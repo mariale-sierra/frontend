@@ -4,16 +4,17 @@ import {
   PressableProps,
   ActivityIndicator,
 } from 'react-native';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, radius, spacing, ActivityType } from '../../constants/theme';
 import { Text } from './text';
 
 /**
  * ButtonVariant defines the available button styles:
  * - primary: White background, black text, for main actions
+ * - activity: Activity type background color, black text, for activity-specific actions
  * - outline: Black background, white border and text, for secondary actions
  * - danger: Black background, red border and text, for destructive actions
  */
-type ButtonVariant = 'primary' | 'outline' | 'danger';
+type ButtonVariant = 'primary' | 'activity' | 'outline' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends Omit<PressableProps, 'children'> {
@@ -21,6 +22,7 @@ interface ButtonProps extends Omit<PressableProps, 'children'> {
   size?: ButtonSize;
   loading?: boolean;
   disabled?: boolean;
+  activityType?: ActivityType;
   children: string;
 }
 
@@ -29,6 +31,7 @@ export function Button({
   size = 'md',
   loading = false,
   disabled = false,
+  activityType,
   children,
   style,
   ...props
@@ -36,7 +39,7 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const textColor =
-    variant === 'primary'
+    variant === 'primary' || variant === 'activity'
       ? colors.textInverse
       : variant === 'danger'
       ? colors.error
@@ -51,10 +54,16 @@ export function Button({
         const computedStyle =
           typeof style === 'function' ? style({ pressed }) : style;
 
+        const variantStyle = variant === 'activity'
+          ? activityType
+            ? { backgroundColor: colors.activityType[activityType] }
+            : styles.primary // fallback to primary if no activityType
+          : styles[variant as Exclude<ButtonVariant, 'activity'>];
+
         return [
           styles.button,
           styles[size],
-          styles[variant],
+          variantStyle,
           pressed && !isDisabled && styles.pressed,
           isDisabled && styles.disabled,
           computedStyle,
@@ -81,7 +90,7 @@ export function Button({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',

@@ -56,9 +56,8 @@ export const radius = {
   sm: 4,
   md: 8,
   lg: 12,
-  xl: 16,
+  xl: 18,
   '2xl': 24,
-  full: 9999,
 } as const;
 
 export const typography = {
@@ -157,12 +156,35 @@ export const shadows = {
   },
 } as const;
 
+// Gradient definitions with start/end coordinates
+export const gradients = {
+  // Surface gradient - diagonal from top-left to bottom-right
+  surface: {
+    colors: [colors.surfaceHighlight, colors.surface] as const,
+    start: { x: 0, y: 0 },
+    end: { x: 1, y: 1 },
+  },
+  // Surface reverse gradient - diagonal from top-right to bottom-left
+  surfaceReverse: {
+    colors: [colors.surface, colors.surfaceHighlight] as const,
+    start: { x: 1, y: 0 },
+    end: { x: 0, y: 1 },
+  },
+  // Surface vertical gradient - top to bottom
+  surfaceVertical: {
+    colors: [colors.surfaceHighlight, colors.surface] as const,
+    start: { x: 0, y: 0 },
+    end: { x: 0, y: 1 },
+  },
+} as const;
+
 export const theme = {
   colors,
   spacing,
   radius,
   typography,
   shadows,
+  gradients,
 } as const;
 
 export type Theme = typeof theme;

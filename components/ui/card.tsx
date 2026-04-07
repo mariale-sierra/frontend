@@ -5,23 +5,18 @@ import {
   Pressable,
   PressableProps,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, spacing, ActivityType } from '../../constants/theme';
 
 /**
  * CardVariant defines the available card styles:
  * - basic: Dark gray background (#1C1C1E), for standard cards
- * - info: Black background with white border, for informational cards
- * - infoGradient: Light dark gray gradient (#3C3C3E), for highlighted info cards
- * - streak: Black background with colored border (based on activityType), for streak cards
- * - activity: Black background with colored border (based on activityType), for activity cards
+ * - activityOutline: Black background with colored border (based on activityType), for streak cards
+ * - activityOutlineGlow: Black background with colored border (based on activityType), for activity cards
  */
 type CardVariant =
   | 'basic'
-  | 'info'
-  | 'infoGradient'
-  | 'streak'
-  | 'activity';
+  | 'activityOutline'
+  | 'activityOutlineGlow';
 
 interface CardProps extends Omit<ViewProps, 'onPress'> {
   variant?: CardVariant;
@@ -36,7 +31,7 @@ export function Card({
   activityType,
   onPress,
   padding = 'md',
-  radius: radiusSize = 'md',
+  radius: radiusSize = 'xl',
   style,
   children,
   ...props
@@ -49,35 +44,6 @@ export function Card({
   const variantStyle = getVariantStyle(variant, activityType);
 
   const cardStyles = [baseStyle, variantStyle, style];
-
-  if (variant === 'infoGradient') {
-    const gradientProps = {
-      colors: [colors.surfaceHighlight, colors.surface] as const,
-      start: { x: 0, y: 0 },
-      end: { x: 1, y: 1 },
-      style: [styles.card, cardStyles],
-    };
-
-    if (onPress) {
-      return (
-        <Pressable
-          onPress={onPress}
-          style={({ pressed }) => pressed && styles.pressed}
-          {...(props as PressableProps)}
-        >
-          <LinearGradient {...gradientProps}>
-            {children}
-          </LinearGradient>
-        </Pressable>
-      );
-    }
-
-    return (
-      <LinearGradient {...gradientProps} {...props}>
-        {children}
-      </LinearGradient>
-    );
-  }
 
   if (onPress) {
     return (
@@ -107,17 +73,7 @@ function getVariantStyle(variant: CardVariant, activityType?: ActivityType) {
         backgroundColor: colors.surface,
       };
 
-    case 'info':
-      return {
-        backgroundColor: colors.background,
-        borderWidth: 1,
-        borderColor: colors.textPrimary,
-      };
-
-    case 'infoGradient':
-      return {};
-
-    case 'streak':
+    case 'activityOutline':
       return {
         backgroundColor: colors.background,
         borderWidth: 1,
@@ -126,7 +82,7 @@ function getVariantStyle(variant: CardVariant, activityType?: ActivityType) {
           : colors.border,
       };
 
-    case 'activity':
+    case 'activityOutlineGlow':
       return {
         backgroundColor: colors.background,
         borderWidth: 1,
@@ -134,14 +90,15 @@ function getVariantStyle(variant: CardVariant, activityType?: ActivityType) {
           ? colors.activityType[activityType]
           : colors.border,
 
-        // Subtle glow effect matching the activity category color
+        // Strong glow effect matching the activity category color
         shadowColor: activityType
           ? colors.activityType[activityType]
           : '#000',
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.6,
         shadowRadius: 12,
-        elevation: 6,
+        elevation: 15,
+        overflow: 'visible' as const,
       };
 
     default:

@@ -2,8 +2,7 @@ import { ScrollView, View } from "react-native";
 import { Container } from '../../components/ui/container';
 import { Text } from '../../components/ui/text';
 import { Button } from '../../components/ui/button';
-import { Card } from '../../components/ui/card';
-import { theme } from '../../constants/theme'; 
+import { Card } from '../../components/ui/card'; 
 
 
 export default function UITest() {
@@ -21,6 +20,7 @@ export default function UITest() {
 
         {/* BUTTONS */}
         <Button>Primary Button</Button>
+        <Button variant="activity" activityType="strength">Strength Activity Button</Button>
         <Button variant="outline">Outline Button</Button>
         <Button variant="danger">Danger Button</Button>
 
@@ -33,20 +33,12 @@ export default function UITest() {
           <Text>Basic Card</Text>
         </Card>
 
-        <Card variant="info">
-          <Text>Info Card</Text>
+        <Card variant="activityOutlineGlow" activityType="mindBody">
+          <Text>Activity Outline Glow Card</Text>
         </Card>
 
-        <Card variant="activity" activityType="mindBody">
-          <Text>Activity Card</Text>
-        </Card>
-
-        <Card variant="streak" activityType="cardioLow">
-          <Text>Streak Card</Text>
-        </Card>
-
-        <Card variant="infoGradient">
-          <Text>Info Gradient Card</Text>
+        <Card variant="activityOutline" activityType="cardioLow">
+          <Text>Activity Outline Card</Text>
         </Card>
 
       </ScrollView>
