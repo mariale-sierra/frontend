@@ -8,8 +8,9 @@ import { useState } from "react";
 import { Row } from '../../components/layout/row';
 import { Column } from '../../components/layout/column';
 import { Input } from '../../components/ui/input';
-import { spacing } from '../../constants/theme';  
-
+import { spacing } from '../../constants/theme'; 
+import { Icon } from "../../components/ui/icon";  
+import { colors } from "../../constants/theme";  
 
 
 
@@ -79,7 +80,11 @@ export default function UITest() {
         placeholder="Enter name"
         value={name}
         onChangeText={setName}
-/>
+          />
+
+        <Icon name="chevron-down" />
+
+        <Icon name="lock-closed" color={colors.primary} />
 
       </ScrollView>
     </Container>
