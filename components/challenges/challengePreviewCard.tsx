@@ -10,7 +10,7 @@ import { AvatarIcon } from '../icons/avatarIcon';
 import { LocationIcon, LocationType } from '../icons/locationIcon';
 import { ActivityType } from '../../constants/theme';
 
-interface ChallengePreviewCardProps {
+export interface ChallengePreviewCardProps {
 	days: number;
 	title: string;
 	author: string;
@@ -21,6 +21,7 @@ interface ChallengePreviewCardProps {
 	locationIconTypes: LocationType[];
 	onPress?: () => void;
 	style?: ViewStyle;
+	badgeVariant?: 'default' | 'minimal';
 }
 
 export function ChallengePreviewCard({
@@ -34,6 +35,7 @@ export function ChallengePreviewCard({
 	locationIconTypes,
 	onPress,
 	style,
+	badgeVariant = 'minimal',
 }: ChallengePreviewCardProps) {
 	const visibleLocationIcons =
 		title.length > 42
@@ -74,7 +76,7 @@ export function ChallengePreviewCard({
 					</Stack>
 
 					<Row justify="flex-end" align="center" gap="sm" style={styles.rightMetaRow}>
-						<Badge label={badgeLabel} variant="minimal" />
+						<Badge label={badgeLabel} variant={badgeVariant} />
 
 						<IconStack>
 							<ActivityIcon type={activityType} size="sm" />

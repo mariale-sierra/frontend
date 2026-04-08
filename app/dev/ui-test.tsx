@@ -17,6 +17,7 @@ import { Badge } from "../../components/ui/badge";
 import { IconStack } from "../../components/layout/iconStack";    
 import { AvatarIcon } from "../../components/icons/avatarIcon";
 import { ChallengePreviewCard } from '../../components/challenges/challengePreviewCard';
+import { Divider } from "../../components/ui/divider";
 
 
 
@@ -118,7 +119,7 @@ export default function UITest() {
         <LocationIcon type="anywhere" size="lg" />
 
         <Badge label="jujuju" variant="activity" activityType="strength"/>
-
+        <Divider />
         <IconStack>
         <ActivityIcon type="flexibility" />
         <ActivityIcon type="cardioIntense" />
