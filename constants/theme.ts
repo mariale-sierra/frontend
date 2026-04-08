@@ -7,6 +7,7 @@ export const colors = {
   surface: '#1C1C1E',
   surfaceElevated: '#2C2C2E',
   surfaceHighlight: '#3C3C3E',
+  surfaceAccent: '#7C7C7E',
 
   // Primary (for buttons, CTAs, highlights)
   primary: '#FFFFFF',

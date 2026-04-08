@@ -8,20 +8,22 @@ import { typography, colors } from '../../constants/theme';
  * TextVariant defines the available text styles:
  * - title: Large (28px), bold (700), white color, for main headings
  * - subheader: Medium (18px), semi-bold (600), white color, uppercase, for subheadings
- * - header: Standard (16px) but semi-bold (600), gray color, for section headers
- * - body: Standard (16px), normal (400), white color, for main content
- * - bodySecondary: Standard (16px), normal (400), gray color, for secondary content
+ * - header: Standard (16px), semi-bold (600), gray by default, optionally white with tone='primary'
+ * - body: Standard (16px), normal (400), white by default, optionally gray with tone='secondary'
  * - caption: Small (12px), normal (400), muted gray color, for captions
  * - label: Small (12px), medium (500), gray color, uppercase, for labels
+ * - activity: Standard (16px), normal (400), color driven by activity category prop
  */
 type TextVariant =
   | 'title'
   | 'subheader'
   | 'header'
   | 'body'
-  | 'bodySecondary'
   | 'caption'
-  | 'label';
+  | 'label'
+  | 'activity';
+
+type TextTone = 'primary' | 'secondary';
 
 /**
  * TextProps defines all configurable props for the Text component.
@@ -32,16 +34,22 @@ type TextVariant =
  *
  * @property variant - Preset typography style and default color (default: 'body')
  * @property align - Horizontal text alignment (`left`, `center`, `right`, `justify`)
+ * @property tone - Optional text tone for `header` and `body` variants
+ * @property activity - Activity category key; required when variant is 'activity'
  */
 
 interface TextProps extends RNTextProps {
   variant?: TextVariant;
   align?: 'left' | 'center' | 'right' | 'justify';
+  tone?: TextTone;
+  activity?: keyof typeof colors.activityType;
 }
 
 export function Text({
   variant = 'body',
   align,
+  tone,
+  activity,
   style,
   children,
   ...props
@@ -58,15 +66,11 @@ export function Text({
     header: {
       ...typography.body,
       fontWeight: '600',
-      color: colors.textSecondary,
+      color: tone === 'primary' ? colors.textPrimary : colors.textSecondary,
     },
     body: {
       ...typography.body,
-      color: colors.textPrimary,
-    },
-    bodySecondary: {
-      ...typography.body,
-      color: colors.textSecondary,
+      color: tone === 'secondary' ? colors.textSecondary : colors.textPrimary,
     },
     caption: {
       ...typography.caption,
@@ -75,6 +79,10 @@ export function Text({
     label: {
       ...typography.label,
       color: colors.textSecondary,
+    },
+    activity: {
+      ...typography.body,
+      color: activity ? colors.activityType[activity] : colors.textSecondary,
     },
   } as const;
 

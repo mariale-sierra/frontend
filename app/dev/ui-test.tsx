@@ -11,7 +11,12 @@ import { Input } from '../../components/ui/input';
 import { spacing } from '../../constants/theme'; 
 import { Icon } from "../../components/ui/icon";  
 import { colors } from "../../constants/theme";  
-
+import { ActivityIcon } from "../../components/icons/activityIcon";
+import { LocationIcon } from "../../components/icons/locationIcon";
+import { Badge } from "../../components/ui/badge";  
+import { IconStack } from "../../components/layout/iconStack";    
+import { AvatarIcon } from "../../components/icons/avatarIcon";
+import { ChallengePreviewCard } from '../../components/challenges/challengePreviewCard';
 
 
 
@@ -27,8 +32,9 @@ export default function UITest() {
         <Text variant="title">Title</Text>
         <Text variant="subheader">Subheader</Text>
         <Text variant="header">Header</Text>
+        <Text variant="header" tone="primary">Header (white)</Text>
         <Text variant="body">Body text example</Text>
-        <Text variant="bodySecondary">Secondary text</Text>
+        <Text variant="body" tone="secondary">Body (gray)</Text>
         <Text variant="caption">Caption</Text>
 
         {/* BUTTONS */}
@@ -53,6 +59,18 @@ export default function UITest() {
         <Card variant="activityOutline" activityType="cardioLow">
           <Text>Activity Outline Card</Text>
         </Card>
+
+        <ChallengePreviewCard
+          days={30}
+          title="Seventy-five Hard Challenge"
+          author="Kristen"
+          badgeLabel="POPULAR"
+          activityType="strength"
+          secondaryIconType="cardioIntense"
+          tertiaryIconType="mindBody"
+          locationIconTypes={['gym', 'outdoor', 'anywhere']}
+          onPress={() => {}}
+        />
 
         <Dropdown
           options={[
@@ -86,6 +104,29 @@ export default function UITest() {
 
         <Icon name="lock-closed" color={colors.primary} />
 
+
+        <ActivityIcon type="strength" size="lg" />
+        <ActivityIcon type="cardioIntense" size="md" />
+        <ActivityIcon type="flexibility" size="sm" />
+        <ActivityIcon type="cardioLow" size="md" />
+        <ActivityIcon type="mindBody" size="lg" />
+        <ActivityIcon type="functional" size="sm" />
+        <LocationIcon type="home" size="lg" />
+        <LocationIcon type="outdoor" size="md" />
+        <LocationIcon type="gym" size="sm" />
+        <LocationIcon type="studio" size="md" />
+        <LocationIcon type="anywhere" size="lg" />
+
+        <Badge label="jujuju" variant="activity" activityType="strength"/>
+
+        <IconStack>
+        <ActivityIcon type="flexibility" />
+        <ActivityIcon type="cardioIntense" />
+        <ActivityIcon type="mindBody" />
+        <AvatarIcon /> {/* will be ignored (max 3) */}
+</IconStack>
+
+        
       </ScrollView>
     </Container>
 

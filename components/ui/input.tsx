@@ -21,7 +21,7 @@ import { spacing, radius, colors } from '../../constants/theme';
 type InputVariant = 'default' | 'filled';
 
 type LabelVariant = 'title' | 'subheader';
-type PlaceholderVariant = 'body' | 'bodySecondary' | 'caption';
+type PlaceholderVariant = 'body' | 'secondary' | 'caption';
 
 /**
  * InputProps defines all configuration options for the Input component.
@@ -29,7 +29,7 @@ type PlaceholderVariant = 'body' | 'bodySecondary' | 'caption';
  * @property label - Optional text displayed above the input field
  * @property labelVariant - Text style for the label; 'title' for large bold text, 'subheader' for medium semi-bold (default: 'subheader')
  * @property placeholder - Optional hint text displayed inside the input when empty
- * @property placeholderVariant - Text color style for the placeholder; 'body' (primary), 'bodySecondary' (secondary), or 'caption' (muted) (default: 'body')
+ * @property placeholderVariant - Text color style for the placeholder; 'body' (primary), 'secondary' (secondary), or 'caption' (muted) (default: 'body')
  * @property leftIcon - Optional icon or element rendered on the left side of the input
  * @property rightIcon - Optional icon or element rendered on the right side of the input
  * @property variant - Input field style; 'default' (minimal/transparent) or 'filled' (dark background) (default: 'default')
@@ -77,7 +77,7 @@ export function Input({
   // Map placeholder variant to color
   const placeholderColorMap = {
     body: colors.textPrimary,
-    bodySecondary: colors.textSecondary,
+    secondary: colors.textSecondary,
     caption: colors.textMuted,
   } as const;
 
