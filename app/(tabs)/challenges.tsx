@@ -1,4 +1,5 @@
 import { ScrollView, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { ChallengeHomeSections } from '../../components/challenges/challengeHomeSections';
 import { ChallengePreviewCardProps } from '../../components/challenges/challengePreviewCard';
 
@@ -51,11 +52,18 @@ const EXPLORE_CHALLENGES: ChallengePreviewCardProps[] = [
 ];
 
 export default function Challenges() {
+	const router = useRouter();
+
+	const handleCreateChallenge = () => {
+		router.push('/challenge/create');
+	};
+
 	return (
 		<ScrollView contentContainerStyle={styles.container}>
 			<ChallengeHomeSections
 				yourChallenges={YOUR_CHALLENGES}
 				exploreChallenges={EXPLORE_CHALLENGES}
+				onCreateChallenge={handleCreateChallenge}
 			/>
 		</ScrollView>
 	);

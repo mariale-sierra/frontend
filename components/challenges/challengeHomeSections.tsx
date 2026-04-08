@@ -8,6 +8,7 @@ export interface ChallengeHomeSectionsProps {
 	exploreChallenges: ChallengePreviewCardProps[];
 	onPressYourChallenges?: () => void;
 	onPressExploreChallenges?: () => void;
+	onCreateChallenge?: () => void;
 }
 
 export function ChallengeHomeSections({
@@ -15,6 +16,7 @@ export function ChallengeHomeSections({
 	exploreChallenges,
 	onPressYourChallenges,
 	onPressExploreChallenges,
+	onCreateChallenge,
 }: ChallengeHomeSectionsProps) {
 	return (
 		<Stack gap="md">
@@ -23,6 +25,8 @@ export function ChallengeHomeSections({
 				challenges={yourChallenges}
 				onPressHeader={onPressYourChallenges}
 				showAvatar
+				showCreateCard
+				onCreatePress={onCreateChallenge}
 			/>
 
 			<Divider />
