@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card'; 
 import { Dropdown } from '../../components/ui/dropdown';
 import { useState } from "react";
+import { Row } from '../../components/layout/row';
 
 
 
@@ -57,6 +58,11 @@ export default function UITest() {
           placeholder="Select options"
           maxSelections={2}
         />
+
+        <Row justify = "space-between">
+            <Text>Row with gap</Text>
+            <Text>Title</Text>
+        </Row>
 
       </ScrollView>
     </Container>
