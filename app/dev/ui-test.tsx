@@ -3,9 +3,15 @@ import { Container } from '../../components/ui/container';
 import { Text } from '../../components/ui/text';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card'; 
+import { Dropdown } from '../../components/ui/dropdown';
+import { useState } from "react";
+
+
 
 
 export default function UITest() {
+  const [selectedValues, setSelectedValues] = useState<string[]>([]);
+
   return (
     <Container>
       <ScrollView contentContainerStyle={{ gap: 16 }}>
@@ -40,6 +46,17 @@ export default function UITest() {
         <Card variant="activityOutline" activityType="cardioLow">
           <Text>Activity Outline Card</Text>
         </Card>
+
+        <Dropdown
+          options={[
+            { label: 'Option 1', value: 'option1' },
+            { label: 'Option 2', value: 'option2' }
+          ]}
+          selectedValues={selectedValues}
+          onChange={setSelectedValues}
+          placeholder="Select options"
+          maxSelections={2}
+        />
 
       </ScrollView>
     </Container>
