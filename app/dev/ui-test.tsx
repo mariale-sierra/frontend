@@ -6,12 +6,17 @@ import { Card } from '../../components/ui/card';
 import { Dropdown } from '../../components/ui/dropdown';
 import { useState } from "react";
 import { Row } from '../../components/layout/row';
+import { Column } from '../../components/layout/column';
+import { Input } from '../../components/ui/input';
+import { spacing } from '../../constants/theme';  
+
 
 
 
 
 export default function UITest() {
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
+  const [name, setName] = useState<string>('');
 
   return (
     <Container>
@@ -56,7 +61,7 @@ export default function UITest() {
           selectedValues={selectedValues}
           onChange={setSelectedValues}
           placeholder="Select options"
-          maxSelections={2}
+          maxSelections={1}
         />
 
         <Row justify = "space-between">
@@ -64,7 +69,22 @@ export default function UITest() {
             <Text>Title</Text>
         </Row>
 
+        <Column align = "center" >
+            <Text>Column 1</Text>
+            <Text>column 1</Text>
+        </Column>
+
+          <Input variant = "filled"
+        label="Camila ama a Javier"
+        placeholder="Enter name"
+        value={name}
+        onChangeText={setName}
+/>
+
       </ScrollView>
     </Container>
+
+      
+
   );
 }

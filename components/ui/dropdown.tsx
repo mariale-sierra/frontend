@@ -14,6 +14,20 @@ interface Option {
   render?: () => React.ReactNode; // para casos custom (row.tsx)
 }
 
+/**
+ * DropdownProps defines all configurable props for the Dropdown component.
+ *
+ * @property options - List of available options. Each option needs a unique `value` and display `label`.
+ *   You can also provide `icon` for the default row rendering or `render` for fully custom option content.
+ * @property selectedValues - Controlled list of currently selected option values.
+ * @property onChange - Callback fired with the next selected values when an option is toggled.
+ * @property placeholder - Optional title text shown in the dropdown header.
+ * @property showValueInline - When true, shows the first selected option label in the header (default: false).
+ * @property rightIcon - Optional element rendered on the right side of the header (for example, a chevron).
+ * @property maxSelections - Optional maximum number of options that can be selected.
+ *   Once reached, unselected options become disabled until one is deselected.
+ */
+
 interface DropdownProps {
   options: Option[];
   selectedValues: string[];

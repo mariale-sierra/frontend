@@ -14,6 +14,19 @@ type ContainerVariant =
   | 'surfaceElevated'
   | 'surfaceHighlight';
 
+/**
+ * ContainerProps defines all configurable props for the Container component.
+ *
+ * In addition to the custom props below, this interface extends React Native
+ * `ViewProps`, so native props like `testID`, accessibility props, and event
+ * handlers can also be passed.
+ *
+ * @property paddingHorizontal - Horizontal spacing token applied as left/right padding
+ * @property paddingVertical - Vertical spacing token applied as top/bottom padding
+ * @property padding - Shared spacing token used for both axes when axis-specific values are not provided
+ * @property centered - When true, centers children on both axes (default: false)
+ * @property variant - Background style variant for the container (default: 'background')
+ */
 interface ContainerProps extends ViewProps {
   paddingHorizontal?: Spacing;
   paddingVertical?: Spacing;

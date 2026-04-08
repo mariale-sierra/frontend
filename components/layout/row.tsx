@@ -4,10 +4,11 @@ import {
   StyleSheet,
   ViewProps,
   PressableProps,
+  FlexAlignType,
 } from 'react-native';
 import { spacing } from '../../constants/theme';
 
-// Justify content horizontally
+// Main axis distribution for a row layout.
 type Justify =
   | 'flex-start'
   | 'center'
@@ -15,8 +16,8 @@ type Justify =
   | 'space-between'
   | 'space-around';
 
-// Align items vertically
-type Align = 'flex-start' | 'center' | 'flex-end';
+// Cross axis alignment for a row layout.
+type Align = Extract<FlexAlignType, 'flex-start' | 'center' | 'flex-end' | 'stretch'>;
 
 interface RowProps extends ViewProps {
   justify?: Justify;

@@ -23,6 +23,17 @@ type TextVariant =
   | 'caption'
   | 'label';
 
+/**
+ * TextProps defines all configurable props for the Text component.
+ *
+ * In addition to the custom props below, this interface extends React Native's
+ * Text props (`RNTextProps`), so you can also pass native props like
+ * `numberOfLines`, `ellipsizeMode`, `selectable`, `onPress`, and accessibility props.
+ *
+ * @property variant - Preset typography style and default color (default: 'body')
+ * @property align - Horizontal text alignment (`left`, `center`, `right`, `justify`)
+ */
+
 interface TextProps extends RNTextProps {
   variant?: TextVariant;
   align?: 'left' | 'center' | 'right' | 'justify';
