@@ -49,7 +49,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: "#00cfff", // blue
+    backgroundColor: "#00cfff", // cyan
     opacity: 0.2,
   },
 });
