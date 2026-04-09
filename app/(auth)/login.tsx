@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { GradientBox } from '../../components/layout/gradient-box';
 import { Row } from '../../components/layout/row';
@@ -9,12 +9,16 @@ import { Icon } from '../../components/ui/icon';
 import { Input } from '../../components/ui/input';
 import { Text } from '../../components/ui/text';
 import { colors, radius, spacing } from '../../constants/theme';
+import api from '../../services/api';
+import { login } from '../../services/auth.service';
+import { ActivityIndicator } from 'react-native';
 
 export default function Login() {
   const router = useRouter();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // Loading state
 
   return (
     <View style={styles.screen}>
@@ -60,9 +64,25 @@ export default function Login() {
               variant="filled"
               leftIcon={<Icon name="lock-closed-outline" size={18} color={colors.textSecondary} />}
             />
-
-            <Button size="md" onPress={() => {}}>
-              Log In
+            <Button size="md" onPress={async () => {
+              setIsLoading(true); // Show loading spinner
+              try {
+                console.log('Email:', email);
+                console.log('Password:', password);
+                console.log('BaseURL:', api.defaults.baseURL);
+                const result = await login(email, password);
+                console.log('Resultado:', JSON.stringify(result));
+                router.replace('/(tabs)');
+              } catch (error: any) {
+                console.log('Error status:', error?.response?.status);
+                console.log('Error data:', error?.response?.data);
+                console.log('Error message:', error?.message);
+                Alert.alert('Error', error?.response?.data?.message || 'Invalid email or password');
+              } finally {
+                setIsLoading(false); // Hide loading spinner
+              }
+            }}>
+              Log in
             </Button>
           </Stack>
         </GradientBox>
@@ -86,6 +106,12 @@ export default function Login() {
           </Pressable>
         </Stack>
       </Stack>
+
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      )}
     </View>
   );
 }
@@ -131,5 +157,11 @@ const styles = StyleSheet.create({
   guestLinkText: {
     color: colors.textSecondary,
     textDecorationLine: 'underline',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
