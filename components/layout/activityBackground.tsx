@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { View, StyleSheet } from "react-native";
+import { GradientBox } from "./gradient-box";
 
 type Props = {
   children: ReactNode;
@@ -9,10 +10,20 @@ export default function ActivityBackground({ children }: Props) {
   return (
     <View style={styles.container}>
       {/* Top glow */}
-      <View style={styles.topGlow} />
+      <GradientBox
+        colors={["#7b2cff22", "#7b2cff00"]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.topGlow}
+      />
 
       {/* Bottom glow */}
-      <View style={styles.bottomGlow} />
+      <GradientBox
+        colors={["#00cfff22", "#00cfff00"]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.bottomGlow}
+      />
 
       {/* Content */}
       <View style={styles.content}>{children}</View>
@@ -38,8 +49,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: "#7b2cff", // purple
-    opacity: 0.2,
+    opacity: 0.8,
   },
 
   bottomGlow: {
@@ -49,7 +59,6 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: "#00cfff", // cyan
-    opacity: 0.2,
+    opacity: 0.8,
   },
 });
