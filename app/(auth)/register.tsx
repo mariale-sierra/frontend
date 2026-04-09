@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import ActivityBackground from '../../components/layout/activityBackground';
 import { GradientBox } from '../../components/layout/gradient-box';
 import { Row } from '../../components/layout/row';
 import { Stack } from '../../components/layout/stack';
@@ -18,9 +19,7 @@ export default function Register() {
   const [password, setPassword] = useState('');
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.topGlow} />
-
+    <ActivityBackground>
       <Stack align="center" justify="center" gap="xl" style={styles.content}>
         <Stack align="center" gap="sm">
           <Text variant="title" align="center">
@@ -90,25 +89,11 @@ export default function Register() {
           </Pressable>
         </Row>
       </Stack>
-    </View>
+    </ActivityBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  topGlow: {
-    position: 'absolute',
-    top: -140,
-    left: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 999,
-    backgroundColor: colors.surfaceHighlight,
-    opacity: 0.18,
-  },
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
