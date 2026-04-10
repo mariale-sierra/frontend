@@ -80,7 +80,7 @@ export function ChallengeConfigurationSection({
 					options={categoryOptions}
 					selectedValues={selectedCategories}
 					onChange={setSelectedCategories}
-					rightIcon={<Ionicons name="chevron-down" size={16} color={colors.textSecondary} />}
+					rightIcon={<Ionicons name="chevron-down" size={16} color={colors.primary} />}
 				/>
 			</GradientBox>
 
@@ -90,7 +90,7 @@ export function ChallengeConfigurationSection({
 					options={locationOptions}
 					selectedValues={selectedLocations}
 					onChange={setSelectedLocations}
-					rightIcon={<Ionicons name="chevron-down" size={16} color={colors.textSecondary} />}
+					rightIcon={<Ionicons name="chevron-down" size={16} color={colors.primary} />}
 				/>
 			</GradientBox>
 

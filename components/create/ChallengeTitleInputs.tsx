@@ -16,13 +16,14 @@ export function ChallengeTitleInputs({
 	onChangeDescription,
 }: ChallengeTitleInputsProps) {
 	return (
-		<Stack gap="xs">
+		<Stack gap="xxs">
 			<Input
 				value={title}
 				onChangeText={onChangeTitle}
 				placeholder="Name your challenge"
 				placeholderVariant="secondary"
 				variant="default"
+				containerStyle={styles.titleContainer}
 				style={styles.titleInput}
 			/>
 
@@ -32,6 +33,7 @@ export function ChallengeTitleInputs({
 				placeholder="Add a challenge description..."
 				placeholderVariant="caption"
 				variant="default"
+				containerStyle={styles.descriptionContainer}
 				multiline
 				style={styles.descriptionInput}
 			/>
@@ -40,10 +42,17 @@ export function ChallengeTitleInputs({
 }
 
 const styles = {
+	titleContainer: {
+		paddingTop: 0,
+		paddingBottom: 2,
+	},
 	titleInput: {
 		...typography.title,
 		color: colors.textPrimary,
 		paddingVertical: 0,
+	},
+	descriptionContainer: {
+		paddingTop: 0,
 	},
 	descriptionInput: {
 		...typography.body,

@@ -40,7 +40,7 @@ export function ChallengeVisibilitySection({
 					render: isPrivate
 						? () => (
 							<Row justify="flex-start" align="center" gap="sm">
-								<Ionicons name="lock-closed" size={14} color={colors.textSecondary} />
+								<Ionicons name="lock-closed" size={14} color={colors.primary} />
 								<Text variant="body">{option}</Text>
 							</Row>
 						)
@@ -82,7 +82,7 @@ export function ChallengeVisibilitySection({
 					onChange={setSelectedVisibility}
 					maxSelections={1}
 					showValueInline
-					rightIcon={<Ionicons name="chevron-down" size={16} color={colors.textSecondary} />}
+					rightIcon={<Ionicons name="chevron-down" size={16} color={colors.primary} />}
 				/>
 			</GradientBox>
 		</Stack>

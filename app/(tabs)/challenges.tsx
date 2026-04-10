@@ -28,6 +28,18 @@ const YOUR_CHALLENGES: ChallengePreviewCardProps[] = [
 		locationIconTypes: ['gym'],
 		badgeVariant: 'default',
 	},
+
+  {
+		days: 30,
+		title: 'Pilates Power',
+		author: 'janesmith',
+		badgeLabel: 'Inactive',
+		activityType: 'mindBody',
+		secondaryIconType: 'flexibility',
+		tertiaryIconType: 'functional',
+		locationIconTypes: ['gym'],
+		badgeVariant: 'default',
+	},
 ];
 
 const EXPLORE_CHALLENGES: ChallengePreviewCardProps[] = [
@@ -35,7 +47,7 @@ const EXPLORE_CHALLENGES: ChallengePreviewCardProps[] = [
 		days: 21,
 		title: 'Yoga Flow',
 		author: 'yogamaster',
-		badgeLabel: 'Flexibility',
+		badgeLabel: 'POPULAR',
 		activityType: 'flexibility',
 		secondaryIconType: 'mindBody',
 		tertiaryIconType: 'cardioLow',
@@ -45,7 +57,7 @@ const EXPLORE_CHALLENGES: ChallengePreviewCardProps[] = [
 		days: 60,
 		title: 'Endurance Boost',
 		author: 'runnerx',
-		badgeLabel: 'Endurance',
+		badgeLabel: 'POPULAR',
 		activityType: 'cardioIntense',
 		secondaryIconType: 'cardioLow',
 		tertiaryIconType: 'functional',

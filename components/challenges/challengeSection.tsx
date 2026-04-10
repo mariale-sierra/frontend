@@ -1,4 +1,5 @@
 import { Stack } from '../layout/stack';
+import { Divider } from '../ui/divider';
 import { ChallengePreviewCardProps } from './challengePreviewCard';
 import { ChallengePreviewList } from './challengePreviewList';
 import { ChallengeSectionHeader } from './challengeSectionHeader';
@@ -10,6 +11,8 @@ export interface ChallengeSectionProps {
 	showAvatar?: boolean;
 	showCreateCard?: boolean;
 	onCreatePress?: () => void;
+	headerListGap?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+	showHeaderDivider?: boolean;
 }
 
 export function ChallengeSection({ 
@@ -19,10 +22,13 @@ export function ChallengeSection({
 	showAvatar = false,
 	showCreateCard = false,
 	onCreatePress,
+	headerListGap = 'md',
+	showHeaderDivider = false,
 }: ChallengeSectionProps) {
 	return (
-		<Stack gap="md">
+		<Stack gap={headerListGap}>
 			<ChallengeSectionHeader title={title} onPress={onPressHeader} showAvatar={showAvatar} />
+			{showHeaderDivider && <Divider />}
 			<ChallengePreviewList 
 				challenges={challenges} 
 				showCreateCard={showCreateCard}

@@ -131,8 +131,8 @@ export function Dropdown({
 
 const styles = StyleSheet.create({
   header: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
     borderRadius: radius.lg,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -157,6 +157,7 @@ const styles = StyleSheet.create({
 
   selected: {
     backgroundColor: colors.surfaceHighlight, 
+    borderRadius: radius['2xl'],
   },
 
   disabledOption: {

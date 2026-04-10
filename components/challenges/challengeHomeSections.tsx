@@ -1,5 +1,6 @@
 import { Divider } from '../ui/divider';
 import { Stack } from '../layout/stack';
+import { StyleSheet, View } from 'react-native';
 import { ChallengePreviewCardProps } from './challengePreviewCard';
 import { ChallengeSection } from './challengeSection';
 
@@ -27,15 +28,26 @@ export function ChallengeHomeSections({
 				showAvatar
 				showCreateCard
 				onCreatePress={onCreateChallenge}
+				headerListGap="lg"
+				showHeaderDivider
 			/>
 
 			<Divider />
 
-			<ChallengeSection
-				title="Explore Challenges"
-				challenges={exploreChallenges}
-				onPressHeader={onPressExploreChallenges}
-			/>
+			<View style={styles.exploreSectionSpacing}>
+				<ChallengeSection
+					title="Explore Challenges"
+					challenges={exploreChallenges}
+					onPressHeader={onPressExploreChallenges}
+					headerListGap="lg"
+				/>
+			</View>
 		</Stack>
 	);
 }
+
+const styles = StyleSheet.create({
+	exploreSectionSpacing: {
+		marginTop: 12,
+	},
+});

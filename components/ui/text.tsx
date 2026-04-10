@@ -7,7 +7,7 @@ import { typography, colors } from '../../constants/theme';
 /**
  * TextVariant defines the available text styles:
  * - title: Large (28px), bold (700), white color, for main headings
- * - subheader: Medium (13px), semi-bold (600), white color, uppercase, for subheadings
+ * - subheader: Medium (12px), semi-bold (600), white color, uppercase, for subheadings
  * - header: Standard (16px), semi-bold (600), gray by default, optionally white with tone='primary'
  * - body: Standard (14px), normal (400), white by default, optionally gray with tone='secondary'
  * - caption: Small (10px), normal (400), muted gray color, for captions
@@ -61,7 +61,7 @@ export function Text({
     },
     subheader: {
       ...typography.header,
-      fontSize: 13,
+      fontSize: 12,
       lineHeight: 20,
       color: colors.textPrimary,
     },

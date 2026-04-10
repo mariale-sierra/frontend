@@ -16,8 +16,8 @@ export interface ChallengePreviewCardProps {
 	author: string;
 	badgeLabel: string;
 	activityType: ActivityType;
-	secondaryIconType: ActivityType;
-	tertiaryIconType: ActivityType;
+	secondaryIconType?: ActivityType;
+	tertiaryIconType?: ActivityType;
 	locationIconTypes: LocationType[];
 	onPress?: () => void;
 	style?: ViewStyle;
@@ -44,23 +44,27 @@ export function ChallengePreviewCard({
 			? locationIconTypes.slice(0, 1)
 			: locationIconTypes;
 
+	const activityIconTypes = [activityType, secondaryIconType, tertiaryIconType].filter(
+		(iconType): iconType is ActivityType => Boolean(iconType)
+	);
+
 	return (
 		<Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
 			<Card
 				variant="activityOutlineGlow"
 				activityType={activityType}
-				padding="md"
+				padding="lg" 
 				radius="xl"
 				style={style}
 			>
 				<Row justify="space-between" align="flex-start" style={styles.contentRow}>
-					<Stack gap="sm" style={styles.leftColumn}>
+					<Stack gap= "xxs" style={styles.leftColumn}> {/* Smaller gap between days row and title */}
 						<Row justify="flex-start" align="center" gap="xs">
 							<Text variant="title">{days}</Text>
 							<Text variant="header" tone='primary'>days</Text>
 						</Row>
 
-						<Row justify="flex-start" align="center" gap="sm">
+						<Row justify="flex-start" align="center" gap="xs"> 
 							<Text style={styles.titleText}>{title}</Text>
 							<IconStack>
 								{visibleLocationIcons.map((locationType, index) => (
@@ -79,9 +83,9 @@ export function ChallengePreviewCard({
 						<Badge label={badgeLabel} variant={badgeVariant} />
 
 						<IconStack>
-							<ActivityIcon type={activityType} size="sm" />
-							<ActivityIcon type={secondaryIconType} size="sm" />
-							<ActivityIcon type={tertiaryIconType} size="sm" />
+							{activityIconTypes.map((iconType, index) => (
+								<ActivityIcon key={`activity-${iconType}-${index}`} type={iconType} size="sm" />
+							))}
 						</IconStack>
 					</Row>
 				</Row>
@@ -102,8 +106,7 @@ const styles = StyleSheet.create({
 		minWidth: 0,
 	},
 	titleText: {
-		flexShrink: 0,
-		flex: 1,
+		flexShrink: 1,
 	},
 	rightMetaRow: {
 		flexShrink: 0,

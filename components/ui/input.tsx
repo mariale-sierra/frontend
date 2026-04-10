@@ -2,9 +2,11 @@ import {
   View,
   TextInput,
   StyleSheet,
+  StyleProp,
   TextInputProps,
   NativeSyntheticEvent,
   TextInputContentSizeChangeEventData,
+  ViewStyle,
 } from 'react-native';
 import { useState } from 'react';
 import { Text } from './text';
@@ -41,6 +43,7 @@ interface InputProps extends TextInputProps {
   labelVariant?: LabelVariant;
   placeholder?: string;
   placeholderVariant?: PlaceholderVariant;
+  containerStyle?: StyleProp<ViewStyle>;
 
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
@@ -56,6 +59,7 @@ export function Input({
   labelVariant = 'subheader',
   placeholder,
   placeholderVariant = 'body',
+  containerStyle,
   leftIcon,
   rightIcon,
   variant = 'default',
@@ -94,6 +98,7 @@ export function Input({
         style={[
           styles.container,
           variant === 'filled' && styles.filled,
+          containerStyle,
         ]}
       >
         {leftIcon}
