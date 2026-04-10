@@ -51,8 +51,7 @@ export function ChallengePreviewCard({
 	return (
 		<Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
 			<Card
-				variant="activityOutlineGlow"
-				activityType={activityType}
+				variant="basicGlass"
 				padding="lg" 
 				radius="xl"
 				style={style}

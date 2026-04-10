@@ -3,7 +3,7 @@ import { StyleProp, StyleSheet, View, ViewProps, ViewStyle } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient';
 import { ActivityType, colors } from '../../constants/theme';
 
-type ScreenBackgroundVariant = 'default' | 'top' | 'activity';
+type ScreenBackgroundVariant = 'default' | 'top' | 'activity' | 'challenges';
 
 interface ScreenBackgroundProps extends ViewProps {
 	children: ReactNode;
@@ -93,6 +93,25 @@ export default function ScreenBackground({
 				</>
 			)}
 
+			{variant === 'challenges' && (
+				<>
+					<LinearGradient
+						colors={['rgba(60, 60, 62, 0.3)', 'rgba(28, 28, 30, 0.16)', 'rgba(0, 0, 0, 0)']}
+						start={{ x: 0.5, y: 0 }}
+						end={{ x: 0.5, y: 1 }}
+						style={styles.challengesTopDepth}
+						pointerEvents="none"
+					/>
+					<LinearGradient
+						colors={['rgba(0, 0, 0, 0)', 'rgba(20, 20, 22, 0.34)', 'rgba(36, 36, 38, 0.44)']}
+						start={{ x: 0.5, y: 0 }}
+						end={{ x: 0.5, y: 1 }}
+						style={styles.challengesBottomDepth}
+						pointerEvents="none"
+					/>
+				</>
+			)}
+
 			<LinearGradient
 				colors={['rgba(255, 255, 255, 0.06)', 'rgba(0, 0, 0, 0)']}
 				start={{ x: 0.5, y: 0 }}
@@ -165,5 +184,19 @@ const styles = StyleSheet.create({
 		width: 320,
 		height: 320,
 		borderRadius: 999,
+	},
+	challengesTopDepth: {
+		position: 'absolute',
+		left: 0,
+		right: 0,
+		top: 0,
+		height: '42%',
+	},
+	challengesBottomDepth: {
+		position: 'absolute',
+		left: 0,
+		right: 0,
+		bottom: 0,
+		height: '40%',
 	},
 });

@@ -73,7 +73,7 @@ export default function Challenges() {
 	};
 
 	return (
-		<ScreenBackground variant="default">
+		<ScreenBackground variant="challenges">
 			<ScrollView contentContainerStyle={styles.container}>
 				<ChallengeHomeSections
 					yourChallenges={YOUR_CHALLENGES}

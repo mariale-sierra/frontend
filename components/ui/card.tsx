@@ -5,16 +5,19 @@ import {
   Pressable,
   PressableProps,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, spacing, ActivityType } from '../../constants/theme';
 
 /**
  * CardVariant defines the available card styles:
  * - basic: Dark gray background (#1C1C1E), for standard cards
+ * - basicGlass: Slightly lighter gray with subtle glassy transparency and soft shadow
  * - activityOutline: Black background with colored border (based on activityType), for streak cards
  * - activityOutlineGlow: Black background with colored border (based on activityType), for activity cards
  */
 type CardVariant =
   | 'basic'
+  | 'basicGlass'
   | 'activityOutline'
   | 'activityOutlineGlow';
 
@@ -71,6 +74,21 @@ function getVariantStyle(variant: CardVariant, activityType?: ActivityType) {
     case 'basic':
       return {
         backgroundColor: colors.surface,
+      };
+
+    case 'basicGlass':
+      return {
+        backgroundColor: 'rgba(41, 42, 51, 0.42)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.14)',
+        borderTopColor: 'rgba(255, 255, 255, 0.22)',
+        borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+        shadowColor: '#070707',
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.40,
+        shadowRadius: 22,
+        elevation: 14,
+        overflow: 'visible' as const,
       };
 
     case 'activityOutline':
