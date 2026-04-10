@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
+import ScreenBackground from '../../components/layout/screenBackground';
 import { Stack } from '../../components/layout/stack';
 import {
   ChallengeConfigurationSection,
@@ -8,7 +9,7 @@ import {
   ChallengeVisibilitySection,
   CreateChallengeHeader,
 } from '../../components/create';
-import { colors, spacing } from '../../constants/theme';
+import { spacing } from '../../constants/theme';
 
 const CATEGORY_OPTIONS = [
   'Strength',
@@ -27,7 +28,8 @@ export default function CreateChallenge() {
   const [duration, setDuration] = useState(3);
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScreenBackground variant="top">
+      <ScrollView contentContainerStyle={styles.container}>
       <Stack gap="md">
         <CreateChallengeHeader author="Cami" />
 
@@ -52,15 +54,15 @@ export default function CreateChallenge() {
           visibilityOptions={VISIBILITY_OPTIONS}
         />
       </Stack>
-    </ScrollView>
+      </ScrollView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: spacing.md,
+    padding: spacing.lg,
     paddingBottom: spacing['2xl'],
-    backgroundColor: colors.surface,
     flexGrow: 1,
   },
 });

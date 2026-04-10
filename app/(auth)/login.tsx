@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import ActivityBackground from '../../components/layout/activityBackground';
 import { GradientBox } from '../../components/layout/gradient-box';
 import { Row } from '../../components/layout/row';
 import { Stack } from '../../components/layout/stack';
@@ -11,7 +12,6 @@ import { Text } from '../../components/ui/text';
 import { colors, radius, spacing } from '../../constants/theme';
 import api from '../../services/api';
 import { login } from '../../services/auth.service';
-import { ActivityIndicator } from 'react-native';
 
 export default function Login() {
   const router = useRouter();
@@ -21,9 +21,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false); // Loading state
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.topGlow} />
-
+    <ActivityBackground>
       <Stack align="center" justify="center" gap="xl" style={styles.content}>
         <Stack align="center" gap="sm">
           <Text variant="title" align="center">
@@ -109,28 +107,14 @@ export default function Login() {
 
       {isLoading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.textPrimary} />
         </View>
       )}
-    </View>
+    </ActivityBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  topGlow: {
-    position: 'absolute',
-    top: -140,
-    left: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 999,
-    backgroundColor: colors.surfaceHighlight,
-    opacity: 0.18,
-  },
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,

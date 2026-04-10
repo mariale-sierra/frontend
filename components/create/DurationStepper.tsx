@@ -15,7 +15,7 @@ export function DurationStepper({ label, value, onIncrement, onDecrement }: Dura
 	return (
 		<GradientBox colors={['#3C3C3E', '#1C1C1E']} style={styles.shell}>
 			<Row justify="space-between" align="center" style={styles.container}>
-				<Text variant="header" tone="primary" style={styles.label}>
+				<Text variant="subheader" style={styles.label}>
 					{label}
 				</Text>
 

@@ -47,7 +47,7 @@ export function Badge({
       ]}
       {...props}
     >
-      <Text variant="activity" activity={activityType}>
+      <Text variant="activity" activity={activityType} style={styles.badgeText}>
         {label}
       </Text>
     </View>
@@ -64,5 +64,10 @@ const styles = StyleSheet.create({
 
   withBorder: {
     borderWidth: 1,
+  },
+
+  badgeText: {
+    fontSize: 12,
+    lineHeight: 14,
   },
 });

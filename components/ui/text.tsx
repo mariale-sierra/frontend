@@ -7,11 +7,11 @@ import { typography, colors } from '../../constants/theme';
 /**
  * TextVariant defines the available text styles:
  * - title: Large (28px), bold (700), white color, for main headings
- * - subheader: Medium (18px), semi-bold (600), white color, uppercase, for subheadings
+ * - subheader: Medium (13px), semi-bold (600), white color, uppercase, for subheadings
  * - header: Standard (16px), semi-bold (600), gray by default, optionally white with tone='primary'
- * - body: Standard (16px), normal (400), white by default, optionally gray with tone='secondary'
- * - caption: Small (12px), normal (400), muted gray color, for captions
- * - label: Small (12px), medium (500), gray color, uppercase, for labels
+ * - body: Standard (14px), normal (400), white by default, optionally gray with tone='secondary'
+ * - caption: Small (10px), normal (400), muted gray color, for captions
+ * - label: Small (10px), medium (500), gray color, uppercase, for labels
  * - activity: Standard (16px), normal (400), color driven by activity category prop
  */
 type TextVariant =
@@ -61,6 +61,8 @@ export function Text({
     },
     subheader: {
       ...typography.header,
+      fontSize: 13,
+      lineHeight: 20,
       color: colors.textPrimary,
     },
     header: {
@@ -70,14 +72,20 @@ export function Text({
     },
     body: {
       ...typography.body,
+      fontSize: 14,
+      lineHeight: 20,
       color: tone === 'secondary' ? colors.textSecondary : colors.textPrimary,
     },
     caption: {
       ...typography.caption,
+      fontSize: 10,
+      lineHeight: 14,
       color: colors.textMuted,
     },
     label: {
       ...typography.label,
+      fontSize: 10,
+      lineHeight: 14,
       color: colors.textSecondary,
     },
     activity: {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import ActivityBackground from '../../components/layout/activityBackground';
 import { GradientBox } from '../../components/layout/gradient-box';
 import { Row } from '../../components/layout/row';
 import { Stack } from '../../components/layout/stack';
@@ -9,6 +10,8 @@ import { Icon } from '../../components/ui/icon';
 import { Input } from '../../components/ui/input';
 import { Text } from '../../components/ui/text';
 import { colors, radius, spacing } from '../../constants/theme';
+import api from '../../services/api';
+import { register } from '../../services/auth.service';
 
 export default function Register() {
   const router = useRouter();
@@ -16,11 +19,10 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.topGlow} />
-
+    <ActivityBackground>
       <Stack align="center" justify="center" gap="xl" style={styles.content}>
         <Stack align="center" gap="sm">
           <Text variant="title" align="center">
@@ -73,7 +75,24 @@ export default function Register() {
               leftIcon={<Icon name="lock-closed-outline" size={18} color={colors.textSecondary} />}
             />
 
-            <Button size="md" onPress={() => {}}>
+            <Button size="md" onPress={async () => {
+              setIsLoading(true);
+              try {
+                console.log('Email:', email);
+                console.log('Username:', username);
+                console.log('BaseURL:', api.defaults.baseURL);
+                const result = await register(email, username, password);
+                console.log('Resultado:', JSON.stringify(result));
+                router.replace('/(tabs)');
+              } catch (error: any) {
+                console.log('Error status:', error?.response?.status);
+                console.log('Error data:', error?.response?.data);
+                console.log('Error message:', error?.message);
+                Alert.alert('Error', error?.response?.data?.message || 'Could not create account');
+              } finally {
+                setIsLoading(false);
+              }
+            }}>
               Create Account
             </Button>
           </Stack>
@@ -90,25 +109,16 @@ export default function Register() {
           </Pressable>
         </Row>
       </Stack>
-    </View>
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={colors.textPrimary} />
+        </View>
+      )}
+    </ActivityBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  topGlow: {
-    position: 'absolute',
-    top: -140,
-    left: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 999,
-    backgroundColor: colors.surfaceHighlight,
-    opacity: 0.18,
-  },
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
@@ -131,5 +141,11 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontWeight: '600',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

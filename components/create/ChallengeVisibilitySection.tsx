@@ -55,7 +55,7 @@ export function ChallengeVisibilitySection({
 		<Stack gap="md">
 			<GradientBox colors={['#3C3C3E', '#1C1C1E']} style={styles.dropdownShell}>
 				<Row justify="space-between" align="center" style={styles.durationRow}>
-					<Text variant="header" tone="primary">Challenge Duration</Text>
+					<Text variant="subheader">Challenge Duration</Text>
 					<Row justify="flex-end" align="center" gap="xs" style={styles.durationControlGroup}>
 						<Input
 							value={String(localDuration)}

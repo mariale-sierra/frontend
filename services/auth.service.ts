@@ -20,6 +20,13 @@ export async function login(email: string, password: string) {
   }
 }
 
+export async function register(email: string, username: string, password: string) {
+  const response = await api.post('/auth/register', { email, username, password });
+  const { accessToken } = response.data;
+  await AsyncStorage.setItem('token', accessToken);
+  return response.data;
+}
+
 export async function logout() {
   await AsyncStorage.removeItem('token');
 }

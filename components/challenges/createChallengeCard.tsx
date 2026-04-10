@@ -30,6 +30,8 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 		alignItems: 'center',
 		minHeight: 100,
+		elevation: 0,
+		shadowOpacity: 0,
 	},
 	pressed: {
 		opacity: 0.85,

@@ -1,5 +1,6 @@
 import { LinearGradient, LinearGradientProps } from 'expo-linear-gradient';
-import { ViewProps } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { colors } from '../../constants/theme';
 
 interface GradientBoxProps extends Omit<LinearGradientProps, 'colors'> {
   colors: readonly [string, string];
@@ -33,10 +34,23 @@ export function GradientBox({
       colors={colors}
       start={start}
       end={end}
-      style={[{ overflow: 'hidden' }, style]}
+      style={[styles.base, style]}
       {...props}
     >
       {children}
     </LinearGradient>
   );
 }
+
+const styles = StyleSheet.create({
+  base: {
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.surfaceHighlight,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 18,
+    elevation: 8,
+  },
+});

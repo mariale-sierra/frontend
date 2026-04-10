@@ -1,7 +1,9 @@
 import { ScrollView, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import ScreenBackground from '../../components/layout/screenBackground';
 import { ChallengeHomeSections } from '../../components/challenges/challengeHomeSections';
 import { ChallengePreviewCardProps } from '../../components/challenges/challengePreviewCard';
+import { spacing } from '../../constants/theme';
 
 const YOUR_CHALLENGES: ChallengePreviewCardProps[] = [
 	{
@@ -59,20 +61,21 @@ export default function Challenges() {
 	};
 
 	return (
-		<ScrollView contentContainerStyle={styles.container}>
-			<ChallengeHomeSections
-				yourChallenges={YOUR_CHALLENGES}
-				exploreChallenges={EXPLORE_CHALLENGES}
-				onCreateChallenge={handleCreateChallenge}
-			/>
-		</ScrollView>
+		<ScreenBackground variant="default">
+			<ScrollView contentContainerStyle={styles.container}>
+				<ChallengeHomeSections
+					yourChallenges={YOUR_CHALLENGES}
+					exploreChallenges={EXPLORE_CHALLENGES}
+					onCreateChallenge={handleCreateChallenge}
+				/>
+			</ScrollView>
+		</ScreenBackground>
 	);
 }
 
 const styles = StyleSheet.create({
 	container: {
-		padding: 16,
-		backgroundColor: '#000000',
+		padding: spacing.lg,
 		flexGrow: 1,
 	},
 });
