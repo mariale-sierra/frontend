@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { CATEGORY_TO_ACTIVITY, type FilterMode } from '../constants/challengeFilters';
+import { CATEGORY_TO_ACTIVITY } from '../constants/challengeFilters';
 import type { ActivityType } from '../constants/theme';
 import type { ExerciseEntry } from '../store/routineBuilderStore';
 
@@ -8,9 +8,9 @@ export type ExerciseCandidate = Omit<ExerciseEntry, 'metrics' | 'note'>;
 interface UseFilteredExercisesParams {
   exercises: ExerciseCandidate[];
   query: string;
-  filterMode: FilterMode;
   selectedCategories: string[];
   selectedLocations: string[];
+  selectedMuscleGroup?: string | null;
 }
 
 function isActivityType(value: ActivityType | undefined): value is ActivityType {
@@ -20,9 +20,9 @@ function isActivityType(value: ActivityType | undefined): value is ActivityType 
 export function useFilteredExercises({
   exercises,
   query,
-  filterMode,
   selectedCategories,
   selectedLocations,
+  selectedMuscleGroup,
 }: UseFilteredExercisesParams) {
   return useMemo(() => {
     const queryValue = query.trim().toLowerCase();
@@ -30,19 +30,19 @@ export function useFilteredExercises({
       .map((value) => CATEGORY_TO_ACTIVITY[value])
       .filter(isActivityType);
 
-    const shouldApplyCategoryFilter = filterMode !== 'location';
-    const shouldApplyLocationFilter = filterMode !== 'category';
-
     return exercises.filter((exercise) => {
       const matchesQuery = exercise.name.toLowerCase().includes(queryValue);
-      const matchesCategory = !shouldApplyCategoryFilter
-        || allowedActivities.length === 0
-        || allowedActivities.includes(exercise.activityType);
-      const matchesLocation = !shouldApplyLocationFilter
-        || selectedLocations.length === 0
-        || selectedLocations.some((location) => exercise.location.toLowerCase().includes(location.toLowerCase()));
+      const matchesCategory =
+        allowedActivities.length === 0 || allowedActivities.includes(exercise.activityType);
+      const matchesLocation =
+        selectedLocations.length === 0 ||
+        selectedLocations.some((location) =>
+          exercise.location.toLowerCase().includes(location.toLowerCase()),
+        );
+      const matchesMuscle =
+        !selectedMuscleGroup || exercise.muscleGroups.includes(selectedMuscleGroup);
 
-      return matchesQuery && matchesCategory && matchesLocation;
+      return matchesQuery && matchesCategory && matchesLocation && matchesMuscle;
     });
-  }, [exercises, query, filterMode, selectedCategories, selectedLocations]);
+  }, [exercises, query, selectedCategories, selectedLocations, selectedMuscleGroup]);
 }

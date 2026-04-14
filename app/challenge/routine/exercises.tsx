@@ -7,22 +7,21 @@ import { Input } from '../../../components/ui/input';
 import { Text } from '../../../components/ui/text';
 import { Icon } from '../../../components/ui/icon';
 import { ExerciseListItem } from '../../../components/routine/exerciseListItem';
-import { FilterToggleButton } from '../../../components/routine/filterToggleButton';
+import { MuscleGroupPickerModal } from '../../../components/routine/MuscleGroupPickerModal';
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
 import { colors, spacing } from '../../../constants/theme';
-import { EXERCISE_FILTERS, type FilterMode } from '../../../constants/challengeFilters';
 import { useFilteredExercises, type ExerciseCandidate } from '../../../hooks/useFilteredExercises';
 
 //fake exercises until we have an API
 
 const MOCK_EXERCISES: ExerciseCandidate[] = [
-  { id: 'e1', name: 'BULGARIAN DEADLIFTS', location: 'Home / Gym', metricType: 'strength', activityType: 'strength' },
-  { id: 'e2', name: 'LEG PRESS', location: 'Gym', metricType: 'strength', activityType: 'strength' },
-  { id: 'e3', name: 'PLANK', location: 'Anywhere', metricType: 'duration', activityType: 'functional' },
-  { id: 'e4', name: 'CRUNCHES', location: 'Anywhere', metricType: 'strength', activityType: 'functional' },
-  { id: 'e5', name: 'HIP THRUST', location: 'Gym', metricType: 'strength', activityType: 'strength' },
-  { id: 'e6', name: 'RUNNING', location: 'Outdoor', metricType: 'distance-duration', activityType: 'cardioIntense' },
+  { id: 'e1', name: 'BULGARIAN DEADLIFTS', location: 'Home / Gym', metricType: 'strength', activityType: 'strength', muscleGroups: ['Glutes', 'Legs', 'Back'] },
+  { id: 'e2', name: 'LEG PRESS', location: 'Gym', metricType: 'strength', activityType: 'strength', muscleGroups: ['Legs', 'Glutes'] },
+  { id: 'e3', name: 'PLANK', location: 'Anywhere', metricType: 'duration', activityType: 'functional', muscleGroups: ['Core'] },
+  { id: 'e4', name: 'CRUNCHES', location: 'Anywhere', metricType: 'strength', activityType: 'functional', muscleGroups: ['Core'] },
+  { id: 'e5', name: 'HIP THRUST', location: 'Gym', metricType: 'strength', activityType: 'strength', muscleGroups: ['Glutes'] },
+  { id: 'e6', name: 'RUNNING', location: 'Outdoor', metricType: 'distance-duration', activityType: 'cardioIntense', muscleGroups: ['Full Body', 'Legs'] },
 ];
 
 export default function ExercisesScreen() {
@@ -31,7 +30,7 @@ export default function ExercisesScreen() {
   const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
   const selectedLocations = useChallengeBuilder((state) => state.selectedLocations);
   const [query, setQuery] = useState('');
-  const [filterMode, setFilterMode] = useState<FilterMode>(null);
+  const [musclePickerVisible, setMusclePickerVisible] = useState(false);
 
   function handleAdd(exercise: ExerciseCandidate) {
     addExercise(exercise);
@@ -41,14 +40,9 @@ export default function ExercisesScreen() {
   const filtered = useFilteredExercises({
     exercises: MOCK_EXERCISES,
     query,
-    filterMode,
     selectedCategories,
     selectedLocations,
   });
-
-  function toggleFilter(mode: FilterMode) {
-    setFilterMode((prev) => (prev === mode ? null : mode));
-  }
 
   return (
     <ScreenBackground variant="top">
@@ -60,7 +54,7 @@ export default function ExercisesScreen() {
         <Text variant="subheader">DAY {day ?? '1'} EXERCISES</Text>
       </Row>
 
-      {/* Search + Filter controls */}
+      {/* Search + muscle group filter */}
       <View style={styles.controls}>
         <Input
           value={query}
@@ -69,19 +63,18 @@ export default function ExercisesScreen() {
           leftIcon={<Icon name="search" size={18} color={colors.textSecondary} />}
         />
 
-        <Row justify="center" gap="sm" style={styles.filters}>
-          {EXERCISE_FILTERS.map((filter) => (
-            <FilterToggleButton
-              key={filter.key}
-              label={filter.label}
-              isActive={filterMode === filter.key}
-              onPress={() => toggleFilter(filter.key)}
-            />
-          ))}
-        </Row>
+        <View style={styles.filters}>
+          <Pressable
+            onPress={() => setMusclePickerVisible(true)}
+            style={({ pressed }) => [styles.muscleBtn, pressed && styles.pressed]}
+          >
+            <Text variant="caption" style={styles.muscleBtnText}>ALL MUSCLES</Text>
+            <Icon name="chevron-down" size={14} color={colors.textPrimary} />
+          </Pressable>
+        </View>
       </View>
 
-      {/* Exercise list — no horizontal padding so dividers span full width */}
+      {/* Exercise list */}
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
@@ -96,6 +89,13 @@ export default function ExercisesScreen() {
         contentContainerStyle={styles.list}
         ListFooterComponent={<View style={styles.listFooterDivider} />}
         showsVerticalScrollIndicator={false}
+      />
+
+      <MuscleGroupPickerModal
+        visible={musclePickerVisible}
+        exercises={MOCK_EXERCISES}
+        onClose={() => setMusclePickerVisible(false)}
+        onAddExercise={handleAdd}
       />
     </ScreenBackground>
   );
@@ -113,11 +113,29 @@ const styles = StyleSheet.create({
   },
   controls: {
     paddingHorizontal: spacing.lg,
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
   filters: {
-    width: '100%',
+    alignItems: 'center',
+  },
+  muscleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 99,
+    borderWidth: 1,
+    borderColor: colors.textPrimary,
+    backgroundColor: colors.background,
+  },
+  muscleBtnText: {
+    color: colors.textPrimary,
+    letterSpacing: 1,
+  },
+  pressed: {
+    opacity: 0.75,
   },
   list: {
     paddingBottom: spacing['2xl'],
@@ -128,3 +146,4 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
 });
+

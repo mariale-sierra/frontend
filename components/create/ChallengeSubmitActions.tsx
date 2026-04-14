@@ -28,7 +28,7 @@ export function ChallengeSubmitActions({
         {getPrimaryLabel(visibility)}
       </Button>
 
-      <Row justify="space-between" gap="sm" style={styles.secondaryRow}>
+      <Row justify="space-between" gap="md" style={styles.secondaryRow}>
         <Button
           variant="outline"
           size="sm"
@@ -46,7 +46,7 @@ export function ChallengeSubmitActions({
           style={styles.saveButton}
           rightIcon={<Icon name="bookmark" size={14} />}
         >
-          SAVE FOR LATER
+          SAVE
         </Button>
       </Row>
     </View>
@@ -55,7 +55,7 @@ export function ChallengeSubmitActions({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 10,
+    gap: 18,
   },
   primaryButton: {
     width: '100%',

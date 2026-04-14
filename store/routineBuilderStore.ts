@@ -22,6 +22,7 @@ export interface ExerciseEntry {
   location: string;
   metricType: ExerciseMetricType;
   activityType: ActivityType;
+  muscleGroups: string[];
   metrics: ExerciseMetrics;
   note: string;
 }
@@ -141,6 +142,7 @@ const seedRoutine = buildRoutineSummary(
       location: 'Home / Outdoor',
       metricType: 'strength',
       activityType: 'strength',
+      muscleGroups: ['Glutes', 'Legs', 'Back'],
       metrics: { kind: 'strength', sets: [{ setNumber: 1, reps: 10, restMin: 1, restSec: 30 }] },
       note: '',
     },
@@ -150,6 +152,7 @@ const seedRoutine = buildRoutineSummary(
       location: 'Gym',
       metricType: 'strength',
       activityType: 'strength',
+      muscleGroups: ['Glutes'],
       metrics: { kind: 'strength', sets: [{ setNumber: 1, reps: 12, restMin: 1, restSec: 30 }] },
       note: '',
     },

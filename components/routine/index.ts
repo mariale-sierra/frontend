@@ -9,4 +9,5 @@ export * from './exerciseSetTable';
 export * from './exerciseInput';
 export * from './restTimeInput';
 export * from './filterToggleButton';
+export * from './MuscleGroupPickerModal';
 export { routineStyles } from './routineStyles';

@@ -1,6 +1,6 @@
-import type { ActivityType } from './theme';
+// temporary data mock, when connected to backend this will be replaced by actual exercise data
 
-export type FilterMode = 'location' | 'category' | null;
+import type { ActivityType } from './theme';
 
 export const CATEGORY_TO_ACTIVITY: Record<string, ActivityType> = {
   Strength: 'strength',
@@ -10,8 +10,3 @@ export const CATEGORY_TO_ACTIVITY: Record<string, ActivityType> = {
   'Mind-Body': 'mindBody',
   Functional: 'functional',
 };
-
-export const EXERCISE_FILTERS: ReadonlyArray<{ key: Exclude<FilterMode, null>; label: string }> = [
-  { key: 'location', label: 'BY LOCATION' },
-  { key: 'category', label: 'BY CATEGORY' },
-];
