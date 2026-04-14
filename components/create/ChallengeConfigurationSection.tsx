@@ -4,12 +4,12 @@ import { Stack } from '../layout/stack';
 import { ActivityIcon } from '../icons/activityIcon';
 import { ActivityType } from '../../constants/theme';
 import { DurationStepper } from './DurationStepper';
-import { GradientBox } from '../layout/gradient-box';
 import { LocationIcon, LocationType } from '../icons/locationIcon';
 import { radius } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/theme';
 import { useChallengeBuilder } from '../../store/challengeBuilderStore';
+import { View } from 'react-native';
 
 export interface ChallengeConfigurationSectionProps {
 	categories: string[];
@@ -77,7 +77,7 @@ export function ChallengeConfigurationSection({
 
 	return (
 		<Stack gap="md">
-			<GradientBox colors={['#3C3C3E', '#1C1C1E']} style={styles.dropdownShell}>
+			<View style={styles.dropdownShell}>
 				<Dropdown
 					placeholder="Exercise categories"
 					options={categoryOptions}
@@ -85,9 +85,9 @@ export function ChallengeConfigurationSection({
 					onChange={setSelectedCategories}
 					rightIcon={<Ionicons name="chevron-down" size={16} color={colors.primary} />}
 				/>
-			</GradientBox>
+			</View>
 
-			<GradientBox colors={['#3C3C3E', '#1C1C1E']} style={styles.dropdownShell}>
+			<View style={styles.dropdownShell}>
 				<Dropdown
 					placeholder="Challenge location"
 					options={locationOptions}
@@ -95,7 +95,7 @@ export function ChallengeConfigurationSection({
 					onChange={setSelectedLocations}
 					rightIcon={<Ionicons name="chevron-down" size={16} color={colors.primary} />}
 				/>
-			</GradientBox>
+			</View>
 
 			<DurationStepper
 				label="Cycle Duration"
@@ -109,6 +109,13 @@ export function ChallengeConfigurationSection({
 
 const styles = {
 	dropdownShell: {
+		borderWidth: 1,
+		borderColor: colors.border,
+		shadowColor: colors.surfaceHighlight,
+		shadowOffset: { width: 0, height: 10 },
+		shadowOpacity: 0.2,
+		shadowRadius: 18,
+		elevation: 8,
 		borderRadius: radius.lg,
 		overflow: 'hidden' as const,
 	},

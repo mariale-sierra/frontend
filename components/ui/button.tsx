@@ -23,6 +23,7 @@ interface ButtonProps extends Omit<PressableProps, 'children'> {
   loading?: boolean;
   disabled?: boolean;
   activityType?: ActivityType;
+  rightIcon?: React.ReactNode;
   children: string;
 }
 
@@ -32,6 +33,7 @@ export function Button({
   loading = false,
   disabled = false,
   activityType,
+  rightIcon,
   children,
   style,
   ...props
@@ -74,15 +76,19 @@ export function Button({
       {loading ? (
         <ActivityIndicator color={loaderColor} />
       ) : (
-        <Text
-          variant={size === 'sm' ? 'caption' : 'label'}
-          style={[
-            styles.text,
-            { color: textColor },
-          ]}
-        >
-          {children}
-        </Text>
+        <>
+          <Text
+            variant={size === 'sm' ? 'caption' : 'label'}
+            style={[
+              styles.text,
+              { color: textColor },
+            ]}
+          >
+            {children}
+          </Text>
+
+          {rightIcon}
+        </>
       )}
     </Pressable>
   );
@@ -141,5 +147,6 @@ const styles = StyleSheet.create({
 
   text: {
     fontWeight: '600',
+    marginRight: spacing.xs,
   },
 });

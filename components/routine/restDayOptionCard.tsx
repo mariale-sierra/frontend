@@ -11,7 +11,7 @@ export function RestDayOptionCard({ onPress }: RestDayOptionCardProps) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
       <LinearGradient
-        colors={['#2E7CF6', '#10214A']}
+        colors={['#485365', '#0e1a34']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.card}

@@ -8,4 +8,5 @@ export * from './routinePickerCard';
 export * from './exerciseSetTable';
 export * from './exerciseInput';
 export * from './restTimeInput';
+export * from './filterToggleButton';
 export { routineStyles } from './routineStyles';

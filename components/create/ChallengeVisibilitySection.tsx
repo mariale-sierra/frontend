@@ -1,28 +1,29 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Dropdown } from '../ui/dropdown';
 import { Stack } from '../layout/stack';
-import { GradientBox } from '../layout/gradient-box';
 import { Row } from '../layout/row';
 import { Text } from '../ui/text';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius } from '../../constants/theme';
 import { Input } from '../ui/input';
+import { View } from 'react-native';
 
 export interface ChallengeVisibilitySectionProps {
-	duration: number;
+	challengeDuration: number;
 	visibilityOptions: string[];
+	selectedVisibility: string | null;
+	onChangeChallengeDuration?: (value: number) => void;
+	onChangeVisibility?: (value: string | null) => void;
 }
 
 export function ChallengeVisibilitySection({
-	duration,
+	challengeDuration,
 	visibilityOptions,
+	selectedVisibility,
+	onChangeChallengeDuration,
+	onChangeVisibility,
 }: ChallengeVisibilitySectionProps) {
-	const [localDuration, setLocalDuration] = useState(duration);
-	const [selectedVisibility, setSelectedVisibility] = useState<string[]>([]);
-
-	useEffect(() => {
-		setLocalDuration(duration);
-	}, [duration]);
+	const selectedVisibilityValues = selectedVisibility ? [selectedVisibility] : [];
 
 	const options = useMemo(
 		() => {
@@ -53,44 +54,51 @@ export function ChallengeVisibilitySection({
 
 	return (
 		<Stack gap="md">
-			<GradientBox colors={['#3C3C3E', '#1C1C1E']} style={styles.dropdownShell}>
+			<View style={styles.dropdownShell}>
 				<Row justify="space-between" align="center" style={styles.durationRow}>
 					<Text variant="subheader">Challenge Duration</Text>
 					<Row justify="flex-end" align="center" gap="xs" style={styles.durationControlGroup}>
 						<Input
-							value={String(localDuration)}
+							value={challengeDuration === 0 ? '' : String(challengeDuration)}
 							onChangeText={(value) => {
 								const numeric = value.replace(/[^0-9]/g, '');
-								setLocalDuration(numeric.length > 0 ? Number(numeric) : duration);
+								onChangeChallengeDuration?.(numeric.length > 0 ? Number(numeric) : 0);
 							}}
 							keyboardType="number-pad"
-							variant="filled"
-							placeholder={String(duration)}
+							variant="default"
+							placeholder="0"
 							placeholderVariant="secondary"
 							style={styles.durationInput}
 						/>
 						<Text variant="body">DAYS</Text>
 					</Row>
 				</Row>
-			</GradientBox>
+			</View>
 
-			<GradientBox colors={['#3C3C3E', '#1C1C1E']} style={styles.dropdownShell}>
+			<View style={styles.dropdownShell}>
 				<Dropdown
 					placeholder="Visibility"
 					options={options}
-					selectedValues={selectedVisibility}
-					onChange={setSelectedVisibility}
+					selectedValues={selectedVisibilityValues}
+					onChange={(values) => onChangeVisibility?.(values[0] ?? null)}
 					maxSelections={1}
 					showValueInline
 					rightIcon={<Ionicons name="chevron-down" size={16} color={colors.primary} />}
 				/>
-			</GradientBox>
+			</View>
 		</Stack>
 	);
 }
 
 const styles = {
 	dropdownShell: {
+		borderWidth: 1,
+		borderColor: colors.border,
+		shadowColor: colors.surfaceHighlight,
+		shadowOffset: { width: 0, height: 10 },
+		shadowOpacity: 0.2,
+		shadowRadius: 18,
+		elevation: 8,
 		borderRadius: radius.lg,
 		overflow: 'hidden' as const,
 	},

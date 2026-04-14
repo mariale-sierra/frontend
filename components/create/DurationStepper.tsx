@@ -1,8 +1,7 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Row } from '../layout/row';
 import { Text } from '../ui/text';
 import { colors, radius, spacing } from '../../constants/theme';
-import { GradientBox } from '../layout/gradient-box';
 
 export interface DurationStepperProps {
 	label: string;
@@ -13,7 +12,7 @@ export interface DurationStepperProps {
 
 export function DurationStepper({ label, value, onIncrement, onDecrement }: DurationStepperProps) {
 	return (
-		<GradientBox colors={['#3C3C3E', '#1C1C1E']} style={styles.shell}>
+		<View style={styles.shell}>
 			<Row justify="space-between" align="center" style={styles.container}>
 				<Text variant="subheader" style={styles.label}>
 					{label}
@@ -35,12 +34,19 @@ export function DurationStepper({ label, value, onIncrement, onDecrement }: Dura
 					</Pressable>
 				</Row>
 			</Row>
-		</GradientBox>
+		</View>
 	);
 }
 
 const styles = StyleSheet.create({
 	shell: {
+		borderWidth: 1,
+		borderColor: colors.border,
+		shadowColor: colors.surfaceHighlight,
+		shadowOffset: { width: 0, height: 10 },
+		shadowOpacity: 0.2,
+		shadowRadius: 18,
+		elevation: 8,
 		borderRadius: radius.lg,
 		overflow: 'hidden',
 	},

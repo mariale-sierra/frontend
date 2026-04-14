@@ -12,7 +12,7 @@ interface ChallengeRoutineCardProps {
 
 export function ChallengeRoutineCard({ routine, onPress }: ChallengeRoutineCardProps) {
   const gradientColors = routine.isRestDay
-    ? (['#2E7CF6', '#10214A'] as const)
+    ? (['#485365', '#0e1a34'] as const)
     : gradients.surfaceVertical.colors;
 
   return (

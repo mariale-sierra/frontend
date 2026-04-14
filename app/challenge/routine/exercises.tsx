@@ -7,29 +7,23 @@ import { Input } from '../../../components/ui/input';
 import { Text } from '../../../components/ui/text';
 import { Icon } from '../../../components/ui/icon';
 import { ExerciseListItem } from '../../../components/routine/exerciseListItem';
+import { FilterToggleButton } from '../../../components/routine/filterToggleButton';
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
-import { colors, spacing, radius, ActivityType } from '../../../constants/theme';
+import { colors, spacing } from '../../../constants/theme';
+import { EXERCISE_FILTERS, type FilterMode } from '../../../constants/challengeFilters';
+import { useFilteredExercises, type ExerciseCandidate } from '../../../hooks/useFilteredExercises';
 
-const MOCK_EXERCISES = [
-  { id: 'e1', name: 'BULGARIAN DEADLIFTS', location: 'Home / Gym', metricType: 'strength' as const, activityType: 'strength' as ActivityType },
-  { id: 'e2', name: 'LEG PRESS', location: 'Gym', metricType: 'strength' as const, activityType: 'strength' as ActivityType },
-  { id: 'e3', name: 'PLANK', location: 'Anywhere', metricType: 'duration' as const, activityType: 'functional' as ActivityType },
-  { id: 'e4', name: 'CRUNCHES', location: 'Anywhere', metricType: 'strength' as const, activityType: 'functional' as ActivityType },
-  { id: 'e5', name: 'HIP THRUST', location: 'Gym', metricType: 'strength' as const, activityType: 'strength' as ActivityType },
-  { id: 'e6', name: 'RUNNING', location: 'Outdoor', metricType: 'distance-duration' as const, activityType: 'cardioIntense' as ActivityType },
+//fake exercises until we have an API
+
+const MOCK_EXERCISES: ExerciseCandidate[] = [
+  { id: 'e1', name: 'BULGARIAN DEADLIFTS', location: 'Home / Gym', metricType: 'strength', activityType: 'strength' },
+  { id: 'e2', name: 'LEG PRESS', location: 'Gym', metricType: 'strength', activityType: 'strength' },
+  { id: 'e3', name: 'PLANK', location: 'Anywhere', metricType: 'duration', activityType: 'functional' },
+  { id: 'e4', name: 'CRUNCHES', location: 'Anywhere', metricType: 'strength', activityType: 'functional' },
+  { id: 'e5', name: 'HIP THRUST', location: 'Gym', metricType: 'strength', activityType: 'strength' },
+  { id: 'e6', name: 'RUNNING', location: 'Outdoor', metricType: 'distance-duration', activityType: 'cardioIntense' },
 ];
-
-type FilterMode = 'location' | 'category' | null;
-
-const CATEGORY_TO_ACTIVITY: Record<string, ActivityType> = {
-  Strength: 'strength',
-  'Cardio Intense': 'cardioIntense',
-  'Cardio Low': 'cardioLow',
-  Flexibility: 'flexibility',
-  'Mind-Body': 'mindBody',
-  Functional: 'functional',
-};
 
 export default function ExercisesScreen() {
   const { day } = useLocalSearchParams<{ day: string }>();
@@ -39,26 +33,17 @@ export default function ExercisesScreen() {
   const [query, setQuery] = useState('');
   const [filterMode, setFilterMode] = useState<FilterMode>(null);
 
-  function handleAdd(exercise: typeof MOCK_EXERCISES[number]) {
-    addExercise({
-      id: exercise.id,
-      name: exercise.name,
-      location: exercise.location,
-      metricType: exercise.metricType,
-      activityType: exercise.activityType,
-    });
+  function handleAdd(exercise: ExerciseCandidate) {
+    addExercise(exercise);
     router.back();
   }
 
-  const allowedActivities = selectedCategories.map((value) => CATEGORY_TO_ACTIVITY[value]).filter(Boolean);
-
-  const filtered = MOCK_EXERCISES.filter((exercise) => {
-    const matchesQuery = exercise.name.toLowerCase().includes(query.toLowerCase());
-    const matchesCategory = allowedActivities.length === 0 || allowedActivities.includes(exercise.activityType);
-    const matchesLocation = selectedLocations.length === 0
-      || selectedLocations.some((location) => exercise.location.toLowerCase().includes(location.toLowerCase()));
-
-    return matchesQuery && matchesCategory && matchesLocation;
+  const filtered = useFilteredExercises({
+    exercises: MOCK_EXERCISES,
+    query,
+    filterMode,
+    selectedCategories,
+    selectedLocations,
   });
 
   function toggleFilter(mode: FilterMode) {
@@ -85,37 +70,14 @@ export default function ExercisesScreen() {
         />
 
         <Row justify="center" gap="sm" style={styles.filters}>
-          <Pressable
-            onPress={() => toggleFilter('location')}
-            style={({ pressed }) => [
-              styles.filterBtn,
-              filterMode === 'location' && styles.filterBtnActive,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text variant="caption" style={[
-              styles.filterBtnText,
-              filterMode === 'location' && styles.filterBtnTextActive,
-            ]}>
-              BY LOCATION
-            </Text>
-          </Pressable>
-
-          <Pressable
-            onPress={() => toggleFilter('category')}
-            style={({ pressed }) => [
-              styles.filterBtn,
-              filterMode === 'category' && styles.filterBtnActive,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text variant="caption" style={[
-              styles.filterBtnText,
-              filterMode === 'category' && styles.filterBtnTextActive,
-            ]}>
-              BY CATEGORY
-            </Text>
-          </Pressable>
+          {EXERCISE_FILTERS.map((filter) => (
+            <FilterToggleButton
+              key={filter.key}
+              label={filter.label}
+              isActive={filterMode === filter.key}
+              onPress={() => toggleFilter(filter.key)}
+            />
+          ))}
         </Row>
       </View>
 
@@ -156,27 +118,6 @@ const styles = StyleSheet.create({
   },
   filters: {
     width: '100%',
-  },
-  filterBtn: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.textPrimary,
-    backgroundColor: colors.background,
-  },
-  filterBtnActive: {
-    backgroundColor: colors.primary,
-  },
-  filterBtnText: {
-    color: colors.textPrimary,
-    letterSpacing: 1,
-  },
-  filterBtnTextActive: {
-    color: colors.textInverse,
-  },
-  pressed: {
-    opacity: 0.75,
   },
   list: {
     paddingBottom: spacing['2xl'],
