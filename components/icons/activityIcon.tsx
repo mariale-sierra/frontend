@@ -4,36 +4,33 @@ import { colors, ActivityType } from '../../constants/theme';
 
 interface ActivityIconProps {
   type: ActivityType;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
+  /** 'circle' shows colored circle background; 'plain' shows just the icon with no container */
+  variant?: 'circle' | 'plain';
 }
 
-export function ActivityIcon({ type, size = 'md' }: ActivityIconProps) {
-  const containerSize = {
-    sm: 28,
-    md: 36,
-    lg: 48,
-  };
+const containerSize = { xs: 18, sm: 28, md: 36, lg: 48 };
+const iconSize = { xs: 12, sm: 18, md: 22, lg: 26 };
 
-  const iconSize = {
-    sm: 16,
-    md: 20,
-    lg: 24,
-  };
+const iconMap: Record<ActivityType, keyof typeof Ionicons.glyphMap> = {
+  strength: 'barbell',
+  cardioIntense: 'flash',
+  flexibility: 'flower',
+  cardioLow: 'leaf',
+  mindBody: 'body',
+  functional: 'musical-notes',
+};
 
-  const iconMap: Record<ActivityType, keyof typeof Ionicons.glyphMap> = {
-
-    strength: 'barbell',
-
-    cardioIntense: 'flash', 
-
-    flexibility: 'flower', 
-
-    cardioLow: 'leaf', 
-
-    mindBody: 'body', 
-
-    functional: 'musical-notes', 
-  };
+export function ActivityIcon({ type, size = 'md', variant = 'circle' }: ActivityIconProps) {
+  if (variant === 'plain') {
+    return (
+      <Ionicons
+        name={iconMap[type]}
+        size={iconSize[size]}
+        color={colors.textPrimary}
+      />
+    );
+  }
 
   return (
     <View
@@ -50,7 +47,7 @@ export function ActivityIcon({ type, size = 'md' }: ActivityIconProps) {
       <Ionicons
         name={iconMap[type]}
         size={iconSize[size]}
-        color={colors.textInverse} // white
+        color={colors.textInverse}
       />
     </View>
   );

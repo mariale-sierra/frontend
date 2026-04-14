@@ -9,6 +9,7 @@ import { LocationIcon, LocationType } from '../icons/locationIcon';
 import { radius } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/theme';
+import { useChallengeBuilder } from '../../store/challengeBuilderStore';
 
 export interface ChallengeConfigurationSectionProps {
 	categories: string[];
@@ -32,8 +33,10 @@ export function ChallengeConfigurationSection({
 	duration,
 	onChangeDuration,
 }: ChallengeConfigurationSectionProps) {
-	const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-	const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+	const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
+	const selectedLocations = useChallengeBuilder((state) => state.selectedLocations);
+	const setSelectedCategories = useChallengeBuilder((state) => state.setSelectedCategories);
+	const setSelectedLocations = useChallengeBuilder((state) => state.setSelectedLocations);
 
 	const categoryOptions = useMemo(
 		() =>

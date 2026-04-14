@@ -1,0 +1,1 @@
+export { ExerciseMetricsEditor as ExerciseSetTable } from './exerciseMetricsEditor';

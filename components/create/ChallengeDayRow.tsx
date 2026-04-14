@@ -1,8 +1,11 @@
 import { Pressable, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Row } from '../layout/row';
 import { Text } from '../ui/text';
 import { colors, gradients } from '../../constants/theme';
 import { GradientBox } from '../layout/gradient-box';
+import { useRoutineBuilder } from '../../store/routineBuilderStore';
+import { ChallengeRoutineCard } from './ChallengeRoutineCard';
 
 export interface ChallengeDayRowProps {
 	dayNumber: number;
@@ -10,19 +13,35 @@ export interface ChallengeDayRowProps {
 }
 
 export function ChallengeDayRow({ dayNumber, onPress }: ChallengeDayRowProps) {
+	const router = useRouter();
+	const routine = useRoutineBuilder((state) => state.routinesByDay[dayNumber]);
+
+	function handleAddRoutine() {
+		if (onPress) {
+			onPress();
+			return;
+		}
+		router.push(`/challenge/routine/select?day=${dayNumber}`);
+	}
+
 	return (
+
 		<Row justify="center" align="center" gap="md" style={styles.row}>
 			<Text variant="subheader">DAY {dayNumber}</Text>
-			<Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
-				<GradientBox
-					colors={gradients.surfaceVertical.colors}
-					start={gradients.surfaceVertical.start}
-					end={gradients.surfaceVertical.end}
-					style={styles.miniCard}
-				>
-					<Text style={styles.plusSign}>+</Text>
-				</GradientBox>
-			</Pressable>
+			{routine ? (
+				<ChallengeRoutineCard routine={routine} onPress={handleAddRoutine} />
+			) : (
+				<Pressable onPress={handleAddRoutine} style={({ pressed }) => [pressed && styles.pressed]}>
+					<GradientBox
+						colors={gradients.surfaceVertical.colors}
+						start={gradients.surfaceVertical.start}
+						end={gradients.surfaceVertical.end}
+						style={styles.miniCard}
+					>
+						<Text style={styles.plusSign}>+</Text>
+					</GradientBox>
+				</Pressable>
+			)}
 		</Row>
 	);
 }
