@@ -1,9 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Dropdown } from '../ui/dropdown';
 import { Stack } from '../layout/stack';
 import { ActivityIcon } from '../icons/activityIcon';
 import { ActivityType } from '../../constants/theme';
-import { DurationStepper } from './DurationStepper';
 import { LocationIcon, LocationType } from '../icons/locationIcon';
 import { radius } from '../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,8 +13,6 @@ import { View } from 'react-native';
 export interface ChallengeConfigurationSectionProps {
 	categories: string[];
 	locations: string[];
-	duration: number;
-	onChangeDuration?: (value: number) => void;
 }
 
 const ACTIVITY_ORDER: ActivityType[] = [
@@ -30,8 +27,6 @@ const ACTIVITY_ORDER: ActivityType[] = [
 export function ChallengeConfigurationSection({
 	categories,
 	locations,
-	duration,
-	onChangeDuration,
 }: ChallengeConfigurationSectionProps) {
 	const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
 	const selectedLocations = useChallengeBuilder((state) => state.selectedLocations);
@@ -72,9 +67,6 @@ export function ChallengeConfigurationSection({
 		[locations],
 	);
 
-	const handleIncrement = () => onChangeDuration?.(duration + 1);
-	const handleDecrement = () => onChangeDuration?.(Math.max(1, duration - 1));
-
 	return (
 		<Stack gap="md">
 			<View style={styles.dropdownShell}>
@@ -96,13 +88,6 @@ export function ChallengeConfigurationSection({
 					rightIcon={<Ionicons name="chevron-down" size={16} color={colors.primary} />}
 				/>
 			</View>
-
-			<DurationStepper
-				label="Cycle Duration"
-				value={duration}
-				onIncrement={handleIncrement}
-				onDecrement={handleDecrement}
-			/>
 		</Stack>
 	);
 }

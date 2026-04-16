@@ -61,6 +61,7 @@ interface RoutineBuilderState {
   saveCurrentRoutineToDay: () => RoutineSummary | null;
   assignRoutineToDay: (day: number, routine: RoutineSummary) => void;
   assignRestDayToDay: (day: number) => void;
+  unassignRoutineFromDay: (day: number) => void;
   resetBuilder: () => void;
 }
 
@@ -365,6 +366,16 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
         ),
       },
     })),
+
+  unassignRoutineFromDay: (day) =>
+    set((state) => {
+      const nextRoutinesByDay = { ...state.routinesByDay };
+      delete nextRoutinesByDay[day];
+
+      return {
+        routinesByDay: nextRoutinesByDay,
+      };
+    }),
 
   resetBuilder: () => set({
     dayIndex: null,

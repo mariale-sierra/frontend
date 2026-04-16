@@ -11,12 +11,12 @@ export function RestDayOptionCard({ onPress }: RestDayOptionCardProps) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
       <LinearGradient
-        colors={['#485365', '#0e1a34']}
+        colors={['#14384ef6', '#a1a7b3']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.card}
       >
-        <Text variant="subheader">REST DAY</Text>
+        <Text variant="header" tone="primary">Rest Day</Text>
         <Text variant="caption" style={styles.text}>Recovery, mobility, or total reset.</Text>
       </LinearGradient>
     </Pressable>
@@ -26,7 +26,7 @@ export function RestDayOptionCard({ onPress }: RestDayOptionCardProps) {
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    minHeight: 88,
+    minHeight: 70,
     borderRadius: radius.xl,
     justifyContent: 'center',
     gap: spacing.xs,

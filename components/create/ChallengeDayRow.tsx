@@ -15,6 +15,7 @@ export interface ChallengeDayRowProps {
 export function ChallengeDayRow({ dayNumber, onPress }: ChallengeDayRowProps) {
 	const router = useRouter();
 	const routine = useRoutineBuilder((state) => state.routinesByDay[dayNumber]);
+	const unassignRoutineFromDay = useRoutineBuilder((state) => state.unassignRoutineFromDay);
 
 	function handleAddRoutine() {
 		if (onPress) {
@@ -24,12 +25,16 @@ export function ChallengeDayRow({ dayNumber, onPress }: ChallengeDayRowProps) {
 		router.push(`/challenge/routine/select?day=${dayNumber}`);
 	}
 
+	function handleRemoveRoutine() {
+		unassignRoutineFromDay(dayNumber);
+	}
+
 	return (
 
 		<Row justify="center" align="center" gap="md" style={styles.row}>
 			<Text variant="subheader">DAY {dayNumber}</Text>
 			{routine ? (
-				<ChallengeRoutineCard routine={routine} onPress={handleAddRoutine} />
+				<ChallengeRoutineCard routine={routine} onPress={handleAddRoutine} onRemove={handleRemoveRoutine} />
 			) : (
 				<Pressable onPress={handleAddRoutine} style={({ pressed }) => [pressed && styles.pressed]}>
 					<GradientBox

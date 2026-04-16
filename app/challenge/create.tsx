@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Stack } from '../../components/layout/stack';
 import {
@@ -9,7 +9,10 @@ import {
   ChallengeTitleInputs,
   ChallengeVisibilitySection,
   CreateChallengeHeader,
+  DurationStepper,
 } from '../../components/create';
+import { ChallengeSectionHeader } from '../../components/create/ChallengeSectionHeader';
+import { Text } from '../../components/ui/text';
 import { spacing } from '../../constants/theme';
 import { useChallengeBuilder } from '../../store/challengeBuilderStore';
 import { useRoutineBuilder } from '../../store/routineBuilderStore';
@@ -35,6 +38,7 @@ export default function CreateChallenge() {
   const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
   const selectedLocations = useChallengeBuilder((state) => state.selectedLocations);
   const routinesByDay = useRoutineBuilder((state) => state.routinesByDay);
+  const hasChallengeIdentity = title.trim().length > 0 && description.trim().length > 0;
 
   const hasRoutineForEveryDay = useMemo(
     () => Array.from({ length: duration }, (_, index) => index + 1)
@@ -42,14 +46,53 @@ export default function CreateChallenge() {
     [duration, routinesByDay],
   );
 
+  const isSetupComplete = selectedCategories.length > 0 && selectedLocations.length > 0;
+
   const effectiveChallengeDuration = challengeDurationOverride ?? duration;
 
-  const isFormComplete = selectedCategories.length > 0
+  const isFormComplete = hasChallengeIdentity
+    && selectedCategories.length > 0
     && selectedLocations.length > 0
     && duration > 0
     && hasRoutineForEveryDay
     && effectiveChallengeDuration > 0
     && Boolean(visibility);
+
+  const missingConfigurationFields = useMemo(() => {
+    const missing: string[] = [];
+
+    if (title.trim().length === 0) missing.push('Challenge title');
+    if (description.trim().length === 0) missing.push('Challenge description');
+    if (selectedCategories.length === 0) missing.push('Exercise categories');
+    if (selectedLocations.length === 0) missing.push('Challenge location');
+    if (duration <= 0) missing.push('Cycle duration');
+    if (!hasRoutineForEveryDay) missing.push('Routine selection for each day');
+    if (effectiveChallengeDuration <= 0) missing.push('Challenge duration');
+    if (!visibility) missing.push('Visibility');
+
+    return missing;
+  }, [
+    title,
+    description,
+    selectedCategories,
+    selectedLocations,
+    duration,
+    hasRoutineForEveryDay,
+    effectiveChallengeDuration,
+    visibility,
+  ]);
+
+  function handleActionPress(actionLabel: string) {
+    if (missingConfigurationFields.length > 0) {
+      Alert.alert(
+        'Missing configuration',
+        `Before "${actionLabel}", please complete:\n\n${missingConfigurationFields.map((item) => `• ${item}`).join('\n')}`,
+      );
+      return;
+    }
+
+    Alert.alert('Ready to go', `"${actionLabel}" is ready. Hook up the final flow next.`);
+  }
 
   const normalizedVisibility = visibility?.toLowerCase() === 'private'
     ? 'Private'
@@ -70,11 +113,22 @@ export default function CreateChallenge() {
             onChangeDescription={setDescription}
           />
 
+          <ChallengeSectionHeader title="1. SETUP" />
+
           <ChallengeConfigurationSection
             categories={CATEGORY_OPTIONS}
             locations={LOCATION_OPTIONS}
-            duration={duration}
-            onChangeDuration={setDuration}
+          />
+
+          <ChallengeSectionHeader title="2. YOUR PLAN" style={styles.planSection} />
+
+          {isSetupComplete ? (
+            <>
+          <DurationStepper
+            label="Cycle Duration"
+            value={duration}
+            onIncrement={() => setDuration((d) => d + 1)}
+            onDecrement={() => setDuration((d) => Math.max(1, d - 1))}
           />
 
           <ChallengeDaysList days={duration} />
@@ -86,12 +140,27 @@ export default function CreateChallenge() {
             onChangeChallengeDuration={(value) => setChallengeDurationOverride(value > 0 ? value : null)}
             onChangeVisibility={setVisibility}
           />
-
-          {isFormComplete && normalizedVisibility && (
-            <View style={styles.actionsBlock}>
-              <ChallengeSubmitActions visibility={normalizedVisibility} />
-            </View>
+            </>
+          ) : (
+            <Text variant="caption" style={styles.gateHint}>
+              Select your activity categories and location to continue building your plan.
+            </Text>
           )}
+
+          <View style={styles.actionsBlock}>
+            <ChallengeSubmitActions
+              visibility={normalizedVisibility ?? 'Public'}
+              onPrimaryPress={() => handleActionPress(normalizedVisibility === 'Private' ? 'Start Challenge' : 'Publish & Join')}
+              onSendToFriendsPress={() => handleActionPress('Send to Friends')}
+              onSaveForLaterPress={() => handleActionPress('Save for Later')}
+            />
+
+            {!isFormComplete && (
+              <Text variant="caption" style={styles.actionsHint}>
+                Complete all required fields to publish, share, or save this challenge.
+              </Text>
+            )}
+          </View>
         </Stack>
       </ScrollView>
     </ScreenBackground>
@@ -104,7 +173,20 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['2xl'],
     flexGrow: 1,
   },
+  planSection: {
+    marginTop: spacing.md,
+  },
+  gateHint: {
+    textAlign: 'center',
+    opacity: 0.45,
+    paddingVertical: spacing.md,
+  },
   actionsBlock: {
     marginTop: spacing.xl,
+    gap: spacing.sm,
+  },
+  actionsHint: {
+    textAlign: 'center',
+    color: 'rgba(255,255,255,0.62)',
   },
 });

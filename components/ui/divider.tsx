@@ -29,7 +29,7 @@ export function Divider({
 const styles = StyleSheet.create({
   divider: {
     height: 1,
-    backgroundColor: colors.border, // gray color for divider
-    width: '100%',
+    backgroundColor: colors.border,
+    alignSelf: 'stretch',
   },
 });

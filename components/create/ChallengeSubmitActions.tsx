@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { Row } from '../layout/row';
 import { Button } from '../ui/button';
 import { Icon } from '../ui/icon';
+import { colors, radius, spacing } from '../../constants/theme';
 
 export type ChallengeVisibility = 'Public' | 'Private';
 
@@ -13,7 +14,7 @@ interface ChallengeSubmitActionsProps {
 }
 
 function getPrimaryLabel(visibility: ChallengeVisibility) {
-  return visibility === 'Private' ? 'START CHALLENGE' : 'PUBLISH & JOIN';
+  return visibility === 'Private' ? 'Start Challenge' : 'Publish & Join';
 }
 
 export function ChallengeSubmitActions({
@@ -36,7 +37,7 @@ export function ChallengeSubmitActions({
           style={styles.sendButton}
           rightIcon={<Icon name="paper-plane" size={14} />}
         >
-          SEND TO FRIENDS
+          Send to Friends
         </Button>
 
         <Button
@@ -46,7 +47,7 @@ export function ChallengeSubmitActions({
           style={styles.saveButton}
           rightIcon={<Icon name="bookmark" size={14} />}
         >
-          SAVE
+          Save for Later
         </Button>
       </Row>
     </View>
@@ -55,19 +56,35 @@ export function ChallengeSubmitActions({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 18,
+    gap: spacing.md,
   },
   primaryButton: {
     width: '100%',
     alignSelf: 'center',
+    borderRadius: radius['2xl'],
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 4,
   },
   secondaryRow: {
     width: '100%',
   },
   sendButton: {
     flex: 1.35,
+    borderRadius: radius['2xl'],
+    borderColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    minHeight: 42,
   },
   saveButton: {
     flex: 1,
+    borderRadius: radius['2xl'],
+    borderColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    minHeight: 42,
   },
 });

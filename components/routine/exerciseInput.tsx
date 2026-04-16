@@ -15,6 +15,7 @@ interface ExerciseInputProps extends Omit<ViewProps, 'children'> {
  * with the consistent styling used throughout the routine builder.
  * Combines field wrapper + TextInput with exercise-specific styling.
  */
+
 export function ExerciseInput({
   label,
   value,

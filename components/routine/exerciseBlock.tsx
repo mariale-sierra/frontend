@@ -16,7 +16,7 @@ interface ExerciseBlockProps {
 
 export function ExerciseBlock({ exercise, index }: ExerciseBlockProps) {
   const { setNote, removeExercise } = useRoutineBuilder();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   return (
     <View style={styles.container}>

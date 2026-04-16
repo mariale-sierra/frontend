@@ -21,7 +21,7 @@ export function RoutinePickerCard({ routine, onPress, onSelect }: RoutinePickerC
           {routine.primaryActivity ? (
             <ActivityIcon type={routine.primaryActivity} size="sm" variant="plain" />
           ) : null}
-          <Text variant="subheader" style={styles.routineName} numberOfLines={1}>
+          <Text variant="header" tone="primary" style={styles.routineName} numberOfLines={1}>
             {routine.name}
           </Text>
           <Icon name="chevron-forward" size={18} color={colors.textSecondary} />

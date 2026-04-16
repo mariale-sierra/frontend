@@ -8,11 +8,12 @@ import { colors, gradients, radius, spacing } from '../../constants/theme';
 interface ChallengeRoutineCardProps {
   routine: RoutineSummary;
   onPress: () => void;
+  onRemove?: () => void;
 }
 
-export function ChallengeRoutineCard({ routine, onPress }: ChallengeRoutineCardProps) {
+export function ChallengeRoutineCard({ routine, onPress, onRemove }: ChallengeRoutineCardProps) {
   const gradientColors = routine.isRestDay
-    ? (['#485365', '#0e1a34'] as const)
+    ? (['#14384ef6', '#a1a7b3'] as const)
     : gradients.surfaceVertical.colors;
 
   return (
@@ -23,7 +24,13 @@ export function ChallengeRoutineCard({ routine, onPress }: ChallengeRoutineCardP
         end={{ x: 1, y: 1 }}
         style={styles.card}
       >
-        <Text variant="subheader" numberOfLines={1} style={styles.title}>
+        {onRemove && (
+          <Pressable onPress={onRemove} hitSlop={10} style={({ pressed }) => [styles.removeButton, pressed && styles.removePressed]}>
+            <Text variant="header" tone="primary" style={styles.removeButtonText}>-</Text>
+          </Pressable>
+        )}
+
+        <Text variant="header" tone="primary" numberOfLines={1} style={styles.title}>
           {routine.name}
         </Text>
 
@@ -54,6 +61,26 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.2)',
     padding: spacing.md,
     justifyContent: 'space-between',
+  },
+  removeButton: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  removeButtonText: {
+    lineHeight: 18,
+  },
+  removePressed: {
+    opacity: 0.72,
   },
   title: {
     maxWidth: '82%',

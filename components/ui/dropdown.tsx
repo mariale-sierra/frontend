@@ -156,7 +156,9 @@ const styles = StyleSheet.create({
   },
 
   selected: {
-    backgroundColor: colors.surfaceHighlight, 
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
     borderRadius: radius['2xl'],
   },
 
