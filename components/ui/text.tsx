@@ -61,8 +61,8 @@ export function Text({
     },
     subheader: {
       ...typography.header,
-      fontSize: 12,
-      lineHeight: 20,
+      fontSize: 13,
+      lineHeight: 23,
       color: colors.textPrimary,
     },
     header: {
@@ -72,7 +72,7 @@ export function Text({
     },
     body: {
       ...typography.body,
-      fontSize: 14,
+      fontSize: 15,
       lineHeight: 20,
       color: tone === 'secondary' ? colors.textSecondary : colors.textPrimary,
     },
@@ -84,7 +84,7 @@ export function Text({
     },
     label: {
       ...typography.label,
-      fontSize: 10,
+      fontSize: 11,
       lineHeight: 14,
       color: colors.textSecondary,
     },

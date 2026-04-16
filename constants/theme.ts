@@ -65,7 +65,7 @@ export const radius = {
 export const typography = {
   // Titles
   title: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '700' as const,
     letterSpacing: 0.5,
     lineHeight: 34,
@@ -86,7 +86,7 @@ export const typography = {
     lineHeight: 24,
   },
   headerSmall: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600' as const,
     letterSpacing: 1.5,
     textTransform: 'uppercase' as const,
@@ -95,19 +95,19 @@ export const typography = {
 
   // Body text
   body: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '400' as const,
     lineHeight: 24,
   },
   bodySmall: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '400' as const,
     lineHeight: 20,
   },
 
   // Labels & captions
   label: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500' as const,
     letterSpacing: 1,
     textTransform: 'uppercase' as const,
