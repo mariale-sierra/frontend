@@ -19,9 +19,10 @@ export function ChallengePreviewList({ challenges, showCreateCard = false, onCre
 		>
 			<Stack gap="lg">
 				{showCreateCard && <CreateChallengeCard onPress={onCreatePress} />}
+				{/* Backend contract: each challenge must include a stable challengeId. */}
 				{challenges.map((challenge, index) => (
 					<ChallengePreviewCard
-						key={`${challenge.title}-${challenge.author}-${index}`}
+						key={challenge.challengeId || `${challenge.title}-${challenge.author}-${index}`}
 						{...challenge}
 					/>
 				))}

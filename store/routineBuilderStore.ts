@@ -1,7 +1,35 @@
 import { create } from 'zustand';
 import type { ActivityType } from '../constants/theme';
 
-export type ExerciseMetricType = 'strength' | 'distance' | 'duration' | 'distance-duration';
+export type ExerciseMetricType = 'strength' | 'schema';
+
+// Backend contract (future): each metric field is defined by DB/API and rendered by UI.
+type MetricFieldBase = {
+  key: string;
+  label: string;
+};
+
+export type NumberMetricField = MetricFieldBase & {
+  type: 'number';
+  defaultValue: number;
+  unit?: string;
+  min?: number;
+  max?: number;
+};
+
+export type DurationMetricField = MetricFieldBase & {
+  type: 'duration';
+  defaultMinutes: number;
+  defaultSeconds: number;
+};
+
+export type MetricFieldDefinition = NumberMetricField | DurationMetricField;
+
+export interface MetricTemplate {
+  id: string;
+  title: string;
+  fields: MetricFieldDefinition[];
+}
 
 export interface SetRow {
   setNumber: number;
@@ -10,11 +38,15 @@ export interface SetRow {
   restSec: number;
 }
 
+export type SchemaMetricValue = number | { minutes: number; seconds: number };
+
 export type ExerciseMetrics =
   | { kind: 'strength'; sets: SetRow[] }
-  | { kind: 'distance'; distanceKm: number }
-  | { kind: 'duration'; durationMin: number; durationSec: number }
-  | { kind: 'distance-duration'; distanceKm: number; durationMin: number; durationSec: number };
+  | {
+      kind: 'schema';
+      template: MetricTemplate;
+      values: Record<string, SchemaMetricValue>;
+    };
 
 export interface ExerciseEntry {
   id: string;
@@ -54,7 +86,10 @@ interface RoutineBuilderState {
   updateStrengthSet: (exerciseId: string, setIndex: number, patch: Partial<SetRow>) => void;
   addStrengthSet: (exerciseId: string) => void;
   removeStrengthSet: (exerciseId: string, setIndex: number) => void;
-  updateExerciseMetrics: (exerciseId: string, patch: Partial<Extract<ExerciseMetrics, { kind: 'distance' | 'duration' | 'distance-duration' }>>) => void;
+  // Future backend handoff: call this with a raw API template; store validates at runtime.
+  applyBackendMetricTemplate: (exerciseId: string, rawTemplate: unknown) => void;
+  updateSchemaMetricNumber: (exerciseId: string, fieldKey: string, value: number) => void;
+  updateSchemaMetricDuration: (exerciseId: string, fieldKey: string, patch: { minutes?: number; seconds?: number }) => void;
   reorderExercise: (from: number, to: number) => void;
   setNote: (exerciseId: string, note: string) => void;
   removeExercise: (exerciseId: string) => void;
@@ -72,16 +107,208 @@ const defaultSet = (): SetRow => ({
   restSec: 0,
 });
 
+// Local template used while designing offline. Backend will eventually provide this.
+const MOCK_SCHEMA_TEMPLATE: MetricTemplate = {
+  id: 'mock-cardio-template',
+  title: 'Exercise metrics',
+  fields: [
+    { key: 'distanceKm', label: 'Distance', type: 'number', defaultValue: 5, unit: 'km', min: 0 },
+    { key: 'duration', label: 'Duration', type: 'duration', defaultMinutes: 20, defaultSeconds: 0 },
+  ],
+};
+
+type UnknownRecord = Record<string, unknown>;
+
+function isObject(value: unknown): value is UnknownRecord {
+  return typeof value === 'object' && value !== null;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function toFiniteNumber(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return null;
+  }
+
+  return value;
+}
+
+function validateMetricField(rawField: unknown, index: number, errors: string[]): MetricFieldDefinition | null {
+  if (!isObject(rawField)) {
+    errors.push(`fields[${index}] must be an object`);
+    return null;
+  }
+
+  if (!isNonEmptyString(rawField.key)) {
+    errors.push(`fields[${index}].key must be a non-empty string`);
+    return null;
+  }
+
+  if (!isNonEmptyString(rawField.label)) {
+    errors.push(`fields[${index}].label must be a non-empty string`);
+    return null;
+  }
+
+  if (rawField.type === 'number') {
+    const defaultValue = toFiniteNumber(rawField.defaultValue);
+    if (defaultValue == null) {
+      errors.push(`fields[${index}].defaultValue must be a finite number for number fields`);
+      return null;
+    }
+
+    const min = rawField.min == null ? undefined : toFiniteNumber(rawField.min);
+    const max = rawField.max == null ? undefined : toFiniteNumber(rawField.max);
+    if (rawField.min != null && min == null) {
+      errors.push(`fields[${index}].min must be a finite number when provided`);
+      return null;
+    }
+    if (rawField.max != null && max == null) {
+      errors.push(`fields[${index}].max must be a finite number when provided`);
+      return null;
+    }
+
+    if (min != null && max != null && min > max) {
+      errors.push(`fields[${index}] has invalid range: min cannot be greater than max`);
+      return null;
+    }
+
+    const unit = rawField.unit;
+    if (unit != null && typeof unit !== 'string') {
+      errors.push(`fields[${index}].unit must be a string when provided`);
+      return null;
+    }
+
+    const normalizedUnit = typeof unit === 'string' ? unit : undefined;
+    const normalizedMin = min == null ? undefined : min;
+    const normalizedMax = max == null ? undefined : max;
+
+    return {
+      type: 'number',
+      key: rawField.key,
+      label: rawField.label,
+      defaultValue,
+      unit: normalizedUnit,
+      min: normalizedMin,
+      max: normalizedMax,
+    };
+  }
+
+  if (rawField.type === 'duration') {
+    const defaultMinutes = toFiniteNumber(rawField.defaultMinutes);
+    const defaultSeconds = toFiniteNumber(rawField.defaultSeconds);
+
+    if (defaultMinutes == null || defaultSeconds == null) {
+      errors.push(`fields[${index}] duration defaults must be finite numbers`);
+      return null;
+    }
+
+    if (defaultMinutes < 0 || defaultSeconds < 0) {
+      errors.push(`fields[${index}] duration defaults cannot be negative`);
+      return null;
+    }
+
+    return {
+      type: 'duration',
+      key: rawField.key,
+      label: rawField.label,
+      defaultMinutes,
+      defaultSeconds,
+    };
+  }
+
+  errors.push(`fields[${index}].type must be "number" or "duration"`);
+  return null;
+}
+
+// Runtime validator for backend-provided metric templates.
+// Backend team: this is the source-of-truth validation your API payload must satisfy.
+export function validateMetricTemplate(rawTemplate: unknown): { ok: true; template: MetricTemplate } | { ok: false; errors: string[] } {
+  const errors: string[] = [];
+
+  if (!isObject(rawTemplate)) {
+    return { ok: false, errors: ['template must be an object'] };
+  }
+
+  const templateObj = rawTemplate as UnknownRecord;
+
+  if (!isNonEmptyString(templateObj.id)) {
+    errors.push('template.id must be a non-empty string');
+  }
+
+  if (!isNonEmptyString(templateObj.title)) {
+    errors.push('template.title must be a non-empty string');
+  }
+
+  if (!Array.isArray(templateObj.fields) || templateObj.fields.length === 0) {
+    errors.push('template.fields must be a non-empty array');
+  }
+
+  if (errors.length > 0) {
+    return { ok: false, errors };
+  }
+
+  const rawFields = templateObj.fields as unknown[];
+
+  const sanitizedFields = rawFields
+    .map((field: unknown, index: number) => validateMetricField(field, index, errors))
+    .filter((field): field is MetricFieldDefinition => Boolean(field));
+
+  if (errors.length > 0 || sanitizedFields.length === 0) {
+    return { ok: false, errors };
+  }
+
+  const templateId = templateObj.id as string;
+  const templateTitle = templateObj.title as string;
+
+  return {
+    ok: true,
+    template: {
+      id: templateId,
+      title: templateTitle,
+      fields: sanitizedFields,
+    },
+  };
+}
+
+function createSchemaValues(template: MetricTemplate): Record<string, SchemaMetricValue> {
+  return template.fields.reduce<Record<string, SchemaMetricValue>>((acc, field) => {
+    if (field.type === 'number') {
+      acc[field.key] = field.defaultValue;
+      return acc;
+    }
+
+    acc[field.key] = {
+      minutes: field.defaultMinutes,
+      seconds: field.defaultSeconds,
+    };
+    return acc;
+  }, {});
+}
+
+function createSchemaMetricsFromRawTemplate(rawTemplate: unknown): ExerciseMetrics | null {
+  const validation = validateMetricTemplate(rawTemplate);
+
+  if (!validation.ok) {
+    console.warn('[RoutineBuilder] Invalid metric template from backend:', validation.errors.join(' | '));
+    return null;
+  }
+
+  return {
+    kind: 'schema',
+    template: validation.template,
+    values: createSchemaValues(validation.template),
+  };
+}
+
 function createDefaultMetrics(metricType: ExerciseMetricType): ExerciseMetrics {
   switch (metricType) {
     case 'strength':
       return { kind: 'strength', sets: [defaultSet()] };
-    case 'distance':
-      return { kind: 'distance', distanceKm: 5 };
-    case 'duration':
-      return { kind: 'duration', durationMin: 20, durationSec: 0 };
-    case 'distance-duration':
-      return { kind: 'distance-duration', distanceKm: 5, durationMin: 25, durationSec: 0 };
+    case 'schema':
+      // Keep local fallback for offline design. The backend path uses applyBackendMetricTemplate.
+      return createSchemaMetricsFromRawTemplate(MOCK_SCHEMA_TEMPLATE) ?? { kind: 'strength', sets: [defaultSet()] };
   }
 }
 
@@ -269,10 +496,30 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
       }),
     })),
 
-  updateExerciseMetrics: (exerciseId, patch) =>
+  applyBackendMetricTemplate: (exerciseId, rawTemplate) =>
     set((state) => ({
       exercises: state.exercises.map((exercise) => {
-        if (exercise.id !== exerciseId || exercise.metrics.kind === 'strength') {
+        if (exercise.id !== exerciseId) {
+          return exercise;
+        }
+
+        const schemaMetrics = createSchemaMetricsFromRawTemplate(rawTemplate);
+        if (!schemaMetrics) {
+          return exercise;
+        }
+
+        return {
+          ...exercise,
+          metricType: 'schema',
+          metrics: schemaMetrics,
+        };
+      }),
+    })),
+
+  updateSchemaMetricNumber: (exerciseId, fieldKey, value) =>
+    set((state) => ({
+      exercises: state.exercises.map((exercise) => {
+        if (exercise.id !== exerciseId || exercise.metrics.kind !== 'schema') {
           return exercise;
         }
 
@@ -280,8 +527,39 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
           ...exercise,
           metrics: {
             ...exercise.metrics,
-            ...patch,
-          } as ExerciseMetrics,
+            values: {
+              ...exercise.metrics.values,
+              [fieldKey]: value,
+            },
+          },
+        };
+      }),
+    })),
+
+  updateSchemaMetricDuration: (exerciseId, fieldKey, patch) =>
+    set((state) => ({
+      exercises: state.exercises.map((exercise) => {
+        if (exercise.id !== exerciseId || exercise.metrics.kind !== 'schema') {
+          return exercise;
+        }
+
+        const currentValue = exercise.metrics.values[fieldKey];
+        if (typeof currentValue === 'number' || currentValue == null) {
+          return exercise;
+        }
+
+        return {
+          ...exercise,
+          metrics: {
+            ...exercise.metrics,
+            values: {
+              ...exercise.metrics.values,
+              [fieldKey]: {
+                minutes: patch.minutes ?? currentValue.minutes,
+                seconds: patch.seconds ?? currentValue.seconds,
+              },
+            },
+          },
         };
       }),
     })),

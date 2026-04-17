@@ -13,15 +13,17 @@ import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
 import { colors, spacing } from '../../../constants/theme';
 import { useFilteredExercises, type ExerciseCandidate } from '../../../hooks/useFilteredExercises';
 
-//fake exercises until we have an API
+// MOCK ONLY: exercises, locations, and activity types should be provided by backend/database.
+// Strength-only metricType is intentional for offline UI design right now.
+// Backend team: this list should be replaced by real exercise entities from API.
 
 const MOCK_EXERCISES: ExerciseCandidate[] = [
   { id: 'e1', name: 'BULGARIAN DEADLIFTS', location: 'Home / Gym', metricType: 'strength', activityType: 'strength', muscleGroups: ['Glutes', 'Legs', 'Back'] },
   { id: 'e2', name: 'LEG PRESS', location: 'Gym', metricType: 'strength', activityType: 'strength', muscleGroups: ['Legs', 'Glutes'] },
-  { id: 'e3', name: 'PLANK', location: 'Anywhere', metricType: 'duration', activityType: 'functional', muscleGroups: ['Core'] },
+  { id: 'e3', name: 'PLANK', location: 'Anywhere', metricType: 'strength', activityType: 'functional', muscleGroups: ['Core'] },
   { id: 'e4', name: 'CRUNCHES', location: 'Anywhere', metricType: 'strength', activityType: 'functional', muscleGroups: ['Core'] },
   { id: 'e5', name: 'HIP THRUST', location: 'Gym', metricType: 'strength', activityType: 'strength', muscleGroups: ['Glutes'] },
-  { id: 'e6', name: 'RUNNING', location: 'Outdoor', metricType: 'distance-duration', activityType: 'cardioIntense', muscleGroups: ['Full Body', 'Legs'] },
+  { id: 'e6', name: 'RUNNING', location: 'Outdoor', metricType: 'strength', activityType: 'cardioIntense', muscleGroups: ['Full Body', 'Legs'] },
 ];
 
 export default function ExercisesScreen() {

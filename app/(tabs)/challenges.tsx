@@ -5,8 +5,11 @@ import { ChallengeHomeSections } from '../../components/challenges/challengeHome
 import { ChallengePreviewCardProps } from '../../components/challenges/challengePreviewCard';
 import { spacing } from '../../constants/theme';
 
+// MOCK ONLY: replace with API response from /challenges once connected.
+// Backend team: each item must be a real challenge entity with a stable id.
 const YOUR_CHALLENGES: ChallengePreviewCardProps[] = [
 	{
+		challengeId: 'challenge-101',
 		days: 30,
 		title: 'Morning Run',
 		author: 'johndoe',
@@ -18,6 +21,7 @@ const YOUR_CHALLENGES: ChallengePreviewCardProps[] = [
 		badgeVariant: 'default',
 	},
 	{
+		challengeId: 'challenge-102',
 		days: 14,
 		title: 'Full Body Strength',
 		author: 'janesmith',
@@ -30,6 +34,7 @@ const YOUR_CHALLENGES: ChallengePreviewCardProps[] = [
 	},
 
   {
+		challengeId: 'challenge-103',
 		days: 30,
 		title: 'Pilates Power',
 		author: 'janesmith',
@@ -44,6 +49,7 @@ const YOUR_CHALLENGES: ChallengePreviewCardProps[] = [
 
 const EXPLORE_CHALLENGES: ChallengePreviewCardProps[] = [
 	{
+		challengeId: 'challenge-201',
 		days: 21,
 		title: 'Yoga Flow',
 		author: 'yogamaster',
@@ -54,6 +60,7 @@ const EXPLORE_CHALLENGES: ChallengePreviewCardProps[] = [
 		locationIconTypes: ['home'],
 	},
 	{
+		challengeId: 'challenge-202',
 		days: 60,
 		title: 'Endurance Boost',
 		author: 'runnerx',

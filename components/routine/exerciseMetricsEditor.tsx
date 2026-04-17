@@ -23,10 +23,13 @@ export function ExerciseMetricsEditor({ exercise }: ExerciseMetricsEditorProps) 
     updateStrengthSet,
     addStrengthSet,
     removeStrengthSet,
-    updateExerciseMetrics,
+    updateSchemaMetricNumber,
+    updateSchemaMetricDuration,
   } = useRoutineBuilder();
 
   if (exercise.metrics.kind === 'strength') {
+    const strengthMetrics = exercise.metrics;
+
     return (
       <View style={styles.bleedWrap}>
         <View style={styles.container}>
@@ -38,17 +41,17 @@ export function ExerciseMetricsEditor({ exercise }: ExerciseMetricsEditorProps) 
             </Pressable>
           </Row>
 
-          {exercise.metrics.sets.map((row, index) => (
+          {strengthMetrics.sets.map((row, index) => (
             <View key={`${exercise.id}-${index}`} style={styles.setSection}>
               {index > 0 ? <View style={routineStyles.divider} /> : null}
               <Row justify="space-between" align="center" style={styles.setHeader}>
                 <Text variant="subheader">SET {row.setNumber}</Text>
                 <Pressable
                   onPress={() => removeStrengthSet(exercise.id, index)}
-                  disabled={exercise.metrics.sets.length <= 1}
-                  style={({ pressed }) => [styles.removeButton, pressed && exercise.metrics.sets.length > 1 && styles.pressed]}
+                  disabled={strengthMetrics.sets.length <= 1}
+                  style={({ pressed }) => [styles.removeButton, pressed && strengthMetrics.sets.length > 1 && styles.pressed]}
                 >
-                  <Text variant="caption" style={[styles.removeText, exercise.metrics.sets.length <= 1 && styles.disabledText]}>
+                  <Text variant="caption" style={[styles.removeText, strengthMetrics.sets.length <= 1 && styles.disabledText]}>
                     Remove
                   </Text>
                 </Pressable>
@@ -74,28 +77,52 @@ export function ExerciseMetricsEditor({ exercise }: ExerciseMetricsEditorProps) 
     );
   }
 
+  // Backend-driven path: template + values come from validated server payload.
+  // Keep using the same visual components so design language stays consistent.
+  const schemaMetrics = exercise.metrics;
+
   return (
     <View style={styles.bleedWrap}>
       <View style={styles.container}>
-        <Text variant="label" style={styles.headingText}>Exercise metrics</Text>
+        <Text variant="label" style={styles.headingText}>{schemaMetrics.template.title}</Text>
         <View style={styles.fieldStack}>
-          {(exercise.metrics.kind === 'distance' || exercise.metrics.kind === 'distance-duration') && (
-            <ExerciseInput
-              label="Distance km"
-              value={String(exercise.metrics.distanceKm)}
-              onChangeText={(value) => updateExerciseMetrics(exercise.id, { distanceKm: parseNumber(value) })}
-            />
-          )}
+          {schemaMetrics.template.fields.map((field) => {
+            if (field.type === 'number') {
+              const value = schemaMetrics.values[field.key];
+              const numericValue = typeof value === 'number' ? value : field.defaultValue;
+              const label = field.unit ? `${field.label} ${field.unit}` : field.label;
 
-          {(exercise.metrics.kind === 'duration' || exercise.metrics.kind === 'distance-duration') && (
-            <RestTimeInput
-              label="Duration"
-              minutes={String(exercise.metrics.durationMin)}
-              seconds={String(exercise.metrics.durationSec)}
-              onChangeMinutes={(value) => updateExerciseMetrics(exercise.id, { durationMin: parseNumber(value) })}
-              onChangeSeconds={(value) => updateExerciseMetrics(exercise.id, { durationSec: parseNumber(value) })}
-            />
-          )}
+              return (
+                <ExerciseInput
+                  key={field.key}
+                  label={label}
+                  value={String(numericValue)}
+                  onChangeText={(nextValue) => updateSchemaMetricNumber(exercise.id, field.key, parseNumber(nextValue))}
+                />
+              );
+            }
+
+            const value = schemaMetrics.values[field.key];
+            const durationValue =
+              typeof value === 'number' || value == null
+                ? { minutes: field.defaultMinutes, seconds: field.defaultSeconds }
+                : value;
+
+            return (
+              <RestTimeInput
+                key={field.key}
+                label={field.label}
+                minutes={String(durationValue.minutes)}
+                seconds={String(durationValue.seconds)}
+                onChangeMinutes={(nextValue) =>
+                  updateSchemaMetricDuration(exercise.id, field.key, { minutes: parseNumber(nextValue) })
+                }
+                onChangeSeconds={(nextValue) =>
+                  updateSchemaMetricDuration(exercise.id, field.key, { seconds: parseNumber(nextValue) })
+                }
+              />
+            );
+          })}
         </View>
       </View>
     </View>

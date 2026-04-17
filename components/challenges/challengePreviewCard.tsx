@@ -11,6 +11,8 @@ import { LocationIcon, LocationType } from '../icons/locationIcon';
 import { ActivityType } from '../../constants/theme';
 
 export interface ChallengePreviewCardProps {
+	// Stable DB identifier for challenge entity; provided by backend.
+	challengeId: string;
 	days: number;
 	title: string;
 	author: string;

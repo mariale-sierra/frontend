@@ -17,6 +17,8 @@ import { spacing } from '../../constants/theme';
 import { useChallengeBuilder } from '../../store/challengeBuilderStore';
 import { useRoutineBuilder } from '../../store/routineBuilderStore';
 
+// MOCK ONLY: category and location option lists should come from backend/database.
+// Backend team: send these as reference data so challenge setup is fully server-driven.
 const CATEGORY_OPTIONS = [
   'Strength',
   'Cardio Intense',
