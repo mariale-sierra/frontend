@@ -13,15 +13,15 @@ interface ChallengeRoutineCardProps {
 
 export function ChallengeRoutineCard({ routine, onPress, onRemove }: ChallengeRoutineCardProps) {
   const gradientColors = routine.isRestDay
-    ? (['#14384ef6', '#a1a7b3'] as const)
+    ? gradients.restDay.colors
     : gradients.surfaceVertical.colors;
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
       <LinearGradient
         colors={gradientColors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        start={routine.isRestDay ? gradients.restDay.start : { x: 0, y: 0 }}
+        end={routine.isRestDay ? gradients.restDay.end : { x: 1, y: 1 }}
         style={styles.card}
       >
         {onRemove && (

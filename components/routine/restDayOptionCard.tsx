@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text } from '../ui/text';
-import { radius, spacing } from '../../constants/theme';
+import { gradients, radius, spacing } from '../../constants/theme';
 
 interface RestDayOptionCardProps {
   onPress: () => void;
@@ -11,9 +11,9 @@ export function RestDayOptionCard({ onPress }: RestDayOptionCardProps) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
       <LinearGradient
-        colors={['#14384ef6', '#a1a7b3']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        colors={gradients.restDay.colors}
+        start={gradients.restDay.start}
+        end={gradients.restDay.end}
         style={styles.card}
       >
         <Text variant="header" tone="primary">Rest Day</Text>

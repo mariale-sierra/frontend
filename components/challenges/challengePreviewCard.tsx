@@ -38,6 +38,7 @@ export function ChallengePreviewCard({
 	onPress,
 	style,
 	badgeVariant = 'minimal',
+	
 }: ChallengePreviewCardProps) {
 	const visibleLocationIcons =
 		title.length > 42

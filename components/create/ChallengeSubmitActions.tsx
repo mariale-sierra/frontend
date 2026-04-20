@@ -3,14 +3,13 @@ import { Row } from '../layout/row';
 import { Button } from '../ui/button';
 import { Icon } from '../ui/icon';
 import { colors, radius, spacing } from '../../constants/theme';
-
-export type ChallengeVisibility = 'Public' | 'Private';
+import type { ChallengeVisibility } from '../../store/challengeBuilderStore';
 
 interface ChallengeSubmitActionsProps {
   visibility: ChallengeVisibility;
   onPrimaryPress?: () => void;
   onSendToFriendsPress?: () => void;
-  onSaveForLaterPress?: () => void;
+  onSharePress?: () => void;
 }
 
 function getPrimaryLabel(visibility: ChallengeVisibility) {
@@ -21,7 +20,7 @@ export function ChallengeSubmitActions({
   visibility,
   onPrimaryPress,
   onSendToFriendsPress,
-  onSaveForLaterPress,
+  onSharePress,
 }: ChallengeSubmitActionsProps) {
   return (
     <View style={styles.container}>
@@ -43,11 +42,11 @@ export function ChallengeSubmitActions({
         <Button
           variant="outline"
           size="sm"
-          onPress={onSaveForLaterPress}
+          onPress={onSharePress}
           style={styles.saveButton}
-          rightIcon={<Icon name="bookmark" size={14} />}
+          rightIcon={<Icon name="share-social" size={14} />}
         >
-          Save for Later
+          Share
         </Button>
       </Row>
     </View>

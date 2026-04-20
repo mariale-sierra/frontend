@@ -1,78 +1,147 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import { GradientBox } from '../layout/gradient-box';
 import { Row } from '../layout/row';
+import { Stack } from '../layout/stack';
 import { Text } from '../ui/text';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, gradients, radius, spacing, typography } from '../../constants/theme';
 
 export interface DurationStepperProps {
 	label: string;
 	value: number;
+	description?: string;
+	unitLabel?: string;
+	presetValues?: number[];
 	onIncrement?: () => void;
 	onDecrement?: () => void;
+	onSelectPreset?: (value: number) => void;
 }
 
-export function DurationStepper({ label, value, onIncrement, onDecrement }: DurationStepperProps) {
-	return (
-		<View style={styles.shell}>
-			<Row justify="space-between" align="center" style={styles.container}>
-				<Text variant="subheader" style={styles.label}>
-					{label}
-				</Text>
 
-				<Row justify="flex-end" align="center" gap="xs" style={styles.controls}>
+export function DurationStepper({
+	label,
+	value,
+	description,
+	unitLabel = 'DAYS',
+	presetValues = [],
+	onIncrement,
+	onDecrement,
+	onSelectPreset,
+}: DurationStepperProps) {
+	const normalizedPresets = Array.from(new Set(presetValues.filter((preset) => preset > 0)));
+
+	return (
+		<GradientBox
+			colors={gradients.surface.colors}
+			start={gradients.surface.start}
+			end={gradients.surface.end}
+			style={styles.shell}
+		>
+			<Stack gap="md">
+				<View>
+					<Text variant="subheader">{label}</Text>
+					{description ? (
+						<Text variant="body" tone="secondary" style={styles.description}>{description}</Text>
+					) : null}
+				</View>
+
+				<Row justify="space-between" align="center" style={styles.counterShell}>
 					<Pressable onPress={onDecrement} style={({ pressed }) => [styles.pressableButton, pressed && styles.pressed]}>
-						<Text variant="header" tone="primary">
-							-
-						</Text>
+						<Text variant="header" tone="primary">-</Text>
 					</Pressable>
 
-					<Text variant="body" style={styles.valueText}>{value} DAYS</Text>
+					<View style={styles.valueWrap}>
+						<Text style={styles.valueNumber}>{value}</Text>
+						<Text variant="caption" style={styles.unitLabel}>{unitLabel}</Text>
+					</View>
 
 					<Pressable onPress={onIncrement} style={({ pressed }) => [styles.pressableButton, pressed && styles.pressed]}>
-						<Text variant="header" tone="primary">
-							+
-						</Text>
+						<Text variant="header" tone="primary">+</Text>
 					</Pressable>
 				</Row>
-			</Row>
-		</View>
+
+				{normalizedPresets.length > 0 && onSelectPreset ? (
+					<Row gap="sm" style={styles.presetRow}>
+						{normalizedPresets.map((preset) => (
+							<Pressable
+								key={`preset-${preset}`}
+								onPress={() => onSelectPreset(preset)}
+								style={({ pressed }) => [
+									styles.presetChip,
+									preset === value && styles.presetChipSelected,
+									pressed && styles.pressed,
+								]}
+							>
+								<Text variant="caption" style={preset === value ? styles.presetTextSelected : styles.presetText}>
+									{preset} {unitLabel.toLowerCase()}
+								</Text>
+							</Pressable>
+						))}
+					</Row>
+				) : null}
+			</Stack>
+		</GradientBox>
 	);
 }
 
 const styles = StyleSheet.create({
 	shell: {
+		borderRadius: radius['2xl'],
+		padding: spacing.lg,
+	},
+	description: {
+		marginTop: spacing.xs,
+	},
+	counterShell: {
+		borderRadius: radius['2xl'],
 		borderWidth: 1,
-		borderColor: colors.border,
-		shadowColor: colors.surfaceHighlight,
-		shadowOffset: { width: 0, height: 10 },
-		shadowOpacity: 0.2,
-		shadowRadius: 18,
-		elevation: 8,
-		borderRadius: radius.lg,
-		overflow: 'hidden',
-	},
-	container: {
-		width: '100%',
+		borderColor: 'rgba(255,255,255,0.12)',
+		backgroundColor: 'rgba(255,255,255,0.04)',
 		paddingHorizontal: spacing.md,
-		paddingVertical: spacing.sm,
-	},
-	label: {
-		flexShrink: 1,
-		maxWidth: '44%',
-	},
-	controls: {
-		flexShrink: 0,
+		paddingVertical: spacing.lg,
 	},
 	pressableButton: {
-		width: 30,
-		height: 30,
-		borderRadius: radius.md,
-		backgroundColor: colors.surface,
+		width: 44,
+		height: 44,
+		borderRadius: 22,
 		justifyContent: 'center',
 		alignItems: 'center',
-		paddingBottom: 1,
+		backgroundColor: 'rgba(255,255,255,0.08)',
+		borderWidth: 1,
+		borderColor: 'rgba(255,255,255,0.12)',
 	},
-	valueText: {
-		paddingHorizontal: spacing.xs,
+	valueWrap: {
+		alignItems: 'center',
+		justifyContent: 'center',
+		gap: spacing.xs,
+	},
+	valueNumber: {
+		...typography.titleLarge,
+		color: colors.textPrimary,
+	},
+	unitLabel: {
+		color: 'rgba(255,255,255,0.58)',
+		letterSpacing: 1.2,
+	},
+	presetRow: {
+		flexWrap: 'wrap',
+	},
+	presetChip: {
+		borderRadius: 999,
+		paddingHorizontal: spacing.md,
+		paddingVertical: spacing.sm,
+		backgroundColor: 'rgba(255,255,255,0.05)',
+		borderWidth: 1,
+		borderColor: 'rgba(255,255,255,0.12)',
+	},
+	presetChipSelected: {
+		backgroundColor: colors.textPrimary,
+		borderColor: colors.textPrimary,
+	},
+	presetText: {
+		color: colors.textPrimary,
+	},
+	presetTextSelected: {
+		color: colors.textInverse,
 	},
 	pressed: {
 		opacity: 0.8,

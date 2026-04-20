@@ -97,6 +97,7 @@ interface RoutineBuilderState {
   assignRoutineToDay: (day: number, routine: RoutineSummary) => void;
   assignRestDayToDay: (day: number) => void;
   unassignRoutineFromDay: (day: number) => void;
+  pruneRoutinesAfterDay: (day: number) => void;
   resetBuilder: () => void;
 }
 
@@ -654,6 +655,13 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
         routinesByDay: nextRoutinesByDay,
       };
     }),
+
+  pruneRoutinesAfterDay: (day) =>
+    set((state) => ({
+      routinesByDay: Object.fromEntries(
+        Object.entries(state.routinesByDay).filter(([key]) => Number(key) <= day)
+      ),
+    })),
 
   resetBuilder: () => set({
     dayIndex: null,

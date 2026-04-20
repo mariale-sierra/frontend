@@ -178,6 +178,12 @@ export const gradients = {
     start: { x: 0, y: 0 },
     end: { x: 0, y: 1 },
   },
+  // Rest-day accent gradient shared across routine assignment surfaces.
+  restDay: {
+    colors: ['#14384ef6', '#a1a7b3'] as const,
+    start: { x: 0, y: 0 },
+    end: { x: 1, y: 1 },
+  },
 } as const;
 
 export const theme = {

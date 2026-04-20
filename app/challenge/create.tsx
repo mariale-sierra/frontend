@@ -1,88 +1,379 @@
-import { useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import ScreenBackground from '../../components/layout/screenBackground';
+import { GradientBox } from '../../components/layout/gradient-box';
+import { Row } from '../../components/layout/row';
 import { Stack } from '../../components/layout/stack';
 import {
-  ChallengeConfigurationSection,
-  ChallengeDaysList,
+  CycleDayAssignmentPanel,
+  CycleDayTimelineStepper,
   ChallengeSubmitActions,
   ChallengeTitleInputs,
   ChallengeVisibilitySection,
   CreateChallengeHeader,
   DurationStepper,
 } from '../../components/create';
-import { ChallengeSectionHeader } from '../../components/create/ChallengeSectionHeader';
+import { ActivityIcon } from '../../components/icons/activityIcon';
+import { LocationIcon, type LocationType } from '../../components/icons/locationIcon';
 import { Text } from '../../components/ui/text';
-import { spacing } from '../../constants/theme';
+import { colors, gradients, radius, spacing, type ActivityType } from '../../constants/theme';
 import { useChallengeBuilder } from '../../store/challengeBuilderStore';
 import { useRoutineBuilder } from '../../store/routineBuilderStore';
 
 // MOCK ONLY: category and location option lists should come from backend/database.
 // Backend team: send these as reference data so challenge setup is fully server-driven.
 const CATEGORY_OPTIONS = [
-  'Strength',
-  'Cardio Intense',
-  'Cardio Low',
-  'Flexibility',
-  'Mind-Body',
-  'Functional',
+  { label: 'Strength', value: 'Strength', type: 'strength' as const, description: 'Load-based training focused on force, power, and muscular growth.' },
+  { label: 'Cardio Intense', value: 'Cardio Intense', type: 'cardioIntense' as const, description: 'High-effort endurance work that elevates heart rate fast.' },
+  { label: 'Cardio Low', value: 'Cardio Low', type: 'cardioLow' as const, description: 'Lower-impact aerobic work built for consistency and recovery.' },
+  { label: 'Flexibility', value: 'Flexibility', type: 'flexibility' as const, description: 'Mobility and range-of-motion sessions to improve movement quality.' },
+  { label: 'Mind-Body', value: 'Mind-Body', type: 'mindBody' as const, description: 'Practices that blend control, breath, and awareness with training.' },
+  { label: 'Functional', value: 'Functional', type: 'functional' as const, description: 'Full-body patterns that transfer to everyday movement and sport.' },
 ];
-const LOCATION_OPTIONS = ['Gym', 'Home', 'Outdoor', 'Studio', 'Anywhere'];
+
+const LOCATION_OPTIONS = [
+  { label: 'Gym', value: 'Gym', type: 'gym' as const, description: 'Equipment-first sessions built around machines, weights, or racks.' },
+  { label: 'Home', value: 'Home', type: 'home' as const, description: 'Minimal-space training designed for home routines and convenience.' },
+  { label: 'Outdoor', value: 'Outdoor', type: 'outdoor' as const, description: 'Running, field work, or open-air movement with more space.' },
+  { label: 'Studio', value: 'Studio', type: 'studio' as const, description: 'Class-like sessions for guided formats such as yoga or pilates.' },
+  { label: 'Anywhere', value: 'Anywhere', type: 'anywhere' as const, description: 'Flexible setups that can be completed in almost any environment.' },
+];
+
 const VISIBILITY_OPTIONS = ['Public', 'Private'];
 
-export default function CreateChallenge() {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [duration, setDuration] = useState(3);
-  const [challengeDurationOverride, setChallengeDurationOverride] = useState<number | null>(null);
-  const [visibility, setVisibility] = useState<string | null>(null);
+type CreateStep =
+  | { kind: 'identity'; eyebrow: string; title: string; description: string }
+  | { kind: 'categories'; eyebrow: string; title: string; description: string }
+  | { kind: 'cycle'; eyebrow: string; title: string; description: string }
+  | { kind: 'days'; eyebrow: string; title: string; description: string }
+  | { kind: 'settings'; eyebrow: string; title: string; description: string }
+  | { kind: 'review'; eyebrow: string; title: string; description: string };
 
+interface SelectionPanelProps {
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+}
+
+interface OptionCardProps {
+  label: string;
+  description: string;
+  selected: boolean;
+  icon: ReactNode;
+  onPress: () => void;
+}
+
+interface DayPlanReviewSummaryProps {
+  daySummaries: string[];
+  onPressConfigure: () => void;
+}
+
+interface SelectableOptionBase {
+  label: string;
+  value: string;
+  description: string;
+}
+
+function toggleValue(values: string[], value: string) {
+  return values.includes(value)
+    ? values.filter((item) => item !== value)
+    : [...values, value];
+}
+
+function SelectionPanel({ title, subtitle, children }: SelectionPanelProps) {
+  return (
+    <GradientBox
+      colors={gradients.surface.colors}
+      start={gradients.surface.start}
+      end={gradients.surface.end}
+      style={styles.selectionPanel}
+    >
+      <Stack gap="md">
+        <View>
+          <Text variant="subheader">{title}</Text>
+          <Text variant="body" tone="secondary" style={styles.selectionPanelSubtitle}>{subtitle}</Text>
+        </View>
+        {children}
+      </Stack>
+    </GradientBox>
+  );
+}
+
+function OptionCard({ label, description, selected, icon, onPress }: OptionCardProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.optionCard, selected && styles.optionCardSelected, pressed && styles.pressed]}
+    >
+      {selected && (
+        <View style={styles.optionCheckIcon}>
+          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+        </View>
+      )}
+      <View style={styles.optionIconShell}>{icon}</View>
+      <Text variant="body" style={styles.optionTitle}>{label}</Text>
+      <Text variant="caption" style={styles.optionDescription}>{description}</Text>
+    </Pressable>
+  );
+}
+
+function renderOptionSelectionPanel<TOption extends SelectableOptionBase>(params: {
+  title: string;
+  subtitle: string;
+  options: readonly TOption[];
+  selectedValues: string[];
+  onToggle: (value: string) => void;
+  renderIcon: (option: TOption) => ReactNode;
+}) {
+  const {
+    title,
+    subtitle,
+    options,
+    selectedValues,
+    onToggle,
+    renderIcon,
+  } = params;
+
+  return (
+    <SelectionPanel title={title} subtitle={subtitle}>
+      <View style={styles.optionGrid}>
+        {options.map((option) => {
+          const selected = selectedValues.includes(option.value);
+          return (
+            <OptionCard
+              key={option.value}
+              label={option.label}
+              description={option.description}
+              selected={selected}
+              icon={renderIcon(option)}
+              onPress={() => onToggle(option.value)}
+            />
+          );
+        })}
+      </View>
+    </SelectionPanel>
+  );
+}
+
+function DayPlanReviewSummary({
+  daySummaries,
+  onPressConfigure,
+}: DayPlanReviewSummaryProps) {
+  return (
+    <GradientBox
+      colors={gradients.surface.colors}
+      start={gradients.surface.start}
+      end={gradients.surface.end}
+      style={styles.planInsightsCard}
+    >
+      <Stack gap="md">
+        <View>
+          <Text variant="subheader">Cycle Plan Summary</Text>
+          <Text variant="body" tone="secondary" style={styles.planInsightsSubtitle}>
+            Quick day-by-day list to verify your plan before publishing.
+          </Text>
+        </View>
+
+        <View style={styles.planListShell}>
+          <Stack gap="xs">
+            {daySummaries.map((item) => (
+              <Row key={item} align="center" gap="sm" style={styles.planListRow}>
+                <View style={styles.planListBullet} />
+                <Text variant="body" style={styles.planListText}>{item}</Text>
+              </Row>
+            ))}
+          </Stack>
+        </View>
+
+        <Pressable onPress={onPressConfigure} style={({ pressed }) => [styles.inlineReviewAction, pressed && styles.pressed]}>
+          <Text variant="label" style={styles.inlineReviewActionLabel}>Edit Day Configuration</Text>
+        </Pressable>
+      </Stack>
+    </GradientBox>
+  );
+}
+
+function getStepErrors(step: CreateStep, params: {
+  title: string;
+  selectedCategories: string[];
+  selectedLocations: string[];
+  hasRoutineForEveryDay: boolean;
+  cycleDuration: number;
+  effectiveChallengeDuration: number;
+  visibility: string | null;
+}) {
+  switch (step.kind) {
+    case 'identity':
+      return params.title.trim().length === 0 ? ['Challenge name'] : [];
+    case 'categories':
+      return [
+        ...(params.selectedCategories.length === 0 ? ['Exercise categories'] : []),
+        ...(params.selectedLocations.length === 0 ? ['Challenge location'] : []),
+      ];
+    case 'cycle':
+      return params.cycleDuration > 0 ? [] : ['Cycle duration'];
+    case 'days':
+      return params.hasRoutineForEveryDay ? [] : ['Configure every day in the cycle'];
+    case 'settings':
+      return [
+        ...(params.effectiveChallengeDuration > 0 ? [] : ['Challenge duration total']),
+        ...(params.visibility ? [] : ['Visibility']),
+      ];
+    case 'review':
+      return [];
+  }
+}
+
+export default function CreateChallenge() {
+  const title = useChallengeBuilder((state) => state.title);
+  const description = useChallengeBuilder((state) => state.description);
+  const cycleDuration = useChallengeBuilder((state) => state.cycleDuration);
+  const challengeDuration = useChallengeBuilder((state) => state.challengeDuration);
+  const visibility = useChallengeBuilder((state) => state.visibility);
+  const currentStep = useChallengeBuilder((state) => state.currentStep);
   const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
   const selectedLocations = useChallengeBuilder((state) => state.selectedLocations);
+  const setTitle = useChallengeBuilder((state) => state.setTitle);
+  const setDescription = useChallengeBuilder((state) => state.setDescription);
+  const setCycleDuration = useChallengeBuilder((state) => state.setCycleDuration);
+  const setChallengeDuration = useChallengeBuilder((state) => state.setChallengeDuration);
+  const setVisibility = useChallengeBuilder((state) => state.setVisibility);
+  const setCurrentStep = useChallengeBuilder((state) => state.setCurrentStep);
+  const setSelectedCategories = useChallengeBuilder((state) => state.setSelectedCategories);
+  const setSelectedLocations = useChallengeBuilder((state) => state.setSelectedLocations);
   const routinesByDay = useRoutineBuilder((state) => state.routinesByDay);
-  const hasChallengeIdentity = title.trim().length > 0 && description.trim().length > 0;
+  const pruneRoutinesAfterDay = useRoutineBuilder((state) => state.pruneRoutinesAfterDay);
+  const unassignRoutineFromDay = useRoutineBuilder((state) => state.unassignRoutineFromDay);
+  const [selectedDay, setSelectedDay] = useState(1);
 
   const hasRoutineForEveryDay = useMemo(
-    () => Array.from({ length: duration }, (_, index) => index + 1)
+    () => Array.from({ length: cycleDuration }, (_, index) => index + 1)
       .every((dayNumber) => Boolean(routinesByDay[dayNumber])),
-    [duration, routinesByDay],
+    [cycleDuration, routinesByDay],
   );
 
-  const isSetupComplete = selectedCategories.length > 0 && selectedLocations.length > 0;
+  const effectiveChallengeDuration = challengeDuration ?? cycleDuration;
 
-  const effectiveChallengeDuration = challengeDurationOverride ?? duration;
+  const steps = useMemo<CreateStep[]>(() => ([
+    {
+      kind: 'identity',
+      eyebrow: 'Step 1',
+      title: 'Give the challenge an identity',
+      description: 'Start with the name. It is the most personal decision and gives context to everything that follows.',
+    },
+    {
+      kind: 'categories',
+      eyebrow: 'Step 2',
+      title: 'Choose categories and location',
+      description: 'Define what kind of challenge this is before planning the days. That makes the routine decisions feel coherent.',
+    },
+    {
+      kind: 'cycle',
+      eyebrow: 'Step 3',
+      title: 'Set the cycle duration',
+      description: 'A cycle is the sequence of days that repeats through the challenge. Set it here so the next screen can generate the full day plan with the right number of days.',
+    },
+    {
+      kind: 'days',
+      eyebrow: 'Step 4',
+      title: 'Configure the cycle days',
+      description: 'Plan the whole cycle in one pass so the user can compare days and shape the weekly rhythm without jumping across screens.',
+    },
+    {
+      kind: 'settings',
+      eyebrow: 'Step 5',
+      title: 'Set duration and visibility',
+      description: 'Define how long the full challenge lasts and whether it should be public or private before moving to the final review.',
+    },
+    {
+      kind: 'review',
+      eyebrow: 'Step 6',
+      title: 'Review and publish',
+      description: 'Review the identity, categories, duration, and every configured day so the user can publish with confidence.',
+    },
+  ]), []);
 
-  const isFormComplete = hasChallengeIdentity
+  const activeStep = steps[Math.min(currentStep, steps.length - 1)];
+
+  const isFormComplete = title.trim().length > 0
     && selectedCategories.length > 0
     && selectedLocations.length > 0
-    && duration > 0
+    && cycleDuration > 0
     && hasRoutineForEveryDay
     && effectiveChallengeDuration > 0
     && Boolean(visibility);
 
+  useEffect(() => {
+    if (currentStep > steps.length - 1) {
+      setCurrentStep(steps.length - 1);
+    }
+  }, [currentStep, setCurrentStep, steps.length]);
+
+  useEffect(() => {
+    pruneRoutinesAfterDay(cycleDuration);
+  }, [cycleDuration, pruneRoutinesAfterDay]);
+
+  useEffect(() => {
+    setSelectedDay((currentDay) => {
+      const maxDay = Math.max(1, cycleDuration);
+      return Math.min(Math.max(currentDay, 1), maxDay);
+    });
+  }, [cycleDuration]);
+
   const missingConfigurationFields = useMemo(() => {
     const missing: string[] = [];
 
-    if (title.trim().length === 0) missing.push('Challenge title');
-    if (description.trim().length === 0) missing.push('Challenge description');
+    if (title.trim().length === 0) missing.push('Challenge name');
     if (selectedCategories.length === 0) missing.push('Exercise categories');
     if (selectedLocations.length === 0) missing.push('Challenge location');
-    if (duration <= 0) missing.push('Cycle duration');
+    if (cycleDuration <= 0) missing.push('Cycle duration');
     if (!hasRoutineForEveryDay) missing.push('Routine selection for each day');
-    if (effectiveChallengeDuration <= 0) missing.push('Challenge duration');
+    if (effectiveChallengeDuration <= 0) missing.push('Challenge duration total');
     if (!visibility) missing.push('Visibility');
 
     return missing;
   }, [
     title,
-    description,
     selectedCategories,
     selectedLocations,
-    duration,
+    cycleDuration,
     hasRoutineForEveryDay,
     effectiveChallengeDuration,
     visibility,
   ]);
+
+  const activeStepErrors = getStepErrors(activeStep, {
+    title,
+    selectedCategories,
+    selectedLocations,
+    hasRoutineForEveryDay,
+    cycleDuration,
+    effectiveChallengeDuration,
+    visibility,
+  });
+
+  function handleBack() {
+    if (currentStep === 0) {
+      router.back();
+      return;
+    }
+
+    setCurrentStep(currentStep - 1);
+  }
+
+  function handleNext() {
+    if (activeStepErrors.length > 0) {
+      Alert.alert(
+        'Complete this step',
+        `Before continuing, complete:\n\n${activeStepErrors.map((item) => `• ${item}`).join('\n')}`,
+      );
+      return;
+    }
+
+    setCurrentStep(Math.min(currentStep + 1, steps.length - 1));
+  }
 
   function handleActionPress(actionLabel: string) {
     if (missingConfigurationFields.length > 0) {
@@ -96,11 +387,199 @@ export default function CreateChallenge() {
     Alert.alert('Ready to go', `"${actionLabel}" is ready. Hook up the final flow next.`);
   }
 
-  const normalizedVisibility = visibility?.toLowerCase() === 'private'
-    ? 'Private'
-    : visibility?.toLowerCase() === 'public'
-      ? 'Public'
-      : null;
+  const progress = (currentStep + 1) / steps.length;
+  const configuredDays = Array.from({ length: cycleDuration }, (_, index) => index + 1)
+    .filter((dayNumber) => Boolean(routinesByDay[dayNumber]));
+  const allCycleDays = Array.from({ length: cycleDuration }, (_, index) => index + 1);
+  const selectedDayRoutine = routinesByDay[selectedDay];
+  const daySummaries = allCycleDays.map((dayNumber) => {
+    const routine = routinesByDay[dayNumber];
+    if (!routine) {
+      return `DAY ${dayNumber}: Missing`;
+    }
+
+    if (routine.isRestDay) {
+      return `DAY ${dayNumber}: Rest day`;
+    }
+
+    return `DAY ${dayNumber}: ${routine.name || 'Routine selected'}`;
+  });
+  const daysStepIndex = steps.findIndex((step) => step.kind === 'days');
+
+  function getDayStatus(dayNumber: number) {
+    const routine = routinesByDay[dayNumber];
+
+    if (!routine) {
+      return 'empty';
+    }
+
+    return routine.isRestDay ? 'rest' : 'configured';
+  }
+
+  function renderStepContent() {
+    switch (activeStep.kind) {
+      case 'identity':
+        return (
+          <ChallengeTitleInputs
+            title={title}
+            description={description}
+            onChangeTitle={setTitle}
+            onChangeDescription={setDescription}
+          />
+        );
+
+      case 'categories':
+        return (
+          <Stack gap="lg">
+            {renderOptionSelectionPanel({
+              title: 'Exercise Categories',
+              subtitle: 'These define the training identity of the challenge and influence the routines users expect to build.',
+              options: CATEGORY_OPTIONS,
+              selectedValues: selectedCategories,
+              onToggle: (value) => setSelectedCategories(toggleValue(selectedCategories, value)),
+              renderIcon: (option) => <ActivityIcon type={option.type as ActivityType} size="sm" />,
+            })}
+
+            {renderOptionSelectionPanel({
+              title: 'Challenge Location',
+              subtitle: 'Location matters just as much as category because it defines the equipment, constraints, and context of each routine.',
+              options: LOCATION_OPTIONS,
+              selectedValues: selectedLocations,
+              onToggle: (value) => setSelectedLocations(toggleValue(selectedLocations, value)),
+              renderIcon: (option) => <LocationIcon type={option.type as LocationType} size="sm" />,
+            })}
+          </Stack>
+        );
+
+      case 'cycle':
+        return (
+          <DurationStepper
+            label="Cycle Duration"
+            value={cycleDuration}
+            unitLabel="CYCLE DAYS"
+            presetValues={[3, 5, 7, 14]}
+            onIncrement={() => setCycleDuration(cycleDuration + 1)}
+            onDecrement={() => setCycleDuration(Math.max(1, cycleDuration - 1))}
+            onSelectPreset={setCycleDuration}
+          />
+        );
+
+      case 'days':
+        return (
+          <Stack gap="lg">
+            <Row justify="space-between" align="center">
+              <View>
+                <Text variant="caption" style={styles.summaryLabel}>Configured</Text>
+                <Text variant="subheader">{configuredDays.length}/{cycleDuration} DAYS</Text>
+              </View>
+            </Row>
+
+            <View style={styles.timelineFullBleed}>
+              <CycleDayTimelineStepper
+                totalDays={cycleDuration}
+                selectedDay={selectedDay}
+                onSelectDay={setSelectedDay}
+                getDayStatus={getDayStatus}
+                daysPerRow={7}
+              />
+            </View>
+
+            <View style={styles.dayAssignmentSpacing}>
+              <CycleDayAssignmentPanel
+                dayNumber={selectedDay}
+                routine={selectedDayRoutine}
+                onPressAssign={() => router.push(`/challenge/routine/select?day=${selectedDay}`)}
+                onPressRemove={() => unassignRoutineFromDay(selectedDay)}
+              />
+            </View>
+          </Stack>
+        );
+
+      case 'settings':
+        return (
+          <ChallengeVisibilitySection
+            baseDuration={cycleDuration}
+            challengeDuration={effectiveChallengeDuration}
+            visibilityOptions={VISIBILITY_OPTIONS}
+            selectedVisibility={visibility}
+            onChangeChallengeDuration={(value) => setChallengeDuration(value > 0 ? value : null)}
+            onChangeVisibility={(value) => {
+              if (value === 'Public' || value === 'Private' || value == null) {
+                setVisibility(value);
+              }
+            }}
+          />
+        );
+
+      case 'review':
+        return (
+          <Stack gap="lg">
+            <GradientBox
+              colors={gradients.surface.colors}
+              start={gradients.surface.start}
+              end={gradients.surface.end}
+              style={styles.summaryCard}
+            >
+              <Stack gap="md">
+                <View>
+                  <Text variant="caption" style={styles.summaryLabel}>Challenge</Text>
+                  <Text variant="title" style={styles.summaryTitle}>{title || 'Untitled challenge'}</Text>
+                  {description.trim().length > 0 && (
+                    <Text variant="body" tone="secondary">{description}</Text>
+                  )}
+                </View>
+
+                <View>
+                  <Text variant="caption" style={styles.summaryLabel}>Categories</Text>
+                  <Text variant="body">{selectedCategories.join(' · ') || 'None selected'}</Text>
+                </View>
+
+                <View>
+                  <Text variant="caption" style={styles.summaryLabel}>Location</Text>
+                  <Text variant="body">{selectedLocations.join(' · ') || 'None selected'}</Text>
+                </View>
+
+                <Row justify="space-between" align="center">
+                  <View style={styles.summaryMetricBlock}>
+                    <Text variant="caption" style={styles.summaryLabel}>Cycle</Text>
+                    <Text variant="subheader">{cycleDuration} DAYS</Text>
+                  </View>
+                  <View style={styles.summaryMetricBlock}>
+                    <Text variant="caption" style={styles.summaryLabel}>Challenge Duration</Text>
+                    <Text variant="subheader">{effectiveChallengeDuration} DAYS</Text>
+                  </View>
+                </Row>
+
+                <View>
+                  <Text variant="caption" style={styles.summaryLabel}>Visibility</Text>
+                  <Text variant="body">{visibility ?? 'Not selected yet'}</Text>
+                </View>
+              </Stack>
+            </GradientBox>
+
+            <DayPlanReviewSummary
+              daySummaries={daySummaries}
+              onPressConfigure={() => setCurrentStep(daysStepIndex)}
+            />
+
+            <View style={styles.actionsBlock}>
+              <ChallengeSubmitActions
+                visibility={visibility ?? 'Public'}
+                onPrimaryPress={() => handleActionPress(visibility === 'Private' ? 'Start Challenge' : 'Publish & Join')}
+                onSendToFriendsPress={() => handleActionPress('Send to Friends')}
+                onSharePress={() => handleActionPress('Share')}
+              />
+
+              {!isFormComplete && (
+                <Text variant="caption" style={styles.actionsHint}>
+                  Complete all required fields to publish or share this challenge.
+                </Text>
+              )}
+            </View>
+          </Stack>
+        );
+    }
+  }
 
   return (
     <ScreenBackground variant="top">
@@ -108,61 +587,50 @@ export default function CreateChallenge() {
         <Stack gap="md">
           <CreateChallengeHeader author="Cami" />
 
-          <ChallengeTitleInputs
-            title={title}
-            description={description}
-            onChangeTitle={setTitle}
-            onChangeDescription={setDescription}
-          />
+          <View style={styles.progressHeader}>
+            <Row justify="flex-start" align="center" style={styles.progressNavRow}>
+              <Pressable onPress={handleBack} hitSlop={12} style={({ pressed }) => [styles.navButton, pressed && styles.pressed]}>
+                <Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
+              </Pressable>
+            </Row>
 
-          <ChallengeSectionHeader title="1. SETUP" />
-
-          <ChallengeConfigurationSection
-            categories={CATEGORY_OPTIONS}
-            locations={LOCATION_OPTIONS}
-          />
-
-          <ChallengeSectionHeader title="2. YOUR PLAN" style={styles.planSection} />
-
-          {isSetupComplete ? (
-            <>
-          <DurationStepper
-            label="Cycle Duration"
-            value={duration}
-            onIncrement={() => setDuration((d) => d + 1)}
-            onDecrement={() => setDuration((d) => Math.max(1, d - 1))}
-          />
-
-          <ChallengeDaysList days={duration} />
-
-          <ChallengeVisibilitySection
-            challengeDuration={effectiveChallengeDuration}
-            visibilityOptions={VISIBILITY_OPTIONS}
-            selectedVisibility={visibility}
-            onChangeChallengeDuration={(value) => setChallengeDurationOverride(value > 0 ? value : null)}
-            onChangeVisibility={setVisibility}
-          />
-            </>
-          ) : (
-            <Text variant="caption" style={styles.gateHint}>
-              Select your activity categories and location to continue building your plan.
-            </Text>
-          )}
-
-          <View style={styles.actionsBlock}>
-            <ChallengeSubmitActions
-              visibility={normalizedVisibility ?? 'Public'}
-              onPrimaryPress={() => handleActionPress(normalizedVisibility === 'Private' ? 'Start Challenge' : 'Publish & Join')}
-              onSendToFriendsPress={() => handleActionPress('Send to Friends')}
-              onSaveForLaterPress={() => handleActionPress('Save for Later')}
-            />
-
-            {!isFormComplete && (
-              <Text variant="caption" style={styles.actionsHint}>
-                Complete all required fields to publish, share, or save this challenge.
-              </Text>
-            )}
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+            </View>
           </View>
+
+          <Stack gap="sm">
+            <Text variant="label" style={styles.stepEyebrow}>{activeStep.eyebrow}</Text>
+            <Text variant="title" style={styles.stepTitle}>{activeStep.title}</Text>
+            <Text variant="body" tone="secondary" style={styles.stepDescription}>{activeStep.description}</Text>
+          </Stack>
+
+          <View style={styles.stepContent}>
+            {renderStepContent()}
+          </View>
+
+          {activeStep.kind !== 'review' && (
+            <View style={styles.footerActions}>
+              {activeStepErrors.length > 0 && (
+                <Text variant="caption" style={styles.stepErrorText}>
+                  Missing: {activeStepErrors.join(', ')}
+                </Text>
+              )}
+
+              <Row gap="sm" style={styles.footerButtonRow}>
+                <Pressable onPress={handleBack} style={({ pressed }) => [styles.secondaryNavButton, pressed && styles.pressed]}>
+                  <Text variant="label" style={styles.secondaryNavLabel}>Back</Text>
+                </Pressable>
+                <Pressable onPress={handleNext} style={({ pressed }) => [styles.primaryNavButton, pressed && styles.pressed]}>
+                  <Text variant="label" style={styles.primaryNavLabel}>
+                    {activeStep.kind === 'settings'
+                        ? 'Review challenge'
+                        : 'Continue'}
+                  </Text>
+                </Pressable>
+              </Row>
+            </View>
+          )}
         </Stack>
       </ScrollView>
     </ScreenBackground>
@@ -175,20 +643,196 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['2xl'],
     flexGrow: 1,
   },
-  planSection: {
+  progressHeader: {
+    gap: spacing.lg,
+  },
+  progressNavRow: {
+    width: '100%',
+  },
+  navButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  progressTrack: {
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: colors.textPrimary,
+  },
+  stepEyebrow: {
+    color: 'rgba(255,255,255,0.62)',
+  },
+  stepTitle: {
+    maxWidth: '88%',
+  },
+  stepDescription: {
+    maxWidth: '92%',
+  },
+  stepContent: {
+    marginTop: spacing.xl + spacing.md,
+  },
+  timelineFullBleed: {
+    marginHorizontal: -spacing.lg,
+    paddingHorizontal: spacing.xs,
+  },
+  dayAssignmentSpacing: {
     marginTop: spacing.md,
   },
-  gateHint: {
-    textAlign: 'center',
-    opacity: 0.45,
+  selectionPanel: {
+    borderRadius: radius['2xl'],
+    padding: spacing.lg,
+  },
+  selectionPanelSubtitle: {
+    marginTop: spacing.xs,
+  },
+  optionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  optionCard: {
+    width: '48%',
+    minHeight: 156,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  optionCardSelected: {
+    borderColor: 'rgba(255,255,255,0.34)',
+    backgroundColor: 'rgba(255,255,255,0.09)',
+  },
+  optionIconShell: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  optionTitle: {
+    fontWeight: '600',
+  },
+  optionDescription: {
+    color: 'rgba(255,255,255,0.6)',
+    lineHeight: 16,
+  },
+  optionCheckIcon: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    zIndex: 1,
+  },
+  summaryCard: {
+    borderRadius: radius['2xl'],
+    padding: spacing.lg,
+  },
+  summaryLabel: {
+    color: 'rgba(255,255,255,0.56)',
+    marginBottom: spacing.xs,
+  },
+  summaryTitle: {
+    marginBottom: spacing.xs,
+  },
+  summaryMetricBlock: {
+    flex: 1,
+  },
+  planInsightsCard: {
+    borderRadius: radius['2xl'],
+    padding: spacing.lg,
+  },
+  planInsightsSubtitle: {
+    marginTop: spacing.xs,
+  },
+  planListShell: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: spacing.md,
+  },
+  planListRow: {
+    width: '100%',
+    paddingVertical: spacing.xs,
+  },
+  planListBullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 3,
+    backgroundColor: 'rgba(255,255,255,0.62)',
+  },
+  planListText: {
+    flex: 1,
+  },
+  inlineReviewAction: {
+    borderRadius: radius['2xl'],
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.24)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
     paddingVertical: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inlineReviewActionLabel: {
+    color: colors.textPrimary,
   },
   actionsBlock: {
-    marginTop: spacing.xl,
     gap: spacing.sm,
   },
   actionsHint: {
     textAlign: 'center',
     color: 'rgba(255,255,255,0.62)',
+  },
+  footerActions: {
+    marginTop: spacing['2xl'],
+    gap: spacing.md,
+  },
+  stepErrorText: {
+    color: colors.error,
+    marginBottom: spacing.sm,
+  },
+  footerButtonRow: {
+    width: '100%',
+  },
+  secondaryNavButton: {
+    flex: 1,
+    borderRadius: radius['2xl'],
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  primaryNavButton: {
+    flex: 1.4,
+    borderRadius: radius['2xl'],
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    backgroundColor: colors.textPrimary,
+  },
+  secondaryNavLabel: {
+    color: colors.textPrimary,
+  },
+  primaryNavLabel: {
+    color: colors.textInverse,
+  },
+  pressed: {
+    opacity: 0.82,
   },
 });

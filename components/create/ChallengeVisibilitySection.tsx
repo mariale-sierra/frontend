@@ -1,14 +1,15 @@
 import { useMemo } from 'react';
-import { Dropdown } from '../ui/dropdown';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Stack } from '../layout/stack';
+import { GradientBox } from '../layout/gradient-box';
 import { Row } from '../layout/row';
+import { Input } from '../ui/input';
 import { Text } from '../ui/text';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius } from '../../constants/theme';
-import { Input } from '../ui/input';
-import { View } from 'react-native';
+import { colors, gradients, radius, spacing, typography } from '../../constants/theme';
 
 export interface ChallengeVisibilitySectionProps {
+	baseDuration: number;
 	challengeDuration: number;
 	visibilityOptions: string[];
 	selectedVisibility: string | null;
@@ -17,102 +18,178 @@ export interface ChallengeVisibilitySectionProps {
 }
 
 export function ChallengeVisibilitySection({
+	baseDuration,
 	challengeDuration,
 	visibilityOptions,
 	selectedVisibility,
 	onChangeChallengeDuration,
 	onChangeVisibility,
 }: ChallengeVisibilitySectionProps) {
-	const selectedVisibilityValues = selectedVisibility ? [selectedVisibility] : [];
+	const visibilityCards = useMemo(() => {
+		const source = visibilityOptions.filter(
+			(option) => option.toLowerCase() === 'public' || option.toLowerCase() === 'private',
+		);
 
-	const options = useMemo(
-		() => {
-			const source = visibilityOptions.filter(
-				(option) => option.toLowerCase() === 'public' || option.toLowerCase() === 'private',
-			);
+		const normalized = source.length > 0 ? source : ['Public', 'Private'];
 
-			const normalized = source.length > 0 ? source : ['Public', 'Private'];
-
-			return normalized.map((option) => {
-				const isPrivate = option.toLowerCase() === 'private';
-				return {
-					label: option,
-					value: option,
-					render: isPrivate
-						? () => (
-							<Row justify="flex-start" align="center" gap="sm">
-								<Ionicons name="lock-closed" size={14} color={colors.primary} />
-								<Text variant="body">{option}</Text>
-							</Row>
-						)
-						: undefined,
-				};
-			});
-		},
-		[visibilityOptions],
-	);
+		return normalized.map((option) => {
+			const isPrivate = option.toLowerCase() === 'private';
+			return {
+				label: option,
+				description: isPrivate
+					? 'Only people you explicitly share it with can see or join.'
+					: 'Anyone can discover, join, and share the challenge.',
+				iconName: isPrivate ? 'lock-closed' : 'globe-outline',
+			};
+		});
+	}, [visibilityOptions]);
 
 	return (
-		<Stack gap="md">
-			<View style={styles.dropdownShell}>
-				<Row justify="space-between" align="center" style={styles.durationRow}>
-					<Text variant="subheader">Challenge Duration</Text>
-					<Row justify="flex-end" align="center" gap="xs" style={styles.durationControlGroup}>
-						<Input
-							value={challengeDuration === 0 ? '' : String(challengeDuration)}
-							onChangeText={(value) => {
-								const numeric = value.replace(/[^0-9]/g, '');
-								onChangeChallengeDuration?.(numeric.length > 0 ? Number(numeric) : 0);
-							}}
-							keyboardType="number-pad"
-							variant="default"
-							placeholder="0"
-							placeholderVariant="secondary"
-							style={styles.durationInput}
-						/>
-						<Text variant="body">DAYS</Text>
-					</Row>
-				</Row>
-			</View>
+		<Stack gap="xl">
+			<GradientBox
+				colors={gradients.surface.colors}
+				start={gradients.surface.start}
+				end={gradients.surface.end}
+				style={styles.durationHero}
+			>
+				<Stack gap="md">
+					<View>
+						<Text variant="subheader">Challenge Duration</Text>
+					</View>
 
-			<View style={styles.dropdownShell}>
-				<Dropdown
-					placeholder="Visibility"
-					options={options}
-					selectedValues={selectedVisibilityValues}
-					onChange={(values) => onChangeVisibility?.(values[0] ?? null)}
-					maxSelections={1}
-					showValueInline
-					rightIcon={<Ionicons name="chevron-down" size={16} color={colors.primary} />}
-				/>
-			</View>
+					<View style={styles.durationInputShell}>
+						<Text variant="caption" style={styles.durationInputLabel}>TOTAL DAYS</Text>
+						<Row align="center" justify="center" gap="sm" style={styles.durationInputRow}>
+							<Input
+								value={challengeDuration === 0 ? '' : String(challengeDuration)}
+								onChangeText={(value) => {
+									const numeric = value.replace(/[^0-9]/g, '');
+									onChangeChallengeDuration?.(numeric.length > 0 ? Number(numeric) : 0);
+								}}
+								keyboardType="number-pad"
+								variant="default"
+								placeholder={String(baseDuration || 1)}
+								placeholderVariant="secondary"
+								containerStyle={styles.durationInputContainer}
+								style={styles.durationInput}
+							/>
+						</Row>
+						<Text variant="caption" style={styles.durationInputUnit}>days</Text>
+					</View>
+
+					<Text variant="caption" style={styles.wheelCaption}>Cycle base: {baseDuration} days</Text>
+				</Stack>
+			</GradientBox>
+
+			<Stack gap="sm">
+				<Text variant="subheader">Visibility</Text>
+				{visibilityCards.map((option) => {
+					const selected = selectedVisibility === option.label;
+					return (
+						<Pressable
+							key={option.label}
+							onPress={() => onChangeVisibility?.(option.label)}
+							style={({ pressed }) => [styles.visibilityCard, selected && styles.visibilityCardSelected, pressed && styles.pressed]}
+						>
+							<Row align="center" gap="md" style={styles.visibilityRow}>
+								<View style={styles.visibilityIconShell}>
+									<Ionicons name={option.iconName as 'lock-closed' | 'globe-outline'} size={16} color={colors.textPrimary} />
+								</View>
+								<View style={styles.visibilityTextBlock}>
+									<Text variant="body" style={styles.visibilityLabel}>{option.label}</Text>
+									<Text variant="caption" style={styles.visibilityDescription}>{option.description}</Text>
+								</View>
+								{selected && <Ionicons name="checkmark-circle" size={18} color={colors.success} />}
+							</Row>
+						</Pressable>
+					);
+				})}
+			</Stack>
 		</Stack>
 	);
 }
 
-const styles = {
-	dropdownShell: {
+const styles = StyleSheet.create({
+	durationHero: {
+		borderRadius: radius['2xl'],
+		padding: spacing.lg,
+	},
+	durationInputShell: {
+		borderRadius: radius['2xl'],
 		borderWidth: 1,
-		borderColor: colors.border,
-		shadowColor: colors.surfaceHighlight,
-		shadowOffset: { width: 0, height: 10 },
-		shadowOpacity: 0.2,
-		shadowRadius: 18,
-		elevation: 8,
+		borderColor: 'rgba(255,255,255,0.12)',
+		backgroundColor: 'rgba(255,255,255,0.04)',
+		paddingHorizontal: spacing.md,
+		paddingVertical: spacing.md,
+	},
+	durationInputLabel: {
+		color: 'rgba(255,255,255,0.55)',
+		letterSpacing: 1.1,
+	},
+	durationInputRow: {
+		marginTop: spacing.sm,
+		width: '100%',
+	},
+	durationInputContainer: {
+		paddingVertical: spacing.xs,
+		paddingHorizontal: spacing.md,
+		width: '100%',
 		borderRadius: radius.lg,
-		overflow: 'hidden' as const,
-	},
-	durationRow: {
-		paddingHorizontal: 16,
-		paddingVertical: 8,
-	},
-	durationControlGroup: {
-		flexShrink: 0,
+		borderWidth: 1,
+		borderColor: 'rgba(255,255,255,0.16)',
+		backgroundColor: 'rgba(0,0,0,0.22)',
 	},
 	durationInput: {
-		width: 168,
-		textAlign: 'center' as const,
+		...typography.titleLarge,
+		fontSize: 44,
+		lineHeight: 48,
+		minWidth: 120,
+		textAlign: 'center',
 		color: colors.textPrimary,
-		borderRadius: radius.md,
+		paddingVertical: 0,
 	},
-};
+	durationInputUnit: {
+		marginTop: spacing.xs,
+		color: 'rgba(255,255,255,0.72)',
+		textAlign: 'center',
+	},
+	wheelCaption: {
+		color: 'rgba(255,255,255,0.58)',
+		textAlign: 'center',
+	},
+	visibilityCard: {
+		borderRadius: radius.xl,
+		borderWidth: 1,
+		borderColor: 'rgba(255,255,255,0.12)',
+		backgroundColor: 'rgba(255,255,255,0.03)',
+		padding: spacing.md,
+	},
+	visibilityCardSelected: {
+		borderColor: 'rgba(255,255,255,0.3)',
+		backgroundColor: 'rgba(255,255,255,0.08)',
+	},
+	visibilityRow: {
+		width: '100%',
+	},
+	visibilityIconShell: {
+		width: 34,
+		height: 34,
+		borderRadius: 17,
+		alignItems: 'center',
+		justifyContent: 'center',
+		backgroundColor: 'rgba(255,255,255,0.06)',
+	},
+	visibilityTextBlock: {
+		flex: 1,
+	},
+	visibilityLabel: {
+		fontWeight: '600',
+	},
+	visibilityDescription: {
+		color: 'rgba(255,255,255,0.56)',
+		marginTop: spacing.xxs,
+	},
+	pressed: {
+		opacity: 0.84,
+	},
+});
