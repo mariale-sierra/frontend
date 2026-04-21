@@ -184,6 +184,12 @@ export const gradients = {
     start: { x: 0, y: 0 },
     end: { x: 1, y: 1 },
   },
+  // Metrics transition gradient from top controls into metrics panel.
+  metricsBridge: {
+    colors: [colors.background, colors.surface, colors.surfaceHighlight] as const,
+    start: { x: 0.5, y: 0 },
+    end: { x: 0.5, y: 1 },
+  },
 } as const;
 
 export const theme = {

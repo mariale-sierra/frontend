@@ -58,22 +58,19 @@ export function ChallengeVisibilitySection({
 					</View>
 
 					<View style={styles.durationInputShell}>
-						<Text variant="caption" style={styles.durationInputLabel}>TOTAL DAYS</Text>
-						<Row align="center" justify="center" gap="sm" style={styles.durationInputRow}>
-							<Input
-								value={challengeDuration === 0 ? '' : String(challengeDuration)}
-								onChangeText={(value) => {
-									const numeric = value.replace(/[^0-9]/g, '');
-									onChangeChallengeDuration?.(numeric.length > 0 ? Number(numeric) : 0);
-								}}
-								keyboardType="number-pad"
-								variant="default"
-								placeholder={String(baseDuration || 1)}
-								placeholderVariant="secondary"
-								containerStyle={styles.durationInputContainer}
-								style={styles.durationInput}
-							/>
-						</Row>
+						<Input
+							value={challengeDuration === 0 ? '' : String(challengeDuration)}
+							onChangeText={(value) => {
+								const numeric = value.replace(/[^0-9]/g, '');
+								onChangeChallengeDuration?.(numeric.length > 0 ? Number(numeric) : 0);
+							}}
+							keyboardType="number-pad"
+							variant="default"
+							placeholder={String(baseDuration || 1)}
+							placeholderVariant="secondary"
+							containerStyle={styles.durationInputContainer}
+							style={styles.durationInput}
+						/>
 						<Text variant="caption" style={styles.durationInputUnit}>days</Text>
 					</View>
 
@@ -115,41 +112,29 @@ const styles = StyleSheet.create({
 		padding: spacing.lg,
 	},
 	durationInputShell: {
-		borderRadius: radius['2xl'],
+		borderRadius: radius.xl,
 		borderWidth: 1,
 		borderColor: 'rgba(255,255,255,0.12)',
-		backgroundColor: 'rgba(255,255,255,0.04)',
+		backgroundColor: 'rgba(255,255,255,0.03)',
 		paddingHorizontal: spacing.md,
-		paddingVertical: spacing.md,
-	},
-	durationInputLabel: {
-		color: 'rgba(255,255,255,0.55)',
-		letterSpacing: 1.1,
-	},
-	durationInputRow: {
-		marginTop: spacing.sm,
-		width: '100%',
+		paddingVertical: spacing.sm,
 	},
 	durationInputContainer: {
-		paddingVertical: spacing.xs,
-		paddingHorizontal: spacing.md,
+		paddingTop: 0,
+		paddingBottom: 2,
+		paddingHorizontal: 0,
 		width: '100%',
-		borderRadius: radius.lg,
-		borderWidth: 1,
-		borderColor: 'rgba(255,255,255,0.16)',
-		backgroundColor: 'rgba(0,0,0,0.22)',
 	},
 	durationInput: {
-		...typography.titleLarge,
-		fontSize: 44,
-		lineHeight: 48,
-		minWidth: 120,
+		...typography.title,
+		fontSize: 22,
+		lineHeight: 26,
 		textAlign: 'center',
 		color: colors.textPrimary,
 		paddingVertical: 0,
 	},
 	durationInputUnit: {
-		marginTop: spacing.xs,
+		marginTop: spacing.xxs,
 		color: 'rgba(255,255,255,0.72)',
 		textAlign: 'center',
 	},

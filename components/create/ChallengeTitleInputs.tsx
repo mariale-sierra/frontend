@@ -24,8 +24,6 @@ export function ChallengeTitleInputs({
 				<Input
 					value={title}
 					onChangeText={onChangeTitle}
-					placeholder="Name your challenge"
-					placeholderVariant="secondary"
 					variant="default"
 					containerStyle={styles.titleContainer}
 					style={styles.titleInput}
@@ -37,8 +35,6 @@ export function ChallengeTitleInputs({
 				<Input
 					value={description}
 					onChangeText={onChangeDescription}
-					placeholder="Tell people what this challenge is about..."
-					placeholderVariant="caption"
 					variant="default"
 					containerStyle={styles.descriptionContainer}
 					multiline

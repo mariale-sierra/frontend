@@ -17,7 +17,7 @@ export default function TabsLayout() {
         listeners={{
           tabPress: (e) => {
             e.preventDefault(); // evita navegación normal
-            router.push("/(add)/camera"); // abre modal
+            router.push("/(add)/metrics"); // abre flujo en metrics primero
           },
         }}
       />

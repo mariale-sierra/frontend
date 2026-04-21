@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
+import { type ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { GradientBox } from '../../components/layout/gradient-box';
@@ -19,8 +18,7 @@ import { ActivityIcon } from '../../components/icons/activityIcon';
 import { LocationIcon, type LocationType } from '../../components/icons/locationIcon';
 import { Text } from '../../components/ui/text';
 import { colors, gradients, radius, spacing, type ActivityType } from '../../constants/theme';
-import { useChallengeBuilder } from '../../store/challengeBuilderStore';
-import { useRoutineBuilder } from '../../store/routineBuilderStore';
+import { useCreateChallengeFlow } from '../../hooks/useCreateChallengeFlow';
 
 // MOCK ONLY: category and location option lists should come from backend/database.
 // Backend team: send these as reference data so challenge setup is fully server-driven.
@@ -42,14 +40,6 @@ const LOCATION_OPTIONS = [
 ];
 
 const VISIBILITY_OPTIONS = ['Public', 'Private'];
-
-type CreateStep =
-  | { kind: 'identity'; eyebrow: string; title: string; description: string }
-  | { kind: 'categories'; eyebrow: string; title: string; description: string }
-  | { kind: 'cycle'; eyebrow: string; title: string; description: string }
-  | { kind: 'days'; eyebrow: string; title: string; description: string }
-  | { kind: 'settings'; eyebrow: string; title: string; description: string }
-  | { kind: 'review'; eyebrow: string; title: string; description: string };
 
 interface SelectionPanelProps {
   title: string;
@@ -74,12 +64,6 @@ interface SelectableOptionBase {
   label: string;
   value: string;
   description: string;
-}
-
-function toggleValue(values: string[], value: string) {
-  return values.includes(value)
-    ? values.filter((item) => item !== value)
-    : [...values, value];
 }
 
 function SelectionPanel({ title, subtitle, children }: SelectionPanelProps) {
@@ -163,29 +147,22 @@ function DayPlanReviewSummary({
 }: DayPlanReviewSummaryProps) {
   return (
     <GradientBox
-      colors={gradients.surface.colors}
-      start={gradients.surface.start}
-      end={gradients.surface.end}
+      colors={gradients.surfaceReverse.colors}
+      start={gradients.surfaceReverse.start}
+      end={gradients.surfaceReverse.end}
       style={styles.planInsightsCard}
     >
       <Stack gap="md">
-        <View>
-          <Text variant="subheader">Cycle Plan Summary</Text>
-          <Text variant="body" tone="secondary" style={styles.planInsightsSubtitle}>
-            Quick day-by-day list to verify your plan before publishing.
-          </Text>
-        </View>
+        <Text variant="subheader">Cycle Plan Summary</Text>
 
-        <View style={styles.planListShell}>
-          <Stack gap="xs">
-            {daySummaries.map((item) => (
-              <Row key={item} align="center" gap="sm" style={styles.planListRow}>
-                <View style={styles.planListBullet} />
-                <Text variant="body" style={styles.planListText}>{item}</Text>
-              </Row>
-            ))}
-          </Stack>
-        </View>
+        <Stack gap="xs">
+          {daySummaries.map((item) => (
+            <Row key={item} align="center" gap="sm" style={styles.planListRow}>
+              <View style={styles.planListBullet} />
+              <Text variant="body" style={styles.planListText}>{item}</Text>
+            </Row>
+          ))}
+        </Stack>
 
         <Pressable onPress={onPressConfigure} style={({ pressed }) => [styles.inlineReviewAction, pressed && styles.pressed]}>
           <Text variant="label" style={styles.inlineReviewActionLabel}>Edit Day Configuration</Text>
@@ -195,226 +172,40 @@ function DayPlanReviewSummary({
   );
 }
 
-function getStepErrors(step: CreateStep, params: {
-  title: string;
-  selectedCategories: string[];
-  selectedLocations: string[];
-  hasRoutineForEveryDay: boolean;
-  cycleDuration: number;
-  effectiveChallengeDuration: number;
-  visibility: string | null;
-}) {
-  switch (step.kind) {
-    case 'identity':
-      return params.title.trim().length === 0 ? ['Challenge name'] : [];
-    case 'categories':
-      return [
-        ...(params.selectedCategories.length === 0 ? ['Exercise categories'] : []),
-        ...(params.selectedLocations.length === 0 ? ['Challenge location'] : []),
-      ];
-    case 'cycle':
-      return params.cycleDuration > 0 ? [] : ['Cycle duration'];
-    case 'days':
-      return params.hasRoutineForEveryDay ? [] : ['Configure every day in the cycle'];
-    case 'settings':
-      return [
-        ...(params.effectiveChallengeDuration > 0 ? [] : ['Challenge duration total']),
-        ...(params.visibility ? [] : ['Visibility']),
-      ];
-    case 'review':
-      return [];
-  }
-}
-
 export default function CreateChallenge() {
-  const title = useChallengeBuilder((state) => state.title);
-  const description = useChallengeBuilder((state) => state.description);
-  const cycleDuration = useChallengeBuilder((state) => state.cycleDuration);
-  const challengeDuration = useChallengeBuilder((state) => state.challengeDuration);
-  const visibility = useChallengeBuilder((state) => state.visibility);
-  const currentStep = useChallengeBuilder((state) => state.currentStep);
-  const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
-  const selectedLocations = useChallengeBuilder((state) => state.selectedLocations);
-  const setTitle = useChallengeBuilder((state) => state.setTitle);
-  const setDescription = useChallengeBuilder((state) => state.setDescription);
-  const setCycleDuration = useChallengeBuilder((state) => state.setCycleDuration);
-  const setChallengeDuration = useChallengeBuilder((state) => state.setChallengeDuration);
-  const setVisibility = useChallengeBuilder((state) => state.setVisibility);
-  const setCurrentStep = useChallengeBuilder((state) => state.setCurrentStep);
-  const setSelectedCategories = useChallengeBuilder((state) => state.setSelectedCategories);
-  const setSelectedLocations = useChallengeBuilder((state) => state.setSelectedLocations);
-  const routinesByDay = useRoutineBuilder((state) => state.routinesByDay);
-  const pruneRoutinesAfterDay = useRoutineBuilder((state) => state.pruneRoutinesAfterDay);
-  const unassignRoutineFromDay = useRoutineBuilder((state) => state.unassignRoutineFromDay);
-  const [selectedDay, setSelectedDay] = useState(1);
-
-  const hasRoutineForEveryDay = useMemo(
-    () => Array.from({ length: cycleDuration }, (_, index) => index + 1)
-      .every((dayNumber) => Boolean(routinesByDay[dayNumber])),
-    [cycleDuration, routinesByDay],
-  );
-
-  const effectiveChallengeDuration = challengeDuration ?? cycleDuration;
-
-  const steps = useMemo<CreateStep[]>(() => ([
-    {
-      kind: 'identity',
-      eyebrow: 'Step 1',
-      title: 'Give the challenge an identity',
-      description: 'Start with the name. It is the most personal decision and gives context to everything that follows.',
-    },
-    {
-      kind: 'categories',
-      eyebrow: 'Step 2',
-      title: 'Choose categories and location',
-      description: 'Define what kind of challenge this is before planning the days. That makes the routine decisions feel coherent.',
-    },
-    {
-      kind: 'cycle',
-      eyebrow: 'Step 3',
-      title: 'Set the cycle duration',
-      description: 'A cycle is the sequence of days that repeats through the challenge. Set it here so the next screen can generate the full day plan with the right number of days.',
-    },
-    {
-      kind: 'days',
-      eyebrow: 'Step 4',
-      title: 'Configure the cycle days',
-      description: 'Plan the whole cycle in one pass so the user can compare days and shape the weekly rhythm without jumping across screens.',
-    },
-    {
-      kind: 'settings',
-      eyebrow: 'Step 5',
-      title: 'Set duration and visibility',
-      description: 'Define how long the full challenge lasts and whether it should be public or private before moving to the final review.',
-    },
-    {
-      kind: 'review',
-      eyebrow: 'Step 6',
-      title: 'Review and publish',
-      description: 'Review the identity, categories, duration, and every configured day so the user can publish with confidence.',
-    },
-  ]), []);
-
-  const activeStep = steps[Math.min(currentStep, steps.length - 1)];
-
-  const isFormComplete = title.trim().length > 0
-    && selectedCategories.length > 0
-    && selectedLocations.length > 0
-    && cycleDuration > 0
-    && hasRoutineForEveryDay
-    && effectiveChallengeDuration > 0
-    && Boolean(visibility);
-
-  useEffect(() => {
-    if (currentStep > steps.length - 1) {
-      setCurrentStep(steps.length - 1);
-    }
-  }, [currentStep, setCurrentStep, steps.length]);
-
-  useEffect(() => {
-    pruneRoutinesAfterDay(cycleDuration);
-  }, [cycleDuration, pruneRoutinesAfterDay]);
-
-  useEffect(() => {
-    setSelectedDay((currentDay) => {
-      const maxDay = Math.max(1, cycleDuration);
-      return Math.min(Math.max(currentDay, 1), maxDay);
-    });
-  }, [cycleDuration]);
-
-  const missingConfigurationFields = useMemo(() => {
-    const missing: string[] = [];
-
-    if (title.trim().length === 0) missing.push('Challenge name');
-    if (selectedCategories.length === 0) missing.push('Exercise categories');
-    if (selectedLocations.length === 0) missing.push('Challenge location');
-    if (cycleDuration <= 0) missing.push('Cycle duration');
-    if (!hasRoutineForEveryDay) missing.push('Routine selection for each day');
-    if (effectiveChallengeDuration <= 0) missing.push('Challenge duration total');
-    if (!visibility) missing.push('Visibility');
-
-    return missing;
-  }, [
+  const {
     title,
+    description,
+    cycleDuration,
+    visibility,
     selectedCategories,
     selectedLocations,
-    cycleDuration,
-    hasRoutineForEveryDay,
+    activeStep,
+    progress,
+    activeStepErrors,
     effectiveChallengeDuration,
-    visibility,
-  ]);
-
-  const activeStepErrors = getStepErrors(activeStep, {
-    title,
-    selectedCategories,
-    selectedLocations,
-    hasRoutineForEveryDay,
-    cycleDuration,
-    effectiveChallengeDuration,
-    visibility,
-  });
-
-  function handleBack() {
-    if (currentStep === 0) {
-      router.back();
-      return;
-    }
-
-    setCurrentStep(currentStep - 1);
-  }
-
-  function handleNext() {
-    if (activeStepErrors.length > 0) {
-      Alert.alert(
-        'Complete this step',
-        `Before continuing, complete:\n\n${activeStepErrors.map((item) => `• ${item}`).join('\n')}`,
-      );
-      return;
-    }
-
-    setCurrentStep(Math.min(currentStep + 1, steps.length - 1));
-  }
-
-  function handleActionPress(actionLabel: string) {
-    if (missingConfigurationFields.length > 0) {
-      Alert.alert(
-        'Missing configuration',
-        `Before "${actionLabel}", please complete:\n\n${missingConfigurationFields.map((item) => `• ${item}`).join('\n')}`,
-      );
-      return;
-    }
-
-    Alert.alert('Ready to go', `"${actionLabel}" is ready. Hook up the final flow next.`);
-  }
-
-  const progress = (currentStep + 1) / steps.length;
-  const configuredDays = Array.from({ length: cycleDuration }, (_, index) => index + 1)
-    .filter((dayNumber) => Boolean(routinesByDay[dayNumber]));
-  const allCycleDays = Array.from({ length: cycleDuration }, (_, index) => index + 1);
-  const selectedDayRoutine = routinesByDay[selectedDay];
-  const daySummaries = allCycleDays.map((dayNumber) => {
-    const routine = routinesByDay[dayNumber];
-    if (!routine) {
-      return `DAY ${dayNumber}: Missing`;
-    }
-
-    if (routine.isRestDay) {
-      return `DAY ${dayNumber}: Rest day`;
-    }
-
-    return `DAY ${dayNumber}: ${routine.name || 'Routine selected'}`;
-  });
-  const daysStepIndex = steps.findIndex((step) => step.kind === 'days');
-
-  function getDayStatus(dayNumber: number) {
-    const routine = routinesByDay[dayNumber];
-
-    if (!routine) {
-      return 'empty';
-    }
-
-    return routine.isRestDay ? 'rest' : 'configured';
-  }
+    configuredDays,
+    selectedDay,
+    selectedDayRoutine,
+    daySummaries,
+    daysStepIndex,
+    isFormComplete,
+    setTitle,
+    setDescription,
+    setCycleDuration,
+    setChallengeDuration,
+    setVisibility,
+    setCurrentStep,
+    setSelectedDay,
+    getDayStatus,
+    handleBack,
+    handleNext,
+    handleActionPress,
+    toggleCategory,
+    toggleLocation,
+    openDayRoutineSelector,
+    unassignRoutineFromDay,
+  } = useCreateChallengeFlow();
 
   function renderStepContent() {
     switch (activeStep.kind) {
@@ -436,7 +227,7 @@ export default function CreateChallenge() {
               subtitle: 'These define the training identity of the challenge and influence the routines users expect to build.',
               options: CATEGORY_OPTIONS,
               selectedValues: selectedCategories,
-              onToggle: (value) => setSelectedCategories(toggleValue(selectedCategories, value)),
+              onToggle: toggleCategory,
               renderIcon: (option) => <ActivityIcon type={option.type as ActivityType} size="sm" />,
             })}
 
@@ -445,7 +236,7 @@ export default function CreateChallenge() {
               subtitle: 'Location matters just as much as category because it defines the equipment, constraints, and context of each routine.',
               options: LOCATION_OPTIONS,
               selectedValues: selectedLocations,
-              onToggle: (value) => setSelectedLocations(toggleValue(selectedLocations, value)),
+              onToggle: toggleLocation,
               renderIcon: (option) => <LocationIcon type={option.type as LocationType} size="sm" />,
             })}
           </Stack>
@@ -488,7 +279,7 @@ export default function CreateChallenge() {
               <CycleDayAssignmentPanel
                 dayNumber={selectedDay}
                 routine={selectedDayRoutine}
-                onPressAssign={() => router.push(`/challenge/routine/select?day=${selectedDay}`)}
+                onPressAssign={() => openDayRoutineSelector(selectedDay)}
                 onPressRemove={() => unassignRoutineFromDay(selectedDay)}
               />
             </View>
@@ -529,30 +320,37 @@ export default function CreateChallenge() {
                   )}
                 </View>
 
-                <View>
-                  <Text variant="caption" style={styles.summaryLabel}>Categories</Text>
-                  <Text variant="body">{selectedCategories.join(' · ') || 'None selected'}</Text>
-                </View>
+                <View style={styles.summaryDivider} />
 
-                <View>
-                  <Text variant="caption" style={styles.summaryLabel}>Location</Text>
-                  <Text variant="body">{selectedLocations.join(' · ') || 'None selected'}</Text>
-                </View>
-
-                <Row justify="space-between" align="center">
+                <Row justify="space-between" align="flex-start" style={styles.summaryRow}>
                   <View style={styles.summaryMetricBlock}>
-                    <Text variant="caption" style={styles.summaryLabel}>Cycle</Text>
-                    <Text variant="subheader">{cycleDuration} DAYS</Text>
+                    <Text variant="caption" style={styles.summaryLabel}>Categories</Text>
+                    <Text variant="body" style={styles.summaryValueText}>{selectedCategories.join(' · ') || 'None selected'}</Text>
                   </View>
                   <View style={styles.summaryMetricBlock}>
-                    <Text variant="caption" style={styles.summaryLabel}>Challenge Duration</Text>
-                    <Text variant="subheader">{effectiveChallengeDuration} DAYS</Text>
+                    <Text variant="caption" style={styles.summaryLabel}>Location</Text>
+                    <Text variant="body" style={styles.summaryValueText}>{selectedLocations.join(' · ') || 'None selected'}</Text>
                   </View>
                 </Row>
 
+                <View style={styles.summaryDivider} />
+
+                <Row justify="space-between" align="flex-start" style={styles.summaryRow}>
+                  <View style={styles.summaryMetricBlock}>
+                    <Text variant="caption" style={styles.summaryLabel}>Cycle</Text>
+                    <Text variant="body" style={styles.summaryValueText}>{cycleDuration} Days</Text>
+                  </View>
+                  <View style={styles.summaryMetricBlock}>
+                    <Text variant="caption" style={styles.summaryLabel}>Challenge Duration</Text>
+                    <Text variant="body" style={styles.summaryValueText}>{effectiveChallengeDuration} Days</Text>
+                  </View>
+                </Row>
+
+                <View style={styles.summaryDivider} />
+
                 <View>
                   <Text variant="caption" style={styles.summaryLabel}>Visibility</Text>
-                  <Text variant="body">{visibility ?? 'Not selected yet'}</Text>
+                  <Text variant="body" style={styles.summaryValueText}>{visibility ?? 'Not selected yet'}</Text>
                 </View>
               </Stack>
             </GradientBox>
@@ -739,6 +537,9 @@ const styles = StyleSheet.create({
   summaryCard: {
     borderRadius: radius['2xl'],
     padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: 'rgba(255,255,255,0.02)',
   },
   summaryLabel: {
     color: 'rgba(255,255,255,0.56)',
@@ -747,22 +548,29 @@ const styles = StyleSheet.create({
   summaryTitle: {
     marginBottom: spacing.xs,
   },
+  summaryDivider: {
+    height: 1,
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  summaryRow: {
+    width: '100%',
+    gap: spacing.md,
+  },
   summaryMetricBlock: {
     flex: 1,
+  },
+  summaryValueText: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '600',
   },
   planInsightsCard: {
     borderRadius: radius['2xl'],
     padding: spacing.lg,
-  },
-  planInsightsSubtitle: {
-    marginTop: spacing.xs,
-  },
-  planListShell: {
-    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    padding: spacing.md,
+    borderColor: 'rgba(255,255,255,0.24)',
+    backgroundColor: 'rgba(255,255,255,0.01)',
   },
   planListRow: {
     width: '100%',
@@ -777,12 +585,15 @@ const styles = StyleSheet.create({
   },
   planListText: {
     flex: 1,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
   },
   inlineReviewAction: {
     borderRadius: radius['2xl'],
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.24)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
     paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
