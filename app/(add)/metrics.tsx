@@ -3,6 +3,7 @@ import ScreenBackground from '../../components/layout/screenBackground';
 import { MetricsExerciseTable } from '../../components/add/metricsExerciseTable';
 import { MetricsPanel } from '../../components/add/metricsPanel';
 import { MetricsTopBar } from '../../components/add/metricsTopBar';
+import { MetricsRoutineSelector } from '../../components/add/metricsRoutineSelector';
 import { Button } from '../../components/ui/button';
 import { spacing } from '../../constants/theme';
 import { useMetricsScreen } from '../../hooks/useMetricsScreen';
@@ -14,12 +15,18 @@ export default function Metrics() {
     isChallengeMenuOpen,
     exerciseMetrics,
     activeRowKey,
+    routines,
+    selectedRoutineId,
+    isRoutineMenuOpen,
+    isSubmitting,
     toggleChallengeMenu,
     selectChallenge,
     updateMetricValue,
     updateExerciseNotes,
     onRowFocus,
     onRowBlur,
+    toggleRoutineMenu,
+    selectRoutine,
     goToCamera,
     goToRestDay,
     goBack,
@@ -40,6 +47,16 @@ export default function Metrics() {
             onRestDay={goToRestDay}
             onSkip={goToCamera}
           />
+
+          <View style={styles.routineRow}>
+            <MetricsRoutineSelector
+              routines={routines}
+              selectedRoutineId={selectedRoutineId}
+              isOpen={isRoutineMenuOpen}
+              onToggle={toggleRoutineMenu}
+              onSelect={selectRoutine}
+            />
+          </View>
         </View>
 
         <View style={styles.divider} />
@@ -66,7 +83,9 @@ export default function Metrics() {
         </MetricsPanel>
 
         <View style={styles.footer}>
-          <Button onPress={submitMetrics}>Log workout</Button>
+          <Button onPress={submitMetrics} loading={isSubmitting}>
+            Log workout
+          </Button>
         </View>
       </View>
     </ScreenBackground>
@@ -81,6 +100,10 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  routineRow: {
+    marginTop: spacing.xs,
   },
   divider: {
     height: 1,

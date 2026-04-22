@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, Pressable, View, TextInput } from 'react-native';
+import { useState } from 'react';
+import { ScrollView, StyleSheet, Pressable, View, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import ScreenBackground from '../../../components/layout/screenBackground';
 import { Stack } from '../../../components/layout/stack';
@@ -8,6 +9,8 @@ import { Icon } from '../../../components/ui/icon';
 import { ExerciseBlock } from '../../../components/routine/exerciseBlock';
 import { getRoutineLocationSummary, useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { colors, spacing, radius, typography } from '../../../constants/theme';
+import { addExerciseToRoutine, createRoutine } from '../../../services/routine.service';
+import { getUserId } from '../../../services/auth.service';
 
 export default function CreateRoutineScreen() {
   const { day } = useLocalSearchParams<{ day: string }>();
@@ -16,21 +19,67 @@ export default function CreateRoutineScreen() {
     routineDescription,
     isRestDay,
     exercises,
+    backendExerciseIdByLocalId,
     setRoutineName,
     setRoutineDescription,
     saveCurrentRoutineToDay,
+    stampBackendIdOnDay,
     resetBuilder,
   } = useRoutineBuilder();
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const dayNumber = Number(day ?? '1');
 
   function handleAddExercise() {
     router.push(`/challenge/routine/exercises?day=${dayNumber}`);
   }
 
-  function handleSelectRoutine() {
-    saveCurrentRoutineToDay();
-    router.replace('/challenge/create');
+  async function handleSelectRoutine() {
+    if (isSubmitting) return;
+
+    // Rest days are client-only — no exercises to persist.
+    if (isRestDay) {
+      saveCurrentRoutineToDay();
+      router.replace('/challenge/create');
+      return;
+    }
+
+    if (routineName.trim().length === 0) {
+      Alert.alert('Name required', 'Give this routine a name before saving.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const userId = await getUserId();
+      const routine = await createRoutine({
+        name: routineName.trim(),
+        description: routineDescription.trim() || undefined,
+        createdByUserId: userId ?? undefined,
+        is_active: true,
+      });
+
+      for (const exercise of exercises) {
+        const backendId = backendExerciseIdByLocalId[exercise.id];
+        if (backendId == null) {
+          console.warn(`[CreateRoutine] Skipping "${exercise.name}" — no backend exerciseId`);
+          continue;
+        }
+        await addExerciseToRoutine(routine.id, backendId);
+      }
+
+      saveCurrentRoutineToDay();
+      stampBackendIdOnDay(dayNumber, routine.id);
+      router.replace('/challenge/create');
+    } catch (error: any) {
+      console.error('[CreateRoutine] Failed:', error?.response?.data ?? error?.message);
+      Alert.alert(
+        'Could not save routine',
+        error?.response?.data?.message ?? 'Network error. Please try again.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function handleDiscard() {
@@ -118,13 +167,22 @@ export default function CreateRoutineScreen() {
             {/* Select / Save — full width, primary */}
             <Pressable
               onPress={handleSelectRoutine}
-              style={({ pressed }) => [styles.selectBtn, pressed && styles.pressed]}
+              disabled={isSubmitting}
+              style={({ pressed }) => [
+                styles.selectBtn,
+                pressed && styles.pressed,
+                isSubmitting && styles.disabled,
+              ]}
             >
-              <Text variant="label" style={styles.selectBtnText}>SELECT ROUTINE</Text>
+              {isSubmitting ? (
+                <ActivityIndicator color={colors.textInverse} />
+              ) : (
+                <Text variant="label" style={styles.selectBtnText}>SELECT ROUTINE</Text>
+              )}
             </Pressable>
 
             {/* Discard — small, centered, danger */}
-            <Pressable onPress={handleDiscard} hitSlop={8} style={styles.discardBtn}>
+            <Pressable onPress={handleDiscard} hitSlop={8} style={styles.discardBtn} disabled={isSubmitting}>
               <Text variant="caption" style={styles.discardBtnText}>Discard</Text>
             </Pressable>
           </View>
@@ -215,6 +273,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.8,
+  },
+  disabled: {
+    opacity: 0.5,
   },
   // Select — long primary
   selectBtn: {

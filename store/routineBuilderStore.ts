@@ -67,6 +67,7 @@ export interface RoutineSummary {
   exercises: ExerciseEntry[];
   primaryActivity: ActivityType | null;
   activityTypes: ActivityType[];
+  backendId?: number;
 }
 
 interface RoutineBuilderState {
@@ -77,12 +78,13 @@ interface RoutineBuilderState {
   exercises: ExerciseEntry[];
   savedRoutines: RoutineSummary[];
   routinesByDay: Record<number, RoutineSummary>;
+  backendExerciseIdByLocalId: Record<string, number>;
 
   init: (day: number, routine?: RoutineSummary | null) => void;
   setRoutineName: (name: string) => void;
   setRoutineDescription: (description: string) => void;
   setIsRestDay: (value: boolean) => void;
-  addExercise: (exercise: Omit<ExerciseEntry, 'metrics' | 'note'>) => void;
+  addExercise: (exercise: Omit<ExerciseEntry, 'metrics' | 'note'>, backendExerciseId?: number) => void;
   updateStrengthSet: (exerciseId: string, setIndex: number, patch: Partial<SetRow>) => void;
   addStrengthSet: (exerciseId: string) => void;
   removeStrengthSet: (exerciseId: string, setIndex: number) => void;
@@ -94,6 +96,7 @@ interface RoutineBuilderState {
   setNote: (exerciseId: string, note: string) => void;
   removeExercise: (exerciseId: string) => void;
   saveCurrentRoutineToDay: () => RoutineSummary | null;
+  stampBackendIdOnDay: (day: number, backendId: number) => void;
   assignRoutineToDay: (day: number, routine: RoutineSummary) => void;
   assignRestDayToDay: (day: number) => void;
   unassignRoutineFromDay: (day: number) => void;
@@ -396,6 +399,7 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
   exercises: [],
   savedRoutines: [seedRoutine],
   routinesByDay: {},
+  backendExerciseIdByLocalId: {},
 
   init: (day, routine) => {
     const assignedRoutine = get().routinesByDay[day];
@@ -426,7 +430,7 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
 
   setIsRestDay: (isRestDay) => set({ isRestDay }),
 
-  addExercise: (exercise) =>
+  addExercise: (exercise, backendExerciseId) =>
     set((state) => ({
       isRestDay: false,
       exercises: [
@@ -437,6 +441,13 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
           note: '',
         },
       ],
+      backendExerciseIdByLocalId:
+        backendExerciseId == null
+          ? state.backendExerciseIdByLocalId
+          : {
+              ...state.backendExerciseIdByLocalId,
+              [exercise.id]: backendExerciseId,
+            },
     })),
 
   updateStrengthSet: (exerciseId, setIndex, patch) =>
@@ -623,6 +634,24 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
 
     return routine;
   },
+
+  stampBackendIdOnDay: (day, backendId) =>
+    set((state) => {
+      const routine = state.routinesByDay[day];
+      if (!routine) {
+        return state;
+      }
+
+      return {
+        routinesByDay: {
+          ...state.routinesByDay,
+          [day]: { ...routine, backendId },
+        },
+        savedRoutines: state.savedRoutines.map((item) =>
+          item.id === routine.id ? { ...item, backendId } : item,
+        ),
+      };
+    }),
 
   assignRoutineToDay: (day, routine) =>
     set((state) => ({
