@@ -190,6 +190,7 @@ export default function CreateChallenge() {
     daySummaries,
     daysStepIndex,
     isFormComplete,
+    isSubmitting,
     setTitle,
     setDescription,
     setCycleDuration,
@@ -363,6 +364,7 @@ export default function CreateChallenge() {
             <View style={styles.actionsBlock}>
               <ChallengeSubmitActions
                 visibility={visibility ?? 'Public'}
+                loading={isSubmitting}
                 onPrimaryPress={() => handleActionPress(visibility === 'Private' ? 'Start Challenge' : 'Publish & Join')}
                 onSendToFriendsPress={() => handleActionPress('Send to Friends')}
                 onSharePress={() => handleActionPress('Share')}

@@ -7,6 +7,7 @@ import type { ChallengeVisibility } from '../../store/challengeBuilderStore';
 
 interface ChallengeSubmitActionsProps {
   visibility: ChallengeVisibility;
+  loading?: boolean;
   onPrimaryPress?: () => void;
   onSendToFriendsPress?: () => void;
   onSharePress?: () => void;
@@ -18,13 +19,14 @@ function getPrimaryLabel(visibility: ChallengeVisibility) {
 
 export function ChallengeSubmitActions({
   visibility,
+  loading = false,
   onPrimaryPress,
   onSendToFriendsPress,
   onSharePress,
 }: ChallengeSubmitActionsProps) {
   return (
     <View style={styles.container}>
-      <Button size="md" variant="primary" onPress={onPrimaryPress} style={styles.primaryButton}>
+      <Button size="md" variant="primary" loading={loading} onPress={onPrimaryPress} style={styles.primaryButton}>
         {getPrimaryLabel(visibility)}
       </Button>
 

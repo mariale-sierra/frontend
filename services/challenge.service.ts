@@ -5,7 +5,7 @@ export async function getChallenges() {
   return response.data;
 }
 
-export async function getChallenge(id: number) {
+export async function getChallenge(id: string) {
   const response = await api.get(`/challenges/${id}`);
   return response.data;
 }

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Alert } from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { buildCreateChallengePayload } from '../services/adapters/createChallengePayloadAdapter';
+import { createChallenge } from '../services/challenge.service';
 import type { ChallengeVisibility } from '../store/challengeBuilderStore';
 import { useChallengeBuilder } from '../store/challengeBuilderStore';
 import { useRoutineBuilder } from '../store/routineBuilderStore';
@@ -68,12 +69,14 @@ export function useCreateChallengeFlow() {
   const setCurrentStep = useChallengeBuilder((state) => state.setCurrentStep);
   const setSelectedCategories = useChallengeBuilder((state) => state.setSelectedCategories);
   const setSelectedLocations = useChallengeBuilder((state) => state.setSelectedLocations);
+  const resetChallengeBuilder = useChallengeBuilder((state) => state.resetChallengeBuilder);
 
   const routinesByDay = useRoutineBuilder((state) => state.routinesByDay);
   const pruneRoutinesAfterDay = useRoutineBuilder((state) => state.pruneRoutinesAfterDay);
   const unassignRoutineFromDay = useRoutineBuilder((state) => state.unassignRoutineFromDay);
 
   const [selectedDay, setSelectedDay] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const steps = useMemo<CreateStep[]>(() => ([
     {
@@ -229,7 +232,7 @@ export function useCreateChallengeFlow() {
     setCurrentStep(Math.min(currentStep + 1, steps.length - 1));
   }
 
-  function handleActionPress(actionLabel: string) {
+  async function handleActionPress(actionLabel: string) {
     if (missingConfigurationFields.length > 0) {
       Alert.alert(
         'Missing configuration',
@@ -262,10 +265,24 @@ export function useCreateChallengeFlow() {
       return;
     }
 
-    Alert.alert(
-      'Ready to go',
-      `"${actionLabel}" is ready. Payload built with ${payloadResult.payload.cycle_days.length} cycle days.`,
-    );
+    const { payload } = payloadResult;
+
+    setIsSubmitting(true);
+    try {
+      await createChallenge({
+        name: payload.name,
+        description: payload.description,
+        visibility: payload.visibility,
+        duration_days: payload.duration_days,
+        cycle_length_days: payload.cycle_length_days,
+      });
+      resetChallengeBuilder();
+      router.replace('/(tabs)/challenges');
+    } catch {
+      Alert.alert('Error', 'Could not create the challenge. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function toggleCategory(value: string) {
@@ -306,6 +323,7 @@ export function useCreateChallengeFlow() {
     setVisibility,
     setCurrentStep,
     setSelectedDay,
+    isSubmitting,
     getDayStatus,
     handleBack,
     handleNext,
