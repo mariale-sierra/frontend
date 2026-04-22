@@ -170,3 +170,45 @@ export function sanitizeHydratedExercises(
       restTimeLabel: exercise.restTimeLabel ?? 'Rest 60 sec',
     }));
 }
+
+
+// CHALLENGE INFO STUFFFFF
+
+
+export type ChallengeDetail = {
+  id: string;
+  author: string;
+  days: number;
+  rules: string[];
+  routine: {
+    day: number;
+    title?: string;
+    subtitle?: string;
+    rest?: boolean;
+  }[];
+};
+
+const MOCK_CHALLENGE_DETAILS: Record<string, ChallengeDetail> = {
+  c1: {
+    id: 'c1',
+    author: 'Kristen',
+    days: 75,
+    rules: [
+      'Do 2 workouts every day (no exceptions)',
+      'Each workout must be 45 minutes long',
+      'One workout must be outdoors',
+      'Workouts must be spaced out (not back-to-back)',
+      'No rest days — do this every day for 75 days',
+    ],
+    routine: [
+      { day: 1, title: 'Running', subtitle: '10 km running' },
+      { day: 2, title: 'Swimming', subtitle: '1 km swimming' },
+      { day: 3, title: 'Lifting Weight Routine', subtitle: 'Chest, arms, legs' },
+      { day: 4, rest: true },
+    ],
+  },
+};
+
+export function getChallengeDetailById(id: string): ChallengeDetail | undefined {
+  return MOCK_CHALLENGE_DETAILS[id];
+}

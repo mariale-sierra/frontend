@@ -7,9 +7,10 @@ export interface ChallengePreviewListProps {
 	challenges: ChallengePreviewCardProps[];
 	showCreateCard?: boolean;
 	onCreatePress?: () => void;
+	onPressChallenge?: (id: string) => void; //ADDED THIS
 }
 
-export function ChallengePreviewList({ challenges, showCreateCard = false, onCreatePress }: ChallengePreviewListProps) {
+export function ChallengePreviewList({ challenges, showCreateCard = false, onCreatePress,  onPressChallenge }: ChallengePreviewListProps) {
 	return (
 		<ScrollView 
 			style={styles.scrollContainer}
@@ -24,6 +25,7 @@ export function ChallengePreviewList({ challenges, showCreateCard = false, onCre
 					<ChallengePreviewCard
 						key={challenge.challengeId || `${challenge.title}-${challenge.author}-${index}`}
 						{...challenge}
+						onPress={() => onPressChallenge?.(challenge.challengeId)} //ADDED THIS
 					/>
 				))}
 			</Stack>

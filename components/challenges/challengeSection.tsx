@@ -13,6 +13,7 @@ export interface ChallengeSectionProps {
 	onCreatePress?: () => void;
 	headerListGap?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 	showHeaderDivider?: boolean;
+	onPressChallenge?: (id: string) => void; //ADDED THIS
 }
 
 export function ChallengeSection({ 
@@ -24,6 +25,7 @@ export function ChallengeSection({
 	onCreatePress,
 	headerListGap = 'md',
 	showHeaderDivider = false,
+	onPressChallenge, //ADDED THIS
 }: ChallengeSectionProps) {
 	return (
 		<Stack gap={headerListGap}>
@@ -33,6 +35,7 @@ export function ChallengeSection({
 				challenges={challenges} 
 				showCreateCard={showCreateCard}
 				onCreatePress={onCreatePress}
+				onPressChallenge={onPressChallenge} //ADDED THIS
 			/>
 		</Stack>
 	);

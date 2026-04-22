@@ -78,6 +78,10 @@ export default function Challenges() {
 	const handleCreateChallenge = () => {
 		router.push('/challenge/create');
 	};
+	//added this for the challengeInfo screen
+	const handleOpenChallenge = (id: string) => {
+		router.push(`/challenge/${id}`);
+	};
 
 	return (
 		<ScreenBackground variant="challenges">
@@ -86,6 +90,7 @@ export default function Challenges() {
 					yourChallenges={YOUR_CHALLENGES}
 					exploreChallenges={EXPLORE_CHALLENGES}
 					onCreateChallenge={handleCreateChallenge}
+					onPressChallenge={handleOpenChallenge} //ADDED THIS
 				/>
 			</ScrollView>
 		</ScreenBackground>
