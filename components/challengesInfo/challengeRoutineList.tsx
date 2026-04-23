@@ -55,10 +55,10 @@ const styles = StyleSheet.create({
   card: {
     padding: spacing.md,
     borderRadius: 20,
-    backgroundColor: '#1c1c1e', // dark card
+    backgroundColor: '#1c1c1e', 
   },
   restCard: {
-    backgroundColor: '#1f3b4d', // bluish like your SS
+    backgroundColor: '#1f3b4d', 
   },
   title: {
     fontSize: 16,
