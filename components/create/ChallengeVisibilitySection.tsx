@@ -7,6 +7,7 @@ import { Input } from '../ui/input';
 import { Text } from '../ui/text';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, gradients, radius, spacing, typography } from '../../constants/theme';
+import { useTranslation } from 'react-i18next';
 
 export interface ChallengeVisibilitySectionProps {
 	baseDuration: number;
@@ -25,6 +26,8 @@ export function ChallengeVisibilitySection({
 	onChangeChallengeDuration,
 	onChangeVisibility,
 }: ChallengeVisibilitySectionProps) {
+	const { t } = useTranslation();
+
 	const visibilityCards = useMemo(() => {
 		const source = visibilityOptions.filter(
 			(option) => option.toLowerCase() === 'public' || option.toLowerCase() === 'private',
@@ -34,15 +37,19 @@ export function ChallengeVisibilitySection({
 
 		return normalized.map((option) => {
 			const isPrivate = option.toLowerCase() === 'private';
+			const displayLabel = isPrivate
+				? t('challengeCreate.visibility.privateLabel')
+				: t('challengeCreate.visibility.publicLabel');
 			return {
 				label: option,
+				displayLabel,
 				description: isPrivate
-					? 'Only people you explicitly share it with can see or join.'
-					: 'Anyone can discover, join, and share the challenge.',
+					? t('challengeCreate.visibility.privateDescription')
+					: t('challengeCreate.visibility.publicDescription'),
 				iconName: isPrivate ? 'lock-closed' : 'globe-outline',
 			};
 		});
-	}, [visibilityOptions]);
+	}, [t, visibilityOptions]);
 
 	return (
 		<Stack gap="xl">
@@ -54,7 +61,7 @@ export function ChallengeVisibilitySection({
 			>
 				<Stack gap="md">
 					<View>
-						<Text variant="subheader">Challenge Duration</Text>
+						<Text variant="subheader">{t('challengeCreate.fields.challengeDuration')}</Text>
 					</View>
 
 					<View style={styles.durationInputShell}>
@@ -71,15 +78,17 @@ export function ChallengeVisibilitySection({
 							containerStyle={styles.durationInputContainer}
 							style={styles.durationInput}
 						/>
-						<Text variant="caption" style={styles.durationInputUnit}>days</Text>
+						<Text variant="caption" style={styles.durationInputUnit}>{t('challengeCreate.fields.daysUnit')}</Text>
 					</View>
 
-					<Text variant="caption" style={styles.wheelCaption}>Cycle base: {baseDuration} days</Text>
+					<Text variant="caption" style={styles.wheelCaption}>
+						{t('challengeCreate.fields.cycleBase', { days: baseDuration })}
+					</Text>
 				</Stack>
 			</GradientBox>
 
 			<Stack gap="sm">
-				<Text variant="subheader">Visibility</Text>
+				<Text variant="subheader">{t('challengeCreate.fields.visibility')}</Text>
 				{visibilityCards.map((option) => {
 					const selected = selectedVisibility === option.label;
 					return (
@@ -93,7 +102,7 @@ export function ChallengeVisibilitySection({
 									<Ionicons name={option.iconName as 'lock-closed' | 'globe-outline'} size={16} color={colors.textPrimary} />
 								</View>
 								<View style={styles.visibilityTextBlock}>
-									<Text variant="body" style={styles.visibilityLabel}>{option.label}</Text>
+									<Text variant="body" style={styles.visibilityLabel}>{option.displayLabel}</Text>
 									<Text variant="caption" style={styles.visibilityDescription}>{option.description}</Text>
 								</View>
 								{selected && <Ionicons name="checkmark-circle" size={18} color={colors.success} />}

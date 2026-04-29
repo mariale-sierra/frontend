@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { CATEGORY_TO_ACTIVITY } from '../constants/challengeFilters';
 import type { ActivityType } from '../constants/theme';
-import type { ExerciseEntry } from '../store/routineBuilderStore';
+import type { ExerciseEntry } from '../types/routine';
 
 export type ExerciseCandidate = Omit<ExerciseEntry, 'metrics' | 'note'>;
 

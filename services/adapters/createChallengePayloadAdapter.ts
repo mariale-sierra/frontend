@@ -1,38 +1,15 @@
-import type { ChallengeVisibility } from '../../store/challengeBuilderStore';
+import type {
+  ChallengeVisibility,
+  CreateChallengeExercisePayload,
+  CreateChallengePayload,
+} from '../../types/challenge';
 import type {
   ExerciseEntry,
   ExerciseMetrics,
   RoutineSummary,
   SchemaMetricValue,
   SetRow,
-} from '../../store/routineBuilderStore';
-
-type CreateChallengeExercisePayload = {
-  name: string;
-  location: string;
-  metric_type: ExerciseEntry['metricType'];
-  activity_type: ExerciseEntry['activityType'];
-  muscle_groups: string[];
-  note?: string;
-  metrics: ReturnType<typeof mapExerciseMetrics>;
-};
-
-export type CreateChallengePayload = {
-  name: string;
-  description?: string;
-  visibility: Lowercase<ChallengeVisibility>;
-  duration_days: number;
-  cycle_length_days: number;
-  categories: string[];
-  locations: string[];
-  cycle_days: Array<{
-    day_number: number;
-    is_rest_day: boolean;
-    routine_name: string;
-    routine_description: string;
-    exercises: CreateChallengeExercisePayload[];
-  }>;
-};
+} from '../../types/routine';
 
 interface BuildChallengePayloadParams {
   title: string;

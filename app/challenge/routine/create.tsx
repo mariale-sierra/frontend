@@ -10,9 +10,12 @@ import { ExerciseBlock } from '../../../components/routine/exerciseBlock';
 import { getRoutineLocationSummary, useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { colors, spacing, radius, typography } from '../../../constants/theme';
 import { addExerciseToRoutine, createRoutine } from '../../../services/routine/routine.service';
-import { getUserId } from '../../../services/auth/auth.service';
+import { useAuth } from '../../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 export default function CreateRoutineScreen() {
+  const { t } = useTranslation();
+  const { userId } = useAuth();
   const { day } = useLocalSearchParams<{ day: string }>();
   const {
     routineName,
@@ -45,13 +48,12 @@ export default function CreateRoutineScreen() {
     }
 
     if (routineName.trim().length === 0) {
-      Alert.alert('Name required', 'Give this routine a name before saving.');
+      Alert.alert(t('routineCreate.alerts.nameRequiredTitle'), t('routineCreate.alerts.nameRequiredMessage'));
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const userId = await getUserId();
       const routine = await createRoutine({
         name: routineName.trim(),
         description: routineDescription.trim() || undefined,
@@ -74,8 +76,8 @@ export default function CreateRoutineScreen() {
     } catch (error: any) {
       console.error('[CreateRoutine] Failed:', error?.response?.data ?? error?.message);
       Alert.alert(
-        'Could not save routine',
-        error?.response?.data?.message ?? 'Network error. Please try again.',
+        t('routineCreate.alerts.saveFailedTitle'),
+        error?.response?.data?.message ?? t('routineCreate.alerts.saveFailedFallback'),
       );
     } finally {
       setIsSubmitting(false);
@@ -94,7 +96,7 @@ export default function CreateRoutineScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
           <Icon name="chevron-back" size={24} color={colors.textPrimary} />
         </Pressable>
-        <Text variant="subheader">DAY {dayNumber} ROUTINE</Text>
+        <Text variant="subheader">{t('routineCreate.dayRoutineTitle', { day: dayNumber })}</Text>
       </Row>
 
       <ScrollView
@@ -106,7 +108,7 @@ export default function CreateRoutineScreen() {
             <TextInput
               value={routineName}
               onChangeText={setRoutineName}
-              placeholder="Routine Name..."
+              placeholder={t('routineCreate.routineNamePlaceholder')}
               placeholderTextColor={colors.textSecondary}
               style={styles.nameInput}
             />
@@ -117,7 +119,7 @@ export default function CreateRoutineScreen() {
             <TextInput
               value={routineDescription}
               onChangeText={setRoutineDescription}
-              placeholder={isRestDay ? 'Recovery details...' : 'Routine Description...'}
+              placeholder={isRestDay ? t('routineCreate.recoveryDetailsPlaceholder') : t('routineCreate.routineDescriptionPlaceholder')}
               placeholderTextColor={colors.textMuted}
               multiline
               style={styles.descriptionInput}
@@ -144,9 +146,9 @@ export default function CreateRoutineScreen() {
 
           {isRestDay && (
             <View style={styles.restStateCard}>
-              <Text variant="subheader">REST DAY</Text>
+              <Text variant="subheader">{t('routineCreate.restDayTitle')}</Text>
               <Text variant="body" tone="secondary">
-                No exercises required for this day. Use the description above to explain recovery, stretching, or mobility work.
+                {t('routineCreate.restDayDescription')}
               </Text>
             </View>
           )}
@@ -160,7 +162,7 @@ export default function CreateRoutineScreen() {
                 style={({ pressed }) => [styles.addExerciseBtn, pressed && styles.pressed]}
               >
                 <Icon name="add" size={18} color={colors.textPrimary} />
-                <Text variant="label" style={styles.addExerciseBtnText}>ADD EXERCISE</Text>
+                <Text variant="label" style={styles.addExerciseBtnText}>{t('routineCreate.addExercise')}</Text>
               </Pressable>
             )}
 
@@ -177,13 +179,13 @@ export default function CreateRoutineScreen() {
               {isSubmitting ? (
                 <ActivityIndicator color={colors.textInverse} />
               ) : (
-                <Text variant="label" style={styles.selectBtnText}>SELECT ROUTINE</Text>
+                <Text variant="label" style={styles.selectBtnText}>{t('routineCreate.selectRoutine')}</Text>
               )}
             </Pressable>
 
             {/* Discard — small, centered, danger */}
             <Pressable onPress={handleDiscard} hitSlop={8} style={styles.discardBtn} disabled={isSubmitting}>
-              <Text variant="caption" style={styles.discardBtnText}>Discard</Text>
+              <Text variant="caption" style={styles.discardBtnText}>{t('routineCreate.discard')}</Text>
             </Pressable>
           </View>
         </Stack>

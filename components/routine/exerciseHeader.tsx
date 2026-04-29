@@ -5,7 +5,7 @@ import { Row } from '../layout/row';
 import { ActivityIcon } from '../icons/activityIcon';
 import { Icon } from '../ui/icon';
 import { colors, spacing } from '../../constants/theme';
-import type { ExerciseEntry } from '../../store/routineBuilderStore';
+import type { ExerciseEntry } from '../../types/routine';
 
 interface ExerciseHeaderProps {
   exercise: ExerciseEntry;

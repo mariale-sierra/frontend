@@ -2,7 +2,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text } from '../ui/text';
 import { ActivityIcon } from '../icons/activityIcon';
-import { getRoutineLocationSummary, type RoutineSummary } from '../../store/routineBuilderStore';
+import { getRoutineLocationSummary } from '../../store/routineBuilderStore';
+import type { RoutineSummary } from '../../types/routine';
 import { colors, gradients, radius, spacing } from '../../constants/theme';
 
 interface ChallengeRoutineCardProps {

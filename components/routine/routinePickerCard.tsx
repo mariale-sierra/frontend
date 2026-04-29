@@ -5,7 +5,9 @@ import { Icon } from '../ui/icon';
 import { ActivityIcon } from '../icons/activityIcon';
 import { routineStyles } from './routineStyles';
 import { colors, radius, spacing } from '../../constants/theme';
-import { getRoutineLocationSummary, type RoutineSummary } from '../../store/routineBuilderStore';
+import { getRoutineLocationSummary } from '../../store/routineBuilderStore';
+import type { RoutineSummary } from '../../types/routine';
+import { useTranslation } from 'react-i18next';
 
 interface RoutinePickerCardProps {
   routine: RoutineSummary;
@@ -14,6 +16,8 @@ interface RoutinePickerCardProps {
 }
 
 export function RoutinePickerCard({ routine, onPress, onSelect }: RoutinePickerCardProps) {
+  const { t } = useTranslation();
+
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
       <View style={styles.card}>
@@ -29,7 +33,7 @@ export function RoutinePickerCard({ routine, onPress, onSelect }: RoutinePickerC
 
         <View style={styles.meta}>
           <Text variant="caption" numberOfLines={1} ellipsizeMode="tail" style={styles.metaText}>
-            {`${getRoutineLocationSummary(routine.exercises)} · ${routine.exercises.length} exercises`}
+            {`${getRoutineLocationSummary(routine.exercises)} · ${t('routineSelect.card.exercisesCount', { count: routine.exercises.length })}`}
           </Text>
         </View>
 
@@ -39,7 +43,7 @@ export function RoutinePickerCard({ routine, onPress, onSelect }: RoutinePickerC
           onPress={onSelect}
           style={({ pressed }) => [styles.selectBtn, pressed && styles.selectBtnPressed]}
         >
-          <Text variant="label" style={styles.selectBtnText}>SELECT</Text>
+          <Text variant="label" style={styles.selectBtnText}>{t('routineSelect.card.select')}</Text>
         </Pressable>
       </View>
     </Pressable>

@@ -3,6 +3,7 @@ import { Stack } from '../layout/stack';
 import { Input } from '../ui/input';
 import { Text } from '../ui/text';
 import { colors, typography } from '../../constants/theme';
+import { useTranslation } from 'react-i18next';
 
 export interface ChallengeTitleInputsProps {
 	title: string;
@@ -17,10 +18,12 @@ export function ChallengeTitleInputs({
 	onChangeTitle,
 	onChangeDescription,
 }: ChallengeTitleInputsProps) {
+	const { t } = useTranslation();
+
 	return (
 		<Stack gap="md">
 			<View style={styles.fieldShell}>
-				<Text variant="caption" style={styles.fieldLabel}>Challenge Name</Text>
+				<Text variant="caption" style={styles.fieldLabel}>{t('challengeCreate.fields.challengeName')}</Text>
 				<Input
 					value={title}
 					onChangeText={onChangeTitle}
@@ -31,7 +34,7 @@ export function ChallengeTitleInputs({
 			</View>
 
 			<View style={styles.fieldShell}>
-				<Text variant="caption" style={styles.fieldLabel}>Description (Optional)</Text>
+				<Text variant="caption" style={styles.fieldLabel}>{t('challengeCreate.fields.descriptionOptional')}</Text>
 				<Input
 					value={description}
 					onChangeText={onChangeDescription}

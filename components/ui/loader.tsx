@@ -1,5 +1,5 @@
 import { ActivityIndicator, StyleSheet, View, ViewStyle } from 'react-native';
-import { colors } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
 
 type LoaderProps = {
 	visible: boolean;
@@ -7,6 +7,8 @@ type LoaderProps = {
 };
 
 export function Loader({ visible, overlayStyle }: LoaderProps) {
+	const { colors } = useTheme();
+
 	if (!visible) {
 		return null;
 	}

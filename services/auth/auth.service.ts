@@ -1,16 +1,22 @@
 import api from '../api';
 import { clearAccessToken, getAccessToken, setAccessToken } from './token.service';
 import { storage } from '../../utils/storage';
+import type {
+  AuthSessionResponse,
+  LoginRequest,
+  RegisterRequest,
+} from '../../types/auth';
 
 export async function login(email: string, password: string) {
   console.log('login function called with:', email, password); // Debugging log
   try {
-    const response = await api.post('/auth/login', { email, password });
+    const payload: LoginRequest = { email, password };
+    const response = await api.post<AuthSessionResponse>('/auth/login', payload);
     const { accessToken, user } = response.data;
 
     await setAccessToken(accessToken);
     if (user?.id) {
-      await storage.setItem('userId', user.id);
+      await storage.setItem('userId', String(user.id));
     }
     return response.data;
   } catch (error: any) {
@@ -25,11 +31,12 @@ export async function login(email: string, password: string) {
 }
 
 export async function register(email: string, username: string, password: string) {
-  const response = await api.post('/auth/register', { email, username, password });
+  const payload: RegisterRequest = { email, username, password };
+  const response = await api.post<AuthSessionResponse>('/auth/register', payload);
   const { accessToken, user } = response.data;
   await setAccessToken(accessToken);
   if (user?.id) {
-    await storage.setItem('userId', user.id);
+    await storage.setItem('userId', String(user.id));
   }
   return response.data;
 }

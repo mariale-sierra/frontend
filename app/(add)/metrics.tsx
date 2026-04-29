@@ -7,8 +7,10 @@ import { MetricsRoutineSelector } from '../../components/add/metricsRoutineSelec
 import { Button } from '../../components/ui/button';
 import { spacing } from '../../constants/theme';
 import { useMetricsScreen } from '../../hooks/useMetricsScreen';
+import { useTranslation } from 'react-i18next';
 
 export default function Metrics() {
+  const { t } = useTranslation();
   const {
     challenges,
     selectedChallengeId,
@@ -84,7 +86,7 @@ export default function Metrics() {
 
         <View style={styles.footer}>
           <Button onPress={submitMetrics} loading={isSubmitting}>
-            Log workout
+            {t('metrics.logWorkout')}
           </Button>
         </View>
       </View>

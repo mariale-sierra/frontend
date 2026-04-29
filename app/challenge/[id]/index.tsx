@@ -8,19 +8,13 @@ import ChallengeRules from '../../../components/challengesInfo/challengeRules';
 import ChallengeRoutineList from '../../../components/challengesInfo/challengeRoutineList';
 import { spacing } from '../../../constants/theme';
 import { getChallenge } from '../../../services/challenge/challenge.service';
-
-type BackendChallenge = {
-  id: string;
-  name: string;
-  description?: string;
-  visibility: string;
-  duration_days: number;
-  created_by_user_id: string;
-};
+import type { ChallengeContract } from '../../../types/challenge';
+import { useTranslation } from 'react-i18next';
 
 export default function ChallengeDetail() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [challenge, setChallenge] = useState<BackendChallenge | null>(null);
+  const [challenge, setChallenge] = useState<ChallengeContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -51,7 +45,7 @@ export default function ChallengeDetail() {
       <ScrollView contentContainerStyle={styles.container}>
         <ChallengeHeader
           challenge={{ label: challenge.name }}
-          detail={{ author: 'member', days: challenge.duration_days }}
+          detail={{ author: t('challenges.memberAuthor'), days: challenge.duration_days ?? 0 }}
         />
         <ChallengeRules rules={rules} />
         <ChallengeRoutineList routine={[]} />

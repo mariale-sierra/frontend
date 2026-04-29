@@ -4,6 +4,7 @@ import { ActivityIcon } from '../icons/activityIcon';
 import { Text } from '../ui/text';
 import { colors, gradients, spacing, typography } from '../../constants/theme';
 import type { ExerciseMetricsBlock, MetricField } from '../../types/metrics';
+import { useTranslation } from 'react-i18next';
 
 interface MetricsExerciseTableProps {
   exercise: ExerciseMetricsBlock;
@@ -107,6 +108,8 @@ export function MetricsExerciseTable({
   onMetricChange,
   onNotesChange,
 }: MetricsExerciseTableProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.exerciseBox}>
       <View style={styles.exerciseHeader}>
@@ -157,7 +160,7 @@ export function MetricsExerciseTable({
         <TextInput
           value={exercise.notes}
           onChangeText={(notes) => onNotesChange(exercise.id, notes)}
-          placeholder="Add notes"
+          placeholder={t('metrics.addNotes')}
           placeholderTextColor={colors.textMuted}
           multiline
           maxLength={180}

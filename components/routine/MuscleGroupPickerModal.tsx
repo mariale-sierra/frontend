@@ -8,6 +8,7 @@ import { useChallengeBuilder } from '../../store/challengeBuilderStore';
 import { useFilteredExercises, type ExerciseCandidate } from '../../hooks/useFilteredExercises';
 import { MUSCLE_GROUPS } from '../../constants/muscleGroups';
 import { colors, radius, spacing } from '../../constants/theme';
+import { useTranslation } from 'react-i18next';
 
 interface MuscleGroupPickerModalProps {
   visible: boolean;
@@ -22,6 +23,7 @@ export function MuscleGroupPickerModal({
   onClose,
   onAddExercise,
 }: MuscleGroupPickerModalProps) {
+  const { t } = useTranslation();
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
 
   const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
@@ -84,7 +86,7 @@ export function MuscleGroupPickerModal({
             )}
 
             <Text variant="subheader" style={styles.headerTitle}>
-              {selectedMuscle ?? 'MUSCLES'}
+              {selectedMuscle ?? t('routineExercises.picker.title')}
             </Text>
 
             <Pressable onPress={handleClose} hitSlop={12} style={styles.closeBtn}>
@@ -130,7 +132,7 @@ export function MuscleGroupPickerModal({
               )}
               ListEmptyComponent={
                 <Text variant="caption" style={styles.emptyText}>
-                  No exercises found for this muscle group.
+                  {t('routineExercises.picker.empty')}
                 </Text>
               }
               ListFooterComponent={<View style={styles.listFooter} />}

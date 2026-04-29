@@ -9,12 +9,16 @@ import { Icon } from '../../components/ui/icon';
 import { Input } from '../../components/ui/input';
 import { Loader } from '../../components/ui/loader';
 import { Text } from '../../components/ui/text';
-import { colors } from '../../constants/theme';
 import api from '../../services/api';
-import { login } from '../../services/auth/auth.service';
+import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 export default function Login() {
   const router = useRouter();
+  const { login } = useAuth();
+  const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,26 +26,26 @@ export default function Login() {
 
   return (
     <AuthScreenShell
-      title="Havit"
-      subtitle="Welcome back"
+      title={t('auth.login.title')}
+      subtitle={t('auth.login.subtitle')}
       footer={
         <Stack align="center" gap="sm">
           <AuthSwitchRow
-            prompt="Don't have an account?"
-            actionLabel="Register"
+            prompt={t('auth.login.switchPrompt')}
+            actionLabel={t('auth.login.switchAction')}
             onPress={() => router.push('/register')}
           />
 
           <Pressable onPress={() => router.replace('/(tabs)')}>
-            <Text variant="caption" style={styles.guestLinkText}>
-              Continue as guest
+            <Text variant="caption" style={[styles.guestLinkText, { color: colors.textSecondary }]}>
+              {t('common.actions.continueAsGuest')}
             </Text>
           </Pressable>
         </Stack>
       }
     >
       <Input
-        placeholder="Email"
+        placeholder={t('common.fields.email')}
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -53,7 +57,7 @@ export default function Login() {
       />
 
       <Input
-        placeholder="Password"
+        placeholder={t('common.fields.password')}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -71,17 +75,19 @@ export default function Login() {
           console.log('BaseURL:', api.defaults.baseURL);
           const result = await login(email, password);
           console.log('Resultado:', JSON.stringify(result));
-          router.replace('/(tabs)');
         } catch (error: any) {
           console.log('Error status:', error?.response?.status);
           console.log('Error data:', error?.response?.data);
           console.log('Error message:', error?.message);
-          Alert.alert('Error', error?.response?.data?.message || 'Invalid email or password');
+          Alert.alert(
+            t('common.errors.genericTitle'),
+            error?.response?.data?.message || t('auth.login.invalidCredentials'),
+          );
         } finally {
           setIsLoading(false); // Hide loading spinner
         }
       }}>
-        Log in
+        {t('common.actions.login')}
       </Button>
 
       <Loader visible={isLoading} />
@@ -91,7 +97,7 @@ export default function Login() {
 
 const styles = StyleSheet.create({
   guestLinkText: {
-    color: colors.textSecondary,
     textDecorationLine: 'underline',
   },
 });
+

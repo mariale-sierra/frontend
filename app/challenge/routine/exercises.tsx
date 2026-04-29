@@ -23,6 +23,7 @@ import {
   type ExerciseCandidate,
 } from "../../../hooks/useFilteredExercises";
 import { getExercises } from '../../../services/exercises/exercises.service';
+import { useTranslation } from 'react-i18next';
 
 interface BackendExercise {
   id: number;
@@ -37,11 +38,12 @@ interface BackendExercise {
 
 function mapBackendExerciseToCandidate(
   exercise: BackendExercise,
+  defaultLocationLabel: string,
 ): ExerciseCandidate {
   return {
     id: String(exercise.id),
     name: exercise.name.toUpperCase(),
-    location: "Anywhere",
+    location: defaultLocationLabel,
     metricType: "strength",
     activityType: "strength",
     muscleGroups: [],
@@ -49,6 +51,7 @@ function mapBackendExerciseToCandidate(
 }
 
 export default function ExercisesScreen() {
+  const { t } = useTranslation();
   const { day } = useLocalSearchParams<{ day: string }>();
   const addExercise = useRoutineBuilder((state) => state.addExercise);
   const selectedCategories = useChallengeBuilder(
@@ -73,7 +76,10 @@ export default function ExercisesScreen() {
         const data: BackendExercise[] = await getExercises();
         if (cancelled) return;
 
-        const candidates = data.map(mapBackendExerciseToCandidate);
+        const candidates = data.map((exercise) => mapBackendExerciseToCandidate(
+          exercise,
+          t('routineExercises.anywhere'),
+        ));
         const idMap: Record<string, number> = {};
         data.forEach((exercise) => {
           idMap[String(exercise.id)] = exercise.id;
@@ -88,8 +94,8 @@ export default function ExercisesScreen() {
           error?.response?.data ?? error?.message,
         );
         Alert.alert(
-          "Could not load exercises",
-          error?.response?.data?.message ?? "Network error",
+          t('routineExercises.alerts.loadFailedTitle'),
+          error?.response?.data?.message ?? t('routineExercises.alerts.loadFailedFallback'),
         );
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -100,7 +106,7 @@ export default function ExercisesScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   function handleAdd(exercise: ExerciseCandidate) {
     const backendId = backendIdByLocalId[exercise.id];
@@ -126,7 +132,7 @@ export default function ExercisesScreen() {
         >
           <Icon name="chevron-back" size={24} color={colors.textPrimary} />
         </Pressable>
-        <Text variant="subheader">DAY {day ?? "1"} EXERCISES</Text>
+        <Text variant="subheader">{t('routineExercises.dayExercisesTitle', { day: day ?? '1' })}</Text>
       </Row>
 
       {/* Search + muscle group filter */}
@@ -149,7 +155,7 @@ export default function ExercisesScreen() {
             ]}
           >
             <Text variant="caption" style={styles.muscleBtnText}>
-              ALL MUSCLES
+              {t('routineExercises.allMuscles')}
             </Text>
             <Icon name="chevron-down" size={14} color={colors.textPrimary} />
           </Pressable>
@@ -176,7 +182,7 @@ export default function ExercisesScreen() {
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <Text variant="body" tone="secondary">
-                No exercises found.
+                {t('routineExercises.empty')}
               </Text>
             </View>
           }

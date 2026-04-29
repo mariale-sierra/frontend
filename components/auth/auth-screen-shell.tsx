@@ -4,7 +4,7 @@ import ActivityBackground from '../layout/activityBackground';
 import { GradientBox } from '../layout/gradient-box';
 import { Stack } from '../layout/stack';
 import { Text } from '../ui/text';
-import { colors, radius, spacing } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
 
 type AuthScreenShellProps = {
   title: string;
@@ -14,6 +14,9 @@ type AuthScreenShellProps = {
 };
 
 export function AuthScreenShell({ title, subtitle, children, footer }: AuthScreenShellProps) {
+  const { colors, radius, spacing } = useTheme();
+  const styles = createStyles(colors, radius, spacing);
+
   return (
     <ActivityBackground>
       <Stack align="center" justify="center" gap="xl" style={styles.content}>
@@ -43,25 +46,31 @@ export function AuthScreenShell({ title, subtitle, children, footer }: AuthScree
   );
 }
 
-const styles = StyleSheet.create({
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    width: '100%',
-  },
-  card: {
-    width: '100%',
-    maxWidth: 420,
-    borderRadius: radius['2xl'],
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.surfaceHighlight,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  cardContent: {
-    padding: spacing.lg,
-  },
-});
+function createStyles(
+  colors: ReturnType<typeof useTheme>['colors'],
+  radius: ReturnType<typeof useTheme>['radius'],
+  spacing: ReturnType<typeof useTheme>['spacing'],
+) {
+  return StyleSheet.create({
+    content: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+      width: '100%',
+    },
+    card: {
+      width: '100%',
+      maxWidth: 420,
+      borderRadius: radius['2xl'],
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: colors.surfaceHighlight,
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.25,
+      shadowRadius: 20,
+      elevation: 10,
+    },
+    cardContent: {
+      padding: spacing.lg,
+    },
+  });
+}

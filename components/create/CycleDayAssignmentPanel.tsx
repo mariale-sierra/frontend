@@ -5,7 +5,7 @@ import { Row } from '../layout/row';
 import { Stack } from '../layout/stack';
 import { Text } from '../ui/text';
 import { colors, gradients, radius, spacing } from '../../constants/theme';
-import type { RoutineSummary } from '../../store/routineBuilderStore';
+import type { RoutineSummary } from '../../types/routine';
 
 export interface CycleDayAssignmentPanelProps {
   dayNumber: number;

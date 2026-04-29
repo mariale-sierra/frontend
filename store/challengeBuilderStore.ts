@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-
-export type ChallengeVisibility = 'Public' | 'Private';
+import type { ChallengeVisibility } from '../types/challenge';
 
 interface ChallengeBuilderState {
   title: string;

@@ -7,7 +7,7 @@ import { ExerciseNoteField } from './exerciseNoteField';
 import { routineStyles } from './routineStyles';
 import { useRoutineBuilder } from '../../store/routineBuilderStore';
 import { colors, spacing } from '../../constants/theme';
-import type { ExerciseEntry } from '../../store/routineBuilderStore';
+import type { ExerciseEntry } from '../../types/routine';
 
 interface ExerciseBlockProps {
   exercise: ExerciseEntry;

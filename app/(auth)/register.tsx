@@ -7,12 +7,16 @@ import { Button } from '../../components/ui/button';
 import { Icon } from '../../components/ui/icon';
 import { Input } from '../../components/ui/input';
 import { Loader } from '../../components/ui/loader';
-import { colors } from '../../constants/theme';
 import api from '../../services/api';
-import { register } from '../../services/auth/auth.service';
+import { useAuth } from '../../hooks/useAuth';
+import { useTheme } from '../../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 export default function Register() {
   const router = useRouter();
+  const { register } = useAuth();
+  const { colors } = useTheme();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [username, setUsername] = useState('');
@@ -21,18 +25,18 @@ export default function Register() {
 
   return (
     <AuthScreenShell
-      title="Create an account"
-      subtitle="Start your first challenge"
+      title={t('auth.register.title')}
+      subtitle={t('auth.register.subtitle')}
       footer={
         <AuthSwitchRow
-          prompt="Already have an account?"
-          actionLabel="Log in"
+          prompt={t('auth.register.switchPrompt')}
+          actionLabel={t('auth.register.switchAction')}
           onPress={() => router.push('/login')}
         />
       }
     >
       <Input
-        placeholder="Email"
+        placeholder={t('common.fields.email')}
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -44,7 +48,7 @@ export default function Register() {
       />
 
       <Input
-        placeholder="Username"
+        placeholder={t('common.fields.username')}
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
@@ -55,7 +59,7 @@ export default function Register() {
       />
 
       <Input
-        placeholder="Password"
+        placeholder={t('common.fields.password')}
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -74,17 +78,19 @@ export default function Register() {
           console.log('BaseURL:', api.defaults.baseURL);
           const result = await register(email, username, password);
           console.log('Resultado:', JSON.stringify(result));
-          router.replace('/(tabs)');
         } catch (error: any) {
           console.log('Error status:', error?.response?.status);
           console.log('Error data:', error?.response?.data);
           console.log('Error message:', error?.message);
-          Alert.alert('Error', error?.response?.data?.message || 'Could not create account');
+          Alert.alert(
+            t('common.errors.genericTitle'),
+            error?.response?.data?.message || t('auth.register.createAccountFailed'),
+          );
         } finally {
           setIsLoading(false);
         }
       }}>
-        Create Account
+        {t('common.actions.register')}
       </Button>
 
       <Loader visible={isLoading} />

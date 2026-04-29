@@ -3,7 +3,8 @@ import { Row } from '../layout/row';
 import { Button } from '../ui/button';
 import { Icon } from '../ui/icon';
 import { colors, radius, spacing } from '../../constants/theme';
-import type { ChallengeVisibility } from '../../store/challengeBuilderStore';
+import type { ChallengeVisibility } from '../../types/challenge';
+import { useTranslation } from 'react-i18next';
 
 interface ChallengeSubmitActionsProps {
   visibility: ChallengeVisibility;
@@ -13,8 +14,10 @@ interface ChallengeSubmitActionsProps {
   onSharePress?: () => void;
 }
 
-function getPrimaryLabel(visibility: ChallengeVisibility) {
-  return visibility === 'Private' ? 'Start Challenge' : 'Publish & Join';
+function getPrimaryLabel(visibility: ChallengeVisibility, t: (key: string) => string) {
+  return visibility === 'Private'
+    ? t('challengeCreate.submit.primaryPrivate')
+    : t('challengeCreate.submit.primaryPublic');
 }
 
 export function ChallengeSubmitActions({
@@ -24,10 +27,12 @@ export function ChallengeSubmitActions({
   onSendToFriendsPress,
   onSharePress,
 }: ChallengeSubmitActionsProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <Button size="md" variant="primary" loading={loading} onPress={onPrimaryPress} style={styles.primaryButton}>
-        {getPrimaryLabel(visibility)}
+        {getPrimaryLabel(visibility, t)}
       </Button>
 
       <Row justify="space-between" gap="md" style={styles.secondaryRow}>
@@ -38,7 +43,7 @@ export function ChallengeSubmitActions({
           style={styles.sendButton}
           rightIcon={<Icon name="paper-plane" size={14} />}
         >
-          Send to Friends
+          {t('challengeCreate.submit.sendToFriends')}
         </Button>
 
         <Button
@@ -48,7 +53,7 @@ export function ChallengeSubmitActions({
           style={styles.saveButton}
           rightIcon={<Icon name="share-social" size={14} />}
         >
-          Share
+          {t('challengeCreate.submit.share')}
         </Button>
       </Row>
     </View>

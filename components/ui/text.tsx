@@ -2,7 +2,8 @@ import {
   Text as RNText,
   TextProps as RNTextProps,
 } from 'react-native';
-import { typography, colors } from '../../constants/theme';
+import type { ActivityType } from '../../constants/theme';
+import { useTheme } from '../../hooks/useTheme';
 
 /**
  * TextVariant defines the available text styles:
@@ -42,7 +43,7 @@ interface TextProps extends RNTextProps {
   variant?: TextVariant;
   align?: 'left' | 'center' | 'right' | 'justify';
   tone?: TextTone;
-  activity?: keyof typeof colors.activityType;
+  activity?: ActivityType;
 }
 
 export function Text({
@@ -54,6 +55,8 @@ export function Text({
   children,
   ...props
 }: TextProps) {
+  const { colors, typography } = useTheme();
+
   const variantMap = {
     title: {
       ...typography.title,

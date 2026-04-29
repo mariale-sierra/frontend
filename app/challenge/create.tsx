@@ -19,6 +19,7 @@ import { LocationIcon, type LocationType } from '../../components/icons/location
 import { Text } from '../../components/ui/text';
 import { colors, gradients, radius, spacing, type ActivityType } from '../../constants/theme';
 import { useCreateChallengeFlow } from '../../hooks/useCreateChallengeFlow';
+import { useTranslation } from 'react-i18next';
 
 // MOCK ONLY: category and location option lists should come from backend/database.
 // Backend team: send these as reference data so challenge setup is fully server-driven.
@@ -145,6 +146,8 @@ function DayPlanReviewSummary({
   daySummaries,
   onPressConfigure,
 }: DayPlanReviewSummaryProps) {
+  const { t } = useTranslation();
+
   return (
     <GradientBox
       colors={gradients.surfaceReverse.colors}
@@ -153,7 +156,7 @@ function DayPlanReviewSummary({
       style={styles.planInsightsCard}
     >
       <Stack gap="md">
-        <Text variant="subheader">Cycle Plan Summary</Text>
+        <Text variant="subheader">{t('challengeCreate.review.cyclePlanSummary')}</Text>
 
         <Stack gap="xs">
           {daySummaries.map((item) => (
@@ -165,7 +168,7 @@ function DayPlanReviewSummary({
         </Stack>
 
         <Pressable onPress={onPressConfigure} style={({ pressed }) => [styles.inlineReviewAction, pressed && styles.pressed]}>
-          <Text variant="label" style={styles.inlineReviewActionLabel}>Edit Day Configuration</Text>
+          <Text variant="label" style={styles.inlineReviewActionLabel}>{t('challengeCreate.actions.editDayConfiguration')}</Text>
         </Pressable>
       </Stack>
     </GradientBox>
@@ -173,6 +176,7 @@ function DayPlanReviewSummary({
 }
 
 export default function CreateChallenge() {
+  const { t } = useTranslation();
   const {
     title,
     description,
@@ -224,8 +228,8 @@ export default function CreateChallenge() {
         return (
           <Stack gap="lg">
             {renderOptionSelectionPanel({
-              title: 'Exercise Categories',
-              subtitle: 'These define the training identity of the challenge and influence the routines users expect to build.',
+              title: t('challengeCreate.categories.exerciseCategoriesTitle'),
+              subtitle: t('challengeCreate.categories.exerciseCategoriesSubtitle'),
               options: CATEGORY_OPTIONS,
               selectedValues: selectedCategories,
               onToggle: toggleCategory,
@@ -233,8 +237,8 @@ export default function CreateChallenge() {
             })}
 
             {renderOptionSelectionPanel({
-              title: 'Challenge Location',
-              subtitle: 'Location matters just as much as category because it defines the equipment, constraints, and context of each routine.',
+              title: t('challengeCreate.categories.challengeLocationTitle'),
+              subtitle: t('challengeCreate.categories.challengeLocationSubtitle'),
               options: LOCATION_OPTIONS,
               selectedValues: selectedLocations,
               onToggle: toggleLocation,
@@ -246,9 +250,9 @@ export default function CreateChallenge() {
       case 'cycle':
         return (
           <DurationStepper
-            label="Cycle Duration"
+            label={t('challengeCreate.fields.cycleDuration')}
             value={cycleDuration}
-            unitLabel="CYCLE DAYS"
+            unitLabel={t('challengeCreate.fields.cycleDaysUnit')}
             presetValues={[3, 5, 7, 14]}
             onIncrement={() => setCycleDuration(cycleDuration + 1)}
             onDecrement={() => setCycleDuration(Math.max(1, cycleDuration - 1))}
@@ -261,8 +265,13 @@ export default function CreateChallenge() {
           <Stack gap="lg">
             <Row justify="space-between" align="center">
               <View>
-                <Text variant="caption" style={styles.summaryLabel}>Configured</Text>
-                <Text variant="subheader">{configuredDays.length}/{cycleDuration} DAYS</Text>
+                <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.days.configured')}</Text>
+                <Text variant="subheader">
+                  {t('challengeCreate.days.configuredCount', {
+                    configured: configuredDays.length,
+                    total: cycleDuration,
+                  })}
+                </Text>
               </View>
             </Row>
 
@@ -314,8 +323,8 @@ export default function CreateChallenge() {
             >
               <Stack gap="md">
                 <View>
-                  <Text variant="caption" style={styles.summaryLabel}>Challenge</Text>
-                  <Text variant="title" style={styles.summaryTitle}>{title || 'Untitled challenge'}</Text>
+                  <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.review.challengeLabel')}</Text>
+                  <Text variant="title" style={styles.summaryTitle}>{title || t('challengeCreate.review.untitledChallenge')}</Text>
                   {description.trim().length > 0 && (
                     <Text variant="body" tone="secondary">{description}</Text>
                   )}
@@ -325,12 +334,12 @@ export default function CreateChallenge() {
 
                 <Row justify="space-between" align="flex-start" style={styles.summaryRow}>
                   <View style={styles.summaryMetricBlock}>
-                    <Text variant="caption" style={styles.summaryLabel}>Categories</Text>
-                    <Text variant="body" style={styles.summaryValueText}>{selectedCategories.join(' · ') || 'None selected'}</Text>
+                    <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.review.categoriesLabel')}</Text>
+                    <Text variant="body" style={styles.summaryValueText}>{selectedCategories.join(' · ') || t('challengeCreate.review.noneSelected')}</Text>
                   </View>
                   <View style={styles.summaryMetricBlock}>
-                    <Text variant="caption" style={styles.summaryLabel}>Location</Text>
-                    <Text variant="body" style={styles.summaryValueText}>{selectedLocations.join(' · ') || 'None selected'}</Text>
+                    <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.review.locationLabel')}</Text>
+                    <Text variant="body" style={styles.summaryValueText}>{selectedLocations.join(' · ') || t('challengeCreate.review.noneSelected')}</Text>
                   </View>
                 </Row>
 
@@ -338,20 +347,20 @@ export default function CreateChallenge() {
 
                 <Row justify="space-between" align="flex-start" style={styles.summaryRow}>
                   <View style={styles.summaryMetricBlock}>
-                    <Text variant="caption" style={styles.summaryLabel}>Cycle</Text>
-                    <Text variant="body" style={styles.summaryValueText}>{cycleDuration} Days</Text>
+                    <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.review.cycleLabel')}</Text>
+                    <Text variant="body" style={styles.summaryValueText}>{t('challengeCreate.review.daysValue', { days: cycleDuration })}</Text>
                   </View>
                   <View style={styles.summaryMetricBlock}>
-                    <Text variant="caption" style={styles.summaryLabel}>Challenge Duration</Text>
-                    <Text variant="body" style={styles.summaryValueText}>{effectiveChallengeDuration} Days</Text>
+                    <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.review.challengeDurationLabel')}</Text>
+                    <Text variant="body" style={styles.summaryValueText}>{t('challengeCreate.review.daysValue', { days: effectiveChallengeDuration })}</Text>
                   </View>
                 </Row>
 
                 <View style={styles.summaryDivider} />
 
                 <View>
-                  <Text variant="caption" style={styles.summaryLabel}>Visibility</Text>
-                  <Text variant="body" style={styles.summaryValueText}>{visibility ?? 'Not selected yet'}</Text>
+                  <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.review.visibilityLabel')}</Text>
+                  <Text variant="body" style={styles.summaryValueText}>{visibility ?? t('challengeCreate.review.notSelectedYet')}</Text>
                 </View>
               </Stack>
             </GradientBox>
@@ -365,14 +374,18 @@ export default function CreateChallenge() {
               <ChallengeSubmitActions
                 visibility={visibility ?? 'Public'}
                 loading={isSubmitting}
-                onPrimaryPress={() => handleActionPress(visibility === 'Private' ? 'Start Challenge' : 'Publish & Join')}
-                onSendToFriendsPress={() => handleActionPress('Send to Friends')}
-                onSharePress={() => handleActionPress('Share')}
+                onPrimaryPress={() => handleActionPress(
+                  visibility === 'Private'
+                    ? t('challengeCreate.submit.primaryPrivate')
+                    : t('challengeCreate.submit.primaryPublic'),
+                )}
+                onSendToFriendsPress={() => handleActionPress(t('challengeCreate.actions.sendToFriends'))}
+                onSharePress={() => handleActionPress(t('challengeCreate.actions.share'))}
               />
 
               {!isFormComplete && (
                 <Text variant="caption" style={styles.actionsHint}>
-                  Complete all required fields to publish or share this challenge.
+                  {t('challengeCreate.submit.incompleteHint')}
                 </Text>
               )}
             </View>
@@ -413,19 +426,19 @@ export default function CreateChallenge() {
             <View style={styles.footerActions}>
               {activeStepErrors.length > 0 && (
                 <Text variant="caption" style={styles.stepErrorText}>
-                  Missing: {activeStepErrors.join(', ')}
+                  {t('challengeCreate.alerts.missingPrefix', { items: activeStepErrors.join(', ') })}
                 </Text>
               )}
 
               <Row gap="sm" style={styles.footerButtonRow}>
                 <Pressable onPress={handleBack} style={({ pressed }) => [styles.secondaryNavButton, pressed && styles.pressed]}>
-                  <Text variant="label" style={styles.secondaryNavLabel}>Back</Text>
+                  <Text variant="label" style={styles.secondaryNavLabel}>{t('common.actions.back')}</Text>
                 </Pressable>
                 <Pressable onPress={handleNext} style={({ pressed }) => [styles.primaryNavButton, pressed && styles.pressed]}>
                   <Text variant="label" style={styles.primaryNavLabel}>
                     {activeStep.kind === 'settings'
-                        ? 'Review challenge'
-                        : 'Continue'}
+                        ? t('challengeCreate.actions.reviewChallenge')
+                        : t('common.actions.continue')}
                   </Text>
                 </Pressable>
               </Row>

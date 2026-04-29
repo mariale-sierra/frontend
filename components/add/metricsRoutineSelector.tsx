@@ -2,11 +2,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { colors, radius, spacing } from '../../constants/theme';
-
-export interface RoutineOption {
-  id: number;
-  name: string;
-}
+import type { RoutineOption } from '../../types/routine';
+import { useTranslation } from 'react-i18next';
 
 interface MetricsRoutineSelectorProps {
   routines: RoutineOption[];
@@ -23,15 +20,16 @@ export function MetricsRoutineSelector({
   onToggle,
   onSelect,
 }: MetricsRoutineSelectorProps) {
+  const { t } = useTranslation();
   const selectedRoutine =
     routines.find((routine) => routine.id === selectedRoutineId) ?? null;
 
   return (
     <View style={styles.container}>
       <Pressable style={({ pressed }) => [styles.trigger, pressed && styles.pressed]} onPress={onToggle}>
-        <Text variant="caption" style={styles.eyebrow}>ROUTINE</Text>
+        <Text variant="caption" style={styles.eyebrow}>{t('metrics.routineLabel')}</Text>
         <Text variant="body" style={styles.routineLabel} numberOfLines={1}>
-          {(selectedRoutine?.name ?? 'Select a routine').toUpperCase()}
+          {(selectedRoutine?.name ?? t('metrics.selectRoutine')).toUpperCase()}
         </Text>
 
         <View style={styles.chevronButton}>
@@ -72,7 +70,7 @@ export function MetricsRoutineSelector({
       {isOpen && routines.length === 0 && (
         <View style={styles.menu}>
           <View style={styles.option}>
-            <Text variant="body" tone="secondary">No routines yet.</Text>
+            <Text variant="body" tone="secondary">{t('metrics.noRoutines')}</Text>
           </View>
         </View>
       )}

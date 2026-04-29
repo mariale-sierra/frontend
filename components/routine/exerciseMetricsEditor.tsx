@@ -7,7 +7,7 @@ import { RestTimeInput } from './restTimeInput';
 import { routineStyles } from './routineStyles';
 import { colors, radius, spacing } from '../../constants/theme';
 import { useRoutineBuilder } from '../../store/routineBuilderStore';
-import type { ExerciseEntry } from '../../store/routineBuilderStore';
+import type { ExerciseEntry } from '../../types/routine';
 
 interface ExerciseMetricsEditorProps {
   exercise: ExerciseEntry;

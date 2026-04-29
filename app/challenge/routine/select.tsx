@@ -9,8 +9,10 @@ import { Icon } from '../../../components/ui/icon';
 import { RestDayOptionCard, RoutinePickerCard } from '../../../components/routine';
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { colors, spacing, radius } from '../../../constants/theme';
+import { useTranslation } from 'react-i18next';
 
 export default function SelectRoutineScreen() {
+  const { t } = useTranslation();
   const { day } = useLocalSearchParams<{ day: string }>();
   const { init, savedRoutines, assignRoutineToDay, assignRestDayToDay } = useRoutineBuilder();
 
@@ -48,7 +50,7 @@ export default function SelectRoutineScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
           <Icon name="chevron-back" size={24} color={colors.textPrimary} />
         </Pressable>
-        <Text variant="subheader">DAY {dayNumber} ROUTINE</Text>
+        <Text variant="subheader">{t('routineSelect.dayRoutineTitle', { day: dayNumber })}</Text>
       </Row>
 
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -58,7 +60,7 @@ export default function SelectRoutineScreen() {
           <View style={styles.sectionDivider} />
 
           <Pressable onPress={handleCreateNew} style={({ pressed }) => [styles.sectionHeader, pressed && styles.pressed]}>
-            <Text variant="subheader" style={styles.sectionLabel}>YOUR ROUTINES</Text>
+            <Text variant="subheader" style={styles.sectionLabel}>{t('routineSelect.yourRoutines')}</Text>
             <View style={styles.addIconButton}>
               <Icon name="add" size={20} color={colors.textPrimary} />
             </View>

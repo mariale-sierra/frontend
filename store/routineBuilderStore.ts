@@ -1,74 +1,15 @@
 import { create } from 'zustand';
 import type { ActivityType } from '../constants/theme';
-
-export type ExerciseMetricType = 'strength' | 'schema';
-
-// Backend contract (future): each metric field is defined by DB/API and rendered by UI.
-type MetricFieldBase = {
-  key: string;
-  label: string;
-};
-
-export type NumberMetricField = MetricFieldBase & {
-  type: 'number';
-  defaultValue: number;
-  unit?: string;
-  min?: number;
-  max?: number;
-};
-
-export type DurationMetricField = MetricFieldBase & {
-  type: 'duration';
-  defaultMinutes: number;
-  defaultSeconds: number;
-};
-
-export type MetricFieldDefinition = NumberMetricField | DurationMetricField;
-
-export interface MetricTemplate {
-  id: string;
-  title: string;
-  fields: MetricFieldDefinition[];
-}
-
-export interface SetRow {
-  setNumber: number;
-  reps: number;
-  restMin: number;
-  restSec: number;
-}
-
-export type SchemaMetricValue = number | { minutes: number; seconds: number };
-
-export type ExerciseMetrics =
-  | { kind: 'strength'; sets: SetRow[] }
-  | {
-      kind: 'schema';
-      template: MetricTemplate;
-      values: Record<string, SchemaMetricValue>;
-    };
-
-export interface ExerciseEntry {
-  id: string;
-  name: string;
-  location: string;
-  metricType: ExerciseMetricType;
-  activityType: ActivityType;
-  muscleGroups: string[];
-  metrics: ExerciseMetrics;
-  note: string;
-}
-
-export interface RoutineSummary {
-  id: string;
-  name: string;
-  description: string;
-  isRestDay: boolean;
-  exercises: ExerciseEntry[];
-  primaryActivity: ActivityType | null;
-  activityTypes: ActivityType[];
-  backendId?: number;
-}
+import type {
+  ExerciseEntry,
+  ExerciseMetricType,
+  ExerciseMetrics,
+  MetricFieldDefinition,
+  MetricTemplate,
+  RoutineSummary,
+  SchemaMetricValue,
+  SetRow,
+} from '../types/routine';
 
 interface RoutineBuilderState {
   dayIndex: number | null;

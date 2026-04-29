@@ -2,12 +2,15 @@ import { Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text } from '../ui/text';
 import { gradients, radius, spacing } from '../../constants/theme';
+import { useTranslation } from 'react-i18next';
 
 interface RestDayOptionCardProps {
   onPress: () => void;
 }
 
 export function RestDayOptionCard({ onPress }: RestDayOptionCardProps) {
+  const { t } = useTranslation();
+
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
       <LinearGradient
@@ -16,8 +19,8 @@ export function RestDayOptionCard({ onPress }: RestDayOptionCardProps) {
         end={gradients.restDay.end}
         style={styles.card}
       >
-        <Text variant="header" tone="primary">Rest Day</Text>
-        <Text variant="caption" style={styles.text}>Recovery, mobility, or total reset.</Text>
+        <Text variant="header" tone="primary">{t('routineSelect.restDay.title')}</Text>
+        <Text variant="caption" style={styles.text}>{t('routineSelect.restDay.description')}</Text>
       </LinearGradient>
     </Pressable>
   );

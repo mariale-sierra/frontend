@@ -9,21 +9,15 @@ import { spacing } from '../../constants/theme';
 import type { ActivityType } from '../../constants/theme';
 import type { LocationType } from '../../components/icons/locationIcon';
 import { getChallenges } from '../../services/challenge/challenge.service';
+import type { ChallengeContract } from '../../types/challenge';
+import { useTranslation } from 'react-i18next';
 
-type BackendChallenge = {
-	id: string;
-	name: string;
-	visibility: string;
-	duration_days: number;
-	created_by_user_id: string;
-};
-
-function toCardProps(c: BackendChallenge): ChallengePreviewCardProps {
+function toCardProps(c: ChallengeContract, memberAuthorLabel: string): ChallengePreviewCardProps {
 	return {
 		challengeId: String(c.id),
-		days: c.duration_days,
+		days: c.duration_days ?? 0,
 		title: c.name,
-		author: 'member',
+		author: memberAuthorLabel,
 		badgeLabel: c.visibility === 'public' ? 'PUBLIC' : 'PRIVATE',
 		activityType: 'strength' as ActivityType,
 		locationIconTypes: ['gym'] as LocationType[],
@@ -32,18 +26,21 @@ function toCardProps(c: BackendChallenge): ChallengePreviewCardProps {
 
 export default function Challenges() {
 	const router = useRouter();
+	const { t } = useTranslation();
 	const [challenges, setChallenges] = useState<ChallengePreviewCardProps[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
+		const memberAuthorLabel = t('challenges.memberAuthor');
+
 		getChallenges()
 			.then((res) => {
-				setChallenges((res.data ?? []).map(toCardProps));
+				setChallenges((res ?? []).map((challenge) => toCardProps(challenge, memberAuthorLabel)));
 			})
-			.catch(() => setError('Could not load challenges.'))
+			.catch(() => setError(t('challenges.loadError')))
 			.finally(() => setLoading(false));
-	}, []);
+	}, [t]);
 
 	const handleCreateChallenge = () => router.push('/challenge/create');
 	const handleOpenChallenge = (id: string) => router.push(`/challenge/${id}`);

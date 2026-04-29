@@ -5,6 +5,7 @@ import { Text } from '../ui/text';
 import { colors, radius, spacing } from '../../constants/theme';
 import { MetricsChallengeSelector } from './metricsChallengeSelector';
 import type { ChallengeOption } from '../../types/metrics';
+import { useTranslation } from 'react-i18next';
 
 interface MetricsTopBarProps {
   challenges: ChallengeOption[];
@@ -27,13 +28,15 @@ export function MetricsTopBar({
   onRestDay,
   onSkip,
 }: MetricsTopBarProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.headerRow}>
       <Pressable
         onPress={onBack}
         style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
         accessibilityRole="button"
-        accessibilityLabel="Go back"
+        accessibilityLabel={t('metrics.accessibilityBack')}
       >
         <Icon name="chevron-back" size={18} />
       </Pressable>
@@ -53,10 +56,10 @@ export function MetricsTopBar({
           onPress={onSkip}
           style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
           accessibilityRole="button"
-          accessibilityLabel="Skip metrics"
+          accessibilityLabel={t('metrics.accessibilitySkip')}
         >
           <Text variant="caption" style={styles.actionButtonLabel}>
-            Skip
+            {t('metrics.skip')}
           </Text>
         </Pressable>
       </View>
