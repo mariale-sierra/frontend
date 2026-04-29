@@ -2,10 +2,10 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import { useMetricsEntryStore } from '../store/metricsEntryStore';
-import { getUserId } from '../services/auth.service';
-import { getRoutines } from '../services/routine.service';
-import { createWorkoutLog, getWorkoutLog } from '../services/workout-log.service';
-import { addMetricToWorkoutLogExercise } from '../services/metrics.service';
+import { getUserId } from '../services/auth/auth.service';
+import { getRoutines } from '../services/routine/routine.service';
+import { createWorkoutLog, getWorkoutLog } from '../services/workout-log/workout-log.service';
+import { addMetricToWorkoutLogExercise } from '../services/metrics/metrics.service';
 import type { RoutineOption } from '../components/add/metricsRoutineSelector';
 
 interface WorkoutLogExerciseDTO {

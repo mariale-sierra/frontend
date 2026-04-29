@@ -1,5 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import api from './api';
+import api from '../api';
+import { clearAccessToken, getAccessToken, setAccessToken } from './token.service';
+import { storage } from '../../utils/storage';
 
 export async function login(email: string, password: string) {
   console.log('login function called with:', email, password); // Debugging log
@@ -7,9 +8,9 @@ export async function login(email: string, password: string) {
     const response = await api.post('/auth/login', { email, password });
     const { accessToken, user } = response.data;
 
-    await AsyncStorage.setItem('token', accessToken);
+    await setAccessToken(accessToken);
     if (user?.id) {
-      await AsyncStorage.setItem('userId', user.id);
+      await storage.setItem('userId', user.id);
     }
     return response.data;
   } catch (error: any) {
@@ -26,22 +27,22 @@ export async function login(email: string, password: string) {
 export async function register(email: string, username: string, password: string) {
   const response = await api.post('/auth/register', { email, username, password });
   const { accessToken, user } = response.data;
-  await AsyncStorage.setItem('token', accessToken);
+  await setAccessToken(accessToken);
   if (user?.id) {
-    await AsyncStorage.setItem('userId', user.id);
+    await storage.setItem('userId', user.id);
   }
   return response.data;
 }
 
 export async function logout() {
-  await AsyncStorage.removeItem('token');
-  await AsyncStorage.removeItem('userId');
+  await clearAccessToken();
+  await storage.removeItem('userId');
 }
 
 export async function getToken() {
-  return await AsyncStorage.getItem('token');
+  return await getAccessToken();
 }
 
 export async function getUserId() {
-  return await AsyncStorage.getItem('userId');
+  return await storage.getItem('userId');
 }

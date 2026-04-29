@@ -9,8 +9,8 @@ import { Icon } from '../../../components/ui/icon';
 import { ExerciseBlock } from '../../../components/routine/exerciseBlock';
 import { getRoutineLocationSummary, useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { colors, spacing, radius, typography } from '../../../constants/theme';
-import { addExerciseToRoutine, createRoutine } from '../../../services/routine.service';
-import { getUserId } from '../../../services/auth.service';
+import { addExerciseToRoutine, createRoutine } from '../../../services/routine/routine.service';
+import { getUserId } from '../../../services/auth/auth.service';
 
 export default function CreateRoutineScreen() {
   const { day } = useLocalSearchParams<{ day: string }>();

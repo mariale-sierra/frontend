@@ -7,7 +7,7 @@ import ChallengeHeader from '../../../components/challengesInfo/challengeHeader'
 import ChallengeRules from '../../../components/challengesInfo/challengeRules';
 import ChallengeRoutineList from '../../../components/challengesInfo/challengeRoutineList';
 import { spacing } from '../../../constants/theme';
-import { getChallenge } from '../../../services/challenge.service';
+import { getChallenge } from '../../../services/challenge/challenge.service';
 
 type BackendChallenge = {
   id: string;

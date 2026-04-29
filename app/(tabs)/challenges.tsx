@@ -8,7 +8,7 @@ import { Text } from '../../components/ui/text';
 import { spacing } from '../../constants/theme';
 import type { ActivityType } from '../../constants/theme';
 import type { LocationType } from '../../components/icons/locationIcon';
-import { getChallenges } from '../../services/challenge.service';
+import { getChallenges } from '../../services/challenge/challenge.service';
 
 type BackendChallenge = {
 	id: string;

@@ -1,4 +1,4 @@
-import api from './api';
+import api from '../api';
 
 export async function createWorkoutLog(data: { userId: string; routineId?: number }) {
   const response = await api.post('/workout-logs', data);

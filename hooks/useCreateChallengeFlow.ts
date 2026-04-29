@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { Alert } from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { buildCreateChallengePayload } from '../services/adapters/createChallengePayloadAdapter';
-import { createChallenge } from '../services/challenge.service';
+import { createChallenge } from '../services/challenge/challenge.service';
 import type { ChallengeVisibility } from '../store/challengeBuilderStore';
 import { useChallengeBuilder } from '../store/challengeBuilderStore';
 import { useRoutineBuilder } from '../store/routineBuilderStore';

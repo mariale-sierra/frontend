@@ -11,7 +11,7 @@ import { Loader } from '../../components/ui/loader';
 import { Text } from '../../components/ui/text';
 import { colors } from '../../constants/theme';
 import api from '../../services/api';
-import { login } from '../../services/auth.service';
+import { login } from '../../services/auth/auth.service';
 
 export default function Login() {
   const router = useRouter();

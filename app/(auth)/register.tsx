@@ -9,7 +9,7 @@ import { Input } from '../../components/ui/input';
 import { Loader } from '../../components/ui/loader';
 import { colors } from '../../constants/theme';
 import api from '../../services/api';
-import { register } from '../../services/auth.service';
+import { register } from '../../services/auth/auth.service';
 
 export default function Register() {
   const router = useRouter();

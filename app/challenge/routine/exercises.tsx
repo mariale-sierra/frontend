@@ -22,7 +22,7 @@ import {
   useFilteredExercises,
   type ExerciseCandidate,
 } from "../../../hooks/useFilteredExercises";
-import { getExercises } from "../../../services/exercises.service";
+import { getExercises } from '../../../services/exercises/exercises.service';
 
 interface BackendExercise {
   id: number;
