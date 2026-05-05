@@ -1,13 +1,11 @@
-import { type ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenBackground from '../../components/layout/screenBackground';
-import { GradientBox } from '../../components/layout/gradient-box';
 import { Row } from '../../components/layout/row';
 import { Stack } from '../../components/layout/stack';
 import {
-  CycleDayAssignmentPanel,
-  CycleDayTimelineStepper,
+  CycleDayVerticalStepper,
   ChallengeSubmitActions,
   ChallengeTitleInputs,
   ChallengeVisibilitySection,
@@ -17,7 +15,7 @@ import {
 import { ActivityIcon } from '../../components/icons/activityIcon';
 import { LocationIcon, type LocationType } from '../../components/icons/locationIcon';
 import { Text } from '../../components/ui/text';
-import { colors, gradients, radius, spacing, type ActivityType } from '../../constants/theme';
+import { colors, radius, spacing, type ActivityType } from '../../constants/theme';
 import { useCreateChallengeFlow } from '../../hooks/useCreateChallengeFlow';
 import { useTranslation } from 'react-i18next';
 
@@ -50,10 +48,10 @@ interface SelectionPanelProps {
 
 interface OptionCardProps {
   label: string;
-  description: string;
   selected: boolean;
   icon: ReactNode;
   onPress: () => void;
+  onPressInfo: () => void;
 }
 
 interface DayPlanReviewSummaryProps {
@@ -67,60 +65,99 @@ interface SelectableOptionBase {
   description: string;
 }
 
+interface OptionInfoModalState {
+  label: string;
+  description: string;
+  icon: ReactNode;
+}
+
 function SelectionPanel({ title, subtitle, children }: SelectionPanelProps) {
   return (
-    <GradientBox
-      colors={gradients.surface.colors}
-      start={gradients.surface.start}
-      end={gradients.surface.end}
-      style={styles.selectionPanel}
-    >
-      <Stack gap="md">
-        <View>
-          <Text variant="subheader">{title}</Text>
-          <Text variant="body" tone="secondary" style={styles.selectionPanelSubtitle}>{subtitle}</Text>
-        </View>
-        {children}
-      </Stack>
-    </GradientBox>
+    <Stack gap="md">
+      <View>
+        <Text variant="subheader">{title}</Text>
+        <Text variant="body" tone="secondary" style={styles.selectionPanelSubtitle}>{subtitle}</Text>
+      </View>
+      {children}
+    </Stack>
   );
 }
 
-function OptionCard({ label, description, selected, icon, onPress }: OptionCardProps) {
+function OptionCard({ label, selected, icon, onPress, onPressInfo }: OptionCardProps) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.optionCard, selected && styles.optionCardSelected, pressed && styles.pressed]}
     >
-      {selected && (
-        <View style={styles.optionCheckIcon}>
-          <Ionicons name="checkmark-circle" size={16} color={colors.success} />
-        </View>
-      )}
-      <View style={styles.optionIconShell}>{icon}</View>
+      <Row align="center" justify="space-between">
+        <View style={styles.optionIconShell}>{icon}</View>
+        <Pressable
+          hitSlop={10}
+          onPress={(event) => {
+            event.stopPropagation();
+            onPressInfo();
+          }}
+          style={({ pressed }) => [styles.optionInfoButton, pressed && styles.pressed]}
+        >
+          <Ionicons name="information-circle-outline" size={18} color="rgba(255,255,255,0.7)" />
+        </Pressable>
+      </Row>
+
       <Text variant="body" style={styles.optionTitle}>{label}</Text>
-      <Text variant="caption" style={styles.optionDescription}>{description}</Text>
     </Pressable>
   );
 }
 
-function renderOptionSelectionPanel<TOption extends SelectableOptionBase>(params: {
+function OptionInfoModal({
+  info,
+  onClose,
+}: {
+  info: OptionInfoModalState | null;
+  onClose: () => void;
+}) {
+  return (
+    <Modal
+      visible={Boolean(info)}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.infoBackdrop} onPress={onClose}>
+        <Pressable style={styles.infoDialog} onPress={() => {}}>
+          <Pressable hitSlop={10} style={styles.infoCloseButton} onPress={onClose}>
+            <Ionicons name="close" size={20} color={colors.textPrimary} />
+          </Pressable>
+
+          <Stack gap="md" style={styles.infoContent}>
+            <View style={styles.infoIconShell}>{info?.icon ?? null}</View>
+            <Text variant="subheader" style={styles.infoTitle}>{info?.label}</Text>
+            <Text variant="body" tone="secondary" style={styles.infoDescription}>
+              {info?.description}
+            </Text>
+          </Stack>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+function OptionSelectionPanel<TOption extends SelectableOptionBase>({
+  title,
+  subtitle,
+  options,
+  selectedValues,
+  onToggle,
+  onPressInfo,
+  renderIcon,
+}: {
   title: string;
   subtitle: string;
   options: readonly TOption[];
   selectedValues: string[];
   onToggle: (value: string) => void;
-  renderIcon: (option: TOption) => ReactNode;
+  onPressInfo: (option: TOption) => void;
+  renderIcon: (option: TOption, size: 'sm' | 'lg') => ReactNode;
 }) {
-  const {
-    title,
-    subtitle,
-    options,
-    selectedValues,
-    onToggle,
-    renderIcon,
-  } = params;
-
   return (
     <SelectionPanel title={title} subtitle={subtitle}>
       <View style={styles.optionGrid}>
@@ -130,10 +167,10 @@ function renderOptionSelectionPanel<TOption extends SelectableOptionBase>(params
             <OptionCard
               key={option.value}
               label={option.label}
-              description={option.description}
               selected={selected}
-              icon={renderIcon(option)}
+              icon={renderIcon(option, 'sm')}
               onPress={() => onToggle(option.value)}
+              onPressInfo={() => onPressInfo(option)}
             />
           );
         })}
@@ -149,12 +186,7 @@ function DayPlanReviewSummary({
   const { t } = useTranslation();
 
   return (
-    <GradientBox
-      colors={gradients.surfaceReverse.colors}
-      start={gradients.surfaceReverse.start}
-      end={gradients.surfaceReverse.end}
-      style={styles.planInsightsCard}
-    >
+    <View style={styles.planInsightsCard}>
       <Stack gap="md">
         <Text variant="subheader">{t('challengeCreate.review.cyclePlanSummary')}</Text>
 
@@ -171,12 +203,15 @@ function DayPlanReviewSummary({
           <Text variant="label" style={styles.inlineReviewActionLabel}>{t('challengeCreate.actions.editDayConfiguration')}</Text>
         </Pressable>
       </Stack>
-    </GradientBox>
+    </View>
   );
 }
 
 export default function CreateChallenge() {
   const { t } = useTranslation();
+  const [activeOptionInfo, setActiveOptionInfo] = useState<OptionInfoModalState | null>(null);
+  const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
+  const [weekPickerOpen, setWeekPickerOpen] = useState(false);
   const {
     title,
     description,
@@ -203,6 +238,8 @@ export default function CreateChallenge() {
     setCurrentStep,
     setSelectedDay,
     getDayStatus,
+    getDayRoutineLabel,
+    getDayRoutineDescription,
     handleBack,
     handleNext,
     handleActionPress,
@@ -211,6 +248,53 @@ export default function CreateChallenge() {
     openDayRoutineSelector,
     unassignRoutineFromDay,
   } = useCreateChallengeFlow();
+
+  const weekGroups = useMemo(() => {
+    const totalWeeks = Math.max(1, Math.ceil(cycleDuration / 7));
+    return Array.from({ length: totalWeeks }, (_, index) => {
+      const startDay = index * 7 + 1;
+      const endDay = Math.min(cycleDuration, startDay + 6);
+      return Array.from({ length: Math.max(0, endDay - startDay + 1) }, (_item, offset) => startDay + offset);
+    });
+  }, [cycleDuration]);
+
+  const activeWeekDays = weekGroups[selectedWeekIndex] ?? [];
+  const showWeekGrouping = cycleDuration > 7;
+  const isDaysStep = activeStep.kind === 'days';
+  const isReviewStep = activeStep.kind === 'review';
+
+  useEffect(() => {
+    const activeIndex = Math.floor((Math.max(1, selectedDay) - 1) / 7);
+    setSelectedWeekIndex(Math.min(activeIndex, Math.max(0, weekGroups.length - 1)));
+  }, [selectedDay, weekGroups.length]);
+
+  function handleSelectWeek(index: number) {
+    setSelectedWeekIndex(index);
+    setWeekPickerOpen(false);
+
+    const days = weekGroups[index] ?? [];
+    if (days.length === 0) {
+      return;
+    }
+
+    if (!days.includes(selectedDay)) {
+      setSelectedDay(days[0]);
+    }
+  }
+
+  function handleDaysContinue() {
+    if (!selectedDayRoutine) {
+      openDayRoutineSelector(selectedDay);
+      return;
+    }
+
+    if (selectedDay < cycleDuration) {
+      setSelectedDay(selectedDay + 1);
+      return;
+    }
+
+    handleNext();
+  }
 
   function renderStepContent() {
     switch (activeStep.kind) {
@@ -226,24 +310,38 @@ export default function CreateChallenge() {
 
       case 'categories':
         return (
-          <Stack gap="lg">
-            {renderOptionSelectionPanel({
-              title: t('challengeCreate.categories.exerciseCategoriesTitle'),
-              subtitle: t('challengeCreate.categories.exerciseCategoriesSubtitle'),
-              options: CATEGORY_OPTIONS,
-              selectedValues: selectedCategories,
-              onToggle: toggleCategory,
-              renderIcon: (option) => <ActivityIcon type={option.type as ActivityType} size="sm" />,
-            })}
+          <Stack gap="2xl">
+            <OptionSelectionPanel
+              title={t('challengeCreate.categories.exerciseCategoriesTitle')}
+              subtitle={t('challengeCreate.categories.exerciseCategoriesSubtitle')}
+              options={CATEGORY_OPTIONS}
+              selectedValues={selectedCategories}
+              onToggle={toggleCategory}
+              onPressInfo={(option) => {
+                setActiveOptionInfo({
+                  label: option.label,
+                  description: option.description,
+                  icon: <ActivityIcon type={option.type as ActivityType} size="lg" />,
+                });
+              }}
+              renderIcon={(option, size) => <ActivityIcon type={option.type as ActivityType} size={size} />}
+            />
 
-            {renderOptionSelectionPanel({
-              title: t('challengeCreate.categories.challengeLocationTitle'),
-              subtitle: t('challengeCreate.categories.challengeLocationSubtitle'),
-              options: LOCATION_OPTIONS,
-              selectedValues: selectedLocations,
-              onToggle: toggleLocation,
-              renderIcon: (option) => <LocationIcon type={option.type as LocationType} size="sm" />,
-            })}
+            <OptionSelectionPanel
+              title={t('challengeCreate.categories.challengeLocationTitle')}
+              subtitle={t('challengeCreate.categories.challengeLocationSubtitle')}
+              options={LOCATION_OPTIONS}
+              selectedValues={selectedLocations}
+              onToggle={toggleLocation}
+              onPressInfo={(option) => {
+                setActiveOptionInfo({
+                  label: option.label,
+                  description: option.description,
+                  icon: <LocationIcon type={option.type as LocationType} size="lg" />,
+                });
+              }}
+              renderIcon={(option, size) => <LocationIcon type={option.type as LocationType} size={size} />}
+            />
           </Stack>
         );
 
@@ -254,6 +352,7 @@ export default function CreateChallenge() {
             value={cycleDuration}
             unitLabel={t('challengeCreate.fields.cycleDaysUnit')}
             presetValues={[3, 5, 7, 14]}
+            presetLabels={{ 7: t('challengeCreate.fields.oneWeek'), 14: t('challengeCreate.fields.twoWeeks') }}
             onIncrement={() => setCycleDuration(cycleDuration + 1)}
             onDecrement={() => setCycleDuration(Math.max(1, cycleDuration - 1))}
             onSelectPreset={setCycleDuration}
@@ -275,24 +374,48 @@ export default function CreateChallenge() {
               </View>
             </Row>
 
-            <View style={styles.timelineFullBleed}>
-              <CycleDayTimelineStepper
-                totalDays={cycleDuration}
-                selectedDay={selectedDay}
-                onSelectDay={setSelectedDay}
-                getDayStatus={getDayStatus}
-                daysPerRow={7}
-              />
-            </View>
+            {showWeekGrouping && (
+              <View style={styles.weekPickerWrap}>
+                <Pressable
+                  onPress={() => setWeekPickerOpen((current) => !current)}
+                  style={({ pressed }) => [styles.weekPickerButton, pressed && styles.pressed]}
+                >
+                  <Text variant="label" style={styles.weekPickerLabel}>{t('challengeCreate.days.weekLabel', { number: selectedWeekIndex + 1 })}</Text>
+                  <Ionicons name={weekPickerOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textPrimary} />
+                </Pressable>
 
-            <View style={styles.dayAssignmentSpacing}>
-              <CycleDayAssignmentPanel
-                dayNumber={selectedDay}
-                routine={selectedDayRoutine}
-                onPressAssign={() => openDayRoutineSelector(selectedDay)}
-                onPressRemove={() => unassignRoutineFromDay(selectedDay)}
-              />
-            </View>
+                {weekPickerOpen && (
+                  <View style={styles.weekPickerList}>
+                    {weekGroups.map((_week, index) => {
+                      const active = index === selectedWeekIndex;
+                      return (
+                        <Pressable
+                          key={`week-option-${index}`}
+                          onPress={() => handleSelectWeek(index)}
+                          style={({ pressed }) => [
+                            styles.weekPickerOption,
+                            active && styles.weekPickerOptionActive,
+                            pressed && styles.pressed,
+                          ]}
+                        >
+                          <Text variant="body" style={styles.weekPickerOptionLabel}>{t('challengeCreate.days.weekLabel', { number: index + 1 })}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            )}
+
+            <CycleDayVerticalStepper
+              days={showWeekGrouping ? activeWeekDays : Array.from({ length: cycleDuration }, (_item, index) => index + 1)}
+              selectedDay={selectedDay}
+              onSelectDay={setSelectedDay}
+              getDayStatus={getDayStatus}
+              getDayRoutineLabel={getDayRoutineLabel}
+              getDayRoutineDescription={getDayRoutineDescription}
+              onPressAssignRoutine={openDayRoutineSelector}
+            />
           </Stack>
         );
 
@@ -315,12 +438,7 @@ export default function CreateChallenge() {
       case 'review':
         return (
           <Stack gap="lg">
-            <GradientBox
-              colors={gradients.surface.colors}
-              start={gradients.surface.start}
-              end={gradients.surface.end}
-              style={styles.summaryCard}
-            >
+            <View style={styles.summaryContent}>
               <Stack gap="md">
                 <View>
                   <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.review.challengeLabel')}</Text>
@@ -363,7 +481,9 @@ export default function CreateChallenge() {
                   <Text variant="body" style={styles.summaryValueText}>{visibility ?? t('challengeCreate.review.notSelectedYet')}</Text>
                 </View>
               </Stack>
-            </GradientBox>
+            </View>
+
+            <View style={styles.reviewSummarySpacer} />
 
             <DayPlanReviewSummary
               daySummaries={daySummaries}
@@ -396,7 +516,7 @@ export default function CreateChallenge() {
 
   return (
     <ScreenBackground variant="top">
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={[styles.container, !isReviewStep && styles.containerWithFixedBottom]}>
         <Stack gap="md">
           <CreateChallengeHeader author="Cami" />
 
@@ -422,30 +542,34 @@ export default function CreateChallenge() {
             {renderStepContent()}
           </View>
 
-          {activeStep.kind !== 'review' && (
-            <View style={styles.footerActions}>
-              {activeStepErrors.length > 0 && (
-                <Text variant="caption" style={styles.stepErrorText}>
-                  {t('challengeCreate.alerts.missingPrefix', { items: activeStepErrors.join(', ') })}
-                </Text>
-              )}
+          <OptionInfoModal
+            info={activeOptionInfo}
+            onClose={() => setActiveOptionInfo(null)}
+          />
 
-              <Row gap="sm" style={styles.footerButtonRow}>
-                <Pressable onPress={handleBack} style={({ pressed }) => [styles.secondaryNavButton, pressed && styles.pressed]}>
-                  <Text variant="label" style={styles.secondaryNavLabel}>{t('common.actions.back')}</Text>
-                </Pressable>
-                <Pressable onPress={handleNext} style={({ pressed }) => [styles.primaryNavButton, pressed && styles.pressed]}>
-                  <Text variant="label" style={styles.primaryNavLabel}>
-                    {activeStep.kind === 'settings'
-                        ? t('challengeCreate.actions.reviewChallenge')
-                        : t('common.actions.continue')}
-                  </Text>
-                </Pressable>
-              </Row>
-            </View>
-          )}
+
         </Stack>
       </ScrollView>
+
+      {!isReviewStep && (
+        <View style={styles.fixedBottomBar}>
+          {activeStepErrors.length > 0 && (
+            <Text variant="caption" style={styles.stepErrorText}>
+              {t('challengeCreate.alerts.missingPrefix', { items: activeStepErrors.join(', ') })}
+            </Text>
+          )}
+          <Pressable
+            onPress={isDaysStep ? handleDaysContinue : handleNext}
+            style={({ pressed }) => [styles.fixedBottomButton, pressed && styles.pressed]}
+          >
+            <Text variant="label" style={styles.fixedBottomButtonLabel}>
+              {activeStep.kind === 'settings'
+                ? t('challengeCreate.actions.reviewChallenge')
+                : t('common.actions.continue')}
+            </Text>
+          </Pressable>
+        </View>
+      )}
     </ScreenBackground>
   );
 }
@@ -456,8 +580,12 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['2xl'],
     flexGrow: 1,
   },
+  containerWithFixedBottom: {
+    paddingBottom: spacing['2xl'] + 132,
+  },
   progressHeader: {
     gap: spacing.lg,
+    marginTop: spacing.lg,
   },
   progressNavRow: {
     width: '100%',
@@ -495,16 +623,42 @@ const styles = StyleSheet.create({
   stepContent: {
     marginTop: spacing.xl + spacing.md,
   },
-  timelineFullBleed: {
-    marginHorizontal: -spacing.lg,
-    paddingHorizontal: spacing.xs,
+  weekPickerWrap: {
+    zIndex: 10,
   },
-  dayAssignmentSpacing: {
-    marginTop: spacing.md,
+  weekPickerButton: {
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  selectionPanel: {
-    borderRadius: radius['2xl'],
-    padding: spacing.lg,
+  weekPickerLabel: {
+    color: colors.textPrimary,
+  },
+  weekPickerList: {
+    marginTop: spacing.sm,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+    backgroundColor: colors.surface,
+    overflow: 'hidden',
+  },
+  weekPickerOption: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  weekPickerOptionActive: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  weekPickerOptionLabel: {
+    color: colors.textPrimary,
   },
   selectionPanelSubtitle: {
     marginTop: spacing.xs,
@@ -516,13 +670,13 @@ const styles = StyleSheet.create({
   },
   optionCard: {
     width: '48%',
-    minHeight: 156,
+    minHeight: 98,
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
     backgroundColor: 'rgba(255,255,255,0.03)',
     padding: spacing.md,
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   optionCardSelected: {
     borderColor: 'rgba(255,255,255,0.34)',
@@ -539,22 +693,60 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontWeight: '600',
   },
-  optionDescription: {
-    color: 'rgba(255,255,255,0.6)',
-    lineHeight: 16,
+  optionInfoButton: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
-  optionCheckIcon: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    zIndex: 1,
+  infoBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
   },
-  summaryCard: {
+  infoDialog: {
+    width: '100%',
     borderRadius: radius['2xl'],
-    padding: spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: colors.surface,
+    padding: spacing.lg,
+    position: 'relative',
+  },
+  infoCloseButton: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    zIndex: 2,
+  },
+  infoContent: {
+    alignItems: 'center',
+    paddingTop: spacing.md,
+  },
+  infoIconShell: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  infoTitle: {
+    textAlign: 'center',
+  },
+  infoDescription: {
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  summaryContent: {
+    paddingHorizontal: spacing.xs,
+  },
+  reviewSummarySpacer: {
+    height: spacing.lg,
   },
   summaryLabel: {
     color: 'rgba(255,255,255,0.56)',
@@ -584,8 +776,8 @@ const styles = StyleSheet.create({
     borderRadius: radius['2xl'],
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.24)',
-    backgroundColor: 'rgba(255,255,255,0.01)',
+    borderColor: 'rgba(255,255,255,0.55)',
+    backgroundColor: 'transparent',
   },
   planListRow: {
     width: '100%',
@@ -618,13 +810,14 @@ const styles = StyleSheet.create({
   },
   actionsBlock: {
     gap: spacing.sm,
+    marginTop: spacing.xl,
   },
   actionsHint: {
     textAlign: 'center',
     color: 'rgba(255,255,255,0.62)',
   },
   footerActions: {
-    marginTop: spacing['2xl'],
+    marginTop: spacing['2xl'] + spacing.lg,
     gap: spacing.md,
   },
   stepErrorText: {
@@ -656,6 +849,28 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   primaryNavLabel: {
+    color: colors.textInverse,
+  },
+  fixedBottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+    backgroundColor: 'rgba(7,10,16,0.92)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.14)',
+  },
+  fixedBottomButton: {
+    borderRadius: radius['2xl'],
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    backgroundColor: colors.textPrimary,
+  },
+  fixedBottomButtonLabel: {
     color: colors.textInverse,
   },
   pressed: {

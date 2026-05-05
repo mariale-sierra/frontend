@@ -1,9 +1,8 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { GradientBox } from '../layout/gradient-box';
 import { Row } from '../layout/row';
 import { Stack } from '../layout/stack';
 import { Text } from '../ui/text';
-import { colors, gradients, radius, spacing, typography } from '../../constants/theme';
+import { colors, radius, spacing, typography } from '../../constants/theme';
 
 export interface DurationStepperProps {
 	label: string;
@@ -11,6 +10,7 @@ export interface DurationStepperProps {
 	description?: string;
 	unitLabel?: string;
 	presetValues?: number[];
+	presetLabels?: Record<number, string>;
 	onIncrement?: () => void;
 	onDecrement?: () => void;
 	onSelectPreset?: (value: number) => void;
@@ -23,6 +23,7 @@ export function DurationStepper({
 	description,
 	unitLabel = 'DAYS',
 	presetValues = [],
+	presetLabels = {},
 	onIncrement,
 	onDecrement,
 	onSelectPreset,
@@ -30,64 +31,53 @@ export function DurationStepper({
 	const normalizedPresets = Array.from(new Set(presetValues.filter((preset) => preset > 0)));
 
 	return (
-		<GradientBox
-			colors={gradients.surface.colors}
-			start={gradients.surface.start}
-			end={gradients.surface.end}
-			style={styles.shell}
-		>
-			<Stack gap="md">
-				<View>
-					<Text variant="subheader">{label}</Text>
-					{description ? (
-						<Text variant="body" tone="secondary" style={styles.description}>{description}</Text>
-					) : null}
+		<Stack gap="md">
+			<View>
+				<Text variant="subheader">{label}</Text>
+				{description ? (
+					<Text variant="body" tone="secondary" style={styles.description}>{description}</Text>
+				) : null}
+			</View>
+
+			<Row justify="space-between" align="center" style={styles.counterShell}>
+				<Pressable onPress={onDecrement} style={({ pressed }) => [styles.pressableButton, pressed && styles.pressed]}>
+					<Text variant="header" tone="primary">-</Text>
+				</Pressable>
+
+				<View style={styles.valueWrap}>
+					<Text style={styles.valueNumber}>{value}</Text>
+					<Text variant="caption" style={styles.unitLabel}>{unitLabel}</Text>
 				</View>
 
-				<Row justify="space-between" align="center" style={styles.counterShell}>
-					<Pressable onPress={onDecrement} style={({ pressed }) => [styles.pressableButton, pressed && styles.pressed]}>
-						<Text variant="header" tone="primary">-</Text>
-					</Pressable>
+				<Pressable onPress={onIncrement} style={({ pressed }) => [styles.pressableButton, pressed && styles.pressed]}>
+					<Text variant="header" tone="primary">+</Text>
+				</Pressable>
+			</Row>
 
-					<View style={styles.valueWrap}>
-						<Text style={styles.valueNumber}>{value}</Text>
-						<Text variant="caption" style={styles.unitLabel}>{unitLabel}</Text>
-					</View>
-
-					<Pressable onPress={onIncrement} style={({ pressed }) => [styles.pressableButton, pressed && styles.pressed]}>
-						<Text variant="header" tone="primary">+</Text>
-					</Pressable>
+			{normalizedPresets.length > 0 && onSelectPreset ? (
+				<Row gap="sm" style={styles.presetRow}>
+					{normalizedPresets.map((preset) => (
+						<Pressable
+							key={`preset-${preset}`}
+							onPress={() => onSelectPreset(preset)}
+							style={({ pressed }) => [
+								styles.presetChip,
+								preset === value && styles.presetChipSelected,
+								pressed && styles.pressed,
+							]}
+						>
+							<Text variant="caption" style={preset === value ? styles.presetTextSelected : styles.presetText}>
+								{presetLabels[preset] ?? `${preset} ${unitLabel.toLowerCase()}`}
+							</Text>
+						</Pressable>
+					))}
 				</Row>
-
-				{normalizedPresets.length > 0 && onSelectPreset ? (
-					<Row gap="sm" style={styles.presetRow}>
-						{normalizedPresets.map((preset) => (
-							<Pressable
-								key={`preset-${preset}`}
-								onPress={() => onSelectPreset(preset)}
-								style={({ pressed }) => [
-									styles.presetChip,
-									preset === value && styles.presetChipSelected,
-									pressed && styles.pressed,
-								]}
-							>
-								<Text variant="caption" style={preset === value ? styles.presetTextSelected : styles.presetText}>
-									{preset} {unitLabel.toLowerCase()}
-								</Text>
-							</Pressable>
-						))}
-					</Row>
-				) : null}
-			</Stack>
-		</GradientBox>
+			) : null}
+		</Stack>
 	);
 }
 
 const styles = StyleSheet.create({
-	shell: {
-		borderRadius: radius['2xl'],
-		padding: spacing.lg,
-	},
 	description: {
 		marginTop: spacing.xs,
 	},
@@ -116,6 +106,8 @@ const styles = StyleSheet.create({
 	},
 	valueNumber: {
 		...typography.titleLarge,
+		fontSize: 32,
+		lineHeight: 38,
 		color: colors.textPrimary,
 	},
 	unitLabel: {

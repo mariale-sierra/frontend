@@ -67,6 +67,7 @@ const es = {
     days: {
       configured: 'Configurado',
       configuredCount: '{{configured}}/{{total}} DIAS',
+      weekLabel: 'Semana {{number}}',
     },
     review: {
       cyclePlanSummary: 'Resumen del plan del ciclo',
@@ -90,6 +91,8 @@ const es = {
       daysUnit: 'dias',
       cycleDuration: 'Duracion del ciclo',
       cycleDaysUnit: 'DIAS DEL CICLO',
+      oneWeek: '1 semana',
+      twoWeeks: '2 semanas',
     },
     visibility: {
       publicLabel: 'Publico',

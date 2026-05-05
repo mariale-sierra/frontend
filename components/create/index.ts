@@ -10,13 +10,9 @@ export * from './ChallengeTitleInputs';
 // Design: Inline counter with balanced +/- controls and clear numeric emphasis.
 export * from './DurationStepper';
 
-// CycleDayTimelineStepper: Multi-row connected timeline for day-by-day cycle sequencing.
-// Design: Circular step nodes linked by connector paths with up to 7 days per row.
-export * from './CycleDayTimelineStepper';
-
-// CycleDayAssignmentPanel: Selected-day details and routine assignment controls.
-// Design: Single action card that keeps assignment/edit/remove flows scoped to one day.
-export * from './CycleDayAssignmentPanel';
+// CycleDayVerticalStepper: Vertical checklist timeline for assigning routines one day at a time.
+// Design: Single active step with completed/current/pending indicators and connector line.
+export * from './CycleDayVerticalStepper';
 
 // ChallengeVisibilitySection: Final setup area for duration override and public/private visibility.
 // Design: Two-panel gradient grouping with strong form hierarchy for publishing decisions.

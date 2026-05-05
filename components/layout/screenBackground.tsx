@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { StyleProp, StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActivityType, colors } from '../../constants/theme';
 
 type ScreenBackgroundVariant = 'default' | 'top' | 'activity' | 'challenges';
@@ -10,6 +11,7 @@ interface ScreenBackgroundProps extends ViewProps {
 	variant?: ScreenBackgroundVariant;
 	activityType?: ActivityType;
 	contentStyle?: StyleProp<ViewStyle>;
+	applyTopInset?: boolean;
 }
 
 function withAlpha(hex: string, alpha: number) {
@@ -34,8 +36,10 @@ export default function ScreenBackground({
 	activityType = 'strength',
 	style,
 	contentStyle,
+	applyTopInset = true,
 	...props
 }: ScreenBackgroundProps) {
+	const insets = useSafeAreaInsets();
 	const activityColor = colors.activityType[activityType];
 
 	return (
@@ -120,7 +124,15 @@ export default function ScreenBackground({
 				pointerEvents="none"
 			/>
 
-			<View style={[styles.content, contentStyle]}>{children}</View>
+			<View
+				style={[
+					styles.content,
+					applyTopInset && { paddingTop: insets.top },
+					contentStyle,
+				]}
+			>
+				{children}
+			</View>
 		</View>
 	);
 }

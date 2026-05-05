@@ -5,9 +5,26 @@ import type {
   JoinChallengeResponse,
 } from '../../types/challenge';
 
+type ChallengesListResponse =
+  | ChallengeContract[]
+  | {
+      data?: ChallengeContract[];
+      message?: string;
+    };
+
 export async function getChallenges() {
-  const response = await api.get<ChallengeContract[]>('/challenges');
-  return response.data;
+  const response = await api.get<ChallengesListResponse>('/challenges');
+  const payload = response.data;
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (payload && Array.isArray(payload.data)) {
+    return payload.data;
+  }
+
+  return [];
 }
 
 export async function getChallenge(id: string) {

@@ -1,7 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { Stack } from '../layout/stack';
 import { Input } from '../ui/input';
-import { Text } from '../ui/text';
 import { colors, typography } from '../../constants/theme';
 import { useTranslation } from 'react-i18next';
 
@@ -23,26 +22,30 @@ export function ChallengeTitleInputs({
 	return (
 		<Stack gap="md">
 			<View style={styles.fieldShell}>
-				<Text variant="caption" style={styles.fieldLabel}>{t('challengeCreate.fields.challengeName')}</Text>
 				<Input
 					value={title}
 					onChangeText={onChangeTitle}
 					variant="default"
+					placeholder={t('challengeCreate.fields.challengeName')}
+					placeholderVariant="caption"
 					containerStyle={styles.titleContainer}
 					style={styles.titleInput}
 				/>
+				<View style={[styles.fieldLine, title.trim().length > 0 && styles.fieldLineActive]} />
 			</View>
 
 			<View style={styles.fieldShell}>
-				<Text variant="caption" style={styles.fieldLabel}>{t('challengeCreate.fields.descriptionOptional')}</Text>
 				<Input
 					value={description}
 					onChangeText={onChangeDescription}
 					variant="default"
+					placeholder={t('challengeCreate.fields.descriptionOptional')}
+					placeholderVariant="caption"
 					containerStyle={styles.descriptionContainer}
 					multiline
 					style={styles.descriptionInput}
 				/>
+				<View style={[styles.fieldLine, styles.descriptionFieldLine, description.trim().length > 0 && styles.fieldLineActive]} />
 			</View>
 		</Stack>
 	);
@@ -50,24 +53,14 @@ export function ChallengeTitleInputs({
 
 const styles = StyleSheet.create({
 	fieldShell: {
-		borderWidth: 1,
-		borderColor: 'rgba(255,255,255,0.12)',
-		borderRadius: 18,
-		paddingHorizontal: 12,
-		paddingVertical: 10,
-		backgroundColor: 'rgba(255,255,255,0.03)',
-	},
-	fieldLabel: {
-		color: 'rgba(255,255,255,0.58)',
-		fontSize: 9,
-		lineHeight: 12,
-		letterSpacing: 0.6,
-		marginBottom: 6,
+		paddingHorizontal: 2,
+		paddingVertical: 6,
 	},
 	titleContainer: {
 		paddingTop: 0,
 		paddingBottom: 2,
 		paddingHorizontal: 0,
+		borderRadius: 0,
 	},
 	titleInput: {
 		...typography.title,
@@ -79,6 +72,7 @@ const styles = StyleSheet.create({
 	descriptionContainer: {
 		paddingTop: 0,
 		paddingHorizontal: 0,
+		borderRadius: 0,
 	},
 	descriptionInput: {
 		...typography.body,
@@ -88,5 +82,16 @@ const styles = StyleSheet.create({
 		color: colors.textPrimary,
 		minHeight: 72,
 		textAlignVertical: 'top' as const,
+	},
+	fieldLine: {
+		height: 1,
+		backgroundColor: 'rgba(255,255,255,0.28)',
+		marginTop: 6,
+	},
+	descriptionFieldLine: {
+		marginTop: 1,
+	},
+	fieldLineActive: {
+		backgroundColor: colors.textPrimary,
 	},
 });

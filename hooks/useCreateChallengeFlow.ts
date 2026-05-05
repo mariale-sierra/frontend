@@ -329,6 +329,34 @@ export function useCreateChallengeFlow() {
     router.push(`/challenge/routine/select?day=${day}`);
   }
 
+  function getDayRoutineLabel(dayNumber: number) {
+    const routine = routinesByDay[dayNumber];
+
+    if (!routine) {
+      return undefined;
+    }
+
+    if (routine.name && routine.name.trim().length > 0) {
+      return routine.name;
+    }
+
+    return routine.isRestDay ? 'Rest day' : undefined;
+  }
+
+  function getDayRoutineDescription(dayNumber: number) {
+    const routine = routinesByDay[dayNumber];
+
+    if (!routine) {
+      return undefined;
+    }
+
+    if (routine.description && routine.description.trim().length > 0) {
+      return routine.description;
+    }
+
+    return routine.isRestDay ? 'Recovery or complete rest' : undefined;
+  }
+
   return {
     title,
     description,
@@ -357,6 +385,8 @@ export function useCreateChallengeFlow() {
     setSelectedDay,
     isSubmitting,
     getDayStatus,
+    getDayRoutineLabel,
+    getDayRoutineDescription,
     handleBack,
     handleNext,
     handleActionPress,

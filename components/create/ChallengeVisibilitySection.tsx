@@ -1,12 +1,11 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Stack } from '../layout/stack';
-import { GradientBox } from '../layout/gradient-box';
 import { Row } from '../layout/row';
 import { Input } from '../ui/input';
 import { Text } from '../ui/text';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, gradients, radius, spacing, typography } from '../../constants/theme';
+import { colors, radius, spacing, typography } from '../../constants/theme';
 import { useTranslation } from 'react-i18next';
 
 export interface ChallengeVisibilitySectionProps {
@@ -53,41 +52,34 @@ export function ChallengeVisibilitySection({
 
 	return (
 		<Stack gap="xl">
-			<GradientBox
-				colors={gradients.surface.colors}
-				start={gradients.surface.start}
-				end={gradients.surface.end}
-				style={styles.durationHero}
-			>
-				<Stack gap="md">
-					<View>
-						<Text variant="subheader">{t('challengeCreate.fields.challengeDuration')}</Text>
-					</View>
+			<Stack gap="md">
+				<View>
+					<Text variant="subheader" style={styles.challengeDurationLabel}>{t('challengeCreate.fields.challengeDuration')}</Text>
+				</View>
 
-					<View style={styles.durationInputShell}>
-						<Input
-							value={challengeDuration === 0 ? '' : String(challengeDuration)}
-							onChangeText={(value) => {
-								const numeric = value.replace(/[^0-9]/g, '');
-								onChangeChallengeDuration?.(numeric.length > 0 ? Number(numeric) : 0);
-							}}
-							keyboardType="number-pad"
-							variant="default"
-							placeholder={String(baseDuration || 1)}
-							placeholderVariant="secondary"
-							containerStyle={styles.durationInputContainer}
-							style={styles.durationInput}
-						/>
-						<Text variant="caption" style={styles.durationInputUnit}>{t('challengeCreate.fields.daysUnit')}</Text>
-					</View>
+				<View style={styles.durationInputShell}>
+					<Input
+						value={challengeDuration === 0 ? '' : String(challengeDuration)}
+						onChangeText={(value) => {
+							const numeric = value.replace(/[^0-9]/g, '');
+							onChangeChallengeDuration?.(numeric.length > 0 ? Number(numeric) : 0);
+						}}
+						keyboardType="number-pad"
+						variant="default"
+						placeholder={String(baseDuration || 1)}
+						placeholderVariant="secondary"
+						containerStyle={styles.durationInputContainer}
+						style={styles.durationInput}
+					/>
+					<Text variant="caption" style={styles.durationInputUnit}>{t('challengeCreate.fields.daysUnit')}</Text>
+				</View>
 
-					<Text variant="caption" style={styles.wheelCaption}>
-						{t('challengeCreate.fields.cycleBase', { days: baseDuration })}
-					</Text>
-				</Stack>
-			</GradientBox>
+				<Text variant="caption" style={styles.wheelCaption}>
+					{t('challengeCreate.fields.cycleBase', { days: baseDuration })}
+				</Text>
+			</Stack>
 
-			<Stack gap="sm">
+			<Stack gap="sm" style={styles.visibilitySection}>
 				<Text variant="subheader">{t('challengeCreate.fields.visibility')}</Text>
 				{visibilityCards.map((option) => {
 					const selected = selectedVisibility === option.label;
@@ -105,7 +97,7 @@ export function ChallengeVisibilitySection({
 									<Text variant="body" style={styles.visibilityLabel}>{option.displayLabel}</Text>
 									<Text variant="caption" style={styles.visibilityDescription}>{option.description}</Text>
 								</View>
-								{selected && <Ionicons name="checkmark-circle" size={18} color={colors.success} />}
+								{selected && <Ionicons name="checkmark-circle" size={18} color={colors.textPrimary} />}
 							</Row>
 						</Pressable>
 					);
@@ -116,17 +108,13 @@ export function ChallengeVisibilitySection({
 }
 
 const styles = StyleSheet.create({
-	durationHero: {
-		borderRadius: radius['2xl'],
-		padding: spacing.lg,
-	},
 	durationInputShell: {
 		borderRadius: radius.xl,
 		borderWidth: 1,
 		borderColor: 'rgba(255,255,255,0.12)',
 		backgroundColor: 'rgba(255,255,255,0.03)',
 		paddingHorizontal: spacing.md,
-		paddingVertical: spacing.sm,
+		paddingVertical: spacing.lg,
 	},
 	durationInputContainer: {
 		paddingTop: 0,
@@ -135,9 +123,9 @@ const styles = StyleSheet.create({
 		width: '100%',
 	},
 	durationInput: {
-		...typography.title,
-		fontSize: 22,
-		lineHeight: 26,
+		...typography.titleLarge,
+		fontSize: 32,
+		lineHeight: 38,
 		textAlign: 'center',
 		color: colors.textPrimary,
 		paddingVertical: 0,
@@ -146,10 +134,15 @@ const styles = StyleSheet.create({
 		marginTop: spacing.xxs,
 		color: 'rgba(255,255,255,0.72)',
 		textAlign: 'center',
+		letterSpacing: 1.2,
 	},
+	challengeDurationLabel: {},
 	wheelCaption: {
 		color: 'rgba(255,255,255,0.58)',
 		textAlign: 'center',
+	},
+	visibilitySection: {
+		marginTop: spacing.lg,
 	},
 	visibilityCard: {
 		borderRadius: radius.xl,
