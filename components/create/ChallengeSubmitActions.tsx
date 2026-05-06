@@ -2,6 +2,7 @@ import { StyleSheet, View } from 'react-native';
 import { Row } from '../layout/row';
 import { Button } from '../ui/button';
 import { Icon } from '../ui/icon';
+import { CreateChallengePrimaryActionButton } from './CreateChallengePrimaryActionButton';
 import { colors, radius, spacing } from '../../constants/theme';
 import type { ChallengeVisibility } from '../../types/challenge';
 import { useTranslation } from 'react-i18next';
@@ -31,9 +32,11 @@ export function ChallengeSubmitActions({
 
   return (
     <View style={styles.container}>
-      <Button size="md" variant="primary" loading={loading} onPress={onPrimaryPress} style={styles.primaryButton}>
-        {getPrimaryLabel(visibility, t)}
-      </Button>
+      <CreateChallengePrimaryActionButton
+        loading={loading}
+        onPress={onPrimaryPress}
+        label={getPrimaryLabel(visibility, t)}
+      />
 
       <Row justify="space-between" gap="md" style={styles.secondaryRow}>
         <Button
@@ -63,18 +66,6 @@ export function ChallengeSubmitActions({
 const styles = StyleSheet.create({
   container: {
     gap: spacing.md,
-  },
-  primaryButton: {
-    width: '100%',
-    alignSelf: 'center',
-    borderRadius: radius['2xl'],
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    shadowColor: '#ffffff',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 4,
   },
   secondaryRow: {
     width: '100%',

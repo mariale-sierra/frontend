@@ -34,7 +34,19 @@ const es = {
     },
   },
   challenges: {
+    screenTitle: 'Retos',
+    activeTitle: 'Retos activos',
+    exploreTitle: 'Explorar retos',
+    seeAll: 'Ver todos',
+    joinOrCreate: 'Unirte o crear',
+    dayLabel: 'Dia {{day}}',
+    streakLabel: '{{count}} racha',
     memberAuthor: 'miembro',
+    members: 'miembros',
+    unknownCreator: 'Creador desconocido',
+    durationUnit: 'dias',
+    locationFallback: 'En cualquier lugar',
+    categoryFallback: 'General',
     loadError: 'No se pudieron cargar los retos.',
   },
   metrics: {
@@ -70,7 +82,6 @@ const es = {
       weekLabel: 'Semana {{number}}',
     },
     review: {
-      cyclePlanSummary: 'Resumen del plan del ciclo',
       challengeLabel: 'Reto',
       untitledChallenge: 'Reto sin titulo',
       categoriesLabel: 'Categorias',
@@ -149,12 +160,6 @@ const es = {
       challengeDurationTotal: 'Duracion total del reto',
       visibility: 'Visibilidad',
     },
-    daySummary: {
-      missing: 'DIA {{day}}: Falta configurar',
-      rest: 'DIA {{day}}: Dia de descanso',
-      selectedRoutine: 'Rutina seleccionada',
-      configured: 'DIA {{day}}: {{routine}}',
-    },
     alerts: {
       completeStepTitle: 'Completa este paso',
       completeStepMessage: 'Antes de continuar, completa:\n\n{{items}}',
@@ -167,7 +172,6 @@ const es = {
     },
     actions: {
       reviewChallenge: 'Revisar reto',
-      editDayConfiguration: 'Editar configuracion de dias',
       sendToFriends: 'Enviar a amigos',
       share: 'Compartir',
     },
@@ -180,6 +184,7 @@ const es = {
     restDayTitle: 'DIA DE DESCANSO',
     restDayDescription: 'No se requieren ejercicios para este dia. Usa la descripcion para explicar recuperacion, estiramientos o movilidad.',
     addExercise: 'AGREGAR EJERCICIO',
+    save: 'Guardar',
     selectRoutine: 'SELECCIONAR RUTINA',
     discard: 'Descartar',
     alerts: {

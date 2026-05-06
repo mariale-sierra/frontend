@@ -6,6 +6,7 @@ import { Row } from '../../components/layout/row';
 import { Stack } from '../../components/layout/stack';
 import {
   CycleDayVerticalStepper,
+  CreateFlowPrimaryButton,
   ChallengeSubmitActions,
   ChallengeTitleInputs,
   ChallengeVisibilitySection,
@@ -52,11 +53,6 @@ interface OptionCardProps {
   icon: ReactNode;
   onPress: () => void;
   onPressInfo: () => void;
-}
-
-interface DayPlanReviewSummaryProps {
-  daySummaries: string[];
-  onPressConfigure: () => void;
 }
 
 interface SelectableOptionBase {
@@ -179,34 +175,6 @@ function OptionSelectionPanel<TOption extends SelectableOptionBase>({
   );
 }
 
-function DayPlanReviewSummary({
-  daySummaries,
-  onPressConfigure,
-}: DayPlanReviewSummaryProps) {
-  const { t } = useTranslation();
-
-  return (
-    <View style={styles.planInsightsCard}>
-      <Stack gap="md">
-        <Text variant="subheader">{t('challengeCreate.review.cyclePlanSummary')}</Text>
-
-        <Stack gap="xs">
-          {daySummaries.map((item) => (
-            <Row key={item} align="center" gap="sm" style={styles.planListRow}>
-              <View style={styles.planListBullet} />
-              <Text variant="body" style={styles.planListText}>{item}</Text>
-            </Row>
-          ))}
-        </Stack>
-
-        <Pressable onPress={onPressConfigure} style={({ pressed }) => [styles.inlineReviewAction, pressed && styles.pressed]}>
-          <Text variant="label" style={styles.inlineReviewActionLabel}>{t('challengeCreate.actions.editDayConfiguration')}</Text>
-        </Pressable>
-      </Stack>
-    </View>
-  );
-}
-
 export default function CreateChallenge() {
   const { t } = useTranslation();
   const [activeOptionInfo, setActiveOptionInfo] = useState<OptionInfoModalState | null>(null);
@@ -226,8 +194,6 @@ export default function CreateChallenge() {
     configuredDays,
     selectedDay,
     selectedDayRoutine,
-    daySummaries,
-    daysStepIndex,
     isFormComplete,
     isSubmitting,
     setTitle,
@@ -483,13 +449,6 @@ export default function CreateChallenge() {
               </Stack>
             </View>
 
-            <View style={styles.reviewSummarySpacer} />
-
-            <DayPlanReviewSummary
-              daySummaries={daySummaries}
-              onPressConfigure={() => setCurrentStep(daysStepIndex)}
-            />
-
             <View style={styles.actionsBlock}>
               <ChallengeSubmitActions
                 visibility={visibility ?? 'Public'}
@@ -553,16 +512,12 @@ export default function CreateChallenge() {
 
       {!isReviewStep && (
         <View style={styles.fixedBottomBar}>
-          <Pressable
+          <CreateFlowPrimaryButton
             onPress={isDaysStep ? handleDaysContinue : handleNext}
-            style={({ pressed }) => [styles.fixedBottomButton, pressed && styles.pressed]}
-          >
-            <Text variant="label" style={styles.fixedBottomButtonLabel}>
-              {activeStep.kind === 'settings'
-                ? t('challengeCreate.actions.reviewChallenge')
-                : t('common.actions.continue')}
-            </Text>
-          </Pressable>
+            label={activeStep.kind === 'settings'
+              ? t('challengeCreate.actions.reviewChallenge')
+              : t('common.actions.continue')}
+          />
         </View>
       )}
     </ScreenBackground>
@@ -736,9 +691,6 @@ const styles = StyleSheet.create({
   summaryContent: {
     paddingHorizontal: spacing.xs,
   },
-  reviewSummarySpacer: {
-    height: spacing.lg,
-  },
   summaryLabel: {
     color: 'rgba(255,255,255,0.56)',
     marginBottom: spacing.xs,
@@ -762,42 +714,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 22,
     fontWeight: '600',
-  },
-  planInsightsCard: {
-    borderRadius: radius['2xl'],
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.55)',
-    backgroundColor: 'transparent',
-  },
-  planListRow: {
-    width: '100%',
-    paddingVertical: spacing.xs,
-  },
-  planListBullet: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginTop: 3,
-    backgroundColor: 'rgba(255,255,255,0.62)',
-  },
-  planListText: {
-    flex: 1,
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '400',
-  },
-  inlineReviewAction: {
-    borderRadius: radius['2xl'],
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inlineReviewActionLabel: {
-    color: colors.textPrimary,
   },
   actionsBlock: {
     gap: spacing.sm,
@@ -849,16 +765,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(7,10,16,0.92)',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.14)',
-  },
-  fixedBottomButton: {
-    borderRadius: radius['2xl'],
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    backgroundColor: colors.textPrimary,
-  },
-  fixedBottomButtonLabel: {
-    color: colors.textInverse,
   },
   pressed: {
     opacity: 0.82,

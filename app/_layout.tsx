@@ -41,6 +41,9 @@ function RootNavigator() {
       <Stack.Screen name="challenge/[id]/info" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/[id]/routine/[day]" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/routine" options={{ headerShown: false }} />
+      <Stack.Screen name="challenge/routine/select" options={{ headerShown: false }} />
+      <Stack.Screen name="challenge/routine/create" options={{ headerShown: false }} />
+      <Stack.Screen name="challenge/routine/exercises" options={{ headerShown: false }} />
     </Stack>
   );
 }

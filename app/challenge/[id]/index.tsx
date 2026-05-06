@@ -6,12 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ActivityScrollGradient from '../../../components/layout/activityScrollGradient';
 import ChallengeHeader from '../../../components/challengesInfo/challengeHeader';
 import ChallengeRoutineList from '../../../components/challengesInfo/challengeRoutineList';
-import { Button } from '../../../components/ui/button';
+import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '../../../components/create';
 import { Icon } from '../../../components/ui/icon';
 import { Text } from '../../../components/ui/text';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { colors, spacing } from '../../../constants/theme';
 import { getChallenge } from '../../../services/challenge/challenge.service';
-import { toChallengeDetailViewModel } from '../../../services/adapters/challengeDetailAdapter';
+import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 // REMOVE_MOCK_START: delete this import when backend payload is ready.
 import { buildMockChallengeDetailViewModel } from '../../../services/mocks/challengeDetailMock';
 // REMOVE_MOCK_END
@@ -142,17 +142,12 @@ export default function ChallengeDetail() {
         </ActivityScrollGradient>
       </ScrollView>
 
-      <View style={[styles.fixedBottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
-          <Pressable
-          style={({ pressed }) => [styles.fixedBottomButton, pressed && styles.pressed]}
-          accessibilityRole="button"
+      <CreateFlowFixedBottomBar bottomInset={Math.max(insets.bottom, spacing.lg)} topPadding={spacing.md}>
+        <CreateChallengePrimaryActionButton
+          label="Join Challenge"
           accessibilityLabel="Join challenge"
-        >
-          <Text variant="label" style={styles.fixedBottomButtonLabel}>
-            Join Challenge
-          </Text>
-        </Pressable>
-      </View>
+        />
+      </CreateFlowFixedBottomBar>
     </View>
   );
 }
@@ -200,32 +195,6 @@ const styles = StyleSheet.create({
     minHeight: 28,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  fixedBottomBar: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    backgroundColor: '#000000',
-  },
-  fixedBottomButton: {
-    minHeight: 56,
-    borderRadius: radius['2xl'],
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    shadowColor: '#ffffff',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  fixedBottomButtonLabel: {
-    color: colors.textInverse,
   },
   loadingScreen: {
     flex: 1,

@@ -1,10 +1,10 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { MetricsExerciseTable } from '../../components/add/metricsExerciseTable';
 import { MetricsPanel } from '../../components/add/metricsPanel';
 import { MetricsTopBar } from '../../components/add/metricsTopBar';
-import { MetricsRoutineSelector } from '../../components/add/metricsRoutineSelector';
-import { Button } from '../../components/ui/button';
+import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '../../components/create';
 import { Divider } from '../../components/ui/divider';
 import { spacing } from '../../constants/theme';
 import { useMetricsScreen } from '../../hooks/useMetricsScreen';
@@ -12,15 +12,13 @@ import { useTranslation } from 'react-i18next';
 
 export default function Metrics() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const {
     challenges,
     selectedChallengeId,
     isChallengeMenuOpen,
     exerciseMetrics,
     activeRowKey,
-    routines,
-    selectedRoutineId,
-    isRoutineMenuOpen,
     isSubmitting,
     toggleChallengeMenu,
     selectChallenge,
@@ -28,8 +26,6 @@ export default function Metrics() {
     updateExerciseNotes,
     onRowFocus,
     onRowBlur,
-    toggleRoutineMenu,
-    selectRoutine,
     goToCamera,
     goToRestDay,
     goBack,
@@ -51,15 +47,6 @@ export default function Metrics() {
             onSkip={goToCamera}
           />
 
-          <View style={styles.routineRow}>
-            <MetricsRoutineSelector
-              routines={routines}
-              selectedRoutineId={selectedRoutineId}
-              isOpen={isRoutineMenuOpen}
-              onToggle={toggleRoutineMenu}
-              onSelect={selectRoutine}
-            />
-          </View>
         </View>
 
         <Divider variant="section" />
@@ -85,11 +72,13 @@ export default function Metrics() {
           </ScrollView>
         </MetricsPanel>
 
-        <View style={styles.footer}>
-          <Button onPress={submitMetrics} loading={isSubmitting}>
-            {t('metrics.logWorkout')}
-          </Button>
-        </View>
+        <CreateFlowFixedBottomBar bottomInset={Math.max(insets.bottom, spacing.lg)}>
+          <CreateChallengePrimaryActionButton
+            onPress={submitMetrics}
+            loading={isSubmitting}
+            label={t('metrics.logWorkout')}
+          />
+        </CreateFlowFixedBottomBar>
       </View>
     </ScreenBackground>
   );
@@ -105,18 +94,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     gap: spacing.sm,
   },
-  routineRow: {
-    marginTop: spacing.xs,
-  },
   metricsScroll: {
     flex: 1,
   },
   metricsContent: {
-    paddingBottom: spacing.lg,
-  },
-  footer: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing['2xl'] + 132,
   },
 });

@@ -9,6 +9,10 @@ export interface ChallengeTitleInputsProps {
 	description: string;
 	onChangeTitle?: (value: string) => void;
 	onChangeDescription?: (value: string) => void;
+	titlePlaceholder?: string;
+	descriptionPlaceholder?: string;
+	showDescriptionBottomLine?: boolean;
+	mode?: 'challenge' | 'routine';
 }
 
 export function ChallengeTitleInputs({
@@ -16,8 +20,13 @@ export function ChallengeTitleInputs({
 	description,
 	onChangeTitle,
 	onChangeDescription,
+	titlePlaceholder,
+	descriptionPlaceholder,
+	showDescriptionBottomLine = true,
+	mode = 'challenge',
 }: ChallengeTitleInputsProps) {
 	const { t } = useTranslation();
+	const routineMode = mode === 'routine';
 
 	return (
 		<Stack gap="md">
@@ -26,12 +35,18 @@ export function ChallengeTitleInputs({
 					value={title}
 					onChangeText={onChangeTitle}
 					variant="default"
-					placeholder={t('challengeCreate.fields.challengeName')}
+					placeholder={titlePlaceholder ?? t('challengeCreate.fields.challengeName')}
 					placeholderVariant="caption"
-					containerStyle={styles.titleContainer}
-					style={styles.titleInput}
+					containerStyle={[styles.titleContainer, routineMode && styles.routineTitleContainer]}
+					style={[styles.titleInput, routineMode && styles.routineTitleInput]}
 				/>
-				<View style={[styles.fieldLine, title.trim().length > 0 && styles.fieldLineActive]} />
+				<View
+					style={[
+						styles.fieldLine,
+						routineMode && styles.routineFieldLine,
+						!routineMode && title.trim().length > 0 && styles.fieldLineActive,
+					]}
+				/>
 			</View>
 
 			<View style={styles.fieldShell}>
@@ -39,12 +54,14 @@ export function ChallengeTitleInputs({
 					value={description}
 					onChangeText={onChangeDescription}
 					variant="default"
-					placeholder={t('challengeCreate.fields.descriptionOptional')}
+					placeholder={descriptionPlaceholder ?? t('challengeCreate.fields.descriptionOptional')}
 					placeholderVariant="caption"
-					containerStyle={styles.descriptionContainer}
-					style={styles.descriptionInput}
+					containerStyle={[styles.descriptionContainer, routineMode && styles.routineDescriptionContainer]}
+					style={[styles.descriptionInput, routineMode && styles.routineDescriptionInput]}
 				/>
-				<View style={[styles.fieldLine, description.trim().length > 0 && styles.fieldLineActive]} />
+				{showDescriptionBottomLine ? (
+					<View style={[styles.fieldLine, description.trim().length > 0 && styles.fieldLineActive]} />
+				) : null}
 			</View>
 		</Stack>
 	);
@@ -79,6 +96,26 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 		lineHeight: 18,
 		color: colors.textPrimary,
+	},
+	routineTitleContainer: {
+		paddingBottom: 3,
+	},
+	routineTitleInput: {
+		fontWeight: '600' as const,
+		fontSize: 30,
+		lineHeight: 34,
+		letterSpacing: 0.2,
+	},
+	routineFieldLine: {
+		backgroundColor: 'rgba(255,255,255,0.16)',
+	},
+	routineDescriptionContainer: {
+		paddingTop: 2,
+	},
+	routineDescriptionInput: {
+		color: 'rgba(255,255,255,0.54)',
+		fontSize: 13,
+		lineHeight: 18,
 	},
 	fieldLine: {
 		height: 1,

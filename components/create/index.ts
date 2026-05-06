@@ -21,3 +21,15 @@ export * from './ChallengeVisibilitySection';
 // ChallengeSubmitActions: Completion CTAs shown only when required setup fields are complete.
 // Design: Single primary action with compact secondary utility actions and icons.
 export * from './ChallengeSubmitActions';
+
+// CreateChallengePrimaryActionButton: Styled primary CTA used in create review and related flows.
+// Design: White-outlined high-contrast action with subtle glow and soft depth.
+export * from './CreateChallengePrimaryActionButton';
+
+// CreateFlowFixedBottomBar: Shared stationary bottom container for main CTAs in challenge flows.
+// Design: Elevated dark backdrop with subtle separator for focus on the bottom action.
+export * from './CreateFlowFixedBottomBar';
+
+// CreateFlowPrimaryButton: Main rounded CTA used across create-related flows.
+// Design: High-contrast full-width action button for primary progression/submission actions.
+export * from './CreateFlowPrimaryButton';

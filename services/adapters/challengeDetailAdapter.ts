@@ -195,7 +195,13 @@ function mapDays(
         ? unique(
             day.activities
               .map((activity) => parseActivityType(asString(activity)))
-              .filter((item): item is ActivityType => Boolean(item) && allowedActivities.has(item)),
+              .filter((item): item is ActivityType => {
+                if (!item) {
+                  return false;
+                }
+
+                return allowedActivities.has(item);
+              }),
           )
         : [];
 

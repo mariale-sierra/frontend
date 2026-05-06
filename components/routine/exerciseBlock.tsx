@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Stack } from '../layout/stack';
-import { ExerciseMetricsEditor } from './exerciseMetricsEditor';
+import { ExerciseSetTable } from './exerciseSetTable';
 import { ExerciseHeader } from './exerciseHeader';
-import { ExerciseNoteField } from './exerciseNoteField';
 import { routineStyles } from './routineStyles';
-import { useRoutineBuilder } from '../../store/routineBuilderStore';
-import { colors, spacing } from '../../constants/theme';
+import { spacing } from '../../constants/theme';
 import type { ExerciseEntry } from '../../types/routine';
 
 interface ExerciseBlockProps {
@@ -15,7 +13,6 @@ interface ExerciseBlockProps {
 }
 
 export function ExerciseBlock({ exercise, index }: ExerciseBlockProps) {
-  const { setNote, removeExercise } = useRoutineBuilder();
   const [collapsed, setCollapsed] = useState(true);
 
   return (
@@ -24,18 +21,13 @@ export function ExerciseBlock({ exercise, index }: ExerciseBlockProps) {
       <Stack gap="sm">
         <ExerciseHeader
           exercise={exercise}
-          index={index}
           collapsed={collapsed}
           onToggleCollapsed={() => setCollapsed((value) => !value)}
-          onRemove={() => removeExercise(exercise.id)}
+          onRemoveExerciseId={exercise.id}
         />
 
         {!collapsed ? (
-          <>
-            <ExerciseMetricsEditor exercise={exercise} />
-
-            <ExerciseNoteField value={exercise.note} onChangeText={(text) => setNote(exercise.id, text)} />
-          </>
+          <ExerciseSetTable exercise={exercise} />
         ) : null}
       </Stack>
     </View>

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { buildCreateChallengePayload } from '../services/adapters/createChallengePayloadAdapter';
+import { buildCreateChallengePayload } from '../services/adapters/index';
 import { createChallenge } from '../services/challenge/challenge.service';
 import type { ChallengeVisibility } from '../types/challenge';
 import { useChallengeBuilder } from '../store/challengeBuilderStore';
@@ -213,23 +213,7 @@ export function useCreateChallengeFlow() {
 
   const configuredDays = Array.from({ length: cycleDuration }, (_, index) => index + 1)
     .filter((dayNumber) => Boolean(routinesByDay[dayNumber]));
-  const allCycleDays = Array.from({ length: cycleDuration }, (_, index) => index + 1);
   const selectedDayRoutine = routinesByDay[selectedDay];
-  const daySummaries = allCycleDays.map((dayNumber) => {
-    const routine = routinesByDay[dayNumber];
-    if (!routine) {
-      return t('challengeCreate.daySummary.missing', { day: dayNumber });
-    }
-
-    if (routine.isRestDay) {
-      return t('challengeCreate.daySummary.rest', { day: dayNumber });
-    }
-
-    return t('challengeCreate.daySummary.configured', {
-      day: dayNumber,
-      routine: routine.name || t('challengeCreate.daySummary.selectedRoutine'),
-    });
-  });
 
   function getDayStatus(dayNumber: number) {
     const routine = routinesByDay[dayNumber];
@@ -326,7 +310,10 @@ export function useCreateChallengeFlow() {
   }
 
   function openDayRoutineSelector(day: number) {
-    router.push(`/challenge/routine/select?day=${day}`);
+    router.push({
+      pathname: '/challenge/routine/select',
+      params: { day: String(day) },
+    });
   }
 
   function getDayRoutineLabel(dayNumber: number) {
@@ -374,8 +361,6 @@ export function useCreateChallengeFlow() {
     configuredDays,
     selectedDay,
     selectedDayRoutine,
-    daySummaries,
-    daysStepIndex,
     setTitle,
     setDescription,
     setCycleDuration,

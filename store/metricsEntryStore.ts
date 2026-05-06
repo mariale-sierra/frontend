@@ -4,7 +4,7 @@ import {
   getDefaultMetricsSeed,
   sanitizeChallengeOptions,
   sanitizeHydratedExercises,
-} from '../services/adapters/metricsAdapter';
+} from '../services/adapters/index';
 import type {
   ChallengeOption,
   ExerciseMetricsBlock,

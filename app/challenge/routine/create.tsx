@@ -1,20 +1,20 @@
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Pressable, View, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { ScrollView, StyleSheet, View, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChallengeTitleInputs, CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '../../../components/create';
 import ScreenBackground from '../../../components/layout/screenBackground';
 import { Stack } from '../../../components/layout/stack';
-import { Input } from '../../../components/ui/input';
-import { Text } from '../../../components/ui/text';
-import { Icon } from '../../../components/ui/icon';
-import { DayRoutineHeader, ExerciseBlock } from '../../../components/routine';
-import { getRoutineLocationSummary, useRoutineBuilder } from '../../../store/routineBuilderStore';
-import { colors, spacing, radius, typography } from '../../../constants/theme';
+import { CreateRoutinePickerCard, DayRoutineHeader, ExerciseBlock } from '../../../components/routine';
+import { useRoutineBuilder } from '../../../store/routineBuilderStore';
+import { spacing } from '../../../constants/theme';
 import { addExerciseToRoutine, createRoutine } from '../../../services/routine/routine.service';
 import { useAuth } from '../../../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 
 export default function CreateRoutineScreen() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const { userId } = useAuth();
   const { day } = useLocalSearchParams<{ day: string }>();
   const {
@@ -27,7 +27,6 @@ export default function CreateRoutineScreen() {
     setRoutineDescription,
     saveCurrentRoutineToDay,
     stampBackendIdOnDay,
-    resetBuilder,
   } = useRoutineBuilder();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -84,16 +83,15 @@ export default function CreateRoutineScreen() {
     }
   }
 
-  function handleDiscard() {
-    resetBuilder();
-    router.back();
-  }
-
   return (
     <ScreenBackground variant="top">
       <DayRoutineHeader
         title={t('routineCreate.dayRoutineTitle', { day: dayNumber })}
         onBack={() => router.back()}
+        rightActionLabel={t('routineCreate.save')}
+        onRightActionPress={handleSelectRoutine}
+        rightActionDisabled={isSubmitting}
+        rightActionLoading={isSubmitting}
       />
 
       <ScrollView
@@ -101,36 +99,17 @@ export default function CreateRoutineScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Stack gap="lg">
-          <View style={styles.fieldShell}>
-            <Input
-              value={routineName}
-              onChangeText={(value) => setRoutineName(value.toLowerCase())}
-              variant="default"
-              placeholder={t('routineCreate.routineNamePlaceholder')}
-              placeholderVariant="caption"
-              autoCapitalize="none"
-              containerStyle={styles.titleContainer}
-              style={styles.titleInput}
-            />
-            <View style={[styles.fieldLine, routineName.trim().length > 0 && styles.fieldLineActive]} />
-          </View>
-
-          <View style={styles.descriptionWrap}>
-            <TextInput
-              value={routineDescription}
-              onChangeText={setRoutineDescription}
-              placeholder={isRestDay ? t('routineCreate.recoveryDetailsPlaceholder') : t('routineCreate.routineDescriptionPlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              multiline
-              style={styles.descriptionInput}
-            />
-          </View>
-
-          {!isRestDay && exercises.length > 0 && (
-            <Text variant="caption" numberOfLines={1} ellipsizeMode="tail" style={styles.routineMeta}>
-              {`${getRoutineLocationSummary(exercises)} · ${exercises.length} exercises`}
-            </Text>
-          )}
+          <ChallengeTitleInputs
+            title={routineName}
+            description={routineDescription}
+            onChangeTitle={setRoutineName}
+            onChangeDescription={setRoutineDescription}
+            showDescriptionBottomLine={false}
+            titlePlaceholder={t('routineCreate.routineNamePlaceholder')}
+            descriptionPlaceholder={
+              isRestDay ? t('routineCreate.recoveryDetailsPlaceholder') : t('routineCreate.routineDescriptionPlaceholder')
+            }
+          />
 
           {!isRestDay && exercises.length > 0 && (
             <View style={styles.exerciseList}>
@@ -144,52 +123,21 @@ export default function CreateRoutineScreen() {
             </View>
           )}
 
-          {isRestDay && (
-            <View style={styles.restStateCard}>
-              <Text variant="subheader">{t('routineCreate.restDayTitle')}</Text>
-              <Text variant="body" tone="secondary">
-                {t('routineCreate.restDayDescription')}
-              </Text>
-            </View>
-          )}
-
-          {/* Action buttons */}
           <View style={styles.actions}>
-            {/* Add Exercise — full width, pill shaped, outline */}
             {!isRestDay && (
-              <Pressable
-                onPress={handleAddExercise}
-                style={({ pressed }) => [styles.addExerciseBtn, pressed && styles.pressed]}
-              >
-                <Icon name="add" size={18} color={colors.textPrimary} />
-                <Text variant="label" style={styles.addExerciseBtnText}>{t('routineCreate.addExercise')}</Text>
-              </Pressable>
+              <CreateRoutinePickerCard onPress={handleAddExercise} label={t('routineCreate.addExercise')} />
             )}
-
-            {/* Select / Save — full width, primary */}
-            <Pressable
-              onPress={handleSelectRoutine}
-              disabled={isSubmitting}
-              style={({ pressed }) => [
-                styles.selectBtn,
-                pressed && styles.pressed,
-                isSubmitting && styles.disabled,
-              ]}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color={colors.textInverse} />
-              ) : (
-                <Text variant="label" style={styles.selectBtnText}>{t('routineCreate.selectRoutine')}</Text>
-              )}
-            </Pressable>
-
-            {/* Discard — small, centered, danger */}
-            <Pressable onPress={handleDiscard} hitSlop={8} style={styles.discardBtn} disabled={isSubmitting}>
-              <Text variant="caption" style={styles.discardBtnText}>{t('routineCreate.discard')}</Text>
-            </Pressable>
           </View>
         </Stack>
       </ScrollView>
+
+      <CreateFlowFixedBottomBar bottomInset={Math.max(insets.bottom, spacing.lg)}>
+        <CreateChallengePrimaryActionButton
+          onPress={handleSelectRoutine}
+          loading={isSubmitting}
+          label={t('routineCreate.selectRoutine')}
+        />
+      </CreateFlowFixedBottomBar>
     </ScreenBackground>
   );
 }
@@ -197,116 +145,17 @@ export default function CreateRoutineScreen() {
 const styles = StyleSheet.create({
   container: {
     padding: spacing.lg,
-    paddingBottom: spacing['2xl'],
+    paddingBottom: spacing['2xl'] + 132,
     flexGrow: 1,
   },
   actions: {
     gap: spacing.md,
     alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  fieldShell: {
-    paddingHorizontal: 2,
-    paddingVertical: 6,
-  },
-  titleContainer: {
-    paddingTop: 0,
-    paddingBottom: 2,
-    paddingHorizontal: 0,
-    borderRadius: 0,
-  },
-  titleInput: {
-    ...typography.title,
-    fontSize: 22,
-    lineHeight: 26,
-    color: colors.textPrimary,
-    paddingVertical: 0,
-  },
-  fieldLine: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.28)',
-    marginTop: 6,
-  },
-  fieldLineActive: {
-    backgroundColor: colors.textPrimary,
-  },
-  descriptionWrap: {
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    padding: spacing.md,
-  },
-  descriptionInput: {
-    minHeight: 84,
-    color: colors.textPrimary,
-    textAlignVertical: 'top',
-    lineHeight: 20,
-  },
-  routineMeta: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: -spacing.sm,
+    marginTop: spacing.lg,
   },
   exerciseList: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
     marginHorizontal: -spacing.lg,
-    gap: spacing.xl,
-  },
-  restStateCard: {
-    gap: spacing.sm,
-    padding: spacing.lg,
-    borderRadius: radius.xl,
-    backgroundColor: 'rgba(46,124,246,0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(46,124,246,0.4)',
-  },
-  // Add exercise — long pill outline
-  addExerciseBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    alignSelf: 'stretch',
-    paddingVertical: spacing.md,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.textPrimary,
-    backgroundColor: colors.background,
-  },
-  addExerciseBtnText: {
-    color: colors.textPrimary,
-    letterSpacing: 2,
-  },
-  pressed: {
-    opacity: 0.8,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  // Select — long primary
-  selectBtn: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: radius.xl,
-    backgroundColor: colors.primary,
-  },
-  selectBtnText: {
-    color: colors.textInverse,
-    letterSpacing: 2,
-  },
-  // Discard — small, centered
-  discardBtn: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-  },
-  discardBtnText: {
-    color: colors.error,
-    textDecorationLine: 'underline',
-    letterSpacing: 0.5,
+    gap: spacing.md,
   },
 });

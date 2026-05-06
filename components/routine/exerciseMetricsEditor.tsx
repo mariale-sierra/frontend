@@ -1,10 +1,8 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-import { Row } from '../layout/row';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from '../ui/text';
 import { ExerciseInput } from './exerciseInput';
 import { RestTimeInput } from './restTimeInput';
-import { routineStyles } from './routineStyles';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, radius, spacing, typography } from '../../constants/theme';
 import { useRoutineBuilder } from '../../store/routineBuilderStore';
 import type { ExerciseEntry } from '../../types/routine';
 
@@ -17,10 +15,35 @@ function parseNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function parseRestInput(value: string): { restMin: number; restSec: number } {
+  const normalized = value.trim();
+
+  if (normalized.length === 0) {
+    return { restMin: 0, restSec: 0 };
+  }
+
+  if (normalized.includes(':')) {
+    const [minutesPart, secondsPart = '0'] = normalized.split(':');
+    const minutes = Math.max(0, parseInt(minutesPart || '0', 10));
+    const secondsRaw = Math.max(0, parseInt(secondsPart || '0', 10));
+
+    return {
+      restMin: minutes + Math.floor(secondsRaw / 60),
+      restSec: secondsRaw % 60,
+    };
+  }
+
+  const totalSeconds = Math.max(0, parseNumber(normalized));
+
+  return {
+    restMin: Math.floor(totalSeconds / 60),
+    restSec: totalSeconds % 60,
+  };
+}
+
 export function ExerciseMetricsEditor({ exercise }: ExerciseMetricsEditorProps) {
   const {
     updateStrengthSet,
-    addStrengthSet,
     removeStrengthSet,
     updateSchemaMetricNumber,
     updateSchemaMetricDuration,
@@ -28,164 +51,212 @@ export function ExerciseMetricsEditor({ exercise }: ExerciseMetricsEditorProps) 
 
   if (exercise.metrics.kind === 'strength') {
     const strengthMetrics = exercise.metrics;
-    const setCount = strengthMetrics.sets.length;
 
     return (
-      <View style={styles.bleedWrap}>
-        <View style={styles.container}>
-          {strengthMetrics.sets.map((row, index) => (
-            <View key={`${exercise.id}-${index}`} style={styles.setSection}>
-              {index > 0 ? <View style={routineStyles.divider} /> : null}
-              <Row justify="space-between" align="center" style={styles.setHeader}>
-                <Text variant="subheader">SET {row.setNumber}</Text>
-                {index === 0 ? (
-                  <View style={styles.setCounter}>
-                    <Pressable
-                      onPress={() => removeStrengthSet(exercise.id, setCount - 1)}
-                      disabled={setCount <= 1}
-                      style={({ pressed }) => [
-                        styles.counterButton,
-                        setCount <= 1 && styles.counterButtonDisabled,
-                        pressed && setCount > 1 && styles.pressed,
-                      ]}
-                    >
-                      <Text variant="label" style={styles.counterSymbol}>-</Text>
-                    </Pressable>
+      <View style={styles.strengthCard}>
+        <View style={styles.tableHeader}>
+          <View style={styles.setColumn} />
+          <Text variant="caption" style={styles.tableHeaderText}>REPS</Text>
+          <Text variant="caption" style={styles.tableHeaderText}>REST</Text>
+          <View style={styles.removeColumn} />
+        </View>
 
-                    <Text variant="caption" style={styles.counterLabel}>SETS {setCount}</Text>
+        {strengthMetrics.sets.map((row, index) => {
+          const rowIsLast = index === strengthMetrics.sets.length - 1;
 
-                    <Pressable
-                      onPress={() => addStrengthSet(exercise.id)}
-                      style={({ pressed }) => [styles.counterButton, pressed && styles.pressed]}
-                    >
-                      <Text variant="label" style={styles.counterSymbol}>+</Text>
-                    </Pressable>
-                  </View>
-                ) : null}
-              </Row>
+          return (
+            <View key={`${exercise.id}-${index}`} style={[styles.tableRow, !rowIsLast && styles.tableRowBorder]}>
+              <View style={styles.setColumn}>
+                <Text variant="caption" style={styles.setNumberText}>{row.setNumber}</Text>
+              </View>
 
-              <View style={styles.fieldStack}>
-                <ExerciseInput
-                  label="Reps"
+              <View style={styles.valueColumn}>
+                <TextInput
                   value={String(row.reps)}
                   onChangeText={(value) => updateStrengthSet(exercise.id, index, { reps: parseNumber(value) })}
-                />
-                <RestTimeInput
-                  minutes={String(row.restMin)}
-                  seconds={String(row.restSec)}
-                  onChangeMinutes={(value) => updateStrengthSet(exercise.id, index, { restMin: parseNumber(value) })}
-                  onChangeSeconds={(value) => updateStrengthSet(exercise.id, index, { restSec: parseNumber(value) })}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor={colors.textMuted}
+                  style={styles.metricInput}
                 />
               </View>
+
+              <View style={styles.valueColumn}>
+                <TextInput
+                  value={`${row.restMin}:${String(row.restSec).padStart(2, '0')}`}
+                  onChangeText={(value) => updateStrengthSet(exercise.id, index, parseRestInput(value))}
+                  placeholder="0:00"
+                  placeholderTextColor={colors.textMuted}
+                  style={styles.metricInput}
+                />
+              </View>
+
+              <Pressable
+                onPress={() => removeStrengthSet(exercise.id, index)}
+                disabled={strengthMetrics.sets.length <= 1}
+                style={({ pressed }) => [
+                  styles.removeColumn,
+                  strengthMetrics.sets.length <= 1 && styles.removeDisabled,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text variant="body" style={styles.removeIcon}>x</Text>
+              </Pressable>
             </View>
-          ))}
-        </View>
+          );
+        })}
       </View>
     );
   }
 
-  // Backend-driven path: template + values come from validated server payload.
-  // Keep using the same visual components so design language stays consistent.
   const schemaMetrics = exercise.metrics;
 
   return (
-    <View style={styles.bleedWrap}>
-      <View style={styles.container}>
-        <Text variant="label" style={styles.headingText}>{schemaMetrics.template.title}</Text>
-        <View style={styles.fieldStack}>
-          {schemaMetrics.template.fields.map((field) => {
-            if (field.type === 'number') {
-              const value = schemaMetrics.values[field.key];
-              const numericValue = typeof value === 'number' ? value : field.defaultValue;
-              const label = field.unit ? `${field.label} ${field.unit}` : field.label;
+    <View style={styles.schemaCard}>
+      <Text variant="label" style={styles.headingText}>{schemaMetrics.template.title}</Text>
 
-              return (
-                <ExerciseInput
-                  key={field.key}
-                  label={label}
-                  value={String(numericValue)}
-                  onChangeText={(nextValue) => updateSchemaMetricNumber(exercise.id, field.key, parseNumber(nextValue))}
-                />
-              );
-            }
-
+      <View style={styles.fieldStack}>
+        {schemaMetrics.template.fields.map((field) => {
+          if (field.type === 'number') {
             const value = schemaMetrics.values[field.key];
-            const durationValue =
-              typeof value === 'number' || value == null
-                ? { minutes: field.defaultMinutes, seconds: field.defaultSeconds }
-                : value;
+            const numericValue = typeof value === 'number' ? value : field.defaultValue;
+            const label = field.unit ? `${field.label} ${field.unit}` : field.label;
 
             return (
-              <RestTimeInput
+              <ExerciseInput
                 key={field.key}
-                label={field.label}
-                minutes={String(durationValue.minutes)}
-                seconds={String(durationValue.seconds)}
-                onChangeMinutes={(nextValue) =>
-                  updateSchemaMetricDuration(exercise.id, field.key, { minutes: parseNumber(nextValue) })
-                }
-                onChangeSeconds={(nextValue) =>
-                  updateSchemaMetricDuration(exercise.id, field.key, { seconds: parseNumber(nextValue) })
-                }
+                label={label}
+                value={String(numericValue)}
+                onChangeText={(nextValue) => updateSchemaMetricNumber(exercise.id, field.key, parseNumber(nextValue))}
               />
             );
-          })}
-        </View>
+          }
+
+          const value = schemaMetrics.values[field.key];
+          const durationValue =
+            typeof value === 'number' || value == null
+              ? { minutes: field.defaultMinutes, seconds: field.defaultSeconds }
+              : value;
+
+          return (
+            <RestTimeInput
+              key={field.key}
+              label={field.label}
+              minutes={String(durationValue.minutes)}
+              seconds={String(durationValue.seconds)}
+              onChangeMinutes={(nextValue) =>
+                updateSchemaMetricDuration(exercise.id, field.key, { minutes: parseNumber(nextValue) })
+              }
+              onChangeSeconds={(nextValue) =>
+                updateSchemaMetricDuration(exercise.id, field.key, { seconds: parseNumber(nextValue) })
+              }
+            />
+          );
+        })}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bleedWrap: {
-    marginHorizontal: 0,
+  strengthCard: {
+    marginHorizontal: spacing.lg,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: colors.background,
+    overflow: 'hidden',
   },
-  container: {
-    ...routineStyles.sectionContainer,
+  schemaCard: {
+    marginHorizontal: spacing.lg,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
   },
   headingText: {
     color: colors.textPrimary,
     letterSpacing: 1.4,
+    paddingHorizontal: spacing.lg,
   },
-  setCounter: {
+  tableHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
+    minHeight: 36,
   },
-  counterButton: {
-    minWidth: 22,
-    minHeight: 22,
+  tableHeaderText: {
+    flex: 1,
+    textAlign: 'center',
+    color: 'rgba(255,255,255,0.44)',
+    fontSize: 9,
+    lineHeight: 12,
+    letterSpacing: 0.8,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 50,
+  },
+  tableRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  setColumn: {
+    width: 42,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  counterButtonDisabled: {
-    opacity: 0.4,
+  valueColumn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
   },
-  counterSymbol: {
+  removeColumn: {
+    width: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
+  },
+  setNumberText: {
+    color: 'rgba(255,255,255,0.52)',
+    fontSize: 12,
+    lineHeight: 14,
+  },
+  valueText: {
     color: colors.textPrimary,
-    lineHeight: 18,
+    fontSize: 15,
+    lineHeight: 20,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
   },
-  counterLabel: {
-    color: colors.textSecondary,
-    letterSpacing: 0.9,
-    minWidth: 56,
+  metricInput: {
+    width: '100%',
     textAlign: 'center',
+    ...typography.bodySmall,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    paddingVertical: spacing.sm,
+    fontVariant: ['tabular-nums'],
   },
-  setSection: {
-    gap: spacing.md,
+  removeIcon: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: 16,
+    lineHeight: 16,
   },
-  setHeader: {
-    paddingHorizontal: spacing.lg,
+  removeDisabled: {
+    opacity: 0.25,
   },
   fieldStack: {
-    ...routineStyles.fieldStack,
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
   },
   pressed: {
-    ...routineStyles.pressed,
+    opacity: 0.82,
   },
 });

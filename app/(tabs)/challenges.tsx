@@ -2,41 +2,38 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import ScreenBackground from '../../components/layout/screenBackground';
-import { ChallengeHomeSections } from '../../components/challenges/challengeHomeSections';
-import { ChallengePreviewCardProps } from '../../components/challenges/challengePreviewCard';
+import {
+	ChallengeListSections,
+	type ChallengesScreenViewModel,
+} from '../../components/challenges';
 import { Text } from '../../components/ui/text';
 import { spacing } from '../../constants/theme';
-import type { ActivityType } from '../../constants/theme';
-import type { LocationType } from '../../components/icons/locationIcon';
 import { getChallenges } from '../../services/challenge/challenge.service';
-import type { ChallengeContract } from '../../types/challenge';
+import { toChallengeListViewModel } from '../../services/adapters/index';
 import { useTranslation } from 'react-i18next';
-
-function toCardProps(c: ChallengeContract, memberAuthorLabel: string): ChallengePreviewCardProps {
-	return {
-		challengeId: String(c.id),
-		days: c.duration_days ?? 0,
-		title: c.name,
-		author: memberAuthorLabel,
-		badgeLabel: c.visibility === 'public' ? 'PUBLIC' : 'PRIVATE',
-		activityType: 'strength' as ActivityType,
-		locationIconTypes: ['gym'] as LocationType[],
-	};
-}
 
 export default function Challenges() {
 	const router = useRouter();
 	const { t } = useTranslation();
-	const [challenges, setChallenges] = useState<ChallengePreviewCardProps[]>([]);
+	const [challengeView, setChallengeView] = useState<ChallengesScreenViewModel>({
+		activeChallenges: [],
+		exploreChallenges: [],
+	});
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		const memberAuthorLabel = t('challenges.memberAuthor');
-
 		getChallenges()
 			.then((res) => {
-				setChallenges((res ?? []).map((challenge) => toCardProps(challenge, memberAuthorLabel)));
+				setChallengeView(
+					toChallengeListViewModel(res ?? [], {
+						membersLabel: t('challenges.members'),
+						unknownCreatorLabel: t('challenges.unknownCreator'),
+						durationLabel: t('challenges.durationUnit'),
+						locationFallbackLabel: t('challenges.locationFallback'),
+						categoryFallbackLabel: t('challenges.categoryFallback'),
+					}),
+				);
 			})
 			.catch(() => setError(t('challenges.loadError')))
 			.finally(() => setLoading(false));
@@ -63,9 +60,16 @@ export default function Challenges() {
 						<Text tone="secondary">{error}</Text>
 					</View>
 				) : (
-					<ChallengeHomeSections
-						yourChallenges={[]}
-						exploreChallenges={challenges}
+					<ChallengeListSections
+						title={t('challenges.screenTitle')}
+						activeLabel={t('challenges.activeTitle')}
+						exploreLabel={t('challenges.exploreTitle')}
+						seeAllLabel={t('challenges.seeAll')}
+						joinOrCreateLabel={t('challenges.joinOrCreate')}
+						dayLabelBuilder={(day: number) => t('challenges.dayLabel', { day })}
+						streakLabelBuilder={(count: number) => t('challenges.streakLabel', { count })}
+						activeChallenges={challengeView.activeChallenges}
+						exploreChallenges={challengeView.exploreChallenges}
 						onCreateChallenge={handleCreateChallenge}
 						onPressChallenge={handleOpenChallenge}
 					/>
