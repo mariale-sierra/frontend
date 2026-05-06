@@ -53,10 +53,10 @@ export function RestTimeInput({
 const styles = StyleSheet.create({
   field: {
     gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    borderRadius: 0,
+    backgroundColor: 'transparent',
   },
   fieldLabel: {
     color: colors.textSecondary,

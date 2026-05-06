@@ -1,5 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-import { Button } from '../ui/button';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../ui/text';
 import { Row } from '../layout/row';
 import { ActivityIcon } from '../icons/activityIcon';
@@ -22,6 +21,17 @@ export function ExerciseHeader({
   onToggleCollapsed,
   onRemove,
 }: ExerciseHeaderProps) {
+  function handleOpenOptions() {
+    Alert.alert(
+      'Exercise options',
+      'Choose an action for this exercise.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Erase exercise', style: 'destructive', onPress: onRemove },
+      ],
+    );
+  }
+
   return (
     <View style={styles.headerSection}>
       <Row justify="space-between" align="center">
@@ -38,9 +48,15 @@ export function ExerciseHeader({
             {index + 1}. {exercise.name}
           </Text>
         </Row>
-        <Button variant="danger" size="sm" onPress={onRemove}>
-          Remove
-        </Button>
+        <Pressable
+          onPress={handleOpenOptions}
+          hitSlop={10}
+          style={({ pressed }) => [styles.optionsButton, pressed && styles.pressed]}
+          accessibilityRole="button"
+          accessibilityLabel="Exercise options"
+        >
+          <Icon name="ellipsis-horizontal" size={18} color={colors.textPrimary} />
+        </Pressable>
       </Row>
 
       <Text variant="caption">{exercise.location}</Text>
@@ -64,5 +80,14 @@ const styles = StyleSheet.create({
   },
   exerciseTitle: {
     flex: 1,
+  },
+  optionsButton: {
+    minWidth: 28,
+    minHeight: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pressed: {
+    opacity: 0.82,
   },
 });

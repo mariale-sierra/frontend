@@ -182,17 +182,17 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     backgroundColor: colors.background,
   },
   exerciseOrderBadge: {
-    width: 34,
+    width: 30,
     alignItems: 'center',
   },
   exerciseOrderText: {
     color: colors.textPrimary,
-    fontSize: 28,
-    lineHeight: 30,
+    fontSize: 24,
+    lineHeight: 26,
     fontWeight: '700',
   },
   exerciseTitleRow: {

@@ -1,6 +1,5 @@
-import { Pressable, StyleSheet } from 'react-native';
-import { Icon } from '../ui/icon';
-import { colors, radius, spacing } from '../../constants/theme';
+import { IconButton } from '../ui/iconButton';
+import { colors } from '../../constants/theme';
 
 interface RestDayIconButtonProps {
   onPress: () => void;
@@ -8,29 +7,16 @@ interface RestDayIconButtonProps {
 
 export function RestDayIconButton({ onPress }: RestDayIconButtonProps) {
   return (
-    <Pressable
+    <IconButton
+      name="moon-outline"
       onPress={onPress}
-      style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+      size={38}
+      iconSize={18}
+      iconColor={colors.textPrimary}
+      variant="surface"
       accessibilityRole="button"
       accessibilityLabel="Mark as rest day"
-    >
-      <Icon name="moon-outline" size={18} color={colors.textPrimary} />
-    </Pressable>
+      pressedOpacity={0.88}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  button: {
-    width: 38,
-    height: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  pressed: {
-    opacity: 0.88,
-  },
-});

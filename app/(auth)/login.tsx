@@ -9,7 +9,6 @@ import { Icon } from '../../components/ui/icon';
 import { Input } from '../../components/ui/input';
 import { Loader } from '../../components/ui/loader';
 import { Text } from '../../components/ui/text';
-import api from '../../services/api';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
@@ -68,23 +67,16 @@ export default function Login() {
         leftIcon={<Icon name="lock-closed-outline" size={18} color={colors.textSecondary} />}
       />
       <Button size="md" onPress={async () => {
-        setIsLoading(true); // Show loading spinner
+        setIsLoading(true);
         try {
-          console.log('Email:', email);
-          console.log('Password:', password);
-          console.log('BaseURL:', api.defaults.baseURL);
-          const result = await login(email, password);
-          console.log('Resultado:', JSON.stringify(result));
+          await login(email, password);
         } catch (error: any) {
-          console.log('Error status:', error?.response?.status);
-          console.log('Error data:', error?.response?.data);
-          console.log('Error message:', error?.message);
           Alert.alert(
             t('common.errors.genericTitle'),
             error?.response?.data?.message || t('auth.login.invalidCredentials'),
           );
         } finally {
-          setIsLoading(false); // Hide loading spinner
+          setIsLoading(false);
         }
       }}>
         {t('common.actions.login')}

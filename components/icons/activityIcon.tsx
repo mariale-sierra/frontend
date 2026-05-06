@@ -5,7 +5,6 @@ import { colors, ActivityType } from '../../constants/theme';
 interface ActivityIconProps {
   type: ActivityType;
   size?: 'xs' | 'sm' | 'md' | 'lg';
-  /** 'circle' shows colored circle background; 'plain' shows just the icon with no container */
   variant?: 'circle' | 'plain';
 }
 
@@ -22,6 +21,7 @@ const iconMap: Record<ActivityType, keyof typeof Ionicons.glyphMap> = {
 };
 
 export function ActivityIcon({ type, size = 'md', variant = 'circle' }: ActivityIconProps) {
+
   if (variant === 'plain') {
     return (
       <Ionicons
@@ -47,7 +47,7 @@ export function ActivityIcon({ type, size = 'md', variant = 'circle' }: Activity
       <Ionicons
         name={iconMap[type]}
         size={iconSize[size]}
-        color={colors.textInverse}
+        color={colors.textPrimary}
       />
     </View>
   );

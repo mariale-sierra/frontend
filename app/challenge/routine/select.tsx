@@ -1,14 +1,13 @@
 import { ScrollView, StyleSheet, Pressable, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import ScreenBackground from '../../../components/layout/screenBackground';
 import { Stack } from '../../../components/layout/stack';
-import { Row } from '../../../components/layout/row';
+import { Divider } from '../../../components/ui/divider';
 import { Text } from '../../../components/ui/text';
 import { Icon } from '../../../components/ui/icon';
-import { RestDayOptionCard, RoutinePickerCard } from '../../../components/routine';
+import { DayRoutineHeader, RestDayOptionCard, RoutinePickerCard } from '../../../components/routine';
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
-import { colors, spacing, radius } from '../../../constants/theme';
+import { colors, spacing, typography } from '../../../constants/theme';
 import { useTranslation } from 'react-i18next';
 
 export default function SelectRoutineScreen() {
@@ -45,19 +44,16 @@ export default function SelectRoutineScreen() {
 
   return (
     <ScreenBackground variant="top">
-      {/* Header */}
-      <Row align="center" gap="md" style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
-          <Icon name="chevron-back" size={24} color={colors.textPrimary} />
-        </Pressable>
-        <Text variant="subheader">{t('routineSelect.dayRoutineTitle', { day: dayNumber })}</Text>
-      </Row>
+      <DayRoutineHeader
+        title={t('routineSelect.dayRoutineTitle', { day: dayNumber })}
+        onBack={() => router.back()}
+      />
 
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <Stack gap="md">
           <RestDayOptionCard onPress={handleSelectRestDay} />
 
-          <View style={styles.sectionDivider} />
+          <Divider variant="section" marginVertical="xs" />
 
           <Pressable onPress={handleCreateNew} style={({ pressed }) => [styles.sectionHeader, pressed && styles.pressed]}>
             <Text variant="subheader" style={styles.sectionLabel}>{t('routineSelect.yourRoutines')}</Text>
@@ -82,15 +78,6 @@ export default function SelectRoutineScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
-    justifyContent: 'flex-start',
-  },
-  backBtn: {
-    padding: spacing.xs,
-  },
   container: {
     padding: spacing.lg,
     paddingBottom: spacing['2xl'],
@@ -100,17 +87,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: spacing.md,
   },
   sectionLabel: {
+    ...typography.title,
     color: colors.textPrimary,
-    fontSize: 14,
-    lineHeight: 20,
-    letterSpacing: 1.8,
-  },
-  sectionDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    marginVertical: spacing.xs,
+    fontSize: 18,
+    lineHeight: 22,
+    textTransform: 'none',
   },
   addIconButton: {
     width: 34,

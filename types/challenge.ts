@@ -45,6 +45,36 @@ export interface CreateChallengePayload {
   }>;
 }
 
+export interface ChallengeExerciseContract {
+  name?: string;
+  location?: string;
+  activity_type?: ActivityType;
+  [key: string]: unknown;
+}
+
+export interface ChallengeCycleDayContract {
+  day_number?: number;
+  is_rest_day?: boolean;
+  routine_name?: string;
+  routine_description?: string;
+  exercises?: ChallengeExerciseContract[];
+  [key: string]: unknown;
+}
+
+export interface ChallengeActivityContract {
+  type?: string;
+  label?: string;
+  [key: string]: unknown;
+}
+
+export interface ChallengeDayContract {
+  day?: number;
+  title?: string;
+  description?: string;
+  activities?: string[];
+  [key: string]: unknown;
+}
+
 export interface ChallengeContract {
   id: number | string;
   name: string;
@@ -53,6 +83,11 @@ export interface ChallengeContract {
   duration_days?: number;
   created_by_user_id?: string;
   cycle_length_days?: number;
+  categories?: string[];
+  locations?: string[];
+  activities?: ChallengeActivityContract[];
+  days?: ChallengeDayContract[];
+  cycle_days?: ChallengeCycleDayContract[];
   [key: string]: unknown;
 }
 

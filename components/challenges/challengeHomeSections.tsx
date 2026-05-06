@@ -10,7 +10,7 @@ export interface ChallengeHomeSectionsProps {
 	onPressYourChallenges?: () => void;
 	onPressExploreChallenges?: () => void;
 	onCreateChallenge?: () => void;
-	onPressChallenge?: (id: string) => void; //ADEED THIS
+	onPressChallenge?: (id: string) => void;
 }
 
 export function ChallengeHomeSections({
@@ -19,7 +19,7 @@ export function ChallengeHomeSections({
 	onPressYourChallenges,
 	onPressExploreChallenges,
 	onCreateChallenge,
-	onPressChallenge, //ADDED THIS
+	onPressChallenge,
 }: ChallengeHomeSectionsProps) {
 	return (
 		<Stack gap="md">
@@ -32,7 +32,7 @@ export function ChallengeHomeSections({
 				onCreatePress={onCreateChallenge}
 				headerListGap="lg"
 				showHeaderDivider
-				onPressChallenge={onPressChallenge} //ADDED THIS
+				onPressChallenge={onPressChallenge}
 			/>
 
 			<Divider />
@@ -43,7 +43,7 @@ export function ChallengeHomeSections({
 					challenges={exploreChallenges}
 					onPressHeader={onPressExploreChallenges}
 					headerListGap="lg"
-					onPressChallenge={onPressChallenge} //ADDED THIS
+					onPressChallenge={onPressChallenge}
 				/>
 			</View>
 		</Stack>

@@ -553,11 +553,6 @@ export default function CreateChallenge() {
 
       {!isReviewStep && (
         <View style={styles.fixedBottomBar}>
-          {activeStepErrors.length > 0 && (
-            <Text variant="caption" style={styles.stepErrorText}>
-              {t('challengeCreate.alerts.missingPrefix', { items: activeStepErrors.join(', ') })}
-            </Text>
-          )}
           <Pressable
             onPress={isDaysStep ? handleDaysContinue : handleNext}
             style={({ pressed }) => [styles.fixedBottomButton, pressed && styles.pressed]}
@@ -591,14 +586,10 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   navButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
+    minWidth: 28,
+    minHeight: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
   },
   progressTrack: {
     height: 6,
@@ -819,10 +810,6 @@ const styles = StyleSheet.create({
   footerActions: {
     marginTop: spacing['2xl'] + spacing.lg,
     gap: spacing.md,
-  },
-  stepErrorText: {
-    color: colors.error,
-    marginBottom: spacing.sm,
   },
   footerButtonRow: {
     width: '100%',

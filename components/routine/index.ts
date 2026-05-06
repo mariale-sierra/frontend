@@ -1,4 +1,5 @@
 export * from './exerciseBlock';
+export * from './dayRoutineHeader';
 export * from './exerciseHeader';
 export * from './exerciseListItem';
 export * from './exerciseMetricsEditor';

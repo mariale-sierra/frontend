@@ -1,16 +1,16 @@
 import { ScrollView, StyleSheet } from 'react-native';
 import { Stack } from '../layout/stack';
 import { ChallengePreviewCard, ChallengePreviewCardProps } from './challengePreviewCard';
-import { CreateChallengeCard, CreateChallengeCardProps } from './createChallengeCard';
+import { CreateChallengeCard } from './createChallengeCard';
 
 export interface ChallengePreviewListProps {
 	challenges: ChallengePreviewCardProps[];
 	showCreateCard?: boolean;
 	onCreatePress?: () => void;
-	onPressChallenge?: (id: string) => void; //ADDED THIS
+	onPressChallenge?: (id: string) => void;
 }
 
-export function ChallengePreviewList({ challenges, showCreateCard = false, onCreatePress,  onPressChallenge }: ChallengePreviewListProps) {
+export function ChallengePreviewList({ challenges, showCreateCard = false, onCreatePress, onPressChallenge }: ChallengePreviewListProps) {
 	return (
 		<ScrollView 
 			style={styles.scrollContainer}
@@ -21,11 +21,11 @@ export function ChallengePreviewList({ challenges, showCreateCard = false, onCre
 			<Stack gap="lg">
 				{showCreateCard && <CreateChallengeCard onPress={onCreatePress} />}
 				{/* Backend contract: each challenge must include a stable challengeId. */}
-				{challenges.map((challenge, index) => (
+				{challenges.map((challenge) => (
 					<ChallengePreviewCard
-						key={challenge.challengeId || `${challenge.title}-${challenge.author}-${index}`}
+						key={challenge.challengeId}
 						{...challenge}
-						onPress={() => onPressChallenge?.(challenge.challengeId)} //ADDED THIS
+						onPress={() => onPressChallenge?.(challenge.challengeId)}
 					/>
 				))}
 			</Stack>

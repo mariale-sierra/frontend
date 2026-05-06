@@ -1,11 +1,11 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Icon } from '../ui/icon';
 import { RestDayIconButton } from '../icons/restDayIconButton';
 import { Text } from '../ui/text';
 import { colors, radius, spacing } from '../../constants/theme';
 import { MetricsChallengeSelector } from './metricsChallengeSelector';
 import type { ChallengeOption } from '../../types/metrics';
 import { useTranslation } from 'react-i18next';
+import { IconButton } from '../ui/iconButton';
 
 interface MetricsTopBarProps {
   challenges: ChallengeOption[];
@@ -32,14 +32,15 @@ export function MetricsTopBar({
 
   return (
     <View style={styles.headerRow}>
-      <Pressable
+      <IconButton
+        name="chevron-back"
         onPress={onBack}
-        style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+        size={28}
+        iconSize={18}
+        variant="ghost"
         accessibilityRole="button"
         accessibilityLabel={t('metrics.accessibilityBack')}
-      >
-        <Icon name="chevron-back" size={18} />
-      </Pressable>
+      />
 
       <MetricsChallengeSelector
         challenges={challenges}
@@ -73,16 +74,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.md,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
   },
   headerActions: {
     flexDirection: 'row',

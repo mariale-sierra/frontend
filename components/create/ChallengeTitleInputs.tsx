@@ -42,10 +42,9 @@ export function ChallengeTitleInputs({
 					placeholder={t('challengeCreate.fields.descriptionOptional')}
 					placeholderVariant="caption"
 					containerStyle={styles.descriptionContainer}
-					multiline
 					style={styles.descriptionInput}
 				/>
-				<View style={[styles.fieldLine, styles.descriptionFieldLine, description.trim().length > 0 && styles.fieldLineActive]} />
+				<View style={[styles.fieldLine, description.trim().length > 0 && styles.fieldLineActive]} />
 			</View>
 		</Stack>
 	);
@@ -80,16 +79,11 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 		lineHeight: 18,
 		color: colors.textPrimary,
-		minHeight: 72,
-		textAlignVertical: 'top' as const,
 	},
 	fieldLine: {
 		height: 1,
 		backgroundColor: 'rgba(255,255,255,0.28)',
 		marginTop: 6,
-	},
-	descriptionFieldLine: {
-		marginTop: 1,
 	},
 	fieldLineActive: {
 		backgroundColor: colors.textPrimary,

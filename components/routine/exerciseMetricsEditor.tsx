@@ -1,7 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Row } from '../layout/row';
 import { Text } from '../ui/text';
-import { Icon } from '../ui/icon';
 import { ExerciseInput } from './exerciseInput';
 import { RestTimeInput } from './restTimeInput';
 import { routineStyles } from './routineStyles';
@@ -29,32 +28,40 @@ export function ExerciseMetricsEditor({ exercise }: ExerciseMetricsEditorProps) 
 
   if (exercise.metrics.kind === 'strength') {
     const strengthMetrics = exercise.metrics;
+    const setCount = strengthMetrics.sets.length;
 
     return (
       <View style={styles.bleedWrap}>
         <View style={styles.container}>
-          <Row justify="space-between" align="center" style={styles.headingRow}>
-            <Text variant="label" style={styles.headingText}>Strength setup</Text>
-            <Pressable onPress={() => addStrengthSet(exercise.id)} style={({ pressed }) => [styles.addSetButton, pressed && styles.pressed]}>
-              <Icon name="add" size={14} color={colors.textPrimary} />
-              <Text variant="caption" style={styles.addSetText}>Add set</Text>
-            </Pressable>
-          </Row>
-
           {strengthMetrics.sets.map((row, index) => (
             <View key={`${exercise.id}-${index}`} style={styles.setSection}>
               {index > 0 ? <View style={routineStyles.divider} /> : null}
               <Row justify="space-between" align="center" style={styles.setHeader}>
                 <Text variant="subheader">SET {row.setNumber}</Text>
-                <Pressable
-                  onPress={() => removeStrengthSet(exercise.id, index)}
-                  disabled={strengthMetrics.sets.length <= 1}
-                  style={({ pressed }) => [styles.removeButton, pressed && strengthMetrics.sets.length > 1 && styles.pressed]}
-                >
-                  <Text variant="caption" style={[styles.removeText, strengthMetrics.sets.length <= 1 && styles.disabledText]}>
-                    Remove
-                  </Text>
-                </Pressable>
+                {index === 0 ? (
+                  <View style={styles.setCounter}>
+                    <Pressable
+                      onPress={() => removeStrengthSet(exercise.id, setCount - 1)}
+                      disabled={setCount <= 1}
+                      style={({ pressed }) => [
+                        styles.counterButton,
+                        setCount <= 1 && styles.counterButtonDisabled,
+                        pressed && setCount > 1 && styles.pressed,
+                      ]}
+                    >
+                      <Text variant="label" style={styles.counterSymbol}>-</Text>
+                    </Pressable>
+
+                    <Text variant="caption" style={styles.counterLabel}>SETS {setCount}</Text>
+
+                    <Pressable
+                      onPress={() => addStrengthSet(exercise.id)}
+                      style={({ pressed }) => [styles.counterButton, pressed && styles.pressed]}
+                    >
+                      <Text variant="label" style={styles.counterSymbol}>+</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
               </Row>
 
               <View style={styles.fieldStack}>
@@ -136,46 +143,47 @@ const styles = StyleSheet.create({
   container: {
     ...routineStyles.sectionContainer,
   },
-  headingRow: {
-    ...routineStyles.sectionPadding,
-    marginBottom: spacing.sm,
-  },
   headingText: {
     color: colors.textPrimary,
     letterSpacing: 1.4,
   },
-  addSetButton: {
+  setCounter: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 4,
   },
-  addSetText: {
+  counterButton: {
+    minWidth: 22,
+    minHeight: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  counterButtonDisabled: {
+    opacity: 0.4,
+  },
+  counterSymbol: {
     color: colors.textPrimary,
+    lineHeight: 18,
+  },
+  counterLabel: {
+    color: colors.textSecondary,
+    letterSpacing: 0.9,
+    minWidth: 56,
+    textAlign: 'center',
   },
   setSection: {
     gap: spacing.md,
   },
   setHeader: {
     paddingHorizontal: spacing.lg,
-    justifyContent: 'space-between',
   },
   fieldStack: {
     ...routineStyles.fieldStack,
-  },
-  removeButton: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: 0,
-  },
-  removeText: {
-    color: colors.textSecondary,
-  },
-  disabledText: {
-    ...routineStyles.disabledText,
   },
   pressed: {
     ...routineStyles.pressed,

@@ -191,7 +191,7 @@ const en = {
   },
   routineSelect: {
     dayRoutineTitle: 'DAY {{day}} ROUTINE',
-    yourRoutines: 'YOUR ROUTINES',
+    yourRoutines: 'Your routines',
     restDay: {
       title: 'Rest Day',
       description: 'Recovery, mobility, or total reset.',

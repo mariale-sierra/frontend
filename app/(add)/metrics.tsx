@@ -5,6 +5,7 @@ import { MetricsPanel } from '../../components/add/metricsPanel';
 import { MetricsTopBar } from '../../components/add/metricsTopBar';
 import { MetricsRoutineSelector } from '../../components/add/metricsRoutineSelector';
 import { Button } from '../../components/ui/button';
+import { Divider } from '../../components/ui/divider';
 import { spacing } from '../../constants/theme';
 import { useMetricsScreen } from '../../hooks/useMetricsScreen';
 import { useTranslation } from 'react-i18next';
@@ -61,7 +62,7 @@ export default function Metrics() {
           </View>
         </View>
 
-        <View style={styles.divider} />
+        <Divider variant="section" />
 
         <MetricsPanel>
           <ScrollView
@@ -106,11 +107,6 @@ const styles = StyleSheet.create({
   },
   routineRow: {
     marginTop: spacing.xs,
-  },
-  divider: {
-    height: 1,
-    width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.18)',
   },
   metricsScroll: {
     flex: 1,

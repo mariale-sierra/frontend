@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'stretch',
-    minHeight: 62,
+    minHeight: 64,
   },
   indicatorColumn: {
     width: 28,
@@ -167,15 +167,18 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.12)',
     backgroundColor: 'rgba(255,255,255,0.03)',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     justifyContent: 'center',
   },
   stepTitle: {
-    fontWeight: '600',
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '700',
+    color: colors.textPrimary,
   },
   stepMeta: {
     marginTop: spacing.xxs,
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.72)',
   },
   pressed: {
     opacity: 0.84,

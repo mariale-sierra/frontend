@@ -3,10 +3,10 @@ import { ScrollView, StyleSheet, Pressable, View, TextInput, Alert, ActivityIndi
 import { router, useLocalSearchParams } from 'expo-router';
 import ScreenBackground from '../../../components/layout/screenBackground';
 import { Stack } from '../../../components/layout/stack';
-import { Row } from '../../../components/layout/row';
+import { Input } from '../../../components/ui/input';
 import { Text } from '../../../components/ui/text';
 import { Icon } from '../../../components/ui/icon';
-import { ExerciseBlock } from '../../../components/routine/exerciseBlock';
+import { DayRoutineHeader, ExerciseBlock } from '../../../components/routine';
 import { getRoutineLocationSummary, useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { colors, spacing, radius, typography } from '../../../constants/theme';
 import { addExerciseToRoutine, createRoutine } from '../../../services/routine/routine.service';
@@ -91,28 +91,28 @@ export default function CreateRoutineScreen() {
 
   return (
     <ScreenBackground variant="top">
-      {/* Header */}
-      <Row align="center" gap="md" style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
-          <Icon name="chevron-back" size={24} color={colors.textPrimary} />
-        </Pressable>
-        <Text variant="subheader">{t('routineCreate.dayRoutineTitle', { day: dayNumber })}</Text>
-      </Row>
+      <DayRoutineHeader
+        title={t('routineCreate.dayRoutineTitle', { day: dayNumber })}
+        onBack={() => router.back()}
+      />
 
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
         <Stack gap="lg">
-          <View style={styles.inputGroup}>
-            <TextInput
+          <View style={styles.fieldShell}>
+            <Input
               value={routineName}
-              onChangeText={setRoutineName}
+              onChangeText={(value) => setRoutineName(value.toLowerCase())}
+              variant="default"
               placeholder={t('routineCreate.routineNamePlaceholder')}
-              placeholderTextColor={colors.textSecondary}
-              style={styles.nameInput}
+              placeholderVariant="caption"
+              autoCapitalize="none"
+              containerStyle={styles.titleContainer}
+              style={styles.titleInput}
             />
-            <View style={styles.inputDivider} />
+            <View style={[styles.fieldLine, routineName.trim().length > 0 && styles.fieldLineActive]} />
           </View>
 
           <View style={styles.descriptionWrap}>
@@ -195,15 +195,6 @@ export default function CreateRoutineScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.md,
-    justifyContent: 'flex-start',
-  },
-  backBtn: {
-    padding: spacing.xs,
-  },
   container: {
     padding: spacing.lg,
     paddingBottom: spacing['2xl'],
@@ -214,19 +205,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.md,
   },
-  inputGroup: {
-    gap: spacing.sm,
+  fieldShell: {
+    paddingHorizontal: 2,
+    paddingVertical: 6,
   },
-  nameInput: {
-    ...typography.header,
-    fontSize: 12,
-    lineHeight: 20,
+  titleContainer: {
+    paddingTop: 0,
+    paddingBottom: 2,
+    paddingHorizontal: 0,
+    borderRadius: 0,
+  },
+  titleInput: {
+    ...typography.title,
+    fontSize: 22,
+    lineHeight: 26,
     color: colors.textPrimary,
-    paddingVertical: spacing.xs,
+    paddingVertical: 0,
   },
-  inputDivider: {
+  fieldLine: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.28)',
+    marginTop: 6,
+  },
+  fieldLineActive: {
+    backgroundColor: colors.textPrimary,
   },
   descriptionWrap: {
     borderRadius: radius.xl,
@@ -243,8 +245,12 @@ const styles = StyleSheet.create({
   },
   routineMeta: {
     color: colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: -spacing.sm,
   },
   exerciseList: {
+    marginTop: spacing.sm,
     marginHorizontal: -spacing.lg,
     gap: spacing.xl,
   },
