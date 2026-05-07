@@ -1,5 +1,4 @@
 import { ReactNode } from 'react';
-import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 import { colors, gradients, radius } from '../../constants/theme';
 

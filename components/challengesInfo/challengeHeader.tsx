@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../ui/text';
 import { Icon } from '../ui/icon';
-import { ActivityIcon } from '../icons/activityIcon';
+import { ActivityBadge } from '../ui/activityBadge';
 import { LocationIcon, type LocationType } from '../icons/locationIcon';
 import { colors, spacing, type ActivityType } from '../../constants/theme';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   challenge: {
@@ -17,6 +18,7 @@ type Props = {
 };
 
 export default function ChallengeHeader({ challenge, detail }: Props) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const locationLabels: Record<LocationType, string> = {
     home: 'Home',
@@ -24,6 +26,14 @@ export default function ChallengeHeader({ challenge, detail }: Props) {
     outdoor: 'Outdoor',
     studio: 'Studio',
     anywhere: 'Anywhere',
+  };
+  const activityBadgeLabels: Record<ActivityType, string> = {
+    strength: t('challenges.activityBadgesShort.strength'),
+    cardioIntense: t('challenges.activityBadgesShort.cardioIntense'),
+    cardioLow: t('challenges.activityBadgesShort.cardioLow'),
+    flexibility: t('challenges.activityBadgesShort.flexibility'),
+    mindBody: t('challenges.activityBadgesShort.mindBody'),
+    functional: t('challenges.activityBadgesShort.functional'),
   };
 
   return (
@@ -55,13 +65,11 @@ export default function ChallengeHeader({ challenge, detail }: Props) {
 
       <View style={styles.activityBadgeRow}>
         {challenge.activityBadges.map((item, index) => (
-          <View
-            key={`${item.label}-${index}`}
-            style={styles.activityBadge}
-          >
-            <ActivityIcon type={item.activityType} size="sm" />
-            <Text variant="body" style={styles.activityBadgeLabel}>{item.label}</Text>
-          </View>
+          <ActivityBadge
+            key={`${item.activityType}-${index}`}
+            label={activityBadgeLabels[item.activityType]}
+            activityType={item.activityType}
+          />
         ))}
       </View>
 
@@ -146,23 +154,12 @@ const styles = StyleSheet.create({
   },
   activityBadgeRow: {
     width: '100%',
-    alignItems: 'center',
-    gap: spacing.xxs,
-    marginTop: spacing.xl,
-  },
-  activityBadge: {
-    width: '100%',
-    minHeight: 40,
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  activityBadgeLabel: {
-    textAlign: 'center',
-    fontWeight: '400',
+    columnGap: spacing.xs,
+    rowGap: spacing.sm,
+    marginTop: spacing.xl,
   },
   descriptionText: {
     maxWidth: '96%',

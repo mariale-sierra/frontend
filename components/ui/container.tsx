@@ -53,6 +53,8 @@ export function Container({
       ? colors.surface
       : variant === 'surfaceElevated'
       ? colors.surfaceElevated
+      : variant === 'surfaceHighlight'
+      ? colors.surfaceHighlight
       : colors.background;
 
   return (

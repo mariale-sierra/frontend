@@ -5,7 +5,6 @@ import {
   Pressable,
   PressableProps,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, spacing, ActivityType } from '../../constants/theme';
 
 /**

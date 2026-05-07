@@ -7,6 +7,7 @@ export function buildMockChallengeDetailViewModel(): ChallengeDetailViewModel {
       'Build consistency with a balanced progression that combines strength training, mobility, and conditioning. Each session is structured to keep intensity sustainable while still pushing adaptation. Follow the plan daily, track your effort, and repeat each week pattern until the challenge ends.',
     durationDays: 30,
     membersJoined: 184,
+    authorName: 'Coach Sam',
     locations: ['home', 'gym'],
     activities: [
       { activityType: 'strength', label: 'Strength training' },

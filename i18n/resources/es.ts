@@ -47,6 +47,14 @@ const es = {
     durationUnit: 'dias',
     locationFallback: 'En cualquier lugar',
     categoryFallback: 'General',
+    activityBadgesShort: {
+      strength: 'Fuerza',
+      cardioIntense: 'Cardio HI',
+      cardioLow: 'Cardio Low',
+      flexibility: 'Flex',
+      mindBody: 'Mente-Cuerpo',
+      functional: 'Funcional',
+    },
     loadError: 'No se pudieron cargar los retos.',
   },
   metrics: {
@@ -219,6 +227,11 @@ const es = {
       loadFailedTitle: 'No se pudieron cargar los ejercicios',
       loadFailedFallback: 'Error de red',
     },
+  },
+  home: {
+    hoursLeft: '{{hours}}h restantes',
+    completed: 'Completado',
+    noActiveChallenge: 'Sin reto activo',
   },
   placeholders: {
     challengeInfoTitle: 'Informacion del reto',

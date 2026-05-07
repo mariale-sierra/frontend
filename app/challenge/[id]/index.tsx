@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,7 +10,7 @@ import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '..
 import { Icon } from '../../../components/ui/icon';
 import { Text } from '../../../components/ui/text';
 import { colors, spacing } from '../../../constants/theme';
-import { getChallenge } from '../../../services/challenge/challenge.service';
+import { getChallenge, joinChallenge } from '../../../services/challenge/challenge.service';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 // REMOVE_MOCK_START: delete this import when backend payload is ready.
 import { buildMockChallengeDetailViewModel } from '../../../services/mocks/challengeDetailMock';
@@ -30,6 +30,36 @@ export default function ChallengeDetail() {
   const [challenge, setChallenge] = useState<ChallengeContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+
+  const handleJoinChallenge = useCallback(async () => {
+    if (isJoining) return;
+
+    const challengeId = Number(id);
+    if (!Number.isFinite(challengeId)) {
+      Alert.alert(
+        t('common.errors.genericTitle'),
+        t('challenges.joinInvalidId', { defaultValue: 'Challenge id is invalid.' }),
+      );
+      return;
+    }
+
+    setIsJoining(true);
+    try {
+      await joinChallenge(challengeId);
+      Alert.alert(
+        t('challenges.joinSuccessTitle', { defaultValue: 'Joined challenge' }),
+        t('challenges.joinSuccessMessage', { defaultValue: 'You are now part of this challenge.' }),
+      );
+    } catch {
+      Alert.alert(
+        t('common.errors.genericTitle'),
+        t('challenges.joinError', { defaultValue: 'Could not join challenge right now.' }),
+      );
+    } finally {
+      setIsJoining(false);
+    }
+  }, [id, isJoining, t]);
 
   useEffect(() => {
     if (!id) return;
@@ -49,14 +79,10 @@ export default function ChallengeDetail() {
     );
   }
 
-  if (error || !challenge) {
-    return null;
-  }
-
-  const challengeViewResult = toChallengeDetailViewModel(challenge);
+  const challengeViewResult = challenge ? toChallengeDetailViewModel(challenge) : null;
 
   // REMOVE_MOCK_START: fallback preview mode for UI validation before backend fields are available.
-  const challengeView = challengeViewResult.ok
+  const challengeView = challengeViewResult?.ok
     ? challengeViewResult.value
     : ENABLE_CHALLENGE_DETAIL_MOCK
       ? buildMockChallengeDetailViewModel()
@@ -71,7 +97,7 @@ export default function ChallengeDetail() {
           <Text style={styles.missingSubtitle}>
             The design requires backend-provided fields. Add these to the challenge payload/database:
           </Text>
-          {challengeViewResult.missingData.map((item) => (
+          {(challengeViewResult?.missingData ?? []).map((item) => (
             <Text key={`${item.field}-${item.requirement}`} style={styles.missingItem}>
               • {item.field}: {item.requirement}
             </Text>
@@ -98,7 +124,7 @@ export default function ChallengeDetail() {
               </Pressable>
 
               <Text variant="caption" style={styles.authorTopLabel}>
-                By {t('challenges.memberAuthor')}
+                By {challengeView.authorName ?? t('challenges.memberAuthor')}
               </Text>
             </View>
 
@@ -144,8 +170,11 @@ export default function ChallengeDetail() {
 
       <CreateFlowFixedBottomBar bottomInset={Math.max(insets.bottom, spacing.lg)} topPadding={spacing.md}>
         <CreateChallengePrimaryActionButton
-          label="Join Challenge"
-          accessibilityLabel="Join challenge"
+          label={t('challenges.joinButton', { defaultValue: 'Join Challenge' })}
+          accessibilityLabel={t('challenges.joinButtonA11y', { defaultValue: 'Join challenge' })}
+          onPress={handleJoinChallenge}
+          loading={isJoining}
+          disabled={isJoining || !id || error}
         />
       </CreateFlowFixedBottomBar>
     </View>

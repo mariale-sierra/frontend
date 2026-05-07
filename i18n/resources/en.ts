@@ -47,6 +47,14 @@ const en = {
     durationUnit: 'days',
     locationFallback: 'Anywhere',
     categoryFallback: 'General',
+    activityBadgesShort: {
+      strength: 'Strength',
+      cardioIntense: 'HI Cardio',
+      cardioLow: 'Low Cardio',
+      flexibility: 'Flex',
+      mindBody: 'Mind-Body',
+      functional: 'Functional',
+    },
     loadError: 'Could not load challenges.',
   },
   metrics: {
@@ -219,6 +227,11 @@ const en = {
       loadFailedTitle: 'Could not load exercises',
       loadFailedFallback: 'Network error',
     },
+  },
+  home: {
+    hoursLeft: '{{hours}}h left',
+    completed: 'Completed',
+    noActiveChallenge: 'No active challenge',
   },
   placeholders: {
     challengeInfoTitle: 'Challenge Info',

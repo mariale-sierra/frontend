@@ -18,6 +18,9 @@ export async function login(email: string, password: string) {
     if (user?.id) {
       await storage.setItem('userId', String(user.id));
     }
+    if (user?.username) {
+      await storage.setItem('username', user.username);
+    }
     return response.data;
   } catch (error: any) {
     console.error('Login error:', {
@@ -38,12 +41,16 @@ export async function register(email: string, username: string, password: string
   if (user?.id) {
     await storage.setItem('userId', String(user.id));
   }
+  if (user?.username) {
+    await storage.setItem('username', user.username);
+  }
   return response.data;
 }
 
 export async function logout() {
   await clearAccessToken();
   await storage.removeItem('userId');
+  await storage.removeItem('username');
 }
 
 export async function getToken() {
@@ -52,4 +59,8 @@ export async function getToken() {
 
 export async function getUserId() {
   return await storage.getItem('userId');
+}
+
+export async function getUsername() {
+  return await storage.getItem('username');
 }
