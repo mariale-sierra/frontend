@@ -1,6 +1,6 @@
 import { StyleSheet, TextInput, ViewProps, View } from 'react-native';
-import { Text } from '../ui/text';
-import { colors, radius, spacing } from '../../constants/theme';
+import { Text } from '../../ui/text';
+import { colors, radius, spacing } from '../../../constants/theme';
 
 interface ExerciseInputProps extends Omit<ViewProps, 'children'> {
   label: string;

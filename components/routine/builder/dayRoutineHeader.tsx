@@ -1,8 +1,8 @@
 import { StyleSheet, View } from 'react-native';
-import { Text } from '../ui/text';
-import { IconButton } from '../ui/iconButton';
-import { Button } from '../ui/button';
-import { colors, spacing } from '../../constants/theme';
+import { Text } from '../../ui/text';
+import { IconButton } from '../../ui/iconButton';
+import { Button } from '../../ui/button';
+import { colors, spacing } from '../../../constants/theme';
 
 interface DayRoutineHeaderProps {
   title: string;

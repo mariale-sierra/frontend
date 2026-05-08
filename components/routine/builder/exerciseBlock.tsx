@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Stack } from '../layout/stack';
-import { ExerciseSetTable } from './exerciseSetTable';
+import { Stack } from '../../layout/stack';
+import { ExerciseSetTable } from '../metrics/exerciseSetTable';
 import { ExerciseHeader } from './exerciseHeader';
-import { routineStyles } from './routineStyles';
-import { spacing } from '../../constants/theme';
-import type { ExerciseEntry } from '../../types/routine';
+import { routineStyles } from '../shared/routineStyles';
+import { spacing } from '../../../constants/theme';
+import type { ExerciseEntry } from '../../../types/routine';
 
 interface ExerciseBlockProps {
   exercise: ExerciseEntry;

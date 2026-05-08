@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../ui/text';
-import { Icon } from '../ui/icon';
+import { Text } from '../../ui/text';
+import { Icon } from '../../ui/icon';
 import { ExerciseListItem } from './exerciseListItem';
-import { useChallengeBuilder } from '../../store/challengeBuilderStore';
-import { useFilteredExercises, type ExerciseCandidate } from '../../hooks/useFilteredExercises';
-import { MUSCLE_GROUPS } from '../../constants/muscleGroups';
-import { colors, radius, spacing } from '../../constants/theme';
+import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
+import { useFilteredExercises, type ExerciseCandidate } from '../../../hooks/useFilteredExercises';
+import { MUSCLE_GROUPS } from '../../../constants/muscleGroups';
+import { colors, radius, spacing } from '../../../constants/theme';
 import { useTranslation } from 'react-i18next';
 
 interface MuscleGroupPickerModalProps {

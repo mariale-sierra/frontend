@@ -1,8 +1,8 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Text } from '../ui/text';
-import { ActivityIcon } from '../icons/activityIcon';
-import { routineStyles } from './routineStyles';
-import { colors, spacing, ActivityType } from '../../constants/theme';
+import { Text } from '../../ui/text';
+import { ActivityIcon } from '../../icons/activityIcon';
+import { routineStyles } from '../shared/routineStyles';
+import { colors, spacing, ActivityType } from '../../../constants/theme';
 
 interface ExerciseListItemProps {
   name: string;

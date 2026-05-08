@@ -1,6 +1,6 @@
 import { StyleSheet, TextInput, View } from 'react-native';
-import { Text } from '../ui/text';
-import { colors, spacing } from '../../constants/theme';
+import { Text } from '../../ui/text';
+import { colors, spacing } from '../../../constants/theme';
 
 interface ExerciseNoteFieldProps {
   value: string;

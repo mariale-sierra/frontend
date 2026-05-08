@@ -1,12 +1,12 @@
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
-import { Text } from '../ui/text';
-import { Row } from '../layout/row';
-import { ActivityIcon } from '../icons/activityIcon';
-import { Icon } from '../ui/icon';
+import { Text } from '../../ui/text';
+import { Row } from '../../layout/row';
+import { ActivityIcon } from '../../icons/activityIcon';
+import { Icon } from '../../ui/icon';
 import { ExerciseSetCounter } from './exerciseSetCounter';
-import { colors, spacing } from '../../constants/theme';
-import { useRoutineBuilder } from '../../store/routineBuilderStore';
-import type { ExerciseEntry } from '../../types/routine';
+import { colors, spacing } from '../../../constants/theme';
+import { useRoutineBuilder } from '../../../store/routineBuilderStore';
+import type { ExerciseEntry } from '../../../types/routine';
 
 interface ExerciseHeaderProps {
   exercise: ExerciseEntry;

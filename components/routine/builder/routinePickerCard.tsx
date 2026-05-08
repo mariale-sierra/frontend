@@ -1,11 +1,11 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Row } from '../layout/row';
-import { Text } from '../ui/text';
-import { Icon } from '../ui/icon';
-import { ActivityIcon } from '../icons/activityIcon';
-import { colors, radius, spacing } from '../../constants/theme';
-import { getRoutineLocationSummary } from '../../store/routineBuilderStore';
-import type { RoutineSummary } from '../../types/routine';
+import { Row } from '../../layout/row';
+import { Text } from '../../ui/text';
+import { Icon } from '../../ui/icon';
+import { ActivityIcon } from '../../icons/activityIcon';
+import { colors, radius, spacing } from '../../../constants/theme';
+import { getRoutineLocationSummary } from '../../../store/routineBuilderStore';
+import type { RoutineSummary } from '../../../types/routine';
 import { useTranslation } from 'react-i18next';
 
 interface RoutinePickerCardProps {

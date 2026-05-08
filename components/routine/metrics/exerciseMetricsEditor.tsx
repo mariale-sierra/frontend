@@ -1,10 +1,10 @@
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { Text } from '../ui/text';
+import { Text } from '../../ui/text';
 import { ExerciseInput } from './exerciseInput';
 import { RestTimeInput } from './restTimeInput';
-import { colors, radius, spacing, typography } from '../../constants/theme';
-import { useRoutineBuilder } from '../../store/routineBuilderStore';
-import type { ExerciseEntry } from '../../types/routine';
+import { colors, radius, spacing, typography } from '../../../constants/theme';
+import { useRoutineBuilder } from '../../../store/routineBuilderStore';
+import type { ExerciseEntry } from '../../../types/routine';
 
 interface ExerciseMetricsEditorProps {
   exercise: ExerciseEntry;

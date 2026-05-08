@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Text } from '../ui/text';
-import { gradients, radius, spacing } from '../../constants/theme';
+import { Text } from '../../ui/text';
+import { gradients, radius, spacing } from '../../../constants/theme';
 import { useTranslation } from 'react-i18next';
 
 interface RestDayOptionCardProps {

@@ -1,5 +1,5 @@
 import { StyleSheet, ViewStyle } from 'react-native';
-import { colors, spacing } from '../../constants/theme';
+import { colors, spacing } from '../../../constants/theme';
 
 /**
  * Reusable style definitions for routine builder components

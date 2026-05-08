@@ -1,7 +1,7 @@
 import { StyleSheet, TextInput, View } from 'react-native';
-import { Text } from '../ui/text';
-import { Row } from '../layout/row';
-import { colors, radius, spacing } from '../../constants/theme';
+import { Text } from '../../ui/text';
+import { Row } from '../../layout/row';
+import { colors, radius, spacing } from '../../../constants/theme';
 
 interface RestTimeInputProps {
   label?: string;
