@@ -4,9 +4,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ActivityScrollGradient from '../../../components/layout/activityScrollGradient';
-import ChallengeHeader from '../../../components/challengesInfo/challengeHeader';
-import ChallengeRoutineList from '../../../components/challengesInfo/challengeRoutineList';
-import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '../../../components/create';
+import { ChallengeHeader, ChallengeRoutineList } from '../../../components/challenge/detail';
+import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '../../../components/challenge/create';
 import { Icon } from '../../../components/ui/icon';
 import { Text } from '../../../components/ui/text';
 import { colors, spacing } from '../../../constants/theme';
@@ -188,6 +187,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     backgroundColor: '#000000',
+    flexGrow: 1,
   },
   gradientContent: {
     minHeight: '100%',

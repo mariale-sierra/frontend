@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Stack } from '../layout/stack';
-import { Row } from '../layout/row';
-import { Input } from '../ui/input';
-import { Text } from '../ui/text';
+import { Stack } from '../../layout/stack';
+import { Row } from '../../layout/row';
+import { Input } from '../../ui/input';
+import { Text } from '../../ui/text';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, radius, spacing, typography } from '../../constants/theme';
+import { colors, radius, spacing, typography } from '../../../constants/theme';
 import { useTranslation } from 'react-i18next';
 
 export interface ChallengeVisibilitySectionProps {
@@ -180,3 +180,4 @@ const styles = StyleSheet.create({
 		opacity: 0.84,
 	},
 });
+

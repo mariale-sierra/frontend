@@ -3,6 +3,7 @@ import { StyleProp, StyleSheet, View, ViewProps, ViewStyle } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActivityType, colors } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 
 type ScreenBackgroundVariant = 'default' | 'top' | 'activity' | 'challenges';
 
@@ -12,22 +13,6 @@ interface ScreenBackgroundProps extends ViewProps {
 	activityType?: ActivityType;
 	contentStyle?: StyleProp<ViewStyle>;
 	applyTopInset?: boolean;
-}
-
-function withAlpha(hex: string, alpha: number) {
-	const normalized = hex.replace('#', '');
-
-	if (normalized.length !== 6) {
-		return hex;
-	}
-
-	const value = Math.max(0, Math.min(1, alpha));
-	const suffix = Math.round(value * 255)
-		.toString(16)
-		.padStart(2, '0')
-		.toUpperCase();
-
-	return `#${normalized}${suffix}`;
 }
 
 export default function ScreenBackground({

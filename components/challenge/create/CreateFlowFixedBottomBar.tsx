@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import { spacing } from '../../constants/theme';
+import { spacing } from '../../../constants/theme';
 
 interface CreateFlowFixedBottomBarProps {
   children: ReactNode;

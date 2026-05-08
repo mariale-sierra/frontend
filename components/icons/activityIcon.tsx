@@ -6,6 +6,7 @@ interface ActivityIconProps {
   type: ActivityType;
   size?: 'xs' | 'sm' | 'md' | 'lg';
   variant?: 'circle' | 'plain';
+  color?: string;
 }
 
 const containerSize = { xs: 18, sm: 28, md: 36, lg: 48 };
@@ -20,14 +21,14 @@ const iconMap: Record<ActivityType, keyof typeof Ionicons.glyphMap> = {
   functional: 'musical-notes',
 };
 
-export function ActivityIcon({ type, size = 'md', variant = 'circle' }: ActivityIconProps) {
+export function ActivityIcon({ type, size = 'md', variant = 'circle', color }: ActivityIconProps) {
 
   if (variant === 'plain') {
     return (
       <Ionicons
         name={iconMap[type]}
         size={iconSize[size]}
-        color={colors.textPrimary}
+        color={color ?? colors.textPrimary}
       />
     );
   }

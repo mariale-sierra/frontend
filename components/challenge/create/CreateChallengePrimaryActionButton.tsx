@@ -1,6 +1,6 @@
 import { StyleSheet, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
-import { Button } from '../ui/button';
-import { radius } from '../../constants/theme';
+import { Button } from '../../ui/button';
+import { radius } from '../../../constants/theme';
 
 interface CreateChallengePrimaryActionButtonProps extends Omit<PressableProps, 'children'> {
   label: string;

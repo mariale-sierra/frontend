@@ -1,10 +1,11 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../ui/text';
-import { Card } from '../ui/card';
-import { ActivityIcon } from '../icons/activityIcon';
-import { Row } from '../layout/row';
-import { colors, spacing, type ActivityType } from '../../constants/theme';
+import { Text } from '../../ui/text';
+import { Card } from '../../ui/card';
+import { ActivityIcon } from '../../icons/activityIcon';
+import { Row } from '../../layout/row';
+import { colors, spacing, type ActivityType } from '../../../constants/theme';
 
 type Props = {
   day: number;
@@ -21,6 +22,12 @@ export default function ChallengeRoutineDayCard({
 }: Props) {
   return (
     <Card style={styles.card} variant="basic" onPress={onPress}>
+      <LinearGradient
+        colors={[colors.surface,'#131315']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={StyleSheet.absoluteFillObject}
+      />
       <Row justify="space-between" align="stretch" style={styles.cardRow}>
         <View style={styles.leftIconWrap}>
           {activity ? <ActivityIcon type={activity} size="md" variant="plain" /> : null}

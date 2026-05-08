@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../ui/text';
-import { colors, radius, spacing } from '../../constants/theme';
+import { Text } from '../../ui/text';
+import { colors, radius, spacing } from '../../../constants/theme';
 
 export type CycleDayStatus = 'empty' | 'configured' | 'rest';
 
@@ -184,3 +184,4 @@ const styles = StyleSheet.create({
     opacity: 0.84,
   },
 });
+

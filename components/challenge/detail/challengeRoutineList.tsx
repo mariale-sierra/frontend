@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Text } from '../ui/text';
-import { colors, spacing, type ActivityType } from '../../constants/theme';
+import { Text } from '../../ui/text';
+import { colors, spacing, type ActivityType } from '../../../constants/theme';
 import ChallengeRoutineDayCard from './challengeRoutineDayCard';
 
 type RoutineItem = {

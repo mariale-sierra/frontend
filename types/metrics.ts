@@ -35,6 +35,7 @@ export interface ExerciseMetricsRow {
 
 export interface ExerciseMetricsBlock {
   id: string;
+  exerciseId: number;
   name: string;
   activityType: ActivityType;
   location: LocationType;

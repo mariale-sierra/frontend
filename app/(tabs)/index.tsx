@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
+import ScreenBackground from '../../components/layout/screenBackground';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
 import { ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
@@ -12,17 +13,11 @@ import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeA
 import { buildMockHomeChallenges } from '../../services/mocks/homeMock';
 // REMOVE_MOCK_END
 import { colors, radius, spacing } from '../../constants/theme';
+import { hoursUntilMidnight } from '../../utils/time';
 
 // REMOVE_MOCK_START: set to false when backend is ready.
 const ENABLE_HOME_MOCK = true;
 // REMOVE_MOCK_END
-
-function hoursUntilMidnight(): number {
-  const now = new Date();
-  const midnight = new Date(now);
-  midnight.setHours(24, 0, 0, 0);
-  return Math.max(0, Math.floor((midnight.getTime() - now.getTime()) / (1000 * 60 * 60)));
-}
 
 export default function Home() {
   const { username } = useAuth();
@@ -49,7 +44,7 @@ export default function Home() {
   const hoursLeft = hoursUntilMidnight();
 
   return (
-    <View style={[styles.screen, { paddingTop: insets.top + spacing.md }]}>
+    <ScreenBackground variant="default" contentStyle={[styles.screen, { paddingTop: insets.top + spacing.md }]}> 
       <View style={styles.profileRow}>
         <View style={styles.avatar}>
           <Icon name="person" size={20} color={colors.textPrimary} />
@@ -66,14 +61,13 @@ export default function Home() {
           <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
         ) : null}
       </View>
-    </View>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   profileRow: {
     flexDirection: 'row',

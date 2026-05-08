@@ -1,10 +1,10 @@
 import { StyleSheet, View } from 'react-native';
-import { Row } from '../layout/row';
-import { Button } from '../ui/button';
-import { Icon } from '../ui/icon';
+import { Row } from '../../layout/row';
+import { Button } from '../../ui/button';
+import { Icon } from '../../ui/icon';
 import { CreateChallengePrimaryActionButton } from './CreateChallengePrimaryActionButton';
-import { colors, radius, spacing } from '../../constants/theme';
-import type { ChallengeVisibility } from '../../types/challenge';
+import { colors, radius, spacing } from '../../../constants/theme';
+import type { ChallengeVisibility } from '../../../types/challenge';
 import { useTranslation } from 'react-i18next';
 
 interface ChallengeSubmitActionsProps {
@@ -85,3 +85,4 @@ const styles = StyleSheet.create({
     minHeight: 42,
   },
 });
+

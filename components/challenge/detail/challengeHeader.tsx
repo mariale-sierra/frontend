@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Text } from '../ui/text';
-import { Icon } from '../ui/icon';
-import { ActivityBadge } from '../ui/activityBadge';
-import { LocationIcon, type LocationType } from '../icons/locationIcon';
-import { colors, spacing, type ActivityType } from '../../constants/theme';
+import { Text } from '../../ui/text';
+import { Icon } from '../../ui/icon';
+import { ActivityBadge } from '../../ui/activityBadge';
+import { LocationIcon, type LocationType } from '../../icons/locationIcon';
+import { colors, spacing, type ActivityType } from '../../../constants/theme';
 import { useTranslation } from 'react-i18next';
 
 type Props = {

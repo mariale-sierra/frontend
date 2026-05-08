@@ -1,8 +1,8 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Row } from '../layout/row';
-import { Stack } from '../layout/stack';
-import { Text } from '../ui/text';
-import { colors, radius, spacing, typography } from '../../constants/theme';
+import { Row } from '../../layout/row';
+import { Stack } from '../../layout/stack';
+import { Text } from '../../ui/text';
+import { colors, radius, spacing, typography } from '../../../constants/theme';
 
 export interface DurationStepperProps {
 	label: string;
@@ -139,3 +139,4 @@ const styles = StyleSheet.create({
 		opacity: 0.8,
 	},
 });
+

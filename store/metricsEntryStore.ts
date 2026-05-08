@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import {
-  buildExerciseMetrics,
   getDefaultMetricsSeed,
   sanitizeChallengeOptions,
   sanitizeHydratedExercises,
@@ -16,9 +15,11 @@ interface MetricsEntryState {
   selectedChallengeId: string;
   isChallengeMenuOpen: boolean;
   exerciseMetrics: ExerciseMetricsBlock[];
+  currentRoutineId: number | null;
 
   toggleChallengeMenu: () => void;
   selectChallenge: (challengeId: string) => void;
+  setExerciseMetrics: (exercises: ExerciseMetricsBlock[], routineId: number | null) => void;
   updateMetricValue: (exerciseId: string, rowIndex: number, field: MetricField, value: string) => void;
   updateExerciseNotes: (exerciseId: string, notes: string) => void;
 
@@ -27,8 +28,10 @@ interface MetricsEntryState {
     challenges: ChallengeOption[];
     selectedChallengeId?: string;
     exerciseMetrics: ExerciseMetricsBlock[];
+    routineId?: number | null;
   }) => void;
 }
+
 const DEFAULT_SEED = getDefaultMetricsSeed();
 
 export const useMetricsEntryStore = create<MetricsEntryState>((set) => ({
@@ -36,23 +39,28 @@ export const useMetricsEntryStore = create<MetricsEntryState>((set) => ({
   selectedChallengeId: DEFAULT_SEED.selectedChallengeId,
   isChallengeMenuOpen: false,
   exerciseMetrics: DEFAULT_SEED.exerciseMetrics,
+  currentRoutineId: null,
 
   toggleChallengeMenu: () => {
     set((state) => ({ isChallengeMenuOpen: !state.isChallengeMenuOpen }));
   },
 
+  // Only updates the selected challenge ID and closes the menu.
+  // The hook watches selectedChallengeId and fetches the assigned routine from the API.
   selectChallenge: (challengeId) => {
     set((state) => {
-      const selectedChallenge =
-        state.challenges.find((challenge) => challenge.id === challengeId) ??
-        state.challenges[0];
-
+      const exists = state.challenges.some((c) => c.id === challengeId);
       return {
-        selectedChallengeId: selectedChallenge?.id ?? '',
-        exerciseMetrics: selectedChallenge ? buildExerciseMetrics(selectedChallenge) : [],
+        selectedChallengeId: exists ? challengeId : state.selectedChallengeId,
+        exerciseMetrics: [],
+        currentRoutineId: null,
         isChallengeMenuOpen: false,
       };
     });
+  },
+
+  setExerciseMetrics: (exercises, routineId) => {
+    set({ exerciseMetrics: exercises, currentRoutineId: routineId });
   },
 
   updateMetricValue: (exerciseId, rowIndex, field, value) => {
@@ -103,6 +111,7 @@ export const useMetricsEntryStore = create<MetricsEntryState>((set) => ({
       challenges: sanitizedChallenges,
       selectedChallengeId,
       exerciseMetrics: hydratedExercises,
+      currentRoutineId: payload.routineId ?? null,
       isChallengeMenuOpen: false,
     });
   },

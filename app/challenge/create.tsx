@@ -12,7 +12,7 @@ import {
   ChallengeVisibilitySection,
   CreateChallengeHeader,
   DurationStepper,
-} from '../../components/create';
+} from '../../components/challenge/create';
 import { ActivityIcon } from '../../components/icons/activityIcon';
 import { LocationIcon, type LocationType } from '../../components/icons/locationIcon';
 import { Text } from '../../components/ui/text';

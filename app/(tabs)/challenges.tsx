@@ -5,7 +5,7 @@ import ScreenBackground from '../../components/layout/screenBackground';
 import {
 	ChallengeListSections,
 	type ChallengesScreenViewModel,
-} from '../../components/challenges';
+} from '../../components/challenge/list';
 import { Text } from '../../components/ui/text';
 import { spacing } from '../../constants/theme';
 import { getChallenges } from '../../services/challenge/challenge.service';

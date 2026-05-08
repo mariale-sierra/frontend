@@ -9,107 +9,23 @@ import type {
   ExerciseMetricsBlock,
 } from '../../types/metrics';
 import type { LocationType } from '../../components/icons/locationIcon';
+import type { ChallengeContract, TodayRoutineContract } from '../../types/challenge';
+import type { ActivityType } from '../../constants/theme';
+import { asNumber, asString } from './adapterUtils';
 
 const ALLOWED_ACTIVITY_CATEGORIES = new Set<ActivityCategory>(
   PREDEFINED_ACTIVITY_CATEGORIES,
 );
 const ALLOWED_LOCATIONS = new Set<LocationType>(PREDEFINED_LOCATIONS);
 
-type ExerciseTemplate = {
-  id: string;
-  name: string;
-  activityType: ExerciseMetricsBlock['activityType'];
-  location: LocationType;
-  restTimeLabel: string;
-  setCount: number;
-};
-
-const MOCK_CHALLENGES: ChallengeOption[] = [
-  {
-    id: 'c1',
-    label: 'placeholder',
-    activityCategories: ['Strength'],
-    locations: ['gym', 'home'],
-  },
-  {
-    id: 'c2',
-    label: 'glute rebuild',
-    activityCategories: ['Strength', 'Functional'],
-    locations: ['gym', 'home'],
-  },
-  {
-    id: 'c3',
-    label: 'upper blast',
-    activityCategories: ['Strength'],
-    locations: ['gym'],
-  },
-  {
-    id: 'c4',
-    label: 'functional week',
-    activityCategories: ['Functional', 'Cardio Low'],
-    locations: ['anywhere', 'outdoor'],
-  },
-];
-
-const MOCK_EXERCISE_CATALOG: ExerciseTemplate[] = [
-  {
-    id: 'ex-1',
-    name: 'Bulgarian Deadlifts',
-    activityType: 'strength',
-    location: 'gym',
-    restTimeLabel: 'Rest 90 sec',
-    setCount: 3,
-  },
-  {
-    id: 'ex-2',
-    name: 'Hip Thrust',
-    activityType: 'strength',
-    location: 'gym',
-    restTimeLabel: 'Rest 120 sec',
-    setCount: 4,
-  },
-  {
-    id: 'ex-3',
-    name: 'Step Ups',
-    activityType: 'functional',
-    location: 'home',
-    restTimeLabel: 'Rest 75 sec',
-    setCount: 3,
-  },
-  {
-    id: 'ex-4',
-    name: 'Brisk Incline Walk',
-    activityType: 'cardioLow',
-    location: 'outdoor',
-    restTimeLabel: 'Rest 45 sec',
-    setCount: 3,
-  },
-  {
-    id: 'ex-5',
-    name: 'Plank Reach Through',
-    activityType: 'functional',
-    location: 'anywhere',
-    restTimeLabel: 'Rest 60 sec',
-    setCount: 3,
-  },
-];
-
-function getInitialRows(setCount: number) {
-  return Array.from({ length: setCount }, (_, index) => ({
-    set: index + 1,
-    reps: '',
-    lbs: '',
-  }));
-}
-
-function sanitizeCategories(categories: string[]): ActivityCategory[] {
-  return categories.filter((value): value is ActivityCategory =>
+function sanitizeCategories(categories: unknown[]): ActivityCategory[] {
+  return (categories as string[]).filter((value): value is ActivityCategory =>
     ALLOWED_ACTIVITY_CATEGORIES.has(value as ActivityCategory),
   );
 }
 
-function sanitizeLocations(locations: string[]): LocationType[] {
-  return locations.filter((value): value is LocationType =>
+function sanitizeLocations(locations: unknown[]): LocationType[] {
+  return (locations as string[]).filter((value): value is LocationType =>
     ALLOWED_LOCATIONS.has(value as LocationType),
   );
 }
@@ -122,36 +38,62 @@ export function sanitizeChallengeOptions(challenges: ChallengeOption[]): Challen
   }));
 }
 
-export function buildExerciseMetrics(challenge: ChallengeOption): ExerciseMetricsBlock[] {
-  const allowedActivities = challenge.activityCategories
-    .map((category) => CATEGORY_TO_ACTIVITY[category])
-    .filter(Boolean);
-
-  return MOCK_EXERCISE_CATALOG.filter(
-    (exercise) =>
-      allowedActivities.includes(exercise.activityType) &&
-      challenge.locations.includes(exercise.location),
-  ).map((exercise) => ({
-    id: exercise.id,
-    name: exercise.name,
-    activityType: exercise.activityType,
-    location: exercise.location,
-    notes: '',
-    restTimeLabel: exercise.restTimeLabel,
-    rows: getInitialRows(exercise.setCount),
+export function adaptChallengesForMetrics(contracts: ChallengeContract[]): ChallengeOption[] {
+  return contracts.map((contract) => ({
+    id: String(contract.id),
+    label: asString(contract.name),
+    activityCategories: sanitizeCategories(
+      Array.isArray(contract.categories) ? contract.categories : [],
+    ),
+    locations: sanitizeLocations(
+      Array.isArray(contract.locations) ? contract.locations : [],
+    ),
   }));
 }
 
-export function getDefaultMetricsSeed() {
-  const challenges = sanitizeChallengeOptions(MOCK_CHALLENGES);
-  const selectedChallengeId = challenges[0]?.id ?? '';
-  const selectedChallenge = challenges[0];
+function restLabel(restSeconds: number | null): string {
+  if (!restSeconds) return 'Rest 60 sec';
+  const mins = Math.floor(restSeconds / 60);
+  const secs = restSeconds % 60;
+  if (mins > 0 && secs > 0) return `Rest ${mins}m ${secs}s`;
+  if (mins > 0) return `Rest ${mins} min`;
+  return `Rest ${restSeconds} sec`;
+}
 
-  return {
-    challenges,
-    selectedChallengeId,
-    exerciseMetrics: selectedChallenge ? buildExerciseMetrics(selectedChallenge) : [],
-  };
+export function adaptTodayRoutineExercises(
+  contract: TodayRoutineContract,
+  challenge: ChallengeOption,
+): ExerciseMetricsBlock[] {
+  const rawExercises = contract.exercises ?? [];
+
+  return rawExercises
+    .map((ex) => {
+      const exerciseId = asNumber(ex.id);
+      if (exerciseId === null) return null;
+
+      const name = asString(ex.name);
+      const activityType = (asString(ex.activity_type) || 'strength') as ActivityType;
+      const location = asString(ex.location) as LocationType;
+      const sets = Array.isArray(ex.sets) ? ex.sets : [];
+      const setCount = sets.length > 0 ? sets.length : 3;
+      const firstRest = asNumber(sets[0]?.rest_seconds ?? null);
+
+      return {
+        id: String(exerciseId),
+        exerciseId,
+        name,
+        activityType,
+        location: ALLOWED_LOCATIONS.has(location) ? location : ('anywhere' as LocationType),
+        notes: '',
+        restTimeLabel: restLabel(firstRest),
+        rows: Array.from({ length: setCount }, (_, i) => ({
+          set: i + 1,
+          reps: '',
+          lbs: '',
+        })),
+      } satisfies ExerciseMetricsBlock;
+    })
+    .filter((block): block is ExerciseMetricsBlock => block !== null);
 }
 
 export function sanitizeHydratedExercises(
@@ -166,7 +108,20 @@ export function sanitizeHydratedExercises(
     )
     .map((exercise) => ({
       ...exercise,
+      exerciseId: exercise.exerciseId ?? 0,
       notes: exercise.notes ?? '',
       restTimeLabel: exercise.restTimeLabel ?? 'Rest 60 sec',
     }));
 }
+
+export function getDefaultMetricsSeed() {
+  return {
+    challenges: [] as ChallengeOption[],
+    selectedChallengeId: '',
+    exerciseMetrics: [] as ExerciseMetricsBlock[],
+  };
+}
+
+// Kept for reference — maps category label to activityType used by filters.
+// The actual exercise list now comes from the backend, not a local catalog.
+export { CATEGORY_TO_ACTIVITY };

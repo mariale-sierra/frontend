@@ -1,6 +1,6 @@
-import { AvatarIcon } from '../icons/avatarIcon';
-import { Row } from '../layout/row';
-import { Text } from '../ui/text';
+import { AvatarIcon } from '../../icons/avatarIcon';
+import { Row } from '../../layout/row';
+import { Text } from '../../ui/text';
 
 export interface CreateChallengeHeaderProps {
 	author: string;
@@ -16,3 +16,4 @@ export function CreateChallengeHeader({ author }: CreateChallengeHeaderProps) {
 		</Row>
 	);
 }
+

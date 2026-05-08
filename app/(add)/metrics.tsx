@@ -1,10 +1,10 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { MetricsExerciseTable } from '../../components/add/metricsExerciseTable';
 import { MetricsPanel } from '../../components/add/metricsPanel';
 import { MetricsTopBar } from '../../components/add/metricsTopBar';
-import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '../../components/create';
+import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '../../components/challenge/create';
 import { Divider } from '../../components/ui/divider';
 import { spacing } from '../../constants/theme';
 import { useMetricsScreen } from '../../hooks/useMetricsScreen';
@@ -20,6 +20,7 @@ export default function Metrics() {
     exerciseMetrics,
     activeRowKey,
     isSubmitting,
+    isLoadingData,
     toggleChallengeMenu,
     selectChallenge,
     updateMetricValue,
@@ -52,24 +53,30 @@ export default function Metrics() {
         <Divider variant="section" />
 
         <MetricsPanel>
-          <ScrollView
-            style={styles.metricsScroll}
-            contentContainerStyle={styles.metricsContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {exerciseMetrics.map((exercise, exerciseIndex) => (
-              <MetricsExerciseTable
-                key={exercise.id}
-                exercise={exercise}
-                index={exerciseIndex}
-                activeRowKey={activeRowKey}
-                onRowFocus={onRowFocus}
-                onRowBlur={onRowBlur}
-                onMetricChange={updateMetricValue}
-                onNotesChange={updateExerciseNotes}
-              />
-            ))}
-          </ScrollView>
+          {isLoadingData ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator />
+            </View>
+          ) : (
+            <ScrollView
+              style={styles.metricsScroll}
+              contentContainerStyle={styles.metricsContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {exerciseMetrics.map((exercise, exerciseIndex) => (
+                <MetricsExerciseTable
+                  key={exercise.id}
+                  exercise={exercise}
+                  index={exerciseIndex}
+                  activeRowKey={activeRowKey}
+                  onRowFocus={onRowFocus}
+                  onRowBlur={onRowBlur}
+                  onMetricChange={updateMetricValue}
+                  onNotesChange={updateExerciseNotes}
+                />
+              ))}
+            </ScrollView>
+          )}
         </MetricsPanel>
 
         <CreateFlowFixedBottomBar bottomInset={Math.max(insets.bottom, spacing.lg)}>
@@ -99,5 +106,10 @@ const styles = StyleSheet.create({
   },
   metricsContent: {
     paddingBottom: spacing['2xl'] + 132,
+  },
+  loadingWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -11,7 +11,7 @@ interface ActivityBadgeProps {
 export function ActivityBadge({ label, activityType }: ActivityBadgeProps) {
   return (
     <View style={styles.badge}>
-      <ActivityIcon type={activityType} size="sm" variant="plain" />
+      <ActivityIcon type={activityType} size="sm" variant="plain" color={colors.activityType[activityType]} />
       <Text variant="body" style={styles.label}>{label}</Text>
     </View>
   );
@@ -21,14 +21,13 @@ const styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     borderRadius: radius['2xl'],
-    backgroundColor: colors.surfaceElevated,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
   },
   label: {
     color: colors.textPrimary,
-    fontWeight: '600',
   },
 });

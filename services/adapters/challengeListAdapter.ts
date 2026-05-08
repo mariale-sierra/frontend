@@ -1,5 +1,5 @@
 import { asString, asNumber, asBoolean, normalizeKey } from './adapterUtils';
-import type { ActiveChallengeViewModel, ChallengesScreenViewModel, ExploreChallengeViewModel } from '../../components/challenges/challengeListSections';
+import type { ActiveChallengeViewModel, ChallengesScreenViewModel, ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import type { ActivityType } from '../../constants/theme';
 import type { ChallengeContract } from '../../types/challenge';
 

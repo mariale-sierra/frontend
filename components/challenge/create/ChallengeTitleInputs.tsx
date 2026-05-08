@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
-import { Stack } from '../layout/stack';
-import { Input } from '../ui/input';
-import { colors, typography } from '../../constants/theme';
+import { Stack } from '../../layout/stack';
+import { Input } from '../../ui/input';
+import { colors, typography } from '../../../constants/theme';
 import { useTranslation } from 'react-i18next';
 
 export interface ChallengeTitleInputsProps {
@@ -126,3 +126,4 @@ const styles = StyleSheet.create({
 		backgroundColor: colors.textPrimary,
 	},
 });
+

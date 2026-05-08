@@ -1,28 +1,108 @@
 import { router } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useMetricsEntryStore } from '../store/metricsEntryStore';
 import { useAuth } from './useAuth';
 import { createWorkoutLog, getWorkoutLog } from '../services/workout-log/workout-log.service';
 import { addMetricToWorkoutLogExercise } from '../services/metrics/metrics.service';
+import {
+  getUserEnrolledChallenges,
+  getTodayRoutineForChallenge,
+} from '../services/challenge/challenge.service';
+import {
+  adaptChallengesForMetrics,
+  adaptTodayRoutineExercises,
+} from '../services/adapters/index';
 import type { WorkoutLogContract } from '../types/workout-log';
 import { useTranslation } from 'react-i18next';
 
 export function useMetricsScreen() {
   const { userId } = useAuth();
   const { t } = useTranslation();
+
   const challenges = useMetricsEntryStore((state) => state.challenges);
   const selectedChallengeId = useMetricsEntryStore((state) => state.selectedChallengeId);
   const isChallengeMenuOpen = useMetricsEntryStore((state) => state.isChallengeMenuOpen);
   const exerciseMetrics = useMetricsEntryStore((state) => state.exerciseMetrics);
+  const currentRoutineId = useMetricsEntryStore((state) => state.currentRoutineId);
 
   const toggleChallengeMenu = useMetricsEntryStore((state) => state.toggleChallengeMenu);
   const selectChallenge = useMetricsEntryStore((state) => state.selectChallenge);
+  const setExerciseMetrics = useMetricsEntryStore((state) => state.setExerciseMetrics);
   const updateMetricValue = useMetricsEntryStore((state) => state.updateMetricValue);
   const updateExerciseNotes = useMetricsEntryStore((state) => state.updateExerciseNotes);
+  const hydrateMetricsData = useMetricsEntryStore((state) => state.hydrateMetricsData);
 
   const [activeRowKey, setActiveRowKey] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  // Tracks which challengeId we last fetched a routine for, to avoid double-fetching
+  // after the init effect sets selectedChallengeId via hydrateMetricsData.
+  const lastFetchedChallengeId = useRef<string>('');
+
+  // Initial load: fetch enrolled challenges + today's routine for the first challenge.
+  useEffect(() => {
+    if (!userId) return;
+
+    async function init() {
+      setIsLoadingData(true);
+      try {
+        const rawChallenges = await getUserEnrolledChallenges();
+        const adaptedChallenges = adaptChallengesForMetrics(rawChallenges);
+
+        if (!adaptedChallenges.length) {
+          hydrateMetricsData({ challenges: [], selectedChallengeId: '', exerciseMetrics: [], routineId: null });
+          return;
+        }
+
+        const firstChallenge = adaptedChallenges[0];
+        const routineData = await getTodayRoutineForChallenge(firstChallenge.id);
+        const exercises = adaptTodayRoutineExercises(routineData, firstChallenge);
+
+        lastFetchedChallengeId.current = firstChallenge.id;
+        hydrateMetricsData({
+          challenges: adaptedChallenges,
+          selectedChallengeId: firstChallenge.id,
+          exerciseMetrics: exercises,
+          routineId: routineData.routine_id,
+        });
+      } catch (error: any) {
+        console.error('[Metrics] Init load failed:', error?.response?.data ?? error?.message);
+        Alert.alert(t('metrics.alerts.submitErrorTitle'), t('metrics.alerts.submitErrorFallback'));
+      } finally {
+        setIsLoadingData(false);
+      }
+    }
+
+    init();
+  }, [userId]);
+
+  // When the user picks a different challenge, fetch that challenge's today-routine.
+  useEffect(() => {
+    if (!selectedChallengeId || selectedChallengeId === lastFetchedChallengeId.current) return;
+
+    const challenge = challenges.find((c) => c.id === selectedChallengeId);
+    if (!challenge) return;
+
+    async function loadRoutine() {
+      setIsLoadingData(true);
+      try {
+        const routineData = await getTodayRoutineForChallenge(selectedChallengeId);
+        const exercises = adaptTodayRoutineExercises(routineData, challenge!);
+
+        lastFetchedChallengeId.current = selectedChallengeId;
+        setExerciseMetrics(exercises, routineData.routine_id);
+      } catch (error: any) {
+        console.error('[Metrics] Routine load failed:', error?.response?.data ?? error?.message);
+        Alert.alert(t('metrics.alerts.submitErrorTitle'), t('metrics.alerts.submitErrorFallback'));
+      } finally {
+        setIsLoadingData(false);
+      }
+    }
+
+    loadRoutine();
+  }, [selectedChallengeId]);
 
   const onRowFocus = useCallback((rowKey: string) => {
     setActiveRowKey(rowKey);
@@ -60,6 +140,7 @@ export function useMetricsScreen() {
     try {
       const workout: WorkoutLogContract = await createWorkoutLog({
         userId,
+        routineId: currentRoutineId ?? undefined,
       });
       const fullWorkout: WorkoutLogContract = await getWorkoutLog(workout.id);
       const wles = fullWorkout.exercises ?? [];
@@ -67,12 +148,9 @@ export function useMetricsScreen() {
       let matchedCount = 0;
 
       for (const block of exerciseMetrics) {
-        const wle = wles.find(
-          (candidate) =>
-            candidate.exercise?.name?.trim().toLowerCase() === block.name.trim().toLowerCase(),
-        );
+        const wle = wles.find((candidate) => candidate.exercise?.id === block.exerciseId);
         if (!wle) {
-          console.warn(`[Metrics] No WLE match for "${block.name}" — skipping`);
+          console.warn(`[Metrics] No WLE match for exerciseId=${block.exerciseId} "${block.name}" — skipping`);
           continue;
         }
 
@@ -96,10 +174,7 @@ export function useMetricsScreen() {
       }
 
       if (matchedCount === 0) {
-        Alert.alert(
-          t('metrics.alerts.loggedTitle'),
-          t('metrics.alerts.noMatchMessage'),
-        );
+        Alert.alert(t('metrics.alerts.loggedTitle'), t('metrics.alerts.noMatchMessage'));
       }
 
       router.push('/(add)/preview');
@@ -112,7 +187,7 @@ export function useMetricsScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [exerciseMetrics, isSubmitting, t, userId]);
+  }, [currentRoutineId, exerciseMetrics, isSubmitting, t, userId]);
 
   return {
     challenges,
@@ -121,6 +196,7 @@ export function useMetricsScreen() {
     exerciseMetrics,
     activeRowKey,
     isSubmitting,
+    isLoadingData,
     toggleChallengeMenu,
     selectChallenge,
     updateMetricValue,

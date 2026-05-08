@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Pressable, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '../../../components/create';
+import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '../../../components/challenge/create';
 import ScreenBackground from '../../../components/layout/screenBackground';
 import { Stack } from '../../../components/layout/stack';
 import { Text } from '../../../components/ui/text';

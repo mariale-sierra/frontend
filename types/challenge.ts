@@ -96,3 +96,23 @@ export interface JoinChallengeResponse {
   message?: string;
   [key: string]: unknown;
 }
+
+export interface TodayRoutineExerciseContract {
+  id: number;
+  name?: string;
+  activity_type?: string;
+  location?: string;
+  sets?: Array<{
+    set_number?: number;
+    reps?: number;
+    rest_seconds?: number;
+    [key: string]: unknown;
+  }>;
+  [key: string]: unknown;
+}
+
+export interface TodayRoutineContract {
+  routine_id: number;
+  exercises?: TodayRoutineExerciseContract[];
+  [key: string]: unknown;
+}
