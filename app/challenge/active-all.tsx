@@ -109,7 +109,6 @@ export default function ActiveAll() {
     setActiveTab(TABS[idx].key);
   }
 
-  const dayLabelBuilder   = (day: number)   => t('challenges.dayLabel',    { day });
   const streakLabelBuilder = (count: number) => t('challenges.streakLabel', { count });
 
   const tabTitles: Record<ChallengeStatus, string> = {
@@ -156,7 +155,6 @@ export default function ActiveAll() {
               <ActiveChallengeCard
                 key={c.challengeId}
                 challenge={c}
-                dayLabel={dayLabelBuilder(c.day)}
                 statusLabel={streakLabelBuilder(c.streakCount)}
                 layout="full"
                 onPress={() => router.push(`/challenge/${c.challengeId}`)}
@@ -175,7 +173,6 @@ export default function ActiveAll() {
               <ActiveChallengeCard
                 key={c.challengeId}
                 challenge={c}
-                dayLabel={dayLabelBuilder(c.day)}
                 statusLabel={t('challenges.left')}
                 layout="full"
                 onPress={() => router.push(`/challenge/${c.challengeId}`)}

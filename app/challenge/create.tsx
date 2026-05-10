@@ -85,21 +85,21 @@ function OptionCard({ label, selected, icon, onPress, onPressInfo }: OptionCardP
       onPress={onPress}
       style={({ pressed }) => [styles.optionCard, selected && styles.optionCardSelected, pressed && styles.pressed]}
     >
-      <Row align="center" justify="space-between">
-        <View style={styles.optionIconShell}>{icon}</View>
-        <Pressable
-          hitSlop={10}
-          onPress={(event) => {
-            event.stopPropagation();
-            onPressInfo();
-          }}
-          style={({ pressed }) => [styles.optionInfoButton, pressed && styles.pressed]}
-        >
-          <Ionicons name="information-circle-outline" size={18} color="rgba(255,255,255,0.7)" />
-        </Pressable>
-      </Row>
+      <Pressable
+        hitSlop={10}
+        onPress={(event) => {
+          event.stopPropagation();
+          onPressInfo();
+        }}
+        style={({ pressed }) => [styles.optionInfoButton, pressed && styles.pressed]}
+      >
+        <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
+      </Pressable>
 
-      <Text variant="body" style={styles.optionTitle}>{label}</Text>
+      <View style={styles.optionContent}>
+        {icon}
+        <Text variant="body" style={styles.optionTitle}>{label}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -164,7 +164,7 @@ function OptionSelectionPanel<TOption extends SelectableOptionBase>({
               key={option.value}
               label={option.label}
               selected={selected}
-              icon={renderIcon(option, 'sm')}
+              icon={renderIcon(option, 'lg')}
               onPress={() => onToggle(option.value)}
               onPressInfo={() => onPressInfo(option)}
             />
@@ -287,10 +287,10 @@ export default function CreateChallenge() {
                 setActiveOptionInfo({
                   label: option.label,
                   description: option.description,
-                  icon: <ActivityIcon type={option.type as ActivityType} size="lg" />,
+                  icon: <ActivityIcon type={option.type as ActivityType} size="lg" variant="circle-glow" />,
                 });
               }}
-              renderIcon={(option, size) => <ActivityIcon type={option.type as ActivityType} size={size} />}
+              renderIcon={(option, size) => <ActivityIcon type={option.type as ActivityType} size={size} variant="circle-glow" />}
             />
 
             <OptionSelectionPanel
@@ -616,30 +616,31 @@ const styles = StyleSheet.create({
   },
   optionCard: {
     width: '48%',
-    minHeight: 98,
+    minHeight: 120,
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
     backgroundColor: 'rgba(255,255,255,0.03)',
     padding: spacing.md,
-    gap: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   optionCardSelected: {
     borderColor: 'rgba(255,255,255,0.34)',
     backgroundColor: 'rgba(255,255,255,0.09)',
   },
-  optionIconShell: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  optionContent: {
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    gap: spacing.sm,
   },
   optionTitle: {
     fontWeight: '600',
+    textAlign: 'center',
   },
   optionInfoButton: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
     width: 26,
     height: 26,
     borderRadius: 13,

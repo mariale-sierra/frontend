@@ -67,7 +67,6 @@ export default function Challenges() {
 						exploreLabel={t('challenges.exploreTitle')}
 						seeAllLabel={t('challenges.seeAll')}
 						joinOrCreateLabel={t('challenges.joinOrCreate')}
-						dayLabelBuilder={(day: number) => t('challenges.dayLabel', { day })}
 						streakLabelBuilder={(count: number) => t('challenges.streakLabel', { count })}
 						activeChallenges={challengeView.activeChallenges}
 						exploreChallenges={challengeView.exploreChallenges}
