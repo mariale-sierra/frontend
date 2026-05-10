@@ -325,7 +325,6 @@ export default function RoutineDayDetail() {
               <Text variant="body" style={styles.routineTitle} numberOfLines={1}>
                 {routine.routineName.toUpperCase()}
               </Text>
-              <Text variant="caption" style={styles.routineSubtitle}>{routine.categoryName}</Text>
             </View>
 
             <View
@@ -388,7 +387,7 @@ const styles = StyleSheet.create({
   routineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: spacing.xs,
+    marginTop: spacing.lg,
   },
   primaryIconWrap: {
     borderRadius: 24,
@@ -410,11 +409,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     marginTop: spacing.xxs,
     fontWeight: '500',
-  },
-  routineSubtitle: {
-    marginTop: 2,
-    color: colors.textSecondary,
-    letterSpacing: 0.6,
   },
   panel: {
     flex: 1,

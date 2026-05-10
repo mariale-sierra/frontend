@@ -38,7 +38,6 @@ export interface ChallengeListSectionsProps extends ChallengesScreenViewModel {
   exploreLabel: string;
   seeAllLabel: string;
   joinOrCreateLabel: string;
-  dayLabelBuilder: (day: number) => string;
   streakLabelBuilder: (count: number) => string;
   onCreateChallenge?: () => void;
   onPressChallenge?: (id: string) => void;
@@ -73,7 +72,6 @@ export function ChallengeListSections({
   exploreLabel,
   seeAllLabel,
   joinOrCreateLabel,
-  dayLabelBuilder,
   streakLabelBuilder,
   activeChallenges,
   exploreChallenges,
@@ -114,7 +112,6 @@ export function ChallengeListSections({
               <ActiveChallengeCard
                 key={challenge.challengeId}
                 challenge={challenge}
-                dayLabel={dayLabelBuilder(challenge.day)}
                 statusLabel={streakLabelBuilder(challenge.streakCount)}
                 onPress={() => onPressChallenge?.(challenge.challengeId)}
               />

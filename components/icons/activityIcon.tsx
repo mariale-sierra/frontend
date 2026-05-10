@@ -5,7 +5,7 @@ import { colors, ActivityType } from '../../constants/theme';
 interface ActivityIconProps {
   type: ActivityType;
   size?: 'xs' | 'sm' | 'md' | 'lg';
-  variant?: 'circle' | 'plain';
+  variant?: 'circle' | 'circle-glow' | 'plain';
   color?: string;
   glow?: boolean;
 }
@@ -34,6 +34,8 @@ export function ActivityIcon({ type, size = 'md', variant = 'circle', color, glo
     );
   }
 
+  const isGlowing = variant === 'circle-glow' || glow;
+
   return (
     <View
       style={[
@@ -44,7 +46,7 @@ export function ActivityIcon({ type, size = 'md', variant = 'circle', color, glo
           height: containerSize[size],
           borderRadius: containerSize[size] / 2,
         },
-        glow && {
+        isGlowing && {
           shadowColor: colors.activityType[type],
           shadowOpacity: 0.5,
           shadowRadius: 12,

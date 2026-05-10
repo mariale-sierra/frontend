@@ -5,14 +5,12 @@ import { Row } from '../../layout/row';
 import { Stack } from '../../layout/stack';
 import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
-import { DayLabel } from './DayLabel';
 import { ChallengeProgressBar } from './ChallengeProgressBar';
 import { colors, radius, spacing } from '../../../constants/theme';
 import type { ActiveChallengeViewModel } from './challengeListSections';
 
 interface ActiveChallengeCardProps {
   challenge: ActiveChallengeViewModel;
-  dayLabel: string;
   statusLabel: string;
   onPress?: () => void;
   layout?: 'compact' | 'full';
@@ -21,9 +19,9 @@ interface ActiveChallengeCardProps {
 type ChallengeStatus = ActiveChallengeViewModel['status'];
 
 const GRADIENT_COLORS: Record<ChallengeStatus, readonly [string, string]> = {
-  active: [colors.surface, colors.background],
+  active: [colors.surface, '#0c0c0e'],
   completed: [colors.surface, 'rgba(74, 222, 128, 0.14)'],
-  left: [colors.surface, colors.background],
+  left: [colors.surface, '#0c0c0e'],
 };
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
@@ -36,7 +34,6 @@ const FOOTER_ICON: Record<ChallengeStatus, { name: IconName; color: string }> = 
 
 export function ActiveChallengeCard({
   challenge,
-  dayLabel,
   statusLabel,
   onPress,
   layout = 'compact',
@@ -63,12 +60,9 @@ export function ActiveChallengeCard({
           style={styles.gradient}
         >
           <View style={styles.content}>
-            <Row justify="space-between" align="center">
-              <View style={isLeft ? styles.leftIcon : undefined}>
-                <ActivityIcon type={activityType} size="md" />
-              </View>
-              <DayLabel label={dayLabel} />
-            </Row>
+            <View style={isLeft ? styles.leftIcon : undefined}>
+              <ActivityIcon type={activityType} size="md" glow />
+            </View>
 
             <View style={styles.bottom}>
               <Stack gap="xs">

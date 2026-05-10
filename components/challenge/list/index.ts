@@ -12,10 +12,6 @@ export * from './ActiveChallengeCard';
 // Shows challenge details with badges and activity icons.
 export * from './ExploreChallengeCard';
 
-// DayLabel: Outlined label component for displaying day numbers.
-// Used in challenge cards to show current day with white outline styling.
-export * from './DayLabel';
-
 // ChallengeBadge: Small badge component for challenge attributes.
 // Displays text badges with consistent styling for challenge features.
 export * from './ChallengeBadge';
