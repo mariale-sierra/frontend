@@ -20,23 +20,10 @@ import { IconButton } from '../../components/ui/iconButton';
 import { ActiveChallengeCard } from '../../components/challenge/list/ActiveChallengeCard';
 import { CompletedChallengeCard } from '../../components/challenge/list/CompletedChallengeCard';
 import type { ActiveChallengeViewModel } from '../../components/challenge/list/challengeListSections';
-import { getUserEnrolledChallenges } from '../../services/challenge/challenge.service';
+import { getMyChallenges } from '../../services/user/user.service';
 import { toEnrolledChallengesViewModel } from '../../services/adapters';
 import { colors, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
-
-// ── MOCK DATA ─────────────────────────────────────────────────────────────────
-// Set to false (or delete this block) to use real backend data.
-const USE_MOCK_DATA = true;
-const MOCK_CHALLENGES: ActiveChallengeViewModel[] = [
-  { challengeId: 'mock-1', title: '30-Day Strength Builder', day: 14, progressPercent: 47,  streakCount: 5, activityType: 'strength',      status: 'active'    },
-  { challengeId: 'mock-2', title: 'Morning Cardio Blast',    day: 7,  progressPercent: 23,  streakCount: 3, activityType: 'cardioIntense', status: 'active'    },
-  { challengeId: 'mock-3', title: 'Flexibility Foundation',  day: 21, progressPercent: 100, streakCount: 0, activityType: 'flexibility',  status: 'completed' },
-  { challengeId: 'mock-4', title: 'Mindfulness Reset',       day: 14, progressPercent: 100, streakCount: 0, activityType: 'mindBody',     status: 'completed' },
-  { challengeId: 'mock-5', title: 'Functional Power Week',   day: 4,  progressPercent: 28,  streakCount: 0, activityType: 'functional',   status: 'left'      },
-  { challengeId: 'mock-6', title: 'Low Cardio Recovery',     day: 9,  progressPercent: 60,  streakCount: 0, activityType: 'cardioLow',    status: 'left'      },
-];
-// ─────────────────────────────────────────────────────────────────────────────
 
 type ChallengeStatus = 'active' | 'completed' | 'left';
 
@@ -91,10 +78,7 @@ export default function ActiveAll() {
   ).current;
 
   useEffect(() => {
-    // ── MOCK DATA — remove the next 4 lines to use real backend data ──────────
-    if (USE_MOCK_DATA) { setGrouped(groupByStatus(MOCK_CHALLENGES)); setLoading(false); return; }
-    // ─────────────────────────────────────────────────────────────────────────
-    getUserEnrolledChallenges()
+    getMyChallenges()
       .then((res) => setGrouped(groupByStatus(toEnrolledChallengesViewModel(res ?? []))))
       .catch(() => setError(t('challenges.loadError')))
       .finally(() => setLoading(false));

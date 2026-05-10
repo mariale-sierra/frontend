@@ -8,14 +8,12 @@ import ScreenBackground from '../../components/layout/screenBackground';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
 import { ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
-import { getChallenges } from '../../services/challenge/challenge.service';
+import { getChallengeProgress } from '../../services/challenge/challenge.service';
 import { getHomeChallengesSorted } from '../../services/adapters/homeAdapter';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
-// REMOVE_MOCK_START: delete when backend provides active challenge data.
-import { buildMockHomeChallenges } from '../../services/mocks/homeMock';
-// REMOVE_MOCK_END
 import { colors, radius, spacing } from '../../constants/theme';
-
+import { hoursUntilMidnight } from '../../utils/time';
+import { getMyChallenges } from '../../services/user/user.service';
 const SHIMMER_BASE = colors.surface;
 const SHIMMER_HIGHLIGHT = colors.surfaceHighlight;
 
@@ -28,60 +26,85 @@ function Bone({ style }: { style: object }) {
     />
   );
 }
-import { hoursUntilMidnight } from '../../utils/time';
 
-// REMOVE_MOCK_START: set to false when backend is ready.
 const ENABLE_HOME_MOCK = true;
-// REMOVE_MOCK_END
 
 export default function Home() {
   const { username } = useAuth();
   const insets = useSafeAreaInsets();
+
   const [challenges, setChallenges] = useState<HomeActiveChallengeViewModel[]>([]);
+  const [challengeProgress, setChallengeProgress] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getChallenges()
-      .then((raw) => {
-        const sorted = getHomeChallengesSorted(raw);
-        // REMOVE_MOCK_START
-        setChallenges(sorted.length > 0 ? sorted : ENABLE_HOME_MOCK ? buildMockHomeChallenges() : []);
-        // REMOVE_MOCK_END
-      })
-      .catch(() => {
-        // REMOVE_MOCK_START
-        if (ENABLE_HOME_MOCK) setChallenges(buildMockHomeChallenges());
-        // REMOVE_MOCK_END
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  Promise.all([getMyChallenges(), getChallengeProgress()])
+    .then(([rawChallenges, progress]) => {
+      setChallenges(getHomeChallengesSorted(rawChallenges));
+      setChallengeProgress(progress);
+    })
+    .catch(() => {
+      setChallenges([]);
+      setChallengeProgress(null);
+    })
+    .finally(() => setLoading(false));
+}, []);
 
   const hoursLeft = hoursUntilMidnight();
 
   return (
-    <ScreenBackground variant="default" contentStyle={[styles.screen, { paddingTop: insets.top + spacing.md }]}> 
+    <ScreenBackground
+      variant="default"
+      contentStyle={[styles.screen, { paddingTop: insets.top + spacing.md }]}
+    >
+      
       <View style={styles.profileRow}>
         <View style={styles.avatar}>
           <Icon name="person" size={20} color={colors.textPrimary} />
         </View>
-        <Text variant="body" style={styles.username}>{username ?? ''}</Text>
+        <Text variant="body" style={styles.username}>
+          {username ?? ''}
+        </Text>
       </View>
 
       <View style={styles.challengeArea}>
+        
+        {challengeProgress && (
+          <View style={styles.progressCard}>
+            <Text variant="caption" tone="secondary">
+              Current challenge
+            </Text>
+            <Text variant="subheader">
+              {challengeProgress.challenge?.name ?? 'Active progress'}
+            </Text>
+            <Text variant="body" tone="secondary">
+              Day {challengeProgress.currentDay ?? 0}/{challengeProgress.totalDays}
+              {challengeProgress.completedToday ? ' · Completed today' : ''}
+            </Text>
+          </View>
+        )}
+
+     
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator color={colors.textPrimary} />
           </View>
         ) : challenges.length > 0 ? (
           <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
-        ) : null}
+        ) : (
+          <View style={styles.center}>
+            <Text>No challenges available</Text>
+          </View>
+        )}
       </View>
 
-      <View style={styles.cardList}>
-        <Bone style={styles.card} />
-        <Bone style={styles.card} />
-        <Bone style={styles.card} />
-      </View>
+      {loading && (
+        <View style={styles.cardList}>
+          <Bone style={styles.card} />
+          <Bone style={styles.card} />
+          <Bone style={styles.card} />
+        </View>
+      )}
     </ScreenBackground>
   );
 }
@@ -109,6 +132,14 @@ const styles = StyleSheet.create({
   },
   challengeArea: {
     marginTop: spacing['2xl'] + spacing.lg,
+    gap: spacing.md,
+  },
+  progressCard: {
+    marginHorizontal: spacing.lg,
+    gap: spacing.xs,
+    padding: spacing.lg,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surfaceElevated,
   },
   center: {
     alignItems: 'center',

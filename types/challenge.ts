@@ -97,6 +97,31 @@ export interface JoinChallengeResponse {
   [key: string]: unknown;
 }
 
+export interface ChallengeProgressContract {
+  challenge: {
+    id: string;
+    name: string;
+    description?: string;
+    duration_days: number;
+    visibility: string;
+    [key: string]: unknown;
+  };
+  currentDay?: number;
+  totalDays: number;
+  completedToday?: boolean;
+  hoursLeftToday?: number;
+  [key: string]: unknown;
+}
+
+export interface ProgressSubmissionRequest {
+  challengeId: string;
+  routineId?: number;
+  imageUrl?: string;
+  caption?: string;
+  visibility?: 'private' | 'followers';
+  isRestDay?: boolean;
+}
+
 export interface TodayRoutineExerciseContract {
   id: number;
   name?: string;

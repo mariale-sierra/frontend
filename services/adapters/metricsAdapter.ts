@@ -39,16 +39,17 @@ export function sanitizeChallengeOptions(challenges: ChallengeOption[]): Challen
 }
 
 export function adaptChallengesForMetrics(contracts: ChallengeContract[]): ChallengeOption[] {
-  return contracts.map((contract) => ({
-    id: String(contract.id),
-    label: asString(contract.name),
-    activityCategories: sanitizeCategories(
-      Array.isArray(contract.categories) ? contract.categories : [],
-    ),
-    locations: sanitizeLocations(
-      Array.isArray(contract.locations) ? contract.locations : [],
-    ),
-  }));
+  console.log('[adaptChallengesForMetrics] Input:', contracts);
+  const result = contracts.map((contract) => ({
+  id: String(contract.id),
+  label: asString(contract.name),
+  activityCategories: [],
+  locations: [],
+}));
+
+console.log('[adaptChallengesForMetrics] Output:', result);
+
+return result;
 }
 
 function restLabel(restSeconds: number | null): string {
@@ -65,6 +66,8 @@ export function adaptTodayRoutineExercises(
   challenge: ChallengeOption,
 ): ExerciseMetricsBlock[] {
   const rawExercises = contract.exercises ?? [];
+
+  console.log('[adaptTodayRoutineExercises] Input:', contract, challenge);
 
   return rawExercises
     .map((ex) => {
@@ -85,7 +88,7 @@ export function adaptTodayRoutineExercises(
         activityType,
         location: ALLOWED_LOCATIONS.has(location) ? location : ('anywhere' as LocationType),
         notes: '',
-        restTimeLabel: restLabel(firstRest),
+        restTimeLabel: restLabel(firstRest) ?? 'Rest 60 sec',
         rows: Array.from({ length: setCount }, (_, i) => ({
           set: i + 1,
           reps: '',
@@ -93,7 +96,7 @@ export function adaptTodayRoutineExercises(
         })),
       } satisfies ExerciseMetricsBlock;
     })
-    .filter((block): block is ExerciseMetricsBlock => block !== null);
+    .filter((block) => block !== null);
 }
 
 export function sanitizeHydratedExercises(

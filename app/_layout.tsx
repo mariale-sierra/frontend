@@ -11,27 +11,23 @@ function RootNavigator() {
   const { isAuthenticated, isRestoring } = useAuth();
 
   useEffect(() => {
-    if (isRestoring) {
-      return;
-    }
+  if (isRestoring) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
-    if (isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)');
-      return;
-    }
-
-    if (!isAuthenticated && !inAuthGroup) {
-      router.replace('/(auth)/login');
-    }
-  }, [isAuthenticated, isRestoring, router, segments]);
-
+  const inAuthGroup = segments[0] === '(auth)';
+  if (!isAuthenticated) {
+    router.replace('/(auth)/login');
+    return;
+  }
+  if (isAuthenticated && inAuthGroup) {
+    router.replace('/(tabs)');
+  }
+}, [isAuthenticated, isRestoring, segments]);
   if (isRestoring) {
     return null;
   }
 
   return (
-    <Stack initialRouteName={isAuthenticated ? '(tabs)' : '(auth)'}>
+    <Stack>
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />

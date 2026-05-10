@@ -19,14 +19,25 @@ export function MetricsChallengeSelector({
   onToggle,
   onSelect,
 }: MetricsChallengeSelectorProps) {
+  const safeChallenges = Array.isArray(challenges) ? challenges : [];
+
   const selectedChallenge =
-    challenges.find((challenge) => challenge.id === selectedChallengeId) ?? challenges[0];
+    safeChallenges.find((c) => String(c.id) === String(selectedChallengeId)) ??
+    safeChallenges[0] ??
+    null;
+
+  const selectedLabel = String(
+    selectedChallenge?.label ?? 'Selecciona reto'
+  ).toUpperCase();
 
   return (
     <View style={styles.container}>
-      <Pressable style={({ pressed }) => [styles.trigger, pressed && styles.pressed]} onPress={onToggle}>
+      <Pressable
+        style={({ pressed }) => [styles.trigger, pressed && styles.pressed]}
+        onPress={onToggle}
+      >
         <Text variant="body" style={styles.challengeLabel}>
-          {(selectedChallenge?.label ?? 'placeholder').toUpperCase()}
+          {selectedLabel}
         </Text>
 
         <View style={styles.chevronButton}>
@@ -38,16 +49,19 @@ export function MetricsChallengeSelector({
         </View>
       </Pressable>
 
-      {isOpen && (
+      {isOpen && safeChallenges.length > 0 && (
         <View style={styles.menu}>
-          {challenges.map((challenge, index) => {
-            const isSelected = challenge.id === selectedChallengeId;
-            const isLast = index === challenges.length - 1;
+          {safeChallenges.map((challenge, index) => {
+            const challengeId = String(challenge.id);
+            const label = String(challenge.label ?? '');
+
+            const isSelected = challengeId === String(selectedChallengeId);
+            const isLast = index === safeChallenges.length - 1;
 
             return (
               <Pressable
-                key={challenge.id}
-                onPress={() => onSelect(challenge.id)}
+                key={challengeId}
+                onPress={() => onSelect(challengeId)}
                 style={({ pressed }) => [
                   styles.option,
                   !isLast && styles.optionDivider,
@@ -56,7 +70,7 @@ export function MetricsChallengeSelector({
                 ]}
               >
                 <Text variant="body" style={styles.optionLabel}>
-                  {challenge.label}
+                  {label}
                 </Text>
               </Pressable>
             );

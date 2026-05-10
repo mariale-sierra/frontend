@@ -9,6 +9,7 @@ import { Divider } from '../../components/ui/divider';
 import { spacing } from '../../constants/theme';
 import { useMetricsScreen } from '../../hooks/useMetricsScreen';
 import { useTranslation } from 'react-i18next';
+import { Text } from '../../components/ui/text';
 
 export default function Metrics() {
   const { t } = useTranslation();
@@ -33,6 +34,9 @@ export default function Metrics() {
     submitMetrics,
   } = useMetricsScreen();
 
+  const selectedChallenge =
+    challenges.find((challenge) => challenge.id === selectedChallengeId) ?? challenges[0];
+
   return (
     <ScreenBackground variant="default">
       <View style={styles.screen}>
@@ -56,6 +60,17 @@ export default function Metrics() {
           {isLoadingData ? (
             <View style={styles.loadingWrap}>
               <ActivityIndicator />
+              <Text variant="body" tone="secondary" style={styles.loadingText}>
+                {selectedChallenge?.label
+                  ? `Cargando ${selectedChallenge.label}...`
+                  : 'Cargando rutina...'}
+              </Text>
+            </View>
+          ) : exerciseMetrics.length === 0 ? (
+            <View style={styles.loadingWrap}>
+              <Text variant="body" tone="secondary">
+                No hay ejercicios para mostrar.
+              </Text>
             </View>
           ) : (
             <ScrollView
@@ -111,5 +126,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  loadingText: {
+    textAlign: 'center',
   },
 });

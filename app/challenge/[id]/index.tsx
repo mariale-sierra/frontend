@@ -34,8 +34,8 @@ export default function ChallengeDetail() {
   const handleJoinChallenge = useCallback(async () => {
     if (isJoining) return;
 
-    const challengeId = Number(id);
-    if (!Number.isFinite(challengeId)) {
+    const challengeId = typeof id === 'string' ? id : '';
+    if (!challengeId) {
       Alert.alert(
         t('common.errors.genericTitle'),
         t('challenges.joinInvalidId', { defaultValue: 'Challenge id is invalid.' }),

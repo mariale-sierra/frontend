@@ -9,7 +9,9 @@ import {
 import { Text } from '../../components/ui/text';
 import { spacing } from '../../constants/theme';
 import { getChallenges } from '../../services/challenge/challenge.service';
+import { getMyChallenges } from '../../services/user/user.service';
 import { toChallengeListViewModel } from '../../services/adapters/index';
+import { toEnrolledChallengesViewModel } from '../../services/adapters/index';
 import { useTranslation } from 'react-i18next';
 
 export default function Challenges() {
@@ -23,15 +25,18 @@ export default function Challenges() {
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		getChallenges()
-			.then((res) => {
+		Promise.all([getMyChallenges(), getChallenges()])
+			.then(([enrolled, allChallenges]) => {
 				setChallengeView(
-					toChallengeListViewModel(res ?? [], {
+					{
+						activeChallenges: toEnrolledChallengesViewModel(enrolled ?? []),
+						exploreChallenges: toChallengeListViewModel(allChallenges ?? [], {
 						membersLabel: t('challenges.members'),
 						unknownCreatorLabel: t('challenges.unknownCreator'),
 						durationLabel: t('challenges.durationUnit'),
 						locationFallbackLabel: t('challenges.locationFallback'),
-					}),
+					}).exploreChallenges,
+					},
 				);
 			})
 			.catch(() => setError(t('challenges.loadError')))

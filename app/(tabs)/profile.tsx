@@ -1,75 +1,112 @@
-// SKELETON PLACEHOLDER — real Profile content not yet implemented.
-// This screen renders animated shimmer loaders that approximate the final layout:
-//   - Avatar circle + name / bio lines
-//   - Two rows of stat chips
-//   - 2-column grid of large content cards
-
-import { StyleSheet, View, ScrollView } from 'react-native';
-import ShimmerPlaceholder from 'react-native-shimmer-placeholder';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { colors } from '../../constants/theme';
+import { Text } from '../../components/ui/text';
+import { Icon } from '../../components/ui/icon';
+import { useRouter } from 'expo-router';
+import { getMe } from '../../services/user/user.service';
+import { getMyChallenges } from '../../services/user/user.service';
+import { getChallengeProgress } from '../../services/challenge/challenge.service';
+import type { ChallengeContract } from '../../types/challenge';
+import type { UserProfileContract } from '../../types/user';
+import { toEnrolledChallengesViewModel } from '../../services/adapters';
+import { useAuth } from '../../hooks/useAuth';
+import { radius, spacing } from '../../constants/theme';
+import { getHomeChallengesSorted } from '../../services/adapters/homeAdapter';
 
-// Shimmer colors tuned to the dark theme palette
-const SHIMMER_BASE = colors.surface;             // #1C1C1E
-const SHIMMER_HIGHLIGHT = colors.surfaceHighlight; // #3C3C3E
-
-// Convenience wrapper so every bone picks up the right gradient
-function Bone({ style }: { style: object }) {
+function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <ShimmerPlaceholder
-      LinearGradient={LinearGradient}
-      shimmerColors={[SHIMMER_BASE, SHIMMER_HIGHLIGHT, SHIMMER_BASE]}
-      style={style}
-    />
+    <View style={styles.statCard}>
+      <Text variant="caption" tone="secondary">{label}</Text>
+      <Text variant="subheader">{value}</Text>
+    </View>
   );
 }
 
 export default function Profile() {
+  const router = useRouter();
+  const { username: sessionUsername } = useAuth();
   const insets = useSafeAreaInsets();
+  const [profile, setProfile] = useState<UserProfileContract | null>(null);
+  const [challenges, setChallenges] = useState<ChallengeContract[]>([]);
+  const [progress, setProgress] = useState<{ currentDay?: number; totalDays: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([getMe(), getMyChallenges(), getChallengeProgress()])
+      .then(([me, myChallenges, challengeProgress]) => {
+        setProfile(me);
+        setChallenges(myChallenges);
+        setProgress(challengeProgress);
+      })
+      .catch(() => setError('No se pudieron cargar tus datos.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const activeChallenges = getHomeChallengesSorted(challenges).filter((item) => !item.isCompleted).length;
 
   return (
     <ScreenBackground variant="challenges" applyTopInset={false}>
-      <ScrollView
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}
-        scrollEnabled={false}
-      >
-        {/* Avatar + name / bio block */}
-        <View style={styles.heroRow}>
-          <Bone style={styles.avatar} />
-
-          <View style={styles.heroText}>
-            <Bone style={styles.heroName} />
-            <Bone style={styles.heroBio} />
-            <View style={styles.heroMeta}>
-              <Bone style={styles.heroMetaChip} />
-              <Bone style={styles.heroMetaChipWide} />
-            </View>
+      <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 20 }]}> 
+        {loading ? (
+          <View style={styles.center}>
+            <ActivityIndicator color={colors.primary} />
           </View>
-        </View>
+        ) : error ? (
+          <View style={styles.center}>
+            <Text tone="secondary">{error}</Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.heroRow}>
+              <View style={styles.avatar}>
+                <Icon name="person" size={28} color={colors.textPrimary} />
+              </View>
 
-        {/* Stat chip rows */}
-        <View style={styles.chipRow}>
-          <Bone style={styles.statChipWide} />
-          <Bone style={styles.statChip} />
-        </View>
+              <View style={styles.heroText}>
+                <Text variant="title">{profile?.username ?? sessionUsername ?? 'Profile'}</Text>
+                <Text variant="body" tone="secondary">{profile?.email ?? 'Sin email disponible'}</Text>
+                <View style={styles.heroMeta}>
+                  <Text style={styles.heroBadge}>{profile?.is_active ? 'Activo' : 'Inactivo'}</Text>
+                  <Text style={styles.heroBadge}>{progress ? `Día ${progress.currentDay ?? 0}/${progress.totalDays}` : 'Sin progreso'}</Text>
+                </View>
+              </View>
+            </View>
 
-        <View style={[styles.chipRow, styles.chipRowGap]}>
-          <Bone style={styles.statChipWide} />
-          <Bone style={styles.statChip} />
-        </View>
+            <View style={styles.statsGrid}>
+              <StatCard label="Challenges" value={String(challenges.length)} />
+              <StatCard label="Active" value={String(activeChallenges)} />
+              <StatCard label="Current day" value={progress ? String(progress.currentDay ?? 0) : '--'} />
+              <StatCard label="Total days" value={progress ? String(progress.totalDays) : '--'} />
+            </View>
 
-        {/* 2-column grid of content cards (2 full rows + partial third) */}
-        <View style={styles.grid}>
-          <Bone style={styles.card} />
-          <Bone style={styles.card} />
-        </View>
-
-        <View style={[styles.grid, styles.gridGap]}>
-          <Bone style={styles.card} />
-          <Bone style={styles.card} />
-        </View>
+            <View style={styles.section}>
+              <Text variant="subheader">My challenges</Text>
+              <View style={styles.challengeList}>
+                {challenges.length > 0 ? challenges.map((challenge) => (
+                  <Pressable
+                    key={String(challenge.id)}
+                    onPress={() => router.push(`/challenge/${challenge.id}`)}
+                    style={({ pressed }) => [styles.challengeRow, pressed && styles.pressed]}
+                  >
+                    <View style={styles.challengeDot} />
+                    <View style={styles.challengeText}>
+                      <Text variant="body">{challenge.name}</Text>
+                      <Text variant="caption" tone="secondary">
+                        {challenge.duration_days ?? '--'} days
+                      </Text>
+                    </View>
+                  </Pressable>
+                )) : (
+                  <Text tone="secondary">Todavía no tienes challenges unidos.</Text>
+                )}
+              </View>
+            </View>
+          </>
+        )}
       </ScrollView>
     </ScreenBackground>
   );
@@ -77,84 +114,82 @@ export default function Profile() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-    gap: 16,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
+    gap: spacing.lg,
   },
-
-  // Hero section
+  center: {
+    minHeight: 280,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   heroRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: spacing.md,
   },
   avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    flexShrink: 0,
+    width: 84,
+    height: 84,
+    borderRadius: radius['2xl'],
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceElevated,
   },
   heroText: {
     flex: 1,
-    gap: 8,
-  },
-  heroName: {
-    height: 16,
-    borderRadius: 8,
-    width: '55%',
-  },
-  heroBio: {
-    height: 12,
-    borderRadius: 6,
-    width: '80%',
+    gap: spacing.xs,
   },
   heroMeta: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
+    gap: spacing.xs,
+    flexWrap: 'wrap',
   },
-  heroMetaChip: {
-    height: 22,
-    borderRadius: 11,
-    width: 60,
+  heroBadge: {
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceElevated,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: radius['2xl'],
+    overflow: 'hidden',
   },
-  heroMetaChipWide: {
-    height: 22,
-    borderRadius: 11,
-    width: 90,
-  },
-
-  // Stat chip rows
-  chipRow: {
+  statsGrid: {
     flexDirection: 'row',
-    gap: 10,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
   },
-  chipRowGap: {
-    marginTop: 4,
+  statCard: {
+    width: '48%',
+    padding: spacing.md,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surfaceElevated,
+    gap: spacing.xs,
   },
-  statChipWide: {
-    height: 44,
-    borderRadius: 14,
-    flex: 2,
+  section: {
+    gap: spacing.sm,
   },
-  statChip: {
-    height: 44,
-    borderRadius: 14,
-    flex: 1,
+  challengeList: {
+    gap: spacing.sm,
   },
-
-  // Content card grid
-  grid: {
+  challengeRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surfaceElevated,
   },
-  gridGap: {
-    marginTop: 12,
+  challengeDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.primary,
   },
-  card: {
+  challengeText: {
     flex: 1,
-    height: 180,
-    borderRadius: 18,
+    gap: 2,
+  },
+  pressed: {
+    opacity: 0.84,
   },
 });

@@ -1,66 +1,86 @@
-// SKELETON PLACEHOLDER — real Search content not yet implemented.
-// This screen renders animated shimmer loaders that approximate the final layout:
-//   - Search bar at the top
-//   - A section label + horizontal row of category chips
-//   - A second section label + two rows of filter chips
-
-import { StyleSheet, View, ScrollView } from 'react-native';
-import ShimmerPlaceholder from 'react-native-shimmer-placeholder';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, TextInput, View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenBackground from '../../components/layout/screenBackground';
-import { colors } from '../../constants/theme';
-
-// Shimmer colors tuned to the dark theme palette
-const SHIMMER_BASE = colors.surface;        // #1C1C1E
-const SHIMMER_HIGHLIGHT = colors.surfaceHighlight; // #3C3C3E
-
-// Convenience wrapper so every bone picks up the right gradient
-function Bone({ style }: { style: object }) {
-  return (
-    <ShimmerPlaceholder
-      LinearGradient={LinearGradient}
-      shimmerColors={[SHIMMER_BASE, SHIMMER_HIGHLIGHT, SHIMMER_BASE]}
-      style={style}
-    />
-  );
-}
+import { colors, radius, spacing } from '../../constants/theme';
+import { Text } from '../../components/ui/text';
+import { getChallenges } from '../../services/challenge/challenge.service';
+import { getMyChallenges } from '../../services/user/user.service';
+import type { ChallengeContract } from '../../types/challenge';
+import { useRouter } from 'expo-router';
 
 export default function Search() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [available, setAvailable] = useState<ChallengeContract[]>([]);
+
+  useEffect(() => {
+    Promise.all([getChallenges(), getMyChallenges()])
+      .then(([allChallenges, myChallenges]) => {
+        const joinedIds = new Set(myChallenges.map((c) => String(c.id)));
+        const filtered = allChallenges.filter((c) => !joinedIds.has(String(c.id)));
+        setAvailable(filtered);
+      })
+      .catch(() => setError('No se pudieron cargar los challenges.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = useMemo(() => {
+    const lower = query.trim().toLowerCase();
+    if (!lower) return available;
+    return available.filter((challenge) =>
+      challenge.name?.toLowerCase().includes(lower),
+    );
+  }, [available, query]);
 
   return (
     <ScreenBackground variant="challenges" applyTopInset={false}>
       <ScrollView
         contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]}
-        scrollEnabled={false}
       >
-        {/* Search bar */}
-        <Bone style={styles.searchBar} />
+        <Text variant="title">Buscar challenges</Text>
+        <Text variant="body" tone="secondary">
+          Muestra todos los challenges a los que no te has unido.
+        </Text>
 
-        {/* Section label */}
-        <Bone style={styles.sectionLabel} />
+        <TextInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Buscar por nombre"
+          placeholderTextColor="rgba(255,255,255,0.45)"
+          style={styles.searchInput}
+        />
 
-        {/* Horizontal row of 3 category chips */}
-        <View style={styles.row}>
-          <Bone style={styles.chipLarge} />
-          <Bone style={styles.chipMedium} />
-          <Bone style={styles.chipSmall} />
-        </View>
-
-        {/* Second section label */}
-        <Bone style={[styles.sectionLabel, styles.sectionLabelGap]} />
-
-        {/* Two rows of filter chips */}
-        <View style={styles.row}>
-          <Bone style={styles.chipSmall} />
-          <Bone style={styles.chipLarge} />
-        </View>
-
-        <View style={[styles.row, styles.rowGap]}>
-          <Bone style={styles.chipSmall} />
-          <Bone style={styles.chipLarge} />
-        </View>
+        {loading ? (
+          <View style={styles.center}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : error ? (
+          <Text tone="secondary">{error}</Text>
+        ) : filtered.length === 0 ? (
+          <Text tone="secondary">No hay challenges disponibles.</Text>
+        ) : (
+          <View style={styles.list}>
+            {filtered.map((challenge) => (
+              <Pressable
+                key={String(challenge.id)}
+                onPress={() => router.push(`/challenge/${challenge.id}`)}
+                style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+              >
+                <Text variant="subheader">{challenge.name}</Text>
+                <Text variant="body" tone="secondary">
+                  {challenge.description ?? 'Sin descripcion'}
+                </Text>
+                <Text variant="caption" tone="secondary">
+                  {challenge.duration_days ?? '--'} dias
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </ScreenBackground>
   );
@@ -68,52 +88,32 @@ export default function Search() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-    gap: 16,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
+    gap: spacing.md,
   },
-
-  // Search bar — full-width pill
-  searchBar: {
-    height: 44,
-    borderRadius: 22,
-    width: '100%',
+  searchInput: {
+    minHeight: 46,
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.md,
+    color: colors.textPrimary,
+    backgroundColor: colors.surfaceElevated,
   },
-
-  // Short section label
-  sectionLabel: {
-    height: 14,
-    borderRadius: 7,
-    width: '47%',
-    marginTop: 8,
+  center: {
+    minHeight: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sectionLabelGap: {
-    marginTop: 24,
+  list: {
+    gap: spacing.sm,
   },
-
-  // Chip row
-  row: {
-    flexDirection: 'row',
-    gap: 10,
+  card: {
+    padding: spacing.lg,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surfaceElevated,
+    gap: spacing.xs,
   },
-  rowGap: {
-    marginTop: 6,
-  },
-
-  // Three chip sizes used across both rows
-  chipLarge: {
-    height: 48,
-    borderRadius: 14,
-    flex: 2,
-  },
-  chipMedium: {
-    height: 48,
-    borderRadius: 14,
-    flex: 1.5,
-  },
-  chipSmall: {
-    height: 48,
-    borderRadius: 14,
-    flex: 1,
+  pressed: {
+    opacity: 0.85,
   },
 });

@@ -1,7 +1,9 @@
 import api from '../api';
 import type {
   ChallengeContract,
+  ChallengeProgressContract,
   CreateChallengePayload,
+  ProgressSubmissionRequest,
   JoinChallengeResponse,
   TodayRoutineContract,
 } from '../../types/challenge';
@@ -33,35 +35,43 @@ export async function getChallenge(id: string) {
   return response.data;
 }
 
+export async function getChallengeProgress() {
+  const response = await api.get<ChallengeProgressContract | null>('/challenges/progress');
+  return response.data;
+}
+
+export async function createChallengeProgress(data: ProgressSubmissionRequest) {
+  const response = await api.post('/challenges/progress', data);
+  return response.data;
+}
+
 export async function createChallenge(data: CreateChallengePayload) {
   const response = await api.post<ChallengeContract>('/challenges', data);
   return response.data;
 }
 
-export async function joinChallenge(id: number) {
+export async function joinChallenge(id: string) {
   const response = await api.post<JoinChallengeResponse>(`/challenges/${id}/join`);
   return response.data;
 }
 
-// Returns challenges the authenticated user is currently enrolled in.
-// Endpoint: GET /challenges/enrolled
 export async function getUserEnrolledChallenges(): Promise<ChallengeContract[]> {
   const response = await api.get<ChallengeContract[] | { data?: ChallengeContract[] }>(
-    '/challenges/enrolled',
+    '/users/me/challenges',
   );
+
   const payload = response.data;
+  console.log('[getUserEnrolledChallenges] Response:', payload);
+
   if (Array.isArray(payload)) return payload;
   if (payload && Array.isArray(payload.data)) return payload.data;
+
   return [];
 }
 
-// Returns the routine assigned for today based on the user's cycle-day progress in the challenge.
-// Endpoint: GET /challenges/:challengeId/today-routine
 export async function getTodayRoutineForChallenge(
   challengeId: string,
 ): Promise<TodayRoutineContract> {
-  const response = await api.get<TodayRoutineContract>(
-    `/challenges/${challengeId}/today-routine`,
-  );
+  const response = await api.get(`/routine/today/${challengeId}`);
   return response.data;
 }

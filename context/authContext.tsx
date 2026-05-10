@@ -7,6 +7,7 @@ import {
   logout as logoutService,
   register as registerService,
 } from '../services/auth/auth.service';
+import api from '../services/api';
 
 interface AuthContextValue {
   token: string | null;
@@ -33,23 +34,50 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isRestoring, setIsRestoring] = useState(true);
 
   const restoreSession = useCallback(async () => {
-    try {
-      const [storedToken, storedUserId, storedUsername] = await Promise.all([
-        getStoredToken(),
-        getStoredUserId(),
-        getStoredUsername(),
-      ]);
-      setToken(storedToken);
-      setUserId(storedUserId);
-      setUsername(storedUsername);
-    } finally {
-      setIsRestoring(false);
+  try {
+    const [storedToken, storedUserId, storedUsername] = await Promise.all([
+      getStoredToken(),
+      getStoredUserId(),
+      getStoredUsername(),
+    ]);
+
+    console.log('RESTORE VALUES', {
+      storedToken,
+      storedUserId,
+      storedUsername,
+    });
+
+    if (!storedToken || !storedUserId || !storedUsername) {
+      setToken(null);
+      setUserId(null);
+      setUsername(null);
+      return;
     }
-  }, []);
+
+    try {
+      await api.get('/auth/me');
+    } catch (error) {
+      console.log('TOKEN INVALID → LOGOUT');
+
+      await logoutService();
+      setToken(null);
+      setUserId(null);
+      setUsername(null);
+      return;
+    }
+
+    setToken(storedToken);
+    setUserId(storedUserId);
+    setUsername(storedUsername);
+
+  } finally {
+    setIsRestoring(false);
+  }
+}, []);
 
   useEffect(() => {
-    restoreSession();
-  }, [restoreSession]);
+  setIsRestoring(false);
+}, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const result = await loginService(email, password);
@@ -79,7 +107,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       token,
       userId,
       username,
-      isAuthenticated: Boolean(token),
+       isAuthenticated: Boolean(token && userId && username),
       isRestoring,
       login,
       register,
