@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
   },
   optionCard: {
     width: '48%',
-    minHeight: 120,
+    minHeight: 150,
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
