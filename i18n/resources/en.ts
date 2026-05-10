@@ -56,6 +56,12 @@ const en = {
       functional: 'Functional',
     },
     loadError: 'Could not load challenges.',
+    allActiveTitle: 'Active',
+    allExploreTitle: 'Explore',
+    inProgress: 'In Progress',
+    completed: 'Completed',
+    left: 'Left',
+    conquered: 'CONQUERED',
   },
   metrics: {
     routineLabel: 'ROUTINE',

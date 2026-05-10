@@ -46,17 +46,15 @@ export default function TabsLayout() {
           tabBarIcon: () => (
             <View
               style={{
-                width: 56,
-                height: 56,
-                borderRadius: 28,
+                width: 64,
+                height: 64,
+                borderRadius: 32,
                 backgroundColor: colors.background,
-                borderWidth: 1,
-                borderColor: colors.surfaceHighlight,
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Ionicons name="add" size={36} color={colors.primary} />
+              <Ionicons name="add" size={40} color={colors.primary} />
             </View>
           ),
         }}

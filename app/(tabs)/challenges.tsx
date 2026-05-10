@@ -41,6 +41,8 @@ export default function Challenges() {
 
 	const handleCreateChallenge = () => router.push('/challenge/create');
 	const handleOpenChallenge = (id: string) => router.push(`/challenge/${id}`);
+	const handleSeeAllActive = () => router.push('/challenge/active-all');
+	const handleSeeAllExplore = () => router.push('/challenge/explore-all');
 
 	if (loading) {
 		return (
@@ -72,6 +74,8 @@ export default function Challenges() {
 						exploreChallenges={challengeView.exploreChallenges}
 						onCreateChallenge={handleCreateChallenge}
 						onPressChallenge={handleOpenChallenge}
+						onPressActiveHeader={handleSeeAllActive}
+						onPressExploreHeader={handleSeeAllExplore}
 					/>
 				)}
 			</ScrollView>

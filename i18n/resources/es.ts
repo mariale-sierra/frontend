@@ -56,6 +56,12 @@ const es = {
       functional: 'Funcional',
     },
     loadError: 'No se pudieron cargar los retos.',
+    allActiveTitle: 'Activos',
+    allExploreTitle: 'Explorar',
+    inProgress: 'En Progreso',
+    completed: 'Completado',
+    left: 'Abandonado',
+    conquered: 'CONQUISTADO',
   },
   metrics: {
     routineLabel: 'RUTINA',

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ShimmerPlaceholder from 'react-native-shimmer-placeholder';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../hooks/useAuth';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Icon } from '../../components/ui/icon';
@@ -13,6 +15,19 @@ import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeA
 import { buildMockHomeChallenges } from '../../services/mocks/homeMock';
 // REMOVE_MOCK_END
 import { colors, radius, spacing } from '../../constants/theme';
+
+const SHIMMER_BASE = colors.surface;
+const SHIMMER_HIGHLIGHT = colors.surfaceHighlight;
+
+function Bone({ style }: { style: object }) {
+  return (
+    <ShimmerPlaceholder
+      LinearGradient={LinearGradient}
+      shimmerColors={[SHIMMER_BASE, SHIMMER_HIGHLIGHT, SHIMMER_BASE]}
+      style={style}
+    />
+  );
+}
 import { hoursUntilMidnight } from '../../utils/time';
 
 // REMOVE_MOCK_START: set to false when backend is ready.
@@ -61,6 +76,12 @@ export default function Home() {
           <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
         ) : null}
       </View>
+
+      <View style={styles.cardList}>
+        <Bone style={styles.card} />
+        <Bone style={styles.card} />
+        <Bone style={styles.card} />
+      </View>
     </ScreenBackground>
   );
 }
@@ -93,5 +114,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: spacing['2xl'],
+  },
+  cardList: {
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing['2xl'],
+  },
+  card: {
+    width: '100%',
+    height: 100,
+    borderRadius: radius.xl,
   },
 });

@@ -15,6 +15,7 @@ export interface ActiveChallengeViewModel {
   progressPercent: number;
   streakCount: number;
   activityType: ActivityType;
+  status: 'active' | 'completed' | 'left';
 }
 
 export interface ExploreChallengeViewModel {
@@ -40,6 +41,7 @@ export interface ChallengeListSectionsProps extends ChallengesScreenViewModel {
   streakLabelBuilder: (count: number) => string;
   onCreateChallenge?: () => void;
   onPressChallenge?: (id: string) => void;
+  onPressActiveHeader?: () => void;
   onPressExploreHeader?: () => void;
 }
 
@@ -76,6 +78,7 @@ export function ChallengeListSections({
   exploreChallenges,
   onCreateChallenge,
   onPressChallenge,
+  onPressActiveHeader,
   onPressExploreHeader,
 }: ChallengeListSectionsProps) {
   return (
@@ -94,7 +97,15 @@ export function ChallengeListSections({
       </Row>
 
       <Stack gap="sm">
-        <Text variant="subheader" tone="secondary">{activeLabel}</Text>
+        <Pressable
+          onPress={onPressActiveHeader}
+          style={({ pressed }) => [styles.headerRowPressable, pressed && styles.pressed]}
+        >
+          <Row justify="space-between" align="center">
+            <Text variant="subheader" tone="secondary">{activeLabel}</Text>
+            <Text variant="body" tone="secondary">{seeAllLabel}</Text>
+          </Row>
+        </Pressable>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll} contentContainerStyle={styles.horizontalContent}>
           <Row justify="flex-start" align="stretch" gap="sm">
@@ -103,7 +114,7 @@ export function ChallengeListSections({
                 key={challenge.challengeId}
                 challenge={challenge}
                 dayLabel={dayLabelBuilder(challenge.day)}
-                streakLabel={streakLabelBuilder(challenge.streakCount)}
+                statusLabel={streakLabelBuilder(challenge.streakCount)}
                 onPress={() => onPressChallenge?.(challenge.challengeId)}
               />
             ))}
@@ -113,16 +124,15 @@ export function ChallengeListSections({
       </Stack>
 
       <Stack gap="sm">
-        <Row justify="space-between" align="center">
-          <Text variant="subheader" tone="secondary">{exploreLabel}</Text>
-
-          <Pressable
-            onPress={onPressExploreHeader}
-            style={({ pressed }) => [styles.inlineActionPressable, pressed && styles.pressed]}
-          >
+        <Pressable
+          onPress={onPressExploreHeader}
+          style={({ pressed }) => [styles.headerRowPressable, pressed && styles.pressed]}
+        >
+          <Row justify="space-between" align="center">
+            <Text variant="subheader" tone="secondary">{exploreLabel}</Text>
             <Text variant="body" tone="secondary">{seeAllLabel}</Text>
-          </Pressable>
-        </Row>
+          </Row>
+        </Pressable>
 
         <Stack gap="sm">
           {exploreChallenges.map((challenge) => (
@@ -143,13 +153,14 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
     backgroundColor: 'rgba(255, 255, 255, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   inlineActionPressable: {
+    paddingVertical: spacing.xs,
+  },
+  headerRowPressable: {
     paddingVertical: spacing.xs,
   },
   horizontalScroll: {
@@ -187,4 +198,3 @@ const styles = StyleSheet.create({
     opacity: 0.86,
   },
 });
-

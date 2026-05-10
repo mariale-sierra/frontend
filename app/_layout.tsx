@@ -36,6 +36,7 @@ function RootNavigator() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
       <Stack.Screen name="(add)" options={{ presentation: 'fullScreenModal', headerShown: false }} />
+      <Stack.Screen name="challenge" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/create" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/[id]/info" options={{ headerShown: false }} />
@@ -44,6 +45,8 @@ function RootNavigator() {
       <Stack.Screen name="challenge/routine/select" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/routine/create" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/routine/exercises" options={{ headerShown: false }} />
+      <Stack.Screen name="challenge/active-all" options={{ headerShown: false }} />
+      <Stack.Screen name="challenge/explore-all" options={{ headerShown: false }} />
     </Stack>
   );
 }

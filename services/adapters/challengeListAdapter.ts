@@ -164,6 +164,24 @@ function pickCategoryLabel(challenge: ChallengeContract, labels: ChallengeListLa
   return labels.categoryFallbackLabel;
 }
 
+function pickChallengeStatus(challenge: ChallengeContract): 'active' | 'completed' | 'left' {
+  const progress = pickProgressPercent(challenge);
+  if (progress >= 100) return 'completed';
+
+  const isCompleted = asBoolean(challenge.is_completed ?? challenge.completed);
+  if (isCompleted === true) return 'completed';
+
+  const statusStr = asString(challenge.status ?? challenge.challenge_status).toLowerCase();
+  if (statusStr.includes('completed') || statusStr.includes('finished') || statusStr.includes('done')) {
+    return 'completed';
+  }
+  if (statusStr.includes('left') || statusStr.includes('quit') || statusStr.includes('abandoned') || statusStr.includes('dropped')) {
+    return 'left';
+  }
+
+  return 'active';
+}
+
 function isChallengeActive(challenge: ChallengeContract): boolean {
   const explicitCandidates: Array<unknown> = [
     challenge.is_active,
@@ -204,6 +222,7 @@ function toActiveCard(challenge: ChallengeContract): ActiveChallengeViewModel {
     progressPercent: pickProgressPercent(challenge),
     streakCount: pickStreakCount(challenge),
     activityType: pickActivityType(challenge),
+    status: pickChallengeStatus(challenge),
   };
 }
 
@@ -236,4 +255,10 @@ export function toChallengeListViewModel(
     activeChallenges,
     exploreChallenges,
   };
+}
+
+export function toEnrolledChallengesViewModel(
+  challenges: ChallengeContract[],
+): ActiveChallengeViewModel[] {
+  return challenges.map(toActiveCard);
 }
