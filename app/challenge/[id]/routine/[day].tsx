@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { ActivityIcon } from '../../../../components/icons/activityIcon';
 import ScreenBackground from '../../../../components/layout/screenBackground';
-import { Divider } from '../../../../components/ui/divider';
 import { Icon } from '../../../../components/ui/icon';
 import { Text } from '../../../../components/ui/text';
 import { colors, radius, spacing, type ActivityType } from '../../../../constants/theme';
@@ -174,6 +174,39 @@ function buildFallbackExercises(activityType: ActivityType): ExerciseDetail[] {
   }));
 }
 
+function ExerciseRow({ exercise, index }: { exercise: ExerciseDetail; index: number }) {
+  return (
+    <View>
+      <View style={styles.exerciseHeader}>
+        <View style={styles.exerciseOrderBadge}>
+          <Text variant="caption" style={styles.exerciseOrderText}>{index + 1}</Text>
+        </View>
+        <View style={styles.exerciseTitleWrap}>
+          <View style={styles.exerciseTitleRow}>
+            <Text variant="header" tone="primary" style={styles.exerciseName}>{exercise.name}</Text>
+            <ActivityIcon type={exercise.activityType} size="md" variant="plain" />
+          </View>
+        </View>
+      </View>
+      <LinearGradient
+        colors={[colors.surface, '#000000']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={styles.metricsSurface}
+      >
+        <View style={styles.metricsRow}>
+          {exercise.metrics.map((metric, metricIndex) => (
+            <View key={`${exercise.name}-${metric.unit}-${metricIndex}`} style={styles.metricCell}>
+              <Text variant="header" tone="primary" style={styles.metricValue}>{metric.value}</Text>
+              <Text variant="caption" style={styles.metricUnit}>{metric.unit}</Text>
+            </View>
+          ))}
+        </View>
+      </LinearGradient>
+    </View>
+  );
+}
+
 export default function RoutineDayDetail() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -281,14 +314,10 @@ export default function RoutineDayDetail() {
               })}
             </Text>
 
-            <Pressable style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}>
-              <Icon name="ellipsis-horizontal" size={20} color={colors.textPrimary} />
-            </Pressable>
+            <View style={styles.backButton} />
           </View>
 
           <View style={styles.routineRow}>
-            <ActivityIcon type={routine.activityType} size="md" variant="plain" />
-
             <View style={styles.routineIdentityText}>
               <Text variant="caption" style={styles.routineEyebrow}>
                 {t('challengeRoutineDay.routineLabel', { defaultValue: 'ROUTINE' })}
@@ -299,47 +328,24 @@ export default function RoutineDayDetail() {
               <Text variant="caption" style={styles.routineSubtitle}>{routine.categoryName}</Text>
             </View>
 
-            <View style={styles.exerciseCountChip}>
-              <Text variant="caption" style={styles.exerciseCountText}>
-                {t('challengeRoutineDay.exerciseCount', {
-                  count: routine.exercises.length,
-                  defaultValue: '{{count}} EX',
-                })}
-              </Text>
+            <View
+              style={[
+                styles.primaryIconWrap,
+                {
+                  shadowColor: colors.activityType[routine.activityType],
+                  backgroundColor: colors.activityType[routine.activityType],
+                },
+              ]}
+            >
+              <ActivityIcon type={routine.activityType} size="lg" variant="circle" />
             </View>
           </View>
         </View>
 
-        <Divider variant="section" />
-
         <View style={styles.panel}>
           <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
             {routine.exercises.map((exercise, index) => (
-              <View key={`${exercise.name}-${index}`} style={styles.exerciseBlock}>
-                <View style={styles.exerciseHeader}>
-                  <View style={styles.exerciseOrderBadge}>
-                    <Text variant="caption" style={styles.exerciseOrderText}>{index + 1}</Text>
-                  </View>
-
-                  <View style={styles.exerciseTitleWrap}>
-                    <View style={styles.exerciseTitleRow}>
-                      <Text variant="header" tone="primary" style={styles.exerciseName}>{exercise.name}</Text>
-                      <ActivityIcon type={exercise.activityType} size="md" variant="plain" />
-                    </View>
-                  </View>
-                </View>
-
-                <View style={styles.metricsSurface}>
-                  <View style={styles.metricsRow}>
-                    {exercise.metrics.map((metric, metricIndex) => (
-                      <View key={`${exercise.name}-${metric.unit}-${metricIndex}`} style={styles.metricCell}>
-                        <Text variant="header" tone="primary" style={styles.metricValue}>{metric.value}</Text>
-                        <Text variant="caption" style={styles.metricUnit}>{metric.unit}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              </View>
+              <ExerciseRow key={`${exercise.name}-${index}`} exercise={exercise} index={index} />
             ))}
           </ScrollView>
         </View>
@@ -374,16 +380,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionButton: {
-    minWidth: 38,
-    minHeight: 38,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   dayOfLabel: {
     color: colors.textPrimary,
     textTransform: 'uppercase',
@@ -392,8 +388,14 @@ const styles = StyleSheet.create({
   routineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
     marginTop: spacing.xs,
+  },
+  primaryIconWrap: {
+    borderRadius: 24,
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
   },
   routineIdentityText: {
     flex: 1,
@@ -414,32 +416,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     letterSpacing: 0.6,
   },
-  exerciseCountChip: {
-    alignSelf: 'center',
-    borderRadius: 999,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  exerciseCountText: {
-    color: colors.textPrimary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
   panel: {
     flex: 1,
-    borderTopWidth: 1,
-    borderColor: colors.border,
     backgroundColor: colors.background,
   },
   scrollContainer: {
     paddingBottom: spacing['2xl'],
-  },
-  exerciseBlock: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   exerciseHeader: {
     paddingHorizontal: spacing.lg,
@@ -477,9 +459,6 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceElevated,
     overflow: 'hidden',
   },
   metricsRow: {

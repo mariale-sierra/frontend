@@ -8,7 +8,6 @@ interface ChallengeListLabels {
   unknownCreatorLabel: string;
   durationLabel: string;
   locationFallbackLabel: string;
-  categoryFallbackLabel: string;
 }
 
 
@@ -153,16 +152,6 @@ function pickLocationLabel(challenge: ChallengeContract, labels: ChallengeListLa
   return labels.locationFallbackLabel;
 }
 
-function pickCategoryLabel(challenge: ChallengeContract, labels: ChallengeListLabels): string {
-  if (Array.isArray(challenge.categories) && challenge.categories.length > 0) {
-    const value = asString(challenge.categories[0]);
-    if (value) {
-      return value;
-    }
-  }
-
-  return labels.categoryFallbackLabel;
-}
 
 function pickChallengeStatus(challenge: ChallengeContract): 'active' | 'completed' | 'left' {
   const progress = pickProgressPercent(challenge);
@@ -236,11 +225,8 @@ function toExploreCard(challenge: ChallengeContract, labels: ChallengeListLabels
     title: asString(challenge.name) || 'Untitled challenge',
     subtitle: `${creator} · ${members} ${labels.membersLabel}`,
     activityType: pickActivityType(challenge),
-    badges: [
-      duration > 0 ? `${duration} ${labels.durationLabel}` : labels.durationLabel,
-      pickLocationLabel(challenge, labels),
-      pickCategoryLabel(challenge, labels),
-    ],
+    durationLabel: duration > 0 ? `${duration} ${labels.durationLabel}` : labels.durationLabel,
+    locationLabel: pickLocationLabel(challenge, labels),
   };
 }
 

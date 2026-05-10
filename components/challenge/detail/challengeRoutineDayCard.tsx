@@ -88,6 +88,7 @@ const styles = StyleSheet.create({
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'center',
   },
   pressed: {
     opacity: 0.86,

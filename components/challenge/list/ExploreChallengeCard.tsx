@@ -23,9 +23,9 @@ export function ExploreChallengeCard({ challenge, onPress }: ExploreChallengeCar
           end={{ x: 1, y: 0.5 }}
           style={styles.gradient}
         >
-          <Stack gap="md">
-            <Row justify="space-between" align="center" gap="md">
-              <Stack gap="xs" style={styles.textColumn}>
+          <Row justify="space-between" align="stretch" gap="md" style={styles.content}>
+            <Stack style={styles.textAndBadges} justify="space-between">
+              <Stack gap="xs">
                 <Text variant="header" tone="primary" numberOfLines={1}>
                   {challenge.title}
                 </Text>
@@ -34,15 +34,16 @@ export function ExploreChallengeCard({ challenge, onPress }: ExploreChallengeCar
                 </Text>
               </Stack>
 
-              <ActivityIcon type={challenge.activityType} size="lg" />
-            </Row>
+              <Row justify="flex-start" align="center" gap="sm" style={styles.badgesRow}>
+                <ChallengeBadge label={challenge.durationLabel} />
+                <ChallengeBadge label={challenge.locationLabel} />
+              </Row>
+            </Stack>
 
-            <Row justify="flex-start" align="center" gap="sm" style={styles.badgesRow}>
-              {challenge.badges.map((badge, index) => (
-                <ChallengeBadge key={`${challenge.challengeId}-badge-${index}`} label={badge} />
-              ))}
-            </Row>
-          </Stack>
+            <View style={styles.iconWrapper}>
+              <ActivityIcon type={challenge.activityType} size="lg" glow />
+            </View>
+          </Row>
         </LinearGradient>
       </View>
     </Pressable>
@@ -65,12 +66,19 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.lg,
   },
-  textColumn: {
+  content: {
+    flex: 1,
+  },
+  textAndBadges: {
     flex: 1,
     minWidth: 0,
   },
   badgesRow: {
     flexWrap: 'wrap',
+  },
+  iconWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   pressed: {
     opacity: 0.86,

@@ -27,7 +27,6 @@ export default function ExploreAll() {
           unknownCreatorLabel: t('challenges.unknownCreator'),
           durationLabel: t('challenges.durationUnit'),
           locationFallbackLabel: t('challenges.locationFallback'),
-          categoryFallbackLabel: t('challenges.categoryFallback'),
         });
         setChallenges(vm.exploreChallenges);
       })

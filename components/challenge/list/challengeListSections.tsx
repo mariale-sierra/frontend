@@ -23,7 +23,8 @@ export interface ExploreChallengeViewModel {
   title: string;
   subtitle: string;
   activityType: ActivityType;
-  badges: [string, string, string];
+  durationLabel: string;
+  locationLabel: string;
 }
 
 export interface ChallengesScreenViewModel {
