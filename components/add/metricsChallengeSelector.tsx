@@ -19,6 +19,7 @@ export function MetricsChallengeSelector({
   onToggle,
   onSelect,
 }: MetricsChallengeSelectorProps) {
+  console.log('[MetricsChallengeSelector] props.challenges', challenges, '| length:', challenges?.length);
   const safeChallenges = Array.isArray(challenges) ? challenges : [];
 
   const selectedChallenge =

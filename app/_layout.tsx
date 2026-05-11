@@ -11,17 +11,19 @@ function RootNavigator() {
   const { isAuthenticated, isRestoring } = useAuth();
 
   useEffect(() => {
-  if (isRestoring) return;
+    console.log('[router] auth loading:', isRestoring, '| auth user exists:', isAuthenticated);
+    if (isRestoring) return;
 
-  const inAuthGroup = segments[0] === '(auth)';
-  if (!isAuthenticated) {
-    router.replace('/(auth)/login');
-    return;
-  }
-  if (isAuthenticated && inAuthGroup) {
-    router.replace('/(tabs)');
-  }
-}, [isAuthenticated, isRestoring, segments]);
+    const inAuthGroup = segments[0] === '(auth)';
+    if (!isAuthenticated) {
+      console.log('[router] redirecting to login from:', segments.join('/') || 'root');
+      router.replace('/(auth)/login');
+      return;
+    }
+    if (isAuthenticated && inAuthGroup) {
+      router.replace('/(tabs)');
+    }
+  }, [isAuthenticated, isRestoring, segments]);
   if (isRestoring) {
     return null;
   }

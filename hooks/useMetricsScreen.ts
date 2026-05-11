@@ -36,10 +36,15 @@ export function useMetricsScreen() {
   const [activeRowKey, setActiveRowKey] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [challengeLoadError, setChallengeLoadError] = useState<string | null>(null);
 
   // Tracks which challengeId we last fetched a routine for, to avoid double-fetching
   // after the init effect sets selectedChallengeId via hydrateMetricsData.
   const lastFetchedChallengeId = useRef<string>('');
+
+  useEffect(() => {
+    console.log('[useMetricsScreen] store challenges after set', challenges, '| length:', challenges.length);
+  }, [challenges]);
 
   // Initial load: fetch enrolled challenges + today's routine for the first challenge.
   useEffect(() => {
@@ -47,29 +52,48 @@ export function useMetricsScreen() {
 
     async function init() {
       setIsLoadingData(true);
+      setChallengeLoadError(null);
       try {
         const rawChallenges = await getUserEnrolledChallenges();
+        console.log('[Metrics] Raw challenges from API:', rawChallenges);
         const adaptedChallenges = adaptChallengesForMetrics(rawChallenges);
+        console.log('[Metrics] Adapted challenges for dropdown:', adaptedChallenges);
 
         if (!adaptedChallenges.length) {
           hydrateMetricsData({ challenges: [], selectedChallengeId: '', exerciseMetrics: [], routineId: null });
           return;
         }
 
+        // Store challenges first so the dropdown is populated even if the routine fetch fails.
         const firstChallenge = adaptedChallenges[0];
-        const routineData = await getTodayRoutineForChallenge(firstChallenge.id);
-        const exercises = adaptTodayRoutineExercises(routineData, firstChallenge);
-
         lastFetchedChallengeId.current = firstChallenge.id;
+        console.log('[useMetricsScreen] challenges before store', adaptedChallenges);
         hydrateMetricsData({
           challenges: adaptedChallenges,
           selectedChallengeId: firstChallenge.id,
-          exerciseMetrics: exercises,
-          routineId: routineData.routine_id,
+          exerciseMetrics: [],
+          routineId: null,
         });
+
+        // Then fetch today's routine separately — failure here won't block the dropdown.
+        try {
+          const routineData = await getTodayRoutineForChallenge(firstChallenge.id);
+          const exercises = adaptTodayRoutineExercises(routineData, firstChallenge);
+          setExerciseMetrics(exercises, routineData.routine_id);
+        } catch (routineErr: any) {
+          console.warn(
+            '[Metrics] Could not load today\'s routine (dropdown still works):',
+            routineErr?.response?.status,
+            routineErr?.response?.data ?? routineErr?.message,
+          );
+        }
       } catch (error: any) {
-        console.error('[Metrics] Init load failed:', error?.response?.data ?? error?.message);
-        Alert.alert(t('metrics.alerts.submitErrorTitle'), t('metrics.alerts.submitErrorFallback'));
+        console.error('[Metrics] Challenge load failed:', error?.response?.status, error?.response?.data ?? error?.message);
+        if (error?.response?.status === 401) {
+          setChallengeLoadError('401');
+        } else {
+          setChallengeLoadError('generic');
+        }
       } finally {
         setIsLoadingData(false);
       }
@@ -197,6 +221,7 @@ export function useMetricsScreen() {
     activeRowKey,
     isSubmitting,
     isLoadingData,
+    challengeLoadError,
     toggleChallengeMenu,
     selectChallenge,
     updateMetricValue,

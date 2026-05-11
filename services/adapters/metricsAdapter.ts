@@ -39,17 +39,19 @@ export function sanitizeChallengeOptions(challenges: ChallengeOption[]): Challen
 }
 
 export function adaptChallengesForMetrics(contracts: ChallengeContract[]): ChallengeOption[] {
-  console.log('[adaptChallengesForMetrics] Input:', contracts);
+  console.log('[adaptChallengesForMetrics] input', contracts);
   const result = contracts.map((contract) => ({
-  id: String(contract.id),
-  label: asString(contract.name),
-  activityCategories: [],
-  locations: [],
-}));
-
-console.log('[adaptChallengesForMetrics] Output:', result);
-
-return result;
+    id: String(contract.id),
+    label: asString(contract.name),
+    activityCategories: sanitizeCategories(
+      Array.isArray(contract.categories) ? contract.categories : [],
+    ),
+    locations: sanitizeLocations(
+      Array.isArray(contract.locations) ? contract.locations : [],
+    ),
+  }));
+  console.log('[adaptChallengesForMetrics] output', result);
+  return result;
 }
 
 function restLabel(restSeconds: number | null): string {
@@ -101,14 +103,12 @@ export function adaptTodayRoutineExercises(
 
 export function sanitizeHydratedExercises(
   exerciseMetrics: ExerciseMetricsBlock[],
-  selectedChallenge: ChallengeOption | undefined,
+  _selectedChallenge: ChallengeOption | undefined,
 ): ExerciseMetricsBlock[] {
+  // Exercises come from /routine/today/:id — already scoped to the challenge.
+  // Only validate that each exercise has a known location value.
   return exerciseMetrics
-    .filter(
-      (exercise) =>
-        ALLOWED_LOCATIONS.has(exercise.location) &&
-        selectedChallenge?.locations.includes(exercise.location),
-    )
+    .filter((exercise) => ALLOWED_LOCATIONS.has(exercise.location))
     .map((exercise) => ({
       ...exercise,
       exerciseId: exercise.exerciseId ?? 0,

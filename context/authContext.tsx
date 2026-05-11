@@ -34,50 +34,60 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isRestoring, setIsRestoring] = useState(true);
 
   const restoreSession = useCallback(async () => {
-  try {
-    const [storedToken, storedUserId, storedUsername] = await Promise.all([
-      getStoredToken(),
-      getStoredUserId(),
-      getStoredUsername(),
-    ]);
-
-    console.log('RESTORE VALUES', {
-      storedToken,
-      storedUserId,
-      storedUsername,
-    });
-
-    if (!storedToken || !storedUserId || !storedUsername) {
-      setToken(null);
-      setUserId(null);
-      setUsername(null);
-      return;
-    }
-
+    console.log('[auth] restoreSession start');
     try {
-      await api.get('/auth/me');
-    } catch (error) {
-      console.log('TOKEN INVALID → LOGOUT');
+      const [storedToken, storedUserId, storedUsername] = await Promise.all([
+        getStoredToken(),
+        getStoredUserId(),
+        getStoredUsername(),
+      ]);
 
-      await logoutService();
-      setToken(null);
-      setUserId(null);
-      setUsername(null);
-      return;
+      console.log('[auth] token from storage exists:', Boolean(storedToken));
+
+      if (!storedToken || !storedUserId || !storedUsername) {
+        setToken(null);
+        setUserId(null);
+        setUsername(null);
+        return;
+      }
+
+      console.log('[auth] /auth/me start');
+      try {
+        await api.get('/auth/me');
+        console.log('[auth] /auth/me success');
+      } catch (error: any) {
+        const status = error?.response?.status;
+        console.log('[auth] /auth/me failed status:', status, 'data:', JSON.stringify(error?.response?.data));
+
+        if (status === 401) {
+          // Token genuinamente rechazado por el servidor — limpiar sesión
+          console.log('[auth] 401 → clearing session');
+          await logoutService();
+          setToken(null);
+          setUserId(null);
+          setUsername(null);
+          return;
+        }
+
+        // Error de red, 5xx, CORS, timeout, etc. — preservar sesión
+        // El token sigue en AsyncStorage y el interceptor lo adjuntará en siguientes llamadas
+        console.log('[auth] non-401 error → preserving session');
+      }
+
+      setToken(storedToken);
+      setUserId(storedUserId);
+      setUsername(storedUsername);
+
+    } finally {
+      console.log('[auth] restoreSession done');
+      console.log('[auth] isLoading: false');
+      setIsRestoring(false);
     }
-
-    setToken(storedToken);
-    setUserId(storedUserId);
-    setUsername(storedUsername);
-
-  } finally {
-    setIsRestoring(false);
-  }
-}, []);
+  }, []);
 
   useEffect(() => {
-  setIsRestoring(false);
-}, []);
+    restoreSession();
+  }, [restoreSession]);
 
   const login = useCallback(async (email: string, password: string) => {
     const result = await loginService(email, password);

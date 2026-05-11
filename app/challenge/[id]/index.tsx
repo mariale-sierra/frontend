@@ -11,15 +11,8 @@ import { Text } from '../../../components/ui/text';
 import { colors, spacing } from '../../../constants/theme';
 import { getChallenge, joinChallenge } from '../../../services/challenge/challenge.service';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
-// REMOVE_MOCK_START: delete this import when backend payload is ready.
-import { buildMockChallengeDetailViewModel } from '../../../services/mocks/challengeDetailMock';
-// REMOVE_MOCK_END
 import type { ChallengeContract } from '../../../types/challenge';
 import { useTranslation } from 'react-i18next';
-
-// REMOVE_MOCK_START: set to false (or delete block) when backend provides complete challenge detail data.
-const ENABLE_CHALLENGE_DETAIL_MOCK = true;
-// REMOVE_MOCK_END
 
 export default function ChallengeDetail() {
   const { t } = useTranslation();
@@ -78,15 +71,23 @@ export default function ChallengeDetail() {
     );
   }
 
-  const challengeViewResult = challenge ? toChallengeDetailViewModel(challenge) : null;
+  if (error) {
+    return (
+      <View style={styles.missingScreen}>
+        <View style={styles.missingBlock}>
+          <Text variant="title" style={styles.missingTitle}>
+            {t('common.errors.genericTitle')}
+          </Text>
+          <Text style={styles.missingSubtitle}>
+            {t('challenges.loadError', { defaultValue: 'Could not load challenge. Check your connection and try again.' })}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
-  // REMOVE_MOCK_START: fallback preview mode for UI validation before backend fields are available.
-  const challengeView = challengeViewResult?.ok
-    ? challengeViewResult.value
-    : ENABLE_CHALLENGE_DETAIL_MOCK
-      ? buildMockChallengeDetailViewModel()
-      : null;
-  // REMOVE_MOCK_END
+  const challengeViewResult = challenge ? toChallengeDetailViewModel(challenge) : null;
+  const challengeView = challengeViewResult?.ok ? challengeViewResult.value : null;
 
   if (!challengeView) {
     return (

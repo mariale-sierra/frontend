@@ -291,11 +291,33 @@ export function useCreateChallengeFlow() {
 
     setIsSubmitting(true);
     try {
-      await createChallenge(payload);
+      console.log('[createChallenge] payload:', JSON.stringify(payload, null, 2));
+      const created = await createChallenge(payload);
       resetChallengeBuilder();
-      router.replace('/(tabs)/challenges');
-    } catch {
-      Alert.alert(t('common.errors.genericTitle'), t('challengeCreate.alerts.createFailedMessage'));
+      if (created?.id) {
+        router.replace(`/challenge/${created.id}`);
+      } else {
+        router.replace('/challenge/active-all');
+      }
+    } catch (err: unknown) {
+      type AxiosLike = {
+        response?: { status?: number; data?: { message?: string | string[] } };
+        config?: { headers?: Record<string, unknown> };
+        message?: string;
+      };
+      const e = err as AxiosLike;
+      console.error('[createChallenge] error:', err);
+      console.error('[createChallenge] status:', e?.response?.status);
+      console.error('[createChallenge] response.data:', JSON.stringify(e?.response?.data, null, 2));
+      console.error('[createChallenge] auth header:', e?.config?.headers?.['Authorization']);
+
+      const raw = e?.response?.data?.message;
+      const backendMessage = Array.isArray(raw) ? raw.join('\n') : (raw ?? e?.message);
+      const statusLabel = e?.response?.status ? `(${e.response.status}) ` : '';
+      Alert.alert(
+        `${statusLabel}${t('common.errors.genericTitle')}`,
+        backendMessage ?? t('challengeCreate.alerts.createFailedMessage'),
+      );
     } finally {
       setIsSubmitting(false);
     }
