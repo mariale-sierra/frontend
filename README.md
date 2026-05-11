@@ -37,8 +37,8 @@ npm install -g expo-cli
 ## 📥 3. Clone the Repository
 
 ```bash
-git clone <YOUR_REPO_URL>
-cd <PROJECT_FOLDER_NAME>
+git clone https://github.com/mariale-sierra/frontend.git
+cd frontend
 ```
 
 ---
