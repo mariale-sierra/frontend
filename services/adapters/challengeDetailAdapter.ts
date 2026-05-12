@@ -196,31 +196,19 @@ function determineDominantActivity(
   return activities[0]?.activityType ?? null;
 }
 
-function mapActivities(
-  challenge: ChallengeContract,
-  missingData: ChallengeDetailMissingData[],
-) {
+function mapActivities(challenge: ChallengeContract, missingData: ChallengeDetailMissingData[]) {
   const directActivities = Array.isArray(challenge.activities)
     ? challenge.activities
         .map((item: ChallengeActivityContract) => {
           const typeValue = parseActivityType(asString(item.type));
           const labelValue = asString(item.label);
-
-          if (!typeValue) {
-            return null;
-          }
-
-          return {
-            activityType: typeValue,
-            label: labelValue || formatActivityLabel(typeValue),
-          };
+          if (!typeValue) return null;
+          return { activityType: typeValue, label: labelValue || formatActivityLabel(typeValue) };
         })
         .filter((item): item is ChallengeActivityBadge => Boolean(item))
     : [];
 
-  if (directActivities.length > 0) {
-    return directActivities;
-  }
+  if (directActivities.length > 0) return directActivities;
 
   const categoryActivities = Array.isArray(challenge.categories)
     ? challenge.categories
@@ -232,10 +220,7 @@ function mapActivities(
   const derivedTypes = unique([...categoryActivities, ...cycleActivities]);
 
   if (derivedTypes.length === 0) {
-    missingData.push({
-      field: 'activities',
-      requirement: 'Provide activities or category/cycle-day activity types to build challenge badges.',
-    });
+    // Ya no agrega a missingData — es opcional
     return [];
   }
 
@@ -263,32 +248,17 @@ function getAuthorName(challenge: ChallengeContract) {
   return undefined;
 }
 
-function mapLocations(
-  locations: string[] | undefined,
-  missingData: ChallengeDetailMissingData[],
-) {
+function mapLocations(locations: string[] | undefined, missingData: ChallengeDetailMissingData[]) {
   if (!Array.isArray(locations) || locations.length === 0) {
-    missingData.push({
-      field: 'locations',
-      requirement: 'Provide locations: string[] such as ["home", "gym"].',
-    });
+    // Ya no agrega a missingData — es opcional
     return [];
   }
 
-  const mapped = unique(
+  return unique(
     locations
       .map((location) => parseLocation(asString(location)))
       .filter((item): item is ChallengeLocation => Boolean(item)),
   );
-
-  if (mapped.length === 0) {
-    missingData.push({
-      field: 'locations',
-      requirement: 'Provide at least one valid location value: home, gym, outdoor, studio, anywhere.',
-    });
-  }
-
-  return mapped;
 }
 
 function mapLegacyDays(
@@ -386,20 +356,12 @@ function mapDays(
   const allowedActivities = new Set(activities.map((item) => item.activityType));
 
   const cycleDayMapped = mapCycleDays(cycleDays, allowedActivities);
-  if (cycleDayMapped.length > 0) {
-    return cycleDayMapped;
-  }
+  if (cycleDayMapped.length > 0) return cycleDayMapped;
 
   const legacyMapped = mapLegacyDays(days, allowedActivities);
-  if (legacyMapped.length > 0) {
-    return legacyMapped;
-  }
+  if (legacyMapped.length > 0) return legacyMapped;
 
-  missingData.push({
-    field: 'days',
-    requirement: 'Provide cycle_days or days with routine/day metadata and valid activities.',
-  });
-
+  // Ya no agrega a missingData — es opcional
   return [];
 }
 
@@ -408,45 +370,24 @@ export function toChallengeDetailViewModel(challenge: ChallengeContract): Challe
 
   const title = asString(challenge.name);
   if (!title) {
-    missingData.push({
-      field: 'name',
-      requirement: 'Provide challenge name.',
-    });
+    missingData.push({ field: 'name', requirement: 'Provide challenge name.' });
   }
 
-  const description = asString(challenge.description);
-  if (!description) {
-    missingData.push({
-      field: 'description',
-      requirement: 'Provide a challenge description string.',
-    });
-  }
-
+  const description = asString(challenge.description) ?? '';
   const durationDays = asNumber(challenge.duration_days);
   if (!durationDays) {
-    missingData.push({
-      field: 'duration_days',
-      requirement: 'Provide duration_days as a positive number.',
-    });
+    missingData.push({ field: 'duration_days', requirement: 'Provide duration_days as a positive number.' });
   }
 
   const activities = mapActivities(challenge, missingData);
   const locations = mapLocations(challenge.locations, missingData);
   const days = mapDays(challenge.days, challenge.cycle_days, activities, missingData);
 
-  const dominantActivity = determineDominantActivity(challenge, activities);
-  if (!dominantActivity) {
-    missingData.push({
-      field: 'activities.type',
-      requirement: 'At least one valid activity type is required for gradient and icons.',
-    });
-  }
+  // Si no hay activities, usa 'functional' como default
+  const dominantActivity = determineDominantActivity(challenge, activities) ?? 'functional';
 
-  if (missingData.length > 0 || !dominantActivity || !durationDays) {
-    return {
-      ok: false,
-      missingData,
-    };
+  if (missingData.length > 0 || !durationDays || !title) {
+    return { ok: false, missingData };
   }
 
   return {
