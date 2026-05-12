@@ -248,3 +248,15 @@ export function toEnrolledChallengesViewModel(
 ): ActiveChallengeViewModel[] {
   return challenges.map(toActiveCard);
 }
+
+export function toExploreChallengeViewModels(
+  challenges: ChallengeContract[],
+): ExploreChallengeViewModel[] {
+  const labels: ChallengeListLabels = {
+    membersLabel: 'members',
+    unknownCreatorLabel: 'Unknown',
+    durationLabel: 'days',
+    locationFallbackLabel: 'Any location',
+  };
+  return challenges.map((c) => toExploreCard(c, labels));
+}

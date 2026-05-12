@@ -1,2 +1,3 @@
-// Profile components (user profile header, stats, settings, avatar editor).
-// Placeholder — no components implemented yet.
+export * from './ProfileHeader';
+export * from './PostsViewToggle';
+export * from './PostsGrid';

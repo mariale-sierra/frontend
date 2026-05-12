@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View, ScrollView } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import ScreenBackground from '../../components/layout/screenBackground';
-import { colors, radius, spacing } from '../../constants/theme';
 import { Text } from '../../components/ui/text';
+import { SearchBar } from '../../components/ui/searchBar';
+import { ExploreChallengeCard } from '../../components/challenge/list/ExploreChallengeCard';
 import { getChallenges } from '../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../services/user/user.service';
-import type { ChallengeContract } from '../../types/challenge';
-import { useRouter } from 'expo-router';
+import { toExploreChallengeViewModels } from '../../services/adapters/challengeListAdapter';
+import type { ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
+import { colors, spacing } from '../../constants/theme';
 
 export default function Search() {
   const router = useRouter();
@@ -15,73 +18,57 @@ export default function Search() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [available, setAvailable] = useState<ChallengeContract[]>([]);
+  const [available, setAvailable] = useState<ExploreChallengeViewModel[]>([]);
 
   useEffect(() => {
     Promise.all([getChallenges(), getMyChallenges()])
       .then(([allChallenges, myChallenges]) => {
         const joinedIds = new Set(myChallenges.map((c) => String(c.id)));
-        const filtered = allChallenges.filter((c) => !joinedIds.has(String(c.id)));
-        setAvailable(filtered);
+        const unjoined = allChallenges.filter((c) => !joinedIds.has(String(c.id)));
+        setAvailable(toExploreChallengeViewModels(unjoined));
       })
-      .catch(() => setError('No se pudieron cargar los challenges.'))
+      .catch(() => setError('Could not load challenges.'))
       .finally(() => setLoading(false));
   }, []);
 
   const filtered = useMemo(() => {
     const lower = query.trim().toLowerCase();
     if (!lower) return available;
-    return available.filter((challenge) =>
-      challenge.name?.toLowerCase().includes(lower),
-    );
+    return available.filter((c) => c.title.toLowerCase().includes(lower));
   }, [available, query]);
 
   return (
-    <ScreenBackground variant="challenges" applyTopInset={false}>
-      <ScrollView
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + 16 }]}
-      >
-        <Text variant="title">Buscar challenges</Text>
-        <Text variant="body" tone="secondary">
-          Muestra todos los challenges a los que no te has unido.
-        </Text>
-
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Buscar por nombre"
-          placeholderTextColor="rgba(255,255,255,0.45)"
-          style={styles.searchInput}
-        />
-
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.primary} />
+    <ScreenBackground variant="default" applyTopInset={false}>
+      <FlatList
+        data={loading ? [] : filtered}
+        keyExtractor={(item) => item.challengeId}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing['2xl'] }]}
+        ListHeaderComponent={
+          <View style={styles.searchBarWrapper}>
+            <SearchBar
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search challenges"
+            />
           </View>
-        ) : error ? (
-          <Text tone="secondary">{error}</Text>
-        ) : filtered.length === 0 ? (
-          <Text tone="secondary">No hay challenges disponibles.</Text>
-        ) : (
-          <View style={styles.list}>
-            {filtered.map((challenge) => (
-              <Pressable
-                key={String(challenge.id)}
-                onPress={() => router.push(`/challenge/${challenge.id}`)}
-                style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-              >
-                <Text variant="subheader">{challenge.name}</Text>
-                <Text variant="body" tone="secondary">
-                  {challenge.description ?? 'Sin descripcion'}
-                </Text>
-                <Text variant="caption" tone="secondary">
-                  {challenge.duration_days ?? '--'} dias
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+        }
+        renderItem={({ item }) => (
+          <ExploreChallengeCard
+            challenge={item}
+            onPress={() => router.push(`/challenge/${item.challengeId}`)}
+          />
         )}
-      </ScrollView>
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ListEmptyComponent={
+          loading ? (
+            <View style={styles.center}>
+              <ActivityIndicator color={colors.textPrimary} />
+            </View>
+          ) : (
+            <Text tone="secondary">{error ?? 'No challenges available.'}</Text>
+          )
+        }
+      />
     </ScreenBackground>
   );
 }
@@ -90,30 +77,15 @@ const styles = StyleSheet.create({
   container: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['2xl'],
-    gap: spacing.md,
   },
-  searchInput: {
-    minHeight: 46,
-    borderRadius: radius.xl,
-    paddingHorizontal: spacing.md,
-    color: colors.textPrimary,
-    backgroundColor: colors.surfaceElevated,
+  searchBarWrapper: {
+    marginBottom: spacing.xl,
+  },
+  separator: {
+    height: spacing.sm,
   },
   center: {
-    minHeight: 200,
+    paddingTop: spacing['2xl'],
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  list: {
-    gap: spacing.sm,
-  },
-  card: {
-    padding: spacing.lg,
-    borderRadius: radius.xl,
-    backgroundColor: colors.surfaceElevated,
-    gap: spacing.xs,
-  },
-  pressed: {
-    opacity: 0.85,
   },
 });

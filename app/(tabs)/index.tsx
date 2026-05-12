@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ShimmerPlaceholder from 'react-native-shimmer-placeholder';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,11 +9,11 @@ import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
 import { ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
 import { getChallengeProgress } from '../../services/challenge/challenge.service';
-import { getHomeChallengesSorted } from '../../services/adapters/homeAdapter';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
 import { colors, radius, spacing } from '../../constants/theme';
 import { hoursUntilMidnight } from '../../utils/time';
-import { getMyChallenges } from '../../services/user/user.service';
+import type { ChallengeProgressContract } from '../../types/challenge';
+
 const SHIMMER_BASE = colors.surface;
 const SHIMMER_HIGHLIGHT = colors.surfaceHighlight;
 
@@ -27,37 +27,44 @@ function Bone({ style }: { style: object }) {
   );
 }
 
-const ENABLE_HOME_MOCK = true;
+function progressToViewModel(progress: ChallengeProgressContract): HomeActiveChallengeViewModel {
+  const currentDay = progress.currentDay ?? 1;
+  const totalDays = progress.totalDays;
+  return {
+    challengeId: String(progress.challenge.id),
+    title: progress.challenge.name,
+    currentDay,
+    totalDays,
+    isTodayCompleted: progress.completedToday ?? false,
+    isCompleted: currentDay >= totalDays,
+    activityType: 'strength',
+  };
+}
 
 export default function Home() {
   const { username } = useAuth();
   const insets = useSafeAreaInsets();
 
-  const [challenges, setChallenges] = useState<HomeActiveChallengeViewModel[]>([]);
-  const [challengeProgress, setChallengeProgress] = useState<any>(null);
+  const [challengeProgress, setChallengeProgress] = useState<ChallengeProgressContract | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-  Promise.all([getMyChallenges(), getChallengeProgress()])
-    .then(([rawChallenges, progress]) => {
-      setChallenges(getHomeChallengesSorted(rawChallenges));
-      setChallengeProgress(progress);
-    })
-    .catch(() => {
-      setChallenges([]);
-      setChallengeProgress(null);
-    })
-    .finally(() => setLoading(false));
-}, []);
+    getChallengeProgress()
+      .then((progress) => setChallengeProgress(progress))
+      .catch(() => setChallengeProgress(null))
+      .finally(() => setLoading(false));
+  }, []);
 
   const hoursLeft = hoursUntilMidnight();
+  const challenges: HomeActiveChallengeViewModel[] = challengeProgress
+    ? [progressToViewModel(challengeProgress)]
+    : [];
 
   return (
     <ScreenBackground
       variant="default"
       contentStyle={[styles.screen, { paddingTop: insets.top + spacing.md }]}
     >
-      
       <View style={styles.profileRow}>
         <View style={styles.avatar}>
           <Icon name="person" size={20} color={colors.textPrimary} />
@@ -68,26 +75,11 @@ export default function Home() {
       </View>
 
       <View style={styles.challengeArea}>
-        
-        {challengeProgress && (
-          <View style={styles.progressCard}>
-            <Text variant="caption" tone="secondary">
-              Current challenge
-            </Text>
-            <Text variant="subheader">
-              {challengeProgress.challenge?.name ?? 'Active progress'}
-            </Text>
-            <Text variant="body" tone="secondary">
-              Day {challengeProgress.currentDay ?? 0}/{challengeProgress.totalDays}
-              {challengeProgress.completedToday ? ' · Completed today' : ''}
-            </Text>
-          </View>
-        )}
-
-     
         {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.textPrimary} />
+          <View style={styles.cardList}>
+            <Bone style={styles.card} />
+            <Bone style={styles.card} />
+            <Bone style={styles.card} />
           </View>
         ) : challenges.length > 0 ? (
           <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
@@ -97,14 +89,6 @@ export default function Home() {
           </View>
         )}
       </View>
-
-      {loading && (
-        <View style={styles.cardList}>
-          <Bone style={styles.card} />
-          <Bone style={styles.card} />
-          <Bone style={styles.card} />
-        </View>
-      )}
     </ScreenBackground>
   );
 }
@@ -134,13 +118,6 @@ const styles = StyleSheet.create({
     marginTop: spacing['2xl'] + spacing.lg,
     gap: spacing.md,
   },
-  progressCard: {
-    marginHorizontal: spacing.lg,
-    gap: spacing.xs,
-    padding: spacing.lg,
-    borderRadius: radius.xl,
-    backgroundColor: colors.surfaceElevated,
-  },
   center: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -149,7 +126,6 @@ const styles = StyleSheet.create({
   cardList: {
     gap: spacing.md,
     paddingHorizontal: spacing.md,
-    marginTop: spacing['2xl'],
   },
   card: {
     width: '100%',
