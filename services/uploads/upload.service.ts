@@ -52,13 +52,12 @@ export async function uploadImageAsync(
 
   // Step 3: PUT the blob directly to the signed URL
   // Must use native fetch — api would inject Authorization + baseURL, both break pre-signed URLs.
-  const putHeaders = { 'Content-Type': fileType };
-  console.log('[uploadImageAsync] PUT headers:', putHeaders);
+  // No Content-Type header: R2 signed URLs encode the expected headers in the signature,
+  // sending extra headers invalidates it and causes a 401.
   console.log('[uploadImageAsync] PUT to signedUrl domain:', signedUrl.split('/').slice(0, 3).join('/'));
 
   const putRes = await fetch(signedUrl, {
     method: 'PUT',
-    headers: putHeaders,
     body: blob,
   });
 

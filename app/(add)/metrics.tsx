@@ -149,10 +149,10 @@ export default function Metrics() {
 
         <CreateFlowFixedBottomBar bottomInset={Math.max(insets.bottom, spacing.lg)}>
           <CreateChallengePrimaryActionButton
-            onPress={submitMetrics}
-            loading={isSubmitting}
-            label={t('metrics.logWorkout')}
-            disabled={!hasChallenges || isSubmitting}
+            onPress={goToCamera}
+            loading={false}
+            label="Next"
+            disabled={!hasChallenges}
           />
         </CreateFlowFixedBottomBar>
       </View>
