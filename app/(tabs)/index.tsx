@@ -38,8 +38,18 @@ function progressToViewModel(progress: ChallengeProgressContract): HomeActiveCha
     isTodayCompleted: progress.completedToday ?? false,
     isCompleted: currentDay >= totalDays,
     activityType: 'strength',
+    isRestDay: (progress as Record<string, unknown>).today_is_rest_day === true,
   };
 }
+
+// REMOVE_MOCK_START: delete once all three badge states are validated in production
+// Note: TimeBadge only renders when hoursLeft > 0 (i.e. before midnight).
+const MOCK_BADGE_CHALLENGES: HomeActiveChallengeViewModel[] = [
+  { challengeId: 'mock-time',  title: 'Iron Will',         currentDay: 14, totalDays: 75, isTodayCompleted: false, isCompleted: false, activityType: 'strength',     isRestDay: false },
+  { challengeId: 'mock-done',  title: 'Thirty Day Flex',   currentDay: 30, totalDays: 30, isTodayCompleted: true,  isCompleted: true,  activityType: 'flexibility',  isRestDay: false },
+  { challengeId: 'mock-rest',  title: 'Morning Cardio 21', currentDay: 8,  totalDays: 21, isTodayCompleted: false, isCompleted: false, activityType: 'cardioLow',    isRestDay: true  },
+];
+// REMOVE_MOCK_END
 
 export default function Home() {
   const { username } = useAuth();
@@ -82,7 +92,7 @@ export default function Home() {
             <Bone style={styles.card} />
           </View>
         ) : challenges.length > 0 ? (
-          <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
+          <ActiveChallengeSection challenges={[...MOCK_BADGE_CHALLENGES, ...challenges]} hoursLeft={hoursLeft} />
         ) : (
           <View style={styles.center}>
             <Text>No challenges available</Text>

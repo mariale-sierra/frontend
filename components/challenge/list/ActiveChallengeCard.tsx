@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ActivityIcon } from '../../icons/activityIcon';
 import { Row } from '../../layout/row';
 import { Stack } from '../../layout/stack';
@@ -38,10 +39,14 @@ export function ActiveChallengeCard({
   onPress,
   layout = 'compact',
 }: ActiveChallengeCardProps) {
-  const { status, activityType } = challenge;
+  const { status, activityType, isRestDay } = challenge;
   const gradientColors = GRADIENT_COLORS[status];
   const footerIcon = FOOTER_ICON[status];
-  const footerIconColor = status === 'active' ? colors.activityType[activityType] : footerIcon.color;
+  const footerIconColor = status !== 'active'
+    ? footerIcon.color
+    : isRestDay
+      ? colors.restDayNeon
+      : colors.activityType[activityType];
   const isLeft = status === 'left';
 
   return (
@@ -59,9 +64,24 @@ export function ActiveChallengeCard({
           end={{ x: 0.5, y: 1 }}
           style={styles.gradient}
         >
+          {isRestDay && (
+            <LinearGradient
+              colors={['rgba(155,145,255,0.13)', 'rgba(155,145,255,0.04)', 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0.75, y: 0.75 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+          )}
+
           <View style={styles.content}>
             <View style={isLeft ? styles.leftIcon : undefined}>
-              <ActivityIcon type={activityType} size="md" glow />
+              {isRestDay ? (
+                <View style={styles.restDayMoon}>
+                  <Ionicons name="moon" size={22} color={colors.primary} />
+                </View>
+              ) : (
+                <ActivityIcon type={activityType} size="md" glow />
+              )}
             </View>
 
             <View style={styles.bottom}>
@@ -147,5 +167,14 @@ const styles = StyleSheet.create({
   },
   leftTitle: {
     color: 'rgba(255,255,255,0.7)',
+  },
+  // Rest day: bare moon icon with neon glow, no container circle.
+  restDayMoon: {
+    marginTop: 3,
+    shadowColor: colors.restDayNeon,
+    shadowOpacity: 0.9,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 10,
+    elevation: 10,
   },
 });

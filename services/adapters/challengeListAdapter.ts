@@ -26,6 +26,25 @@ function asActivityType(value: string): ActivityType | null {
   return map[normalized] ?? null;
 }
 
+function pickIsRestDay(challenge: ChallengeContract): boolean {
+  // Direct flag — some API shapes return this at the top level
+  const direct = asBoolean(
+    challenge.today_is_rest_day ?? challenge.is_rest_day_today ?? challenge.is_rest_day,
+  );
+  if (direct != null) return direct;
+
+  // Derive from cycle_days: find the cycle day that matches the current day in the cycle
+  if (Array.isArray(challenge.cycle_days) && challenge.cycle_days.length > 0) {
+    const currentDay = pickCurrentDay(challenge);
+    const cycleLength = asNumber(challenge.cycle_length_days) ?? challenge.cycle_days.length;
+    const dayInCycle = ((currentDay - 1) % cycleLength) + 1;
+    const cycleDay = challenge.cycle_days.find((d) => asNumber(d.day_number) === dayInCycle);
+    if (cycleDay) return asBoolean(cycleDay.is_rest_day) ?? false;
+  }
+
+  return false;
+}
+
 function pickActivityType(challenge: ChallengeContract): ActivityType {
   const fromActivities = Array.isArray(challenge.activities)
     ? challenge.activities
@@ -212,6 +231,7 @@ function toActiveCard(challenge: ChallengeContract): ActiveChallengeViewModel {
     streakCount: pickStreakCount(challenge),
     activityType: pickActivityType(challenge),
     status: pickChallengeStatus(challenge),
+    isRestDay: pickIsRestDay(challenge),
   };
 }
 

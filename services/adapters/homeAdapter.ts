@@ -10,6 +10,7 @@ export interface HomeActiveChallengeViewModel {
   isTodayCompleted: boolean;
   isCompleted: boolean;
   activityType: ActivityType;
+  isRestDay: boolean;
 }
 
 
@@ -121,6 +122,14 @@ function isJoinedOrCompleted(challenge: ChallengeContract): boolean {
   return duration > 0 && currentDay > 0;
 }
 
+function pickIsRestDay(challenge: ChallengeContract): boolean {
+  const direct = asBoolean(
+    challenge.today_is_rest_day ?? challenge.is_rest_day_today ?? challenge.is_rest_day,
+  );
+  if (direct != null) return direct;
+  return false;
+}
+
 export function toHomeActiveChallengeViewModel(challenge: ChallengeContract): HomeActiveChallengeViewModel {
   const currentDay = pickCurrentDay(challenge);
   const totalDays = asNumber(challenge.duration_days) ?? 1;
@@ -133,6 +142,7 @@ export function toHomeActiveChallengeViewModel(challenge: ChallengeContract): Ho
     isTodayCompleted: pickIsTodayCompleted(challenge),
     isCompleted: pickIsCompleted(challenge, currentDay, totalDays),
     activityType: pickActivityType(challenge),
+    isRestDay: pickIsRestDay(challenge),
   };
 }
 

@@ -16,6 +16,7 @@ export interface ActiveChallengeViewModel {
   streakCount: number;
   activityType: ActivityType;
   status: 'active' | 'completed' | 'left';
+  isRestDay: boolean;
 }
 
 export interface ExploreChallengeViewModel {

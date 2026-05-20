@@ -14,3 +14,7 @@ export * from './locationIcon';
 // RestDayIconButton: Pressable icon button used to mark a workout day as a rest day.
 // Renders a moon icon and is styled to match the app's icon button conventions.
 export * from './restDayIconButton';
+
+// RestDayIcon: Non-pressable display icon for rest day state. Shares size keys (sm/md/lg)
+// with ActivityIcon so both can be swapped at the same size slot.
+export * from './restDayIcon';
