@@ -7,6 +7,7 @@ export default function AddLayout() {
       <Stack.Screen name="camera" />
       <Stack.Screen name="preview" />
       <Stack.Screen name="rest-day" />
+      <Stack.Screen name="plan-rest-days" />
     </Stack>
   );
 }

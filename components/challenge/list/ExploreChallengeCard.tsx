@@ -6,11 +6,61 @@ import { Stack } from '../../layout/stack';
 import { Text } from '../../ui/text';
 import { ChallengeBadge } from './ChallengeBadge';
 import { colors, radius, spacing } from '../../../constants/theme';
+import type { ActivityType } from '../../../constants/theme';
 import type { ExploreChallengeViewModel } from './challengeListSections';
 
 interface ExploreChallengeCardProps {
   challenge: ExploreChallengeViewModel;
   onPress?: () => void;
+}
+
+const ICON_PX = 48; // containerSize['lg']
+const SPREAD = 28;  // top-left corner offset between icons; gives ~8 px of circle overlap
+
+function ActivityIconStack({
+  primary,
+  secondary,
+  tertiary,
+}: {
+  primary: ActivityType;
+  secondary?: ActivityType;
+  tertiary?: ActivityType;
+}) {
+  // ">" formation — secondary top-left, tertiary bottom-left, primary center-right
+  if (secondary && tertiary) {
+    return (
+      <View style={{ width: SPREAD + ICON_PX, height: SPREAD * 2 + ICON_PX }}>
+        <View style={[styles.iconSlot, { top: 0, left: 0, zIndex: 1, opacity: 0.78 }]}>
+          <ActivityIcon type={secondary} size="lg" glow />
+        </View>
+        <View style={[styles.iconSlot, { top: SPREAD * 2, left: 0, zIndex: 1, opacity: 0.78 }]}>
+          <ActivityIcon type={tertiary} size="lg" glow />
+        </View>
+        {/* rendered last so it sits on top on both iOS and Android */}
+        <View style={[styles.iconSlot, { top: SPREAD, left: SPREAD, zIndex: 3 }]}>
+          <ActivityIcon type={primary} size="lg" glow />
+        </View>
+      </View>
+    );
+  }
+
+  // "/" formation — secondary bottom-left, primary top-right
+  if (secondary) {
+    const size = SPREAD + ICON_PX;
+    return (
+      <View style={{ width: size, height: size }}>
+        <View style={[styles.iconSlot, { top: SPREAD, left: 0, zIndex: 1, opacity: 0.78 }]}>
+          <ActivityIcon type={secondary} size="lg" glow />
+        </View>
+        <View style={[styles.iconSlot, { top: 0, left: SPREAD, zIndex: 3 }]}>
+          <ActivityIcon type={primary} size="lg" glow />
+        </View>
+      </View>
+    );
+  }
+
+  // Single icon
+  return <ActivityIcon type={primary} size="lg" glow />;
 }
 
 export function ExploreChallengeCard({ challenge, onPress }: ExploreChallengeCardProps) {
@@ -41,7 +91,11 @@ export function ExploreChallengeCard({ challenge, onPress }: ExploreChallengeCar
             </Stack>
 
             <View style={styles.iconWrapper}>
-              <ActivityIcon type={challenge.activityType} size="lg" glow />
+              <ActivityIconStack
+                primary={challenge.activityType}
+                secondary={challenge.secondaryActivityType}
+                tertiary={challenge.tertiaryActivityType}
+              />
             </View>
           </Row>
         </LinearGradient>
@@ -79,6 +133,9 @@ const styles = StyleSheet.create({
   iconWrapper: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  iconSlot: {
+    position: 'absolute',
   },
   pressed: {
     opacity: 0.86,

@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   exploreLabel: {
-    color: colors.textPrimary,
+    color: colors.primary,
     fontWeight: '600',
   },
   pressed: {

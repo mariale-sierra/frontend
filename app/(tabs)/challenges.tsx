@@ -12,6 +12,8 @@ import { getChallenges } from '../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../services/user/user.service';
 import { toChallengeListViewModel } from '../../services/adapters/index';
 import { toEnrolledChallengesViewModel } from '../../services/adapters/index';
+// REMOVE_MOCK_START: remove this import and the spread below once icon-stack is validated
+import { buildMockExploreChallenges } from '../../services/mocks/exploreMock';
 import { useTranslation } from 'react-i18next';
 
 export default function Challenges() {
@@ -27,17 +29,18 @@ export default function Challenges() {
 	useEffect(() => {
 		Promise.all([getMyChallenges(), getChallenges()])
 			.then(([enrolled, allChallenges]) => {
-				setChallengeView(
-					{
-						activeChallenges: toEnrolledChallengesViewModel(enrolled ?? []),
-						exploreChallenges: toChallengeListViewModel(allChallenges ?? [], {
+				const realExplore = toChallengeListViewModel(allChallenges ?? [], {
 						membersLabel: t('challenges.members'),
 						unknownCreatorLabel: t('challenges.unknownCreator'),
 						durationLabel: t('challenges.durationUnit'),
 						locationFallbackLabel: t('challenges.locationFallback'),
-					}).exploreChallenges,
-					},
-				);
+					}).exploreChallenges;
+
+					setChallengeView({
+						activeChallenges: toEnrolledChallengesViewModel(enrolled ?? []),
+						// REMOVE_MOCK: replace the spread with just `realExplore` once icon-stack is validated
+						exploreChallenges: [...buildMockExploreChallenges(), ...realExplore],
+					});
 			})
 			.catch(() => setError(t('challenges.loadError')))
 			.finally(() => setLoading(false));

@@ -16,17 +16,17 @@ export function ChallengeBadge({ label }: ChallengeBadgeProps) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: colors.surfaceElevated,
     borderRadius: radius['2xl'],
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: 3,
   },
   label: {
-    color: colors.textSecondary,
+    color: colors.textPrimary,
     fontSize: 11,
     lineHeight: 14,
-    fontWeight: '700',
-    letterSpacing: 0.4,
+    fontWeight: '500',
+    letterSpacing: 0.2,
   },
 });
 

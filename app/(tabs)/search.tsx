@@ -9,6 +9,7 @@ import { ExploreChallengeCard } from '../../components/challenge/list/ExploreCha
 import { getChallenges } from '../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../services/user/user.service';
 import { toExploreChallengeViewModels } from '../../services/adapters/challengeListAdapter';
+import { buildMockExploreChallenges } from '../../services/mocks/exploreMock';
 import type { ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import { colors, spacing } from '../../constants/theme';
 
@@ -25,7 +26,7 @@ export default function Search() {
       .then(([allChallenges, myChallenges]) => {
         const joinedIds = new Set(myChallenges.map((c) => String(c.id)));
         const unjoined = allChallenges.filter((c) => !joinedIds.has(String(c.id)));
-        setAvailable(toExploreChallengeViewModels(unjoined));
+        setAvailable([...buildMockExploreChallenges(), ...toExploreChallengeViewModels(unjoined)]);
       })
       .catch(() => setError('Could not load challenges.'))
       .finally(() => setLoading(false));
@@ -38,7 +39,7 @@ export default function Search() {
   }, [available, query]);
 
   return (
-    <ScreenBackground variant="default" applyTopInset={false}>
+    <ScreenBackground variant="challenges" applyTopInset={false}>
       <FlatList
         data={loading ? [] : filtered}
         keyExtractor={(item) => item.challengeId}

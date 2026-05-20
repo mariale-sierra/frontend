@@ -18,6 +18,8 @@ export const colors = {
     mindBody: '#F578EC',
     functional: '#E4FE18',
   },
+  restDay: '#7EB5D1',
+  restDayNeon: '#9B91FF',
   success: '#4ADE80',
   error: '#EF4444',
   warning: '#FACC15',

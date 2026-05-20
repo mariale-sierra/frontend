@@ -1,7 +1,6 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { RestDayIconButton } from '../icons/restDayIconButton';
-import { Text } from '../ui/text';
-import { colors, radius, spacing } from '../../constants/theme';
+import { spacing } from '../../constants/theme';
 import { MetricsChallengeSelector } from './metricsChallengeSelector';
 import type { ChallengeOption } from '../../types/metrics';
 import { useTranslation } from 'react-i18next';
@@ -53,16 +52,15 @@ export function MetricsTopBar({
       <View style={styles.headerActions}>
         <RestDayIconButton onPress={onRestDay} />
 
-        <Pressable
+        <IconButton
+          name="camera"
           onPress={onSkip}
-          style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
+          size={44}
+          iconSize={20}
+          variant="ghost"
           accessibilityRole="button"
           accessibilityLabel={t('metrics.accessibilitySkip')}
-        >
-          <Text variant="caption" style={styles.actionButtonLabel}>
-            {t('metrics.skip')}
-          </Text>
-        </Pressable>
+        />
       </View>
     </View>
   );
@@ -79,23 +77,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  actionButton: {
-    minHeight: 38,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  actionButtonLabel: {
-    color: colors.textPrimary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  pressed: {
-    opacity: 0.88,
+    marginLeft: spacing.lg,
   },
 });

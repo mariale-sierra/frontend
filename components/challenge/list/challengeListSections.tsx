@@ -23,6 +23,8 @@ export interface ExploreChallengeViewModel {
   title: string;
   subtitle: string;
   activityType: ActivityType;
+  secondaryActivityType?: ActivityType;
+  tertiaryActivityType?: ActivityType;
   durationLabel: string;
   locationLabel: string;
 }
