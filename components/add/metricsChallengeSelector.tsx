@@ -19,7 +19,6 @@ export function MetricsChallengeSelector({
   onToggle,
   onSelect,
 }: MetricsChallengeSelectorProps) {
-  console.log('[MetricsChallengeSelector] props.challenges', challenges, '| length:', challenges?.length);
   const safeChallenges = Array.isArray(challenges) ? challenges : [];
 
   const selectedChallenge =
@@ -95,7 +94,7 @@ const styles = StyleSheet.create({
   },
   challengeLabel: {
     maxWidth: 180,
-    color: colors.textSecondary,
+    color: colors.primary,
     textTransform: 'uppercase',
     letterSpacing: 1.4,
     fontWeight: '400',

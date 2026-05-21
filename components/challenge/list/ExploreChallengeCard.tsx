@@ -5,7 +5,7 @@ import { Row } from '../../layout/row';
 import { Stack } from '../../layout/stack';
 import { Text } from '../../ui/text';
 import { ChallengeBadge } from './ChallengeBadge';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { radius, spacing } from '../../../constants/theme';
 import type { ActivityType } from '../../../constants/theme';
 import type { ExploreChallengeViewModel } from './challengeListSections';
 
@@ -68,7 +68,7 @@ export function ExploreChallengeCard({ challenge, onPress }: ExploreChallengeCar
     <Pressable onPress={onPress} style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}>
       <View style={styles.card}>
         <LinearGradient
-          colors={['#0c0c0e', colors.surface]}
+          colors={['#000000', '#0a0a0a']}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={styles.gradient}

@@ -32,7 +32,7 @@ export function CompletedChallengeCard({
       <View style={[styles.card, { borderColor: `${categoryColor}14` }]}>
         {/* Category halo: diagonal gradient bleeding in from top-left */}
         <LinearGradient
-          colors={[`${categoryColor}3D`, 'transparent']}
+          colors={[`${categoryColor}14`, 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 0.65, y: 0.65 }}
           style={StyleSheet.absoluteFillObject}

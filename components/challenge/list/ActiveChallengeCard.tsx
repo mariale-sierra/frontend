@@ -20,9 +20,9 @@ interface ActiveChallengeCardProps {
 type ChallengeStatus = ActiveChallengeViewModel['status'];
 
 const GRADIENT_COLORS: Record<ChallengeStatus, readonly [string, string]> = {
-  active: [colors.surface, '#0c0c0e'],
-  completed: [colors.surface, 'rgba(74, 222, 128, 0.14)'],
-  left: [colors.surface, '#0c0c0e'],
+  active: ['#0a0a0a', '#000000'],
+  completed: ['#0a0a0a', 'rgba(74, 222, 128, 0.05)'],
+  left: ['#0a0a0a', '#000000'],
 };
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
@@ -66,7 +66,7 @@ export function ActiveChallengeCard({
         >
           {isRestDay && (
             <LinearGradient
-              colors={['rgba(155,145,255,0.13)', 'rgba(155,145,255,0.04)', 'transparent']}
+              colors={['rgba(155,145,255,0.06)', 'rgba(155,145,255,0.02)', 'transparent']}
               start={{ x: 0, y: 0 }}
               end={{ x: 0.75, y: 0.75 }}
               style={StyleSheet.absoluteFillObject}
