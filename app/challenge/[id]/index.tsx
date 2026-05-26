@@ -11,6 +11,7 @@ import { Text } from '../../../components/ui/text';
 import { colors, spacing } from '../../../constants/theme';
 import { getChallenge, joinChallenge } from '../../../services/challenge/challenge.service';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
+import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
 import type { ChallengeContract } from '../../../types/challenge';
 import { useTranslation } from 'react-i18next';
 
@@ -22,36 +23,34 @@ export default function ChallengeDetail() {
   const [challenge, setChallenge] = useState<ChallengeContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
 
-  const handleJoinChallenge = useCallback(async () => {
-    if (isJoining) return;
-
-    const challengeId = typeof id === 'string' ? id : '';
-    if (!challengeId) {
-      Alert.alert(
-        t('common.errors.genericTitle'),
-        t('challenges.joinInvalidId', { defaultValue: 'Challenge id is invalid.' }),
-      );
-      return;
-    }
-
-    setIsJoining(true);
-    try {
-      await joinChallenge(challengeId);
-      Alert.alert(
-        t('challenges.joinSuccessTitle', { defaultValue: 'Joined challenge' }),
-        t('challenges.joinSuccessMessage', { defaultValue: 'You are now part of this challenge.' }),
-      );
-    } catch {
-      Alert.alert(
-        t('common.errors.genericTitle'),
-        t('challenges.joinError', { defaultValue: 'Could not join challenge right now.' }),
-      );
-    } finally {
-      setIsJoining(false);
-    }
-  }, [id, isJoining, t]);
+  // Join confirmation popup
+  const joinPopup = useConfirmationPopup({
+    type: 'join',
+    challengeName: challenge?.name ?? 'Challenge',
+    onConfirm: async () => {
+      const challengeId = typeof id === 'string' ? id : '';
+      if (!challengeId) {
+        Alert.alert(
+          t('common.errors.genericTitle'),
+          t('challenges.joinInvalidId', { defaultValue: 'Challenge id is invalid.' }),
+        );
+        return;
+      }
+      try {
+        await joinChallenge(challengeId);
+        Alert.alert(
+          t('challenges.joinSuccessTitle', { defaultValue: 'Joined challenge' }),
+          t('challenges.joinSuccessMessage', { defaultValue: 'You are now part of this challenge.' }),
+        );
+      } catch {
+        Alert.alert(
+          t('common.errors.genericTitle'),
+          t('challenges.joinError', { defaultValue: 'Could not join challenge right now.' }),
+        );
+      }
+    },
+  });
 
   useEffect(() => {
     if (!id) return;
@@ -172,11 +171,14 @@ export default function ChallengeDetail() {
         <CreateChallengePrimaryActionButton
           label={t('challenges.joinButton', { defaultValue: 'Join Challenge' })}
           accessibilityLabel={t('challenges.joinButtonA11y', { defaultValue: 'Join challenge' })}
-          onPress={handleJoinChallenge}
-          loading={isJoining}
-          disabled={isJoining || !id || error}
+          onPress={joinPopup.show}
+          loading={false}
+          disabled={false || !id || error}
         />
       </CreateFlowFixedBottomBar>
+
+      {/* Confirmation Popup for Join/Leave */}
+      <joinPopup.Component />
     </View>
   );
 }

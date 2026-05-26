@@ -19,6 +19,7 @@ import { Text } from '../../components/ui/text';
 import { IconButton } from '../../components/ui/iconButton';
 import { ActiveChallengeCard } from '../../components/challenge/list/ActiveChallengeCard';
 import { CompletedChallengeCard } from '../../components/challenge/list/CompletedChallengeCard';
+import { useChallengeCompletion } from '../../hooks/useConfirmationPopup';
 import type { ActiveChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import { getMyChallenges } from '../../services/user/user.service';
 import { toEnrolledChallengesViewModel } from '../../services/adapters';
@@ -66,6 +67,18 @@ export default function ActiveAll() {
     left: [],
   });
 
+  // Challenge completion notification
+  const completion = useChallengeCompletion({
+    onDismiss: () => {
+      // Refresh challenges after user sees completion notification
+      getMyChallenges()
+        .then((res) => setGrouped(groupByStatus(toEnrolledChallengesViewModel(res ?? []))))
+        .catch(() => setError(t('challenges.loadError')));
+    },
+  });
+
+  const shownCompletions = useRef(new Set<string>());
+
   // One animated value per tab: 0 = inactive, 1 = active
   const anim0 = useRef(new Animated.Value(1)).current;
   const anim1 = useRef(new Animated.Value(0)).current;
@@ -79,10 +92,26 @@ export default function ActiveAll() {
 
   useEffect(() => {
     getMyChallenges()
-      .then((res) => setGrouped(groupByStatus(toEnrolledChallengesViewModel(res ?? []))))
+      .then((res) => {
+        const challenges = toEnrolledChallengesViewModel(res ?? []);
+        setGrouped(groupByStatus(challenges));
+
+        // Check for newly completed challenges and show notification
+        challenges.forEach((c) => {
+          if (c.status === 'completed' && !shownCompletions.current.has(c.challengeId)) {
+            completion.show({
+              challengeId: c.challengeId,
+              challengeName: c.title,
+              duration: c.duration || '30 days',
+              completedAt: new Date(),
+            });
+            shownCompletions.current.add(c.challengeId);
+          }
+        });
+      })
       .catch(() => setError(t('challenges.loadError')))
       .finally(() => setLoading(false));
-  }, [t]);
+  }, [t, completion]);
 
   function switchTab(idx: number) {
     Animated.parallel(
@@ -203,6 +232,9 @@ export default function ActiveAll() {
           })}
         </View>
       </View>
+
+      {/* Challenge Completion Notification */}
+      <completion.Component />
     </ScreenBackground>
   );
 }
