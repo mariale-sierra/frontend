@@ -63,6 +63,16 @@ const es = {
     left: 'Abandonado',
     conquered: 'CONQUISTADO',
   },
+  challengeProgress: {
+    gallery: {
+      publicLabel: 'Fotos publicas del reto',
+      dayLabel: 'Fotos publicas del dia {{day}}',
+      feedTitle: 'Feed de progreso',
+      postedBy: '{{name}} · Dia {{day}}',
+      emptyTitle: 'No hay foto seleccionada',
+      emptyMessage: 'Aun no hay fotos publicas para este dia.',
+    },
+  },
   metrics: {
     routineLabel: 'RUTINA',
     selectRoutine: 'Selecciona una rutina',

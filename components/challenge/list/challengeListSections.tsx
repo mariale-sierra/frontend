@@ -44,6 +44,8 @@ export interface ChallengeListSectionsProps extends ChallengesScreenViewModel {
   streakLabelBuilder: (count: number) => string;
   onCreateChallenge?: () => void;
   onPressChallenge?: (id: string) => void;
+  onPressActiveChallenge?: (id: string) => void;
+  onPressExploreChallenge?: (id: string) => void;
   onPressActiveHeader?: () => void;
   onPressExploreHeader?: () => void;
 }
@@ -80,6 +82,8 @@ export function ChallengeListSections({
   exploreChallenges,
   onCreateChallenge,
   onPressChallenge,
+  onPressActiveChallenge,
+  onPressExploreChallenge,
   onPressActiveHeader,
   onPressExploreHeader,
 }: ChallengeListSectionsProps) {
@@ -116,7 +120,7 @@ export function ChallengeListSections({
                 key={challenge.challengeId}
                 challenge={challenge}
                 statusLabel={streakLabelBuilder(challenge.streakCount)}
-                onPress={() => onPressChallenge?.(challenge.challengeId)}
+                onPress={() => (onPressActiveChallenge ?? onPressChallenge)?.(challenge.challengeId)}
               />
             ))}
             <JoinOrCreateCard label={joinOrCreateLabel} onPress={onCreateChallenge} />
@@ -140,7 +144,7 @@ export function ChallengeListSections({
             <ExploreChallengeCard
               key={challenge.challengeId}
               challenge={challenge}
-              onPress={() => onPressChallenge?.(challenge.challengeId)}
+              onPress={() => (onPressExploreChallenge ?? onPressChallenge)?.(challenge.challengeId)}
             />
           ))}
         </Stack>

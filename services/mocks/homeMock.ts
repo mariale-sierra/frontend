@@ -11,6 +11,7 @@ export function buildMockHomeChallenges(): HomeActiveChallengeViewModel[] {
       isTodayCompleted: false,
       isCompleted: false,
       activityType: 'strength',
+      isRestDay: false,
     },
     {
       challengeId: '2',
@@ -20,6 +21,7 @@ export function buildMockHomeChallenges(): HomeActiveChallengeViewModel[] {
       isTodayCompleted: true,
       isCompleted: false,
       activityType: 'flexibility',
+      isRestDay: false,
     },
     {
       challengeId: '3',
@@ -29,6 +31,7 @@ export function buildMockHomeChallenges(): HomeActiveChallengeViewModel[] {
       isTodayCompleted: true,
       isCompleted: true,
       activityType: 'cardioLow',
+      isRestDay: false,
     },
   ];
 }

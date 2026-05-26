@@ -1,6 +1,6 @@
 import { asString, asNumber, asBoolean, normalizeKey } from './adapterUtils';
 import type { ActivityType } from '../../constants/theme';
-import type { ChallengeContract } from '../../types/challenge';
+import type { ChallengeContract, ChallengeProgressContract } from '../../types/challenge';
 
 export interface HomeActiveChallengeViewModel {
   challengeId: string;
@@ -143,6 +143,24 @@ export function toHomeActiveChallengeViewModel(challenge: ChallengeContract): Ho
     isCompleted: pickIsCompleted(challenge, currentDay, totalDays),
     activityType: pickActivityType(challenge),
     isRestDay: pickIsRestDay(challenge),
+  };
+}
+
+export function progressToHomeActiveChallengeViewModel(
+  progress: ChallengeProgressContract,
+): HomeActiveChallengeViewModel {
+  const currentDay = progress.currentDay ?? 1;
+  const totalDays = progress.totalDays;
+
+  return {
+    challengeId: String(progress.challenge.id),
+    title: progress.challenge.name,
+    currentDay,
+    totalDays,
+    isTodayCompleted: progress.completedToday ?? false,
+    isCompleted: currentDay >= totalDays,
+    activityType: 'strength',
+    isRestDay: (progress as Record<string, unknown>).today_is_rest_day === true,
   };
 }
 

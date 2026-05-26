@@ -37,6 +37,7 @@ function RootNavigator() {
       <Stack.Screen name="challenge" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/create" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="challenge/[id]/progress" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/[id]/info" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/[id]/routine/[day]" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/routine" options={{ headerShown: false }} />

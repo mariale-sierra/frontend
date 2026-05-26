@@ -63,6 +63,16 @@ const en = {
     left: 'Left',
     conquered: 'CONQUERED',
   },
+  challengeProgress: {
+    gallery: {
+      publicLabel: 'Public challenge photos',
+      dayLabel: 'Day {{day}} public photos',
+      feedTitle: 'Progress Feed',
+      postedBy: '{{name}} · Day {{day}}',
+      emptyTitle: 'No photo selected',
+      emptyMessage: 'No public photos for this day yet.',
+    },
+  },
   metrics: {
     routineLabel: 'ROUTINE',
     selectRoutine: 'Select a routine',

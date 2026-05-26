@@ -1,18 +1,16 @@
-import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ShimmerPlaceholder from 'react-native-shimmer-placeholder';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../hooks/useAuth';
+import { useChallengeProgress } from '../../hooks/useChallengeProgress';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
 import { ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
-import { getChallengeProgress } from '../../services/challenge/challenge.service';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
 import { colors, radius, spacing } from '../../constants/theme';
 import { hoursUntilMidnight } from '../../utils/time';
-import type { ChallengeProgressContract } from '../../types/challenge';
 
 const SHIMMER_BASE = colors.surface;
 const SHIMMER_HIGHLIGHT = colors.surfaceHighlight;
@@ -27,21 +25,6 @@ function Bone({ style }: { style: object }) {
   );
 }
 
-function progressToViewModel(progress: ChallengeProgressContract): HomeActiveChallengeViewModel {
-  const currentDay = progress.currentDay ?? 1;
-  const totalDays = progress.totalDays;
-  return {
-    challengeId: String(progress.challenge.id),
-    title: progress.challenge.name,
-    currentDay,
-    totalDays,
-    isTodayCompleted: progress.completedToday ?? false,
-    isCompleted: currentDay >= totalDays,
-    activityType: 'strength',
-    isRestDay: (progress as Record<string, unknown>).today_is_rest_day === true,
-  };
-}
-
 // REMOVE_MOCK_START: delete once all three badge states are validated in production
 // Note: TimeBadge only renders when hoursLeft > 0 (i.e. before midnight).
 const MOCK_BADGE_CHALLENGES: HomeActiveChallengeViewModel[] = [
@@ -54,20 +37,11 @@ const MOCK_BADGE_CHALLENGES: HomeActiveChallengeViewModel[] = [
 export default function Home() {
   const { username } = useAuth();
   const insets = useSafeAreaInsets();
-
-  const [challengeProgress, setChallengeProgress] = useState<ChallengeProgressContract | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getChallengeProgress()
-      .then((progress) => setChallengeProgress(progress))
-      .catch(() => setChallengeProgress(null))
-      .finally(() => setLoading(false));
-  }, []);
+  const { challenge: activeChallenge, loading } = useChallengeProgress();
 
   const hoursLeft = hoursUntilMidnight();
-  const challenges: HomeActiveChallengeViewModel[] = challengeProgress
-    ? [progressToViewModel(challengeProgress)]
+  const challenges: HomeActiveChallengeViewModel[] = activeChallenge
+    ? [activeChallenge]
     : [];
 
   return (

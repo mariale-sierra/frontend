@@ -1,0 +1,361 @@
+export interface PublicChallengePhotoMetric {
+  label: string;
+  value: string;
+}
+
+export interface PublicChallengePhoto {
+  id: string;
+  challengeId: string;
+  userName: string;
+  imageUrl: string | null;
+  day: number;
+  visibility: 'public';
+  metrics: PublicChallengePhotoMetric[];
+  description: string;
+}
+
+const SHARED_CHALLENGE_ID = 'mock-active-challenge-1';
+
+export const mockPublicChallengePhotos: PublicChallengePhoto[] = [
+  {
+    id: 'photo-1',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Cami',
+    imageUrl: null,
+    day: 8,
+    visibility: 'public',
+    metrics: [
+      { label: 'Push ups', value: '45 reps' },
+      { label: 'Squats', value: '60 reps' },
+      { label: 'Duration', value: '38 min' },
+    ],
+    description: 'Day 8 workout completed.',
+  },
+  {
+    id: 'photo-2',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'To',
+    imageUrl: null,
+    day: 8,
+    visibility: 'public',
+    metrics: [
+      { label: 'Pull ups', value: '24 reps' },
+      { label: 'Rows', value: '4 sets' },
+      { label: 'Notes', value: 'Strict tempo' },
+    ],
+    description: 'Back session checked in with the group.',
+  },
+  {
+    id: 'photo-3',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Alex',
+    imageUrl: null,
+    day: 7,
+    visibility: 'public',
+    metrics: [
+      { label: 'Run', value: '5 km' },
+      { label: 'Duration', value: '28 min' },
+      { label: 'Pace', value: '5:36/km' },
+    ],
+    description: 'Outdoor cardio before work.',
+  },
+  {
+    id: 'photo-4',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Sam',
+    imageUrl: null,
+    day: 6,
+    visibility: 'public',
+    metrics: [
+      { label: 'Bench press', value: '5 sets' },
+      { label: 'Weight', value: '135 lb' },
+      { label: 'Reps', value: '40 total' },
+    ],
+    description: 'Upper body day done.',
+  },
+  {
+    id: 'photo-5',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Cami',
+    imageUrl: null,
+    day: 5,
+    visibility: 'public',
+    metrics: [
+      { label: 'Lunges', value: '80 reps' },
+      { label: 'Core', value: '12 min' },
+      { label: 'Duration', value: '42 min' },
+    ],
+    description: 'Lower body volume and core finisher.',
+  },
+  {
+    id: 'photo-6',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'To',
+    imageUrl: null,
+    day: 4,
+    visibility: 'public',
+    metrics: [
+      { label: 'Bike', value: '35 min' },
+      { label: 'Zone', value: '2' },
+      { label: 'Notes', value: 'Steady ride' },
+    ],
+    description: 'Recovery cardio completed.',
+  },
+  {
+    id: 'photo-7',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Alex',
+    imageUrl: null,
+    day: 3,
+    visibility: 'public',
+    metrics: [
+      { label: 'Deadlift', value: '4 sets' },
+      { label: 'Weight', value: '185 lb' },
+      { label: 'Duration', value: '46 min' },
+    ],
+    description: 'Strength day logged.',
+  },
+  {
+    id: 'photo-8',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Sam',
+    imageUrl: null,
+    day: 2,
+    visibility: 'public',
+    metrics: [
+      { label: 'Yoga', value: '30 min' },
+      { label: 'Mobility', value: '15 min' },
+      { label: 'Notes', value: 'Hips and back' },
+    ],
+    description: 'Mobility work for day 2.',
+  },
+  {
+    id: 'photo-9',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Cami',
+    imageUrl: null,
+    day: 1,
+    visibility: 'public',
+    metrics: [
+      { label: 'Walk', value: '45 min' },
+      { label: 'Push ups', value: '35 reps' },
+      { label: 'Water', value: '3 L' },
+    ],
+    description: 'Challenge kickoff.',
+  },
+  {
+    id: 'photo-10',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'To',
+    imageUrl: null,
+    day: 8,
+    visibility: 'public',
+    metrics: [
+      { label: 'Plank', value: '4 min' },
+      { label: 'Sit ups', value: '80 reps' },
+      { label: 'Notes', value: 'Core finisher' },
+    ],
+    description: 'Extra core work after the main session.',
+  },
+  {
+    id: 'photo-11',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Alex',
+    imageUrl: null,
+    day: 7,
+    visibility: 'public',
+    metrics: [
+      { label: 'Incline walk', value: '40 min' },
+      { label: 'Heart rate', value: '132 bpm' },
+      { label: 'Notes', value: 'Zone 2' },
+    ],
+    description: 'Low-intensity cardio logged publicly.',
+  },
+  {
+    id: 'photo-12',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Sam',
+    imageUrl: null,
+    day: 6,
+    visibility: 'public',
+    metrics: [
+      { label: 'Shoulder press', value: '4 sets' },
+      { label: 'Weight', value: '65 lb' },
+      { label: 'Duration', value: '34 min' },
+    ],
+    description: 'Shoulders and accessory work completed.',
+  },
+  {
+    id: 'photo-13',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Cami',
+    imageUrl: null,
+    day: 5,
+    visibility: 'public',
+    metrics: [
+      { label: 'Stair climber', value: '25 min' },
+      { label: 'Squats', value: '50 reps' },
+      { label: 'Notes', value: 'Leg burn' },
+    ],
+    description: 'A sweaty day five check-in.',
+  },
+  {
+    id: 'photo-14',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'To',
+    imageUrl: null,
+    day: 4,
+    visibility: 'public',
+    metrics: [
+      { label: 'Rows', value: '5 sets' },
+      { label: 'Weight', value: '90 lb' },
+      { label: 'Duration', value: '41 min' },
+    ],
+    description: 'Pull day metrics shared with the challenge.',
+  },
+  {
+    id: 'photo-15',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Alex',
+    imageUrl: null,
+    day: 3,
+    visibility: 'public',
+    metrics: [
+      { label: 'Burpees', value: '75 reps' },
+      { label: 'Rounds', value: '5' },
+      { label: 'Duration', value: '29 min' },
+    ],
+    description: 'Conditioning round finished.',
+  },
+  {
+    id: 'photo-16',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Sam',
+    imageUrl: null,
+    day: 2,
+    visibility: 'public',
+    metrics: [
+      { label: 'Mobility', value: '35 min' },
+      { label: 'Breathing', value: '8 min' },
+      { label: 'Notes', value: 'Recovery focus' },
+    ],
+    description: 'Mobility session logged for the group.',
+  },
+  {
+    id: 'photo-17',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Cami',
+    imageUrl: null,
+    day: 1,
+    visibility: 'public',
+    metrics: [
+      { label: 'Run', value: '3 km' },
+      { label: 'Push ups', value: '40 reps' },
+      { label: 'Duration', value: '36 min' },
+    ],
+    description: 'First public progress photo.',
+  },
+  {
+    id: 'photo-18',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'To',
+    imageUrl: null,
+    day: 8,
+    visibility: 'public',
+    metrics: [
+      { label: 'Farmer carry', value: '6 rounds' },
+      { label: 'Weight', value: '50 lb' },
+      { label: 'Notes', value: 'Grip work' },
+    ],
+    description: 'Final carry set from day eight.',
+  },
+  {
+    id: 'photo-19',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Alex',
+    imageUrl: null,
+    day: 7,
+    visibility: 'public',
+    metrics: [
+      { label: 'Kettlebell swings', value: '100 reps' },
+      { label: 'Weight', value: '35 lb' },
+      { label: 'Duration', value: '22 min' },
+    ],
+    description: 'Quick functional finisher.',
+  },
+  {
+    id: 'photo-20',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Sam',
+    imageUrl: null,
+    day: 6,
+    visibility: 'public',
+    metrics: [
+      { label: 'Cycle', value: '12 miles' },
+      { label: 'Duration', value: '44 min' },
+      { label: 'Notes', value: 'Steady cadence' },
+    ],
+    description: 'Bike workout shared to the challenge feed.',
+  },
+  {
+    id: 'photo-21',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Cami',
+    imageUrl: null,
+    day: 5,
+    visibility: 'public',
+    metrics: [
+      { label: 'Glute bridges', value: '90 reps' },
+      { label: 'Core', value: '10 min' },
+      { label: 'Duration', value: '31 min' },
+    ],
+    description: 'Late-night workout still counted.',
+  },
+  {
+    id: 'photo-22',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'To',
+    imageUrl: null,
+    day: 4,
+    visibility: 'public',
+    metrics: [
+      { label: 'Jump rope', value: '15 min' },
+      { label: 'Rounds', value: '10' },
+      { label: 'Notes', value: 'Fast intervals' },
+    ],
+    description: 'Conditioning check-in for day four.',
+  },
+  {
+    id: 'photo-23',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Alex',
+    imageUrl: null,
+    day: 3,
+    visibility: 'public',
+    metrics: [
+      { label: 'Pull ups', value: '30 reps' },
+      { label: 'Dips', value: '45 reps' },
+      { label: 'Duration', value: '33 min' },
+    ],
+    description: 'Bodyweight work completed.',
+  },
+  {
+    id: 'photo-24',
+    challengeId: SHARED_CHALLENGE_ID,
+    userName: 'Sam',
+    imageUrl: null,
+    day: 2,
+    visibility: 'public',
+    metrics: [
+      { label: 'Walk', value: '50 min' },
+      { label: 'Steps', value: '6200' },
+      { label: 'Notes', value: 'Evening route' },
+    ],
+    description: 'A public low-cardio check-in.',
+  },
+];
+
+export function getMockPublicPhotosForChallenge(challengeId: string) {
+  const matching = mockPublicChallengePhotos.filter((photo) => photo.challengeId === challengeId);
+  return matching.length > 0 ? matching : mockPublicChallengePhotos;
+}

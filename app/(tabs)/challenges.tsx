@@ -50,6 +50,7 @@ export default function Challenges() {
 
 	const handleCreateChallenge = () => router.push('/challenge/create');
 	const handleOpenChallenge = (id: string) => router.push(`/challenge/${id}`);
+	const handleOpenActiveChallenge = (id: string) => router.push(`/challenge/${id}/progress`);
 	const handleSeeAllActive = () => router.push('/challenge/active-all');
 	const handleSeeAllExplore = () => router.push('/challenge/explore-all');
 
@@ -82,6 +83,8 @@ export default function Challenges() {
 						exploreChallenges={challengeView.exploreChallenges}
 						onCreateChallenge={handleCreateChallenge}
 						onPressChallenge={handleOpenChallenge}
+						onPressActiveChallenge={handleOpenActiveChallenge}
+						onPressExploreChallenge={handleOpenChallenge}
 						onPressActiveHeader={handleSeeAllActive}
 						onPressExploreHeader={handleSeeAllExplore}
 					/>

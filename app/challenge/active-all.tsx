@@ -94,6 +94,8 @@ export default function ActiveAll() {
   }
 
   const streakLabelBuilder = (count: number) => t('challenges.streakLabel', { count });
+  const openChallengeProgress = (challengeId: string) => router.push(`/challenge/${challengeId}/progress`);
+  const openChallengeDetail = (challengeId: string) => router.push(`/challenge/${challengeId}`);
 
   const tabTitles: Record<ChallengeStatus, string> = {
     active:    t('challenges.inProgress'),
@@ -141,7 +143,7 @@ export default function ActiveAll() {
                 challenge={c}
                 statusLabel={streakLabelBuilder(c.streakCount)}
                 layout="full"
-                onPress={() => router.push(`/challenge/${c.challengeId}`)}
+                onPress={() => openChallengeProgress(c.challengeId)}
               />
             ))}
             {activeTab === 'completed' && grouped.completed.map((c) => (
@@ -150,7 +152,7 @@ export default function ActiveAll() {
                 challenge={c}
                 conqueredLabel={t('challenges.conquered')}
                 completedLabel={t('challenges.completed')}
-                onPress={() => router.push(`/challenge/${c.challengeId}`)}
+                onPress={() => openChallengeDetail(c.challengeId)}
               />
             ))}
             {activeTab === 'left' && grouped.left.map((c) => (
@@ -159,7 +161,7 @@ export default function ActiveAll() {
                 challenge={c}
                 statusLabel={t('challenges.left')}
                 layout="full"
-                onPress={() => router.push(`/challenge/${c.challengeId}`)}
+                onPress={() => openChallengeDetail(c.challengeId)}
               />
             ))}
           </Stack>
