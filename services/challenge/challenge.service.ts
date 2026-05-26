@@ -55,6 +55,11 @@ export async function joinChallenge(id: string) {
   return response.data;
 }
 
+export async function leaveChallenge(id: string) {
+  const response = await api.post(`/challenges/${id}/leave`);
+  return response.data;
+}
+
 export async function getUserEnrolledChallenges(): Promise<ChallengeContract[]> {
   const response = await api.get<ChallengeContract[] | { data?: ChallengeContract[] }>(
     '/users/me/challenges',

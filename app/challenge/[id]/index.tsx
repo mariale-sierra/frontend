@@ -9,7 +9,7 @@ import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '..
 import { Icon } from '../../../components/ui/icon';
 import { Text } from '../../../components/ui/text';
 import { colors, spacing } from '../../../constants/theme';
-import { getChallenge, joinChallenge } from '../../../services/challenge/challenge.service';
+import { getChallenge, joinChallenge, leaveChallenge } from '../../../services/challenge/challenge.service';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
 import type { ChallengeContract } from '../../../types/challenge';
@@ -47,6 +47,35 @@ export default function ChallengeDetail() {
         Alert.alert(
           t('common.errors.genericTitle'),
           t('challenges.joinError', { defaultValue: 'Could not join challenge right now.' }),
+        );
+      }
+    },
+  });
+
+  // Leave confirmation popup
+  const leavePopup = useConfirmationPopup({
+    type: 'leave',
+    challengeName: challenge?.name ?? 'Challenge',
+    onConfirm: async () => {
+      const challengeId = typeof id === 'string' ? id : '';
+      if (!challengeId) {
+        Alert.alert(
+          t('common.errors.genericTitle'),
+          t('challenges.leaveInvalidId', { defaultValue: 'Challenge id is invalid.' }),
+        );
+        return;
+      }
+      try {
+        await leaveChallenge(challengeId);
+        Alert.alert(
+          t('challenges.leaveSuccessTitle', { defaultValue: 'Left Challenge' }),
+          t('challenges.leaveSuccessMessage', { defaultValue: 'You have left this challenge. Your progress was saved.' }),
+        );
+        router.back();
+      } catch {
+        Alert.alert(
+          t('common.errors.genericTitle'),
+          t('challenges.leaveError', { defaultValue: 'Could not leave challenge right now.' }),
         );
       }
     },
@@ -138,12 +167,13 @@ export default function ChallengeDetail() {
               </Pressable>
 
               <Pressable
+                onPress={leavePopup.show}
                 style={({ pressed }) => [styles.saveIconButton, pressed && styles.pressed]}
                 accessibilityRole="button"
-                accessibilityLabel="Challenge options"
+                accessibilityLabel="Leave challenge"
                 hitSlop={12}
               >
-                <Icon name="ellipsis-horizontal" size={20} color={colors.textPrimary} />
+                <Icon name="exit-outline" size={20} color={colors.error} />
               </Pressable>
             </View>
           </View>
@@ -177,8 +207,9 @@ export default function ChallengeDetail() {
         />
       </CreateFlowFixedBottomBar>
 
-      {/* Confirmation Popup for Join/Leave */}
+      {/* Confirmation Popups for Join/Leave */}
       <joinPopup.Component />
+      <leavePopup.Component />
     </View>
   );
 }
