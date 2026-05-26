@@ -41,3 +41,11 @@ export * from './loader';
 // Text: Core typography component with variants (title, subheader, header, body, caption, label, activity),
 // tone options (default, muted, inverted), alignment control, and activity-type color support.
 export * from './text';
+
+// ErrorNotification: Toast-style error notification that slides in from the top with an auto-dismiss timer,
+// optional action button, and manual close button. Used with useErrorNotificationStore for global error handling.
+export * from './errorNotification';
+
+// ErrorNotificationProvider: Provider component that wraps your app root to enable error notifications
+// throughout your application. Add this to your root layout (_layout.tsx).
+export * from './ErrorNotificationProvider';
