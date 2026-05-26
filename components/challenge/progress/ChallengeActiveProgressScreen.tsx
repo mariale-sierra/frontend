@@ -3,11 +3,13 @@ import { useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChallengeProgress } from '../../../hooks/useChallengeProgress';
+import { usePublicChallengePhotos } from '../../../hooks/usePublicChallengePhotos';
+import ScreenBackground from '../../layout/screenBackground';
 import { ChallengeProgressHeader } from './ChallengeProgressHeader';
 import { ChallengePhotoGalleryModal } from './ChallengePhotoGalleryModal';
 import { ChallengePhotoMosaicSkeleton } from './ChallengePhotoMosaicSkeleton';
 import { ChallengeWorkoutCalendar } from './ChallengeWorkoutCalendar';
-import { colors } from '../../../constants/theme';
+import { spacing } from '../../../constants/theme';
 import { hoursUntilMidnight } from '../../../utils/time';
 import { getMockPublicPhotosForChallenge } from '../../../services/mocks/publicChallengePhotos';
 
@@ -24,9 +26,9 @@ const mockChallenge = {
     { id: '3', name: 'Alex', color: '#67E8F9' },
     { id: '4', name: 'Sam', color: '#A3A3A3' },
   ],
-  month: 'JUNE',
-  completedWorkoutDays: [1, 2, 3, 4, 5, 6, 7, 8],
-  selectedDay: 9,
+  // Day 1 = March 15, 2026 → day 72 lands on May 25, 2026 (today)
+  startDate: new Date(2026, 2, 15),
+  completedWorkoutDays: Array.from({ length: 71 }, (_, i) => i + 1),
 };
 
 export function ChallengeActiveProgressScreen() {
@@ -40,7 +42,8 @@ export function ChallengeActiveProgressScreen() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   const challengeId = typeof id === 'string' && id.length > 0 ? id : mockChallenge.id;
-  const publicPhotos = useMemo(() => getMockPublicPhotosForChallenge(challengeId), [challengeId]);
+  const { photos: livePhotos } = usePublicChallengePhotos(challengeId);
+  const publicPhotos = livePhotos.length > 0 ? livePhotos : getMockPublicPhotosForChallenge(challengeId);
   const photoDays = useMemo(
     () => Array.from(new Set(publicPhotos.map((photo) => photo.day))),
     [publicPhotos],
@@ -82,7 +85,7 @@ export function ChallengeActiveProgressScreen() {
   }
 
   return (
-    <View style={[styles.screen, { paddingTop: Math.max(insets.top, 0) }]}>
+    <ScreenBackground variant="challenges" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
       <ChallengeProgressHeader
         progress={headerProgress}
         totalDays={headerTotalDays}
@@ -106,15 +109,18 @@ export function ChallengeActiveProgressScreen() {
           <ChallengePhotoMosaicSkeleton
             width={width}
             photos={publicPhotos}
+            totalDays={headerTotalDays}
             bottomInset={insets.bottom}
             onPressPhoto={openPhotoGallery}
           />
           <ChallengeWorkoutCalendar
             width={width}
-            month={mockChallenge.month}
+            startDate={mockChallenge.startDate}
+            totalDays={headerTotalDays}
             completedWorkoutDays={mockChallenge.completedWorkoutDays}
-            selectedDay={mockChallenge.selectedDay}
+            selectedDay={selectedDay}
             photoDays={photoDays}
+            bottomInset={insets.bottom}
             onPressDay={openDayGallery}
           />
         </ScrollView>
@@ -127,16 +133,13 @@ export function ChallengeActiveProgressScreen() {
         selectedDay={selectedDay}
         onClose={closeGallery}
       />
-    </View>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
   pagerWrap: {
     flex: 1,
+    paddingTop: spacing.lg,
   },
 });

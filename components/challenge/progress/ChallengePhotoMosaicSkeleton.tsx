@@ -1,29 +1,28 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { radius, spacing } from '../../../constants/theme';
-import type { PublicChallengePhoto } from '../../../services/mocks/publicChallengePhotos';
+import type { ChallengePhoto } from '../../../types/challenge';
 
 interface ChallengePhotoMosaicSkeletonProps {
   width: number;
-  photos: PublicChallengePhoto[];
+  photos: ChallengePhoto[];
+  totalDays: number;
   bottomInset: number;
   onPressPhoto: (photoId: string) => void;
 }
 
-const MIN_VISIBLE_CELLS = 18;
-
 export function ChallengePhotoMosaicSkeleton({
   width,
   photos,
+  totalDays,
   bottomInset,
   onPressPhoto,
 }: ChallengePhotoMosaicSkeletonProps) {
   const horizontalPadding = spacing.lg;
   const gap = spacing.sm;
   const itemSize = Math.floor((width - horizontalPadding * 2 - gap * 2) / 3);
-  const cells = Array.from(
-    { length: Math.max(MIN_VISIBLE_CELLS, photos.length) },
-    (_, index) => photos[index] ?? null,
-  );
+
+  // Only show squares for photos that have actually been uploaded, capped at totalDays
+  const cells = photos.slice(0, totalDays);
 
   return (
     <ScrollView
@@ -41,24 +40,17 @@ export function ChallengePhotoMosaicSkeleton({
       bounces
     >
       <View style={styles.grid}>
-        {cells.map((photo, index) => (
+        {cells.map((photo) => (
           <Pressable
-            key={photo?.id ?? `empty-${index}`}
-            disabled={!photo}
-            onPress={() => {
-              if (photo) onPressPhoto(photo.id);
-            }}
+            key={photo.id}
+            onPress={() => onPressPhoto(photo.id)}
             style={({ pressed }) => [
-              styles.placeholder,
-              photo && styles.photoPlaceholder,
+              styles.photoCell,
               pressed && styles.pressed,
-              {
-                width: itemSize,
-                height: itemSize,
-              },
+              { width: itemSize, height: itemSize },
             ]}
           >
-            {photo && <View style={styles.innerGlow} />}
+            <View style={styles.innerGlow} />
           </Pressable>
         ))}
       </View>
@@ -78,15 +70,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
   },
-  placeholder: {
+  photoCell: {
     borderRadius: radius.lg,
-    backgroundColor: '#2E2E30',
-    opacity: 0.82,
-    overflow: 'hidden',
-  },
-  photoPlaceholder: {
     backgroundColor: '#3A3A3D',
-    opacity: 1,
+    overflow: 'hidden',
   },
   innerGlow: {
     position: 'absolute',

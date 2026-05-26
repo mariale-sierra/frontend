@@ -68,7 +68,7 @@ export function ExploreChallengeCard({ challenge, onPress }: ExploreChallengeCar
     <Pressable onPress={onPress} style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}>
       <View style={styles.card}>
         <LinearGradient
-          colors={['#000000', '#0a0a0a']}
+          colors={['#0a0a0a', '#242323']}
           start={{ x: 0, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={styles.gradient}

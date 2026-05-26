@@ -20,9 +20,9 @@ interface ActiveChallengeCardProps {
 type ChallengeStatus = ActiveChallengeViewModel['status'];
 
 const GRADIENT_COLORS: Record<ChallengeStatus, readonly [string, string]> = {
-  active: ['#0a0a0a', '#000000'],
+  active: ['#242323', '#000000'],
   completed: ['#0a0a0a', 'rgba(74, 222, 128, 0.05)'],
-  left: ['#0a0a0a', '#000000'],
+  left: ['#242323', '#000000'],
 };
 
 type IconName = React.ComponentProps<typeof Icon>['name'];

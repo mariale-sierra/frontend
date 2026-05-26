@@ -1,6 +1,7 @@
 import api from '../api';
 import type {
   ChallengeContract,
+  ChallengePhoto,
   ChallengeProgressContract,
   CreateChallengePayload,
   ProgressSubmissionRequest,
@@ -90,5 +91,10 @@ export async function getTodayRoutineForChallenge(
   challengeId: string,
 ): Promise<TodayRoutineContract> {
   const response = await api.get(`/routine/today/${challengeId}`);
+  return response.data;
+}
+
+export async function getPublicChallengePhotos(challengeId: string): Promise<ChallengePhoto[]> {
+  const response = await api.get<ChallengePhoto[]>(`/challenges/${challengeId}/photos/public`);
   return response.data;
 }

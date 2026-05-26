@@ -2,6 +2,9 @@
 // Used to tag challenges, routines, and exercises with their activity category.
 export * from './activityBadge';
 
+// BackButton: Reusable chevron back button that calls router.back(). Accepts optional color and size.
+export * from './backButton';
+
 // Button: Multi-variant pressable button (primary, activity, outline, danger) with sm/md/lg sizes,
 // a loading state spinner, and an optional right-side icon slot.
 export * from './button';

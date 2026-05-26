@@ -141,3 +141,19 @@ export interface TodayRoutineContract {
   exercises?: TodayRoutineExerciseContract[];
   [key: string]: unknown;
 }
+
+export interface ChallengePhotoMetric {
+  label: string;
+  value: string;
+}
+
+export interface ChallengePhoto {
+  id: string;
+  challengeId: string;
+  userName: string;
+  imageUrl: string | null;
+  day: number;
+  visibility: 'public' | 'private';
+  metrics: ChallengePhotoMetric[];
+  description: string;
+}

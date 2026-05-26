@@ -1,18 +1,7 @@
-export interface PublicChallengePhotoMetric {
-  label: string;
-  value: string;
-}
+import type { ChallengePhoto, ChallengePhotoMetric } from '../../types/challenge';
 
-export interface PublicChallengePhoto {
-  id: string;
-  challengeId: string;
-  userName: string;
-  imageUrl: string | null;
-  day: number;
-  visibility: 'public';
-  metrics: PublicChallengePhotoMetric[];
-  description: string;
-}
+export type PublicChallengePhoto = ChallengePhoto;
+export type PublicChallengePhotoMetric = ChallengePhotoMetric;
 
 const SHARED_CHALLENGE_ID = 'mock-active-challenge-1';
 

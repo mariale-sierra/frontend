@@ -2,9 +2,11 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Row } from '../../layout/row';
 import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
+import { BackButton } from '../../ui/backButton';
 import { colors, radius, spacing, typography } from '../../../constants/theme';
 import { ParticipantAvatarStack } from './ParticipantAvatarStack';
 import { ChallengePagerDots } from './ChallengePagerDots';
+import { ChallengeProgressCard } from './ChallengeProgressCard';
 
 interface Participant {
   id: string;
@@ -37,8 +39,14 @@ export function ChallengeProgressHeader({
     <View style={styles.header}>
       <Row justify="space-between" align="center">
         <Row justify="flex-start" align="center" gap="sm" style={styles.participantRow}>
+          <BackButton size={36} />
           <ParticipantAvatarStack participants={participants} />
-          <Text variant="body" tone="secondary" numberOfLines={1} style={styles.participantLabel}>
+          <Text
+            variant="body"
+            tone="secondary"
+            numberOfLines={1}
+            style={styles.participantLabel}
+          >
             {participantsLabel}
           </Text>
         </Row>
@@ -54,21 +62,12 @@ export function ChallengeProgressHeader({
         </Row>
       </Row>
 
-      <View style={styles.progressBlock}>
-        <View style={styles.progressRow}>
-          <Text style={styles.progressMain}>{progress}</Text>
-          <Text style={styles.progressTotal}>/{totalDays}</Text>
-        </View>
-
-        <Text variant="label" style={styles.title} numberOfLines={2}>
-          {title}
-        </Text>
-
-        <View style={styles.timePill}>
-          <Icon name="time-outline" size={13} color={colors.textPrimary} />
-          <Text variant="caption" style={styles.timeText}>{timeLeft}</Text>
-        </View>
-      </View>
+      <ChallengeProgressCard
+        progress={progress}
+        totalDays={totalDays}
+        title={title}
+        timeLeft={timeLeft}
+      />
 
       <ChallengePagerDots activeIndex={activePage} />
     </View>
@@ -80,7 +79,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
-    gap: spacing.lg,
+    gap: spacing['2xl'],
   },
   participantRow: {
     flex: 1,
@@ -114,47 +113,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.lg,
     backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  progressBlock: {
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-  },
-  progressMain: {
-    ...typography.stat,
-    color: colors.textPrimary,
-    fontSize: 82,
-    lineHeight: 86,
-  },
-  progressTotal: {
-    ...typography.statSmall,
-    color: colors.textPrimary,
-    fontSize: 34,
-    lineHeight: 46,
-  },
-  title: {
-    color: 'rgba(255,255,255,0.76)',
-    letterSpacing: 1.8,
-    textAlign: 'center',
-  },
-  timePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  timeText: {
-    color: colors.textPrimary,
-    fontSize: 11,
-    lineHeight: 14,
   },
   pressed: {
     opacity: 0.82,
