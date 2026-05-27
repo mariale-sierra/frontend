@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +7,7 @@ import { IconButton } from '../../components/ui/iconButton';
 import { Button } from '../../components/ui/button';
 import { Text } from '../../components/ui/text';
 import { RestDayCalendar } from '../../components/add/restDay/RestDayCalendar';
+import { getChallengeProgress } from '../../services/challenge/challenge.service';
 import { colors, spacing } from '../../constants/theme';
 
 const BOTTOM_BAR_BG = 'rgba(0,0,0,0.88)';
@@ -16,6 +17,19 @@ export default function PlanRestDays() {
   const insets = useSafeAreaInsets();
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [challengeBounds, setChallengeBounds] = useState<{ startDate: Date; totalDays: number } | null>(null);
+
+  useEffect(() => {
+    getChallengeProgress().then((progress) => {
+      if (!progress) return;
+      const currentDay = progress.currentDay ?? 1;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() - (currentDay - 1));
+      setChallengeBounds({ startDate, totalDays: progress.totalDays });
+    }).catch(() => {});
+  }, []);
 
   const handleToggleDate = useCallback((dateKey: string) => {
     setSelectedDates((prev) => {
@@ -75,10 +89,14 @@ export default function PlanRestDays() {
           contentContainerStyle={{ paddingBottom: bottomBarHeight + spacing.lg }}
           showsVerticalScrollIndicator={false}
         >
-          <RestDayCalendar
-            selectedDates={selectedDates}
-            onToggleDate={handleToggleDate}
-          />
+          {challengeBounds && (
+            <RestDayCalendar
+              startDate={challengeBounds.startDate}
+              totalDays={challengeBounds.totalDays}
+              selectedDates={selectedDates}
+              onToggleDate={handleToggleDate}
+            />
+          )}
         </ScrollView>
 
         <View
@@ -93,6 +111,7 @@ export default function PlanRestDays() {
             onPress={handleSetRestDays}
             loading={saving}
             disabled={selectedDates.size === 0}
+            style={styles.actionButton}
           >
             Set rest days
           </Button>
@@ -133,5 +152,9 @@ const styles = StyleSheet.create({
     backgroundColor: BOTTOM_BAR_BG,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+  },
+  actionButton: {
+    width: 220,
   },
 });

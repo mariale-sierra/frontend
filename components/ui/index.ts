@@ -52,3 +52,19 @@ export * from './errorNotification';
 // ErrorNotificationProvider: Provider component that wraps your app root to enable error notifications
 // throughout your application. Add this to your root layout (_layout.tsx).
 export * from './ErrorNotificationProvider';
+
+// UserAvatar: Circular avatar showing the user's first initial on a deterministic activity-type color
+// derived from their username. Use getUserAvatarColor(username) to get the color standalone.
+export * from './userAvatar';
+
+// PhotoUserOverlay: Absolute-positioned overlay for photo cards showing a UserAvatar and username
+// with a text shadow for legibility. Drop it directly inside any photo frame View.
+export * from './photoUserOverlay';
+
+// PhotoFrame: Reusable portrait photo card (3/4 aspect ratio) with an image/placeholder fallback
+// and a PhotoUserOverlay. Used in FeedPostCard and ChallengePhotoGalleryModal.
+export * from './photoFrame';
+
+// PhotoDetailCard: Photo card with optional description and metrics table below the image.
+// Used in ChallengePhotoGalleryModal and ProfilePhotoModal.
+export * from './photoDetailCard';

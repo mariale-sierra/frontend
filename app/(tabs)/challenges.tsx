@@ -55,7 +55,7 @@ export default function Challenges() {
 
 	if (loading) {
 		return (
-			<ScreenBackground variant="challenges">
+			<ScreenBackground variant="default">
 				<View style={styles.center}>
 					<ActivityIndicator color="#ffffff" />
 				</View>
@@ -64,7 +64,7 @@ export default function Challenges() {
 	}
 
 	return (
-		<ScreenBackground variant="challenges">
+		<ScreenBackground variant="default">
 			<ScrollView contentContainerStyle={styles.container}>
 				{error ? (
 					<View style={styles.center}>

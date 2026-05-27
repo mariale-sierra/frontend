@@ -15,7 +15,7 @@ export function PostsViewToggle({ view, onViewChange }: PostsViewToggleProps) {
       <View style={styles.tabs}>
         <Pressable style={styles.tab} onPress={() => onViewChange('posts')}>
           <Icon
-            name="eye-outline"
+            name="eye"
             size={22}
             color={view === 'posts' ? colors.textPrimary : colors.textMuted}
           />
@@ -23,7 +23,7 @@ export function PostsViewToggle({ view, onViewChange }: PostsViewToggleProps) {
         </Pressable>
         <Pressable style={styles.tab} onPress={() => onViewChange('photos')}>
           <Icon
-            name="camera-outline"
+            name="camera"
             size={22}
             color={view === 'photos' ? colors.textPrimary : colors.textMuted}
           />

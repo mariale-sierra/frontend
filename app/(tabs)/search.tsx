@@ -39,11 +39,11 @@ export default function Search() {
   }, [available, query]);
 
   return (
-    <ScreenBackground variant="challenges" applyTopInset={false}>
+    <ScreenBackground variant="default">
       <FlatList
         data={loading ? [] : filtered}
         keyExtractor={(item) => item.challengeId}
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing['2xl'] }]}
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.xs }]}
         ListHeaderComponent={
           <View style={styles.searchBarWrapper}>
             <SearchBar

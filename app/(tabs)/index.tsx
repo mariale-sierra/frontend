@@ -1,32 +1,26 @@
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ShimmerPlaceholder from 'react-native-shimmer-placeholder';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../hooks/useAuth';
 import { useChallengeProgress } from '../../hooks/useChallengeProgress';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Icon } from '../../components/ui/icon';
+import { Loader } from '../../components/ui/loader';
 import { Text } from '../../components/ui/text';
+import { UserAvatar } from '../../components/ui/userAvatar';
 import { ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
+import { FeedPostCard } from '../../components/home/FeedPostCard';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
-import { colors, radius, spacing } from '../../constants/theme';
+import { getHomeFeed } from '../../services/feed/feed.service';
+import { toFeedPostViewModels } from '../../services/adapters/feedAdapter';
+import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
+// REMOVE_MOCK_START
+import { buildMockFeedPosts } from '../../services/mocks/feedMock';
+// REMOVE_MOCK_END
+import { spacing } from '../../constants/theme';
 import { hoursUntilMidnight } from '../../utils/time';
 
-const SHIMMER_BASE = colors.surface;
-const SHIMMER_HIGHLIGHT = colors.surfaceHighlight;
-
-function Bone({ style }: { style: object }) {
-  return (
-    <ShimmerPlaceholder
-      LinearGradient={LinearGradient}
-      shimmerColors={[SHIMMER_BASE, SHIMMER_HIGHLIGHT, SHIMMER_BASE]}
-      style={style}
-    />
-  );
-}
-
 // REMOVE_MOCK_START: delete once all three badge states are validated in production
-// Note: TimeBadge only renders when hoursLeft > 0 (i.e. before midnight).
 const MOCK_BADGE_CHALLENGES: HomeActiveChallengeViewModel[] = [
   { challengeId: 'mock-time',  title: 'Iron Will',         currentDay: 14, totalDays: 75, isTodayCompleted: false, isCompleted: false, activityType: 'strength',     isRestDay: false },
   { challengeId: 'mock-done',  title: 'Thirty Day Flex',   currentDay: 30, totalDays: 30, isTodayCompleted: true,  isCompleted: true,  activityType: 'flexibility',  isRestDay: false },
@@ -37,83 +31,134 @@ const MOCK_BADGE_CHALLENGES: HomeActiveChallengeViewModel[] = [
 export default function Home() {
   const { username } = useAuth();
   const insets = useSafeAreaInsets();
-  const { challenge: activeChallenge, loading } = useChallengeProgress();
+  const { challenge: activeChallenge, loading: challengeLoading } = useChallengeProgress();
+
+  const [feedPosts, setFeedPosts] = useState<FeedPostViewModel[]>([]);
+  const [feedLoading, setFeedLoading] = useState(true);
 
   const hoursLeft = hoursUntilMidnight();
-  const challenges: HomeActiveChallengeViewModel[] = activeChallenge
-    ? [activeChallenge]
-    : [];
+  const challenges: HomeActiveChallengeViewModel[] = activeChallenge ? [activeChallenge] : [];
 
-  return (
-    <ScreenBackground
-      variant="default"
-      contentStyle={[styles.screen, { paddingTop: insets.top + spacing.md }]}
-    >
+  useEffect(() => {
+    getHomeFeed()
+      .then((data) => setFeedPosts(toFeedPostViewModels(data)))
+      .catch(() => {
+        // REMOVE_MOCK: remove fallback once /feed is live
+        setFeedPosts(toFeedPostViewModels(buildMockFeedPosts()));
+      })
+      .finally(() => setFeedLoading(false));
+  }, []);
+
+  function renderItem({ item }: { item: FeedPostViewModel }) {
+    return <FeedPostCard post={item} />;
+  }
+
+  const listHeader = (
+    <View style={[styles.listHeader, { paddingTop: insets.top + spacing.xs }]}>
       <View style={styles.profileRow}>
-        <View style={styles.avatar}>
-          <Icon name="person" size={20} color={colors.textPrimary} />
-        </View>
+        <UserAvatar username={username ?? ''} size={44} />
         <Text variant="body" style={styles.username}>
           {username ?? ''}
         </Text>
       </View>
 
       <View style={styles.challengeArea}>
-        {loading ? (
-          <View style={styles.cardList}>
-            <Bone style={styles.card} />
-            <Bone style={styles.card} />
-            <Bone style={styles.card} />
+        {challengeLoading ? (
+          <View style={styles.challengeLoadingArea}>
+            <Loader visible={true} overlayStyle={styles.loaderTransparent} />
           </View>
         ) : challenges.length > 0 ? (
           <ActiveChallengeSection challenges={[...MOCK_BADGE_CHALLENGES, ...challenges]} hoursLeft={hoursLeft} />
         ) : (
           <View style={styles.center}>
-            <Text>No challenges available</Text>
+            <Text variant="body" tone="secondary">No active challenges</Text>
           </View>
         )}
       </View>
+
+      <View style={styles.feedSectionHeader}>
+        <Text variant="header" tone="secondary">Community</Text>
+        <Icon name="people" size={20} color="rgba(255,255,255,0.4)" />
+      </View>
+    </View>
+  );
+
+  return (
+    <ScreenBackground variant="default">
+      <FlatList
+        data={feedPosts}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        ListHeaderComponent={listHeader}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ListEmptyComponent={
+          feedLoading ? (
+            <View style={styles.feedLoadingArea}>
+              <Loader visible={true} overlayStyle={styles.loaderTransparent} />
+            </View>
+          ) : (
+            <View style={styles.emptyFeed}>
+              <Icon name="images-outline" size={34} color="rgba(255,255,255,0.3)" />
+              <Text variant="body" tone="secondary" align="center">
+                No posts yet. Be the first to share!
+              </Text>
+            </View>
+          )
+        }
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: insets.bottom + spacing['2xl'] },
+        ]}
+      />
     </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
+  listContent: {
+    paddingHorizontal: spacing.lg,
+  },
+  listHeader: {
+    marginBottom: spacing.lg,
   },
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: radius['2xl'],
-    backgroundColor: colors.surfaceElevated,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   username: {
     fontWeight: '600',
   },
   challengeArea: {
     marginTop: spacing['2xl'] + spacing.lg,
-    gap: spacing.md,
+  },
+  challengeLoadingArea: {
+    height: 120,
+  },
+  loaderTransparent: {
+    backgroundColor: 'transparent',
   },
   center: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: spacing['2xl'],
+    paddingVertical: spacing['2xl'],
   },
-  cardList: {
+  feedSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing['2xl'],
+    marginBottom: spacing.sm,
+  },
+  feedLoadingArea: {
+    height: 300,
+  },
+  separator: {
+    height: spacing['2xl'],
+  },
+  emptyFeed: {
+    alignItems: 'center',
     gap: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  card: {
-    width: '100%',
-    height: 100,
-    borderRadius: radius.xl,
+    paddingVertical: spacing['2xl'],
   },
 });

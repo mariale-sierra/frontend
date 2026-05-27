@@ -15,6 +15,8 @@ export interface ActiveChallengeViewModel {
   progressPercent: number;
   streakCount: number;
   activityType: ActivityType;
+  secondaryActivityType?: ActivityType;
+  tertiaryActivityType?: ActivityType;
   status: 'active' | 'completed' | 'left';
   isRestDay: boolean;
 }

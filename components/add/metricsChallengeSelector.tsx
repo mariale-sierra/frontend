@@ -109,7 +109,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     borderRadius: radius.lg,
     overflow: 'hidden',
-    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -122,7 +121,8 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   optionSelected: {
-    backgroundColor: colors.surfaceHighlight,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.primary,
   },
   optionLabel: {
     color: colors.textPrimary,

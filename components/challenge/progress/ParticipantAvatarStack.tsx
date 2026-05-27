@@ -1,10 +1,9 @@
 import { StyleSheet, View } from 'react-native';
-import { Icon } from '../../ui/icon';
-import { radius } from '../../../constants/theme';
+import { UserAvatar } from '../../ui/userAvatar';
 
 interface Participant {
   id: string;
-  color: string;
+  name: string;
 }
 
 interface ParticipantAvatarStackProps {
@@ -13,8 +12,7 @@ interface ParticipantAvatarStackProps {
 }
 
 export function ParticipantAvatarStack({ participants, size = 32 }: ParticipantAvatarStackProps) {
-  const iconSize = Math.round(size * 0.5);
-  const borderRadius = size / 2;
+  const borderRadius = size / 2 + 2;
 
   return (
     <View style={styles.stack}>
@@ -22,18 +20,15 @@ export function ParticipantAvatarStack({ participants, size = 32 }: ParticipantA
         <View
           key={participant.id}
           style={[
-            styles.avatar,
+            styles.ring,
             {
-              width: size,
-              height: size,
               borderRadius,
-              backgroundColor: participant.color,
               marginLeft: index === 0 ? 0 : -(size * 0.3),
               zIndex: participants.length - index,
             },
           ]}
         >
-          <Icon name="person" size={iconSize} color="rgba(0,0,0,0.55)" />
+          <UserAvatar username={participant.name} size={size} />
         </View>
       ))}
     </View>
@@ -45,10 +40,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  avatar: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  ring: {
     borderWidth: 2,
     borderColor: '#000000',
+    overflow: 'hidden',
   },
 });

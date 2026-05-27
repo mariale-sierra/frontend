@@ -24,7 +24,7 @@ export function RestDayAlreadyLogged({ onBack, onPlanRestDays }: RestDayAlreadyL
       </View>
 
       <View style={styles.actions}>
-        <Button variant="outline" size="md" onPress={onPlanRestDays}>
+        <Button variant="outline" size="md" onPress={onPlanRestDays} style={styles.actionButton}>
           Plan rest days
         </Button>
         <Pressable
@@ -63,6 +63,9 @@ const styles = StyleSheet.create({
   actions: {
     gap: spacing.md,
     alignItems: 'center',
+  },
+  actionButton: {
+    width: 220,
   },
   backLink: {
     paddingVertical: spacing.sm,

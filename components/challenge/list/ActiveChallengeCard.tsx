@@ -8,7 +8,40 @@ import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
 import { ChallengeProgressBar } from './ChallengeProgressBar';
 import { colors, radius, spacing } from '../../../constants/theme';
+import type { ActivityType } from '../../../constants/theme';
 import type { ActiveChallengeViewModel } from './challengeListSections';
+
+const ICON_SIZE = 36;
+const ICON_OFFSET = 16;
+
+interface ActivityIconStackProps {
+  primary: ActivityType;
+  secondary?: ActivityType;
+  tertiary?: ActivityType;
+}
+
+function ActivityIconStack({ primary, secondary, tertiary }: ActivityIconStackProps) {
+  const count = 1 + (secondary ? 1 : 0) + (tertiary ? 1 : 0);
+  const width = ICON_SIZE + ICON_OFFSET * (count - 1);
+
+  return (
+    <View style={{ width, height: ICON_SIZE }}>
+      {tertiary && (
+        <View style={[styles.stackedIcon, { left: ICON_OFFSET * 2, zIndex: 1, opacity: 0.35 }]}>
+          <ActivityIcon type={tertiary} size="md" />
+        </View>
+      )}
+      {secondary && (
+        <View style={[styles.stackedIcon, { left: ICON_OFFSET, zIndex: 2, opacity: 0.6 }]}>
+          <ActivityIcon type={secondary} size="md" />
+        </View>
+      )}
+      <View style={[styles.stackedIcon, { left: 0, zIndex: 3 }]}>
+        <ActivityIcon type={primary} size="md" />
+      </View>
+    </View>
+  );
+}
 
 interface ActiveChallengeCardProps {
   challenge: ActiveChallengeViewModel;
@@ -80,7 +113,11 @@ export function ActiveChallengeCard({
                   <Ionicons name="moon" size={22} color={colors.primary} />
                 </View>
               ) : (
-                <ActivityIcon type={activityType} size="md" />
+                <ActivityIconStack
+                  primary={activityType}
+                  secondary={challenge.secondaryActivityType}
+                  tertiary={challenge.tertiaryActivityType}
+                />
               )}
             </View>
 
@@ -159,6 +196,10 @@ const styles = StyleSheet.create({
   hazeOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(20,20,25,0.55)',
+  },
+  stackedIcon: {
+    position: 'absolute',
+    top: 0,
   },
   leftIcon: {
     opacity: 0.6,

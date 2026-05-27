@@ -27,10 +27,15 @@ export interface ChallengeOption {
   locations: LocationType[];
 }
 
+export type MetricField = 'reps' | 'lbs' | 'duration' | 'distance' | 'rounds';
+
 export interface ExerciseMetricsRow {
   set: number;
-  reps: string;
-  lbs: string;
+  reps?: string;
+  lbs?: string;
+  duration?: string;
+  distance?: string;
+  rounds?: string;
 }
 
 export interface ExerciseMetricsBlock {
@@ -44,4 +49,41 @@ export interface ExerciseMetricsBlock {
   rows: ExerciseMetricsRow[];
 }
 
-export type MetricField = 'reps' | 'lbs';
+export interface ActivityMetricConfig {
+  columns: Array<{ key: MetricField; label: string }>;
+  defaultRows: number;
+  showSetColumn: boolean;
+}
+
+export const ACTIVITY_METRIC_CONFIG: Record<ActivityType, ActivityMetricConfig> = {
+  strength: {
+    columns: [{ key: 'reps', label: 'reps' }, { key: 'lbs', label: 'lbs' }],
+    defaultRows: 3,
+    showSetColumn: true,
+  },
+  cardioIntense: {
+    columns: [{ key: 'duration', label: 'min' }, { key: 'distance', label: 'km' }],
+    defaultRows: 1,
+    showSetColumn: false,
+  },
+  cardioLow: {
+    columns: [{ key: 'duration', label: 'min' }, { key: 'distance', label: 'km' }],
+    defaultRows: 1,
+    showSetColumn: false,
+  },
+  flexibility: {
+    columns: [{ key: 'duration', label: 'min' }],
+    defaultRows: 1,
+    showSetColumn: false,
+  },
+  mindBody: {
+    columns: [{ key: 'duration', label: 'min' }],
+    defaultRows: 1,
+    showSetColumn: false,
+  },
+  functional: {
+    columns: [{ key: 'rounds', label: 'rounds' }, { key: 'reps', label: 'reps' }],
+    defaultRows: 3,
+    showSetColumn: true,
+  },
+};

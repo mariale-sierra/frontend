@@ -4,12 +4,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { colors, spacing } from '../../constants/theme';
 import { Text } from '../../components/ui/text';
-import { IconButton } from '../../components/ui/iconButton';
 import { getMe } from '../../services/user/user.service';
 import type { UserProfileContract } from '../../types/user';
 import { useAuth } from '../../hooks/useAuth';
-import { ProfileHeader, PostsViewToggle, PostsGrid } from '../../components/profile';
+import { ProfileHeader, PostsViewToggle, PostsGrid, ProfilePhotoModal } from '../../components/profile';
 import type { PostsView } from '../../components/profile';
+import type { ChallengePhoto } from '../../types/challenge';
 
 export default function Profile() {
   const { username: sessionUsername } = useAuth();
@@ -18,6 +18,7 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<PostsView>('posts');
+  const [selectedPhoto, setSelectedPhoto] = useState<ChallengePhoto | null>(null);
 
   useEffect(() => {
     getMe()
@@ -30,12 +31,8 @@ export default function Profile() {
   const username = profile?.username ?? sessionUsername ?? 'username';
 
   return (
-    <ScreenBackground variant="challenges" applyTopInset={false}>
-      <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + 12 }]}>
-        <View style={styles.topBar}>
-          <IconButton name="ellipsis-horizontal" iconSize={22} />
-        </View>
-
+    <ScreenBackground variant="default">
+      <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.xs }]}>
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator color={colors.primary} />
@@ -48,10 +45,11 @@ export default function Profile() {
           <>
             <ProfileHeader displayName={displayName} username={username} />
             <PostsViewToggle view={view} onViewChange={setView} />
-            <PostsGrid />
+            <PostsGrid view={view} onPhotoPress={setSelectedPhoto} />
           </>
         )}
       </ScrollView>
+      <ProfilePhotoModal photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
     </ScreenBackground>
   );
 }
@@ -61,9 +59,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['2xl'],
     gap: spacing.lg,
-  },
-  topBar: {
-    alignItems: 'flex-end',
   },
   center: {
     minHeight: 280,

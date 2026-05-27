@@ -44,24 +44,28 @@ function pickIsRestDay(challenge: ChallengeContract): boolean {
   return false;
 }
 
-function pickActivityType(challenge: ChallengeContract): ActivityType {
-  const fromActivities = Array.isArray(challenge.activities)
-    ? challenge.activities
-        .map((item) => asActivityType(asString(item?.type)))
-        .find((type): type is ActivityType => Boolean(type))
-    : null;
+function pickActivityTypes(challenge: ChallengeContract): [ActivityType, ActivityType?, ActivityType?] {
+  const seen = new Set<ActivityType>();
+  const types: ActivityType[] = [];
 
-  if (fromActivities) {
-    return fromActivities;
+  const addType = (value: string | null | undefined) => {
+    const t = asActivityType(asString(value ?? ''));
+    if (t && !seen.has(t)) { seen.add(t); types.push(t); }
+  };
+
+  if (Array.isArray(challenge.activities)) {
+    challenge.activities.forEach((item) => addType(item?.type));
+  }
+  if (Array.isArray(challenge.categories)) {
+    challenge.categories.forEach((cat) => addType(asString(cat)));
   }
 
-  const fromCategories = Array.isArray(challenge.categories)
-    ? challenge.categories
-        .map((category) => asActivityType(asString(category)))
-        .find((type): type is ActivityType => Boolean(type))
-    : null;
+  if (types.length === 0) types.push('strength');
+  return [types[0], types[1], types[2]];
+}
 
-  return fromCategories ?? 'strength';
+function pickActivityType(challenge: ChallengeContract): ActivityType {
+  return pickActivityTypes(challenge)[0];
 }
 
 function pickProgressPercent(challenge: ChallengeContract): number {
@@ -222,13 +226,16 @@ function isChallengeActive(challenge: ChallengeContract): boolean {
 }
 
 function toActiveCard(challenge: ChallengeContract): ActiveChallengeViewModel {
+  const [activityType, secondaryActivityType, tertiaryActivityType] = pickActivityTypes(challenge);
   return {
     challengeId: String(challenge.id),
     title: asString(challenge.name) || 'Untitled challenge',
     day: pickCurrentDay(challenge),
     progressPercent: pickProgressPercent(challenge),
     streakCount: pickStreakCount(challenge),
-    activityType: pickActivityType(challenge),
+    activityType,
+    secondaryActivityType,
+    tertiaryActivityType,
     status: pickChallengeStatus(challenge),
     isRestDay: pickIsRestDay(challenge),
   };

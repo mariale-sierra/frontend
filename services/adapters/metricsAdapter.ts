@@ -5,9 +5,12 @@ import {
 } from '../../types/metrics';
 import type {
   ActivityCategory,
+  ActivityMetricConfig,
   ChallengeOption,
   ExerciseMetricsBlock,
+  ExerciseMetricsRow,
 } from '../../types/metrics';
+import { ACTIVITY_METRIC_CONFIG } from '../../types/metrics';
 import type { LocationType } from '../../components/icons/locationIcon';
 import type { ChallengeContract, TodayRoutineContract } from '../../types/challenge';
 import type { ActivityType } from '../../constants/theme';
@@ -80,8 +83,10 @@ export function adaptTodayRoutineExercises(
       const activityType = (asString(ex.activity_type) || 'strength') as ActivityType;
       const location = asString(ex.location) as LocationType;
       const sets = Array.isArray(ex.sets) ? ex.sets : [];
-      const setCount = sets.length > 0 ? sets.length : 3;
       const firstRest = asNumber(sets[0]?.rest_seconds ?? null);
+
+      const config: ActivityMetricConfig = ACTIVITY_METRIC_CONFIG[activityType] ?? ACTIVITY_METRIC_CONFIG.strength;
+      const rowCount = config.showSetColumn && sets.length > 0 ? sets.length : config.defaultRows;
 
       return {
         id: String(exerciseId),
@@ -91,11 +96,13 @@ export function adaptTodayRoutineExercises(
         location: ALLOWED_LOCATIONS.has(location) ? location : ('anywhere' as LocationType),
         notes: '',
         restTimeLabel: restLabel(firstRest) ?? 'Rest 60 sec',
-        rows: Array.from({ length: setCount }, (_, i) => ({
-          set: i + 1,
-          reps: '',
-          lbs: '',
-        })),
+        rows: Array.from({ length: rowCount }, (_, i) => {
+          const row: ExerciseMetricsRow = { set: i + 1 };
+          for (const col of config.columns) {
+            row[col.key] = '';
+          }
+          return row;
+        }),
       } satisfies ExerciseMetricsBlock;
     })
     .filter((block) => block !== null);

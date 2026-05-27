@@ -11,7 +11,6 @@ import { ChallengeProgressCard } from './ChallengeProgressCard';
 interface Participant {
   id: string;
   name: string;
-  color: string;
 }
 
 interface ChallengeProgressHeaderProps {

@@ -4,6 +4,7 @@ import { ActivityIcon } from '../icons/activityIcon';
 import { Text } from '../ui/text';
 import { colors, gradients, spacing, typography } from '../../constants/theme';
 import type { ExerciseMetricsBlock, MetricField } from '../../types/metrics';
+import { ACTIVITY_METRIC_CONFIG } from '../../types/metrics';
 import { useTranslation } from 'react-i18next';
 
 interface MetricsExerciseTableProps {
@@ -24,13 +25,6 @@ interface MetricValueInputProps {
   onChangeText: (value: string) => void;
 }
 
-const METRIC_COLUMNS: Array<{ key: MetricField; label: string }> = [
-  { key: 'reps', label: 'reps' },
-  { key: 'lbs', label: 'lbs' },
-];
-
-const TABLE_COLUMNS = ['set', ...METRIC_COLUMNS.map((column) => column.label)];
-
 function MetricValueInput({ value, rowKey, onFocus, onBlur, onChangeText }: MetricValueInputProps) {
   return (
     <TextInput
@@ -46,10 +40,10 @@ function MetricValueInput({ value, rowKey, onFocus, onBlur, onChangeText }: Metr
   );
 }
 
-function MetricsTableHeader() {
+function MetricsTableHeader({ columns }: { columns: string[] }) {
   return (
     <View style={styles.tableHeader}>
-      {TABLE_COLUMNS.map((column) => (
+      {columns.map((column) => (
         <Text key={column} variant="caption" style={styles.tableHeaderText}>
           {column}
         </Text>
@@ -61,6 +55,8 @@ function MetricsTableHeader() {
 interface MetricsTableRowProps {
   exercise: ExerciseMetricsBlock;
   rowIndex: number;
+  metricColumns: Array<{ key: MetricField; label: string }>;
+  showSetColumn: boolean;
   activeRowKey: string | null;
   onRowFocus: (rowKey: string) => void;
   onRowBlur: (rowKey: string) => void;
@@ -70,6 +66,8 @@ interface MetricsTableRowProps {
 function MetricsTableRow({
   exercise,
   rowIndex,
+  metricColumns,
+  showSetColumn,
   activeRowKey,
   onRowFocus,
   onRowBlur,
@@ -81,14 +79,16 @@ function MetricsTableRow({
 
   return (
     <View style={[styles.metricRow, isActive && styles.metricRowActive]}>
-      <View style={styles.setCell}>
-        <Text variant="body" style={styles.cellNumberText}>{row.set}</Text>
-      </View>
+      {showSetColumn && (
+        <View style={styles.setCell}>
+          <Text variant="body" style={styles.cellNumberText}>{row.set}</Text>
+        </View>
+      )}
 
-      {METRIC_COLUMNS.map((column) => (
+      {metricColumns.map((column) => (
         <MetricValueInput
           key={column.key}
-          value={row[column.key]}
+          value={row[column.key] ?? ''}
           rowKey={rowKey}
           onFocus={onRowFocus}
           onBlur={onRowBlur}
@@ -109,6 +109,10 @@ export function MetricsExerciseTable({
   onNotesChange,
 }: MetricsExerciseTableProps) {
   const { t } = useTranslation();
+  const config = ACTIVITY_METRIC_CONFIG[exercise.activityType] ?? ACTIVITY_METRIC_CONFIG.strength;
+  const tableColumns = config.showSetColumn
+    ? ['set', ...config.columns.map((c) => c.label)]
+    : config.columns.map((c) => c.label);
 
   return (
     <View style={styles.exerciseBox}>
@@ -135,13 +139,15 @@ export function MetricsExerciseTable({
         end={gradients.surface.end}
         style={styles.tableWrap}
       >
-        <MetricsTableHeader />
+        <MetricsTableHeader columns={tableColumns} />
 
         {exercise.rows.map((row, rowIndex) => (
           <MetricsTableRow
             key={`${exercise.id}-${row.set}`}
             exercise={exercise}
             rowIndex={rowIndex}
+            metricColumns={config.columns}
+            showSetColumn={config.showSetColumn}
             activeRowKey={activeRowKey}
             onRowFocus={onRowFocus}
             onRowBlur={onRowBlur}

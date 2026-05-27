@@ -21,10 +21,10 @@ const mockChallenge = {
   timeLeft: '8h left',
   participantsLabel: 'Cami, To',
   participants: [
-    { id: '1', name: 'Cami', color: '#D9D9D9' },
-    { id: '2', name: 'To', color: '#F472D0' },
-    { id: '3', name: 'Alex', color: '#67E8F9' },
-    { id: '4', name: 'Sam', color: '#A3A3A3' },
+    { id: '1', name: 'Cami' },
+    { id: '2', name: 'To' },
+    { id: '3', name: 'Alex' },
+    { id: '4', name: 'Sam' },
   ],
   // Day 1 = March 15, 2026 → day 72 lands on May 25, 2026 (today)
   startDate: new Date(2026, 2, 15),

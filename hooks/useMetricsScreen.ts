@@ -178,8 +178,8 @@ export function useMetricsScreen() {
           continue;
         }
 
-        const firstRepsRow = block.rows.find((row) => row.reps.trim().length > 0);
-        const firstLbsRow = block.rows.find((row) => row.lbs.trim().length > 0);
+        const firstRepsRow = block.rows.find((row) => row.reps?.trim().length > 0);
+        const firstLbsRow = block.rows.find((row) => row.lbs?.trim().length > 0);
 
         if (firstRepsRow) {
           const reps = parseFloat(firstRepsRow.reps);

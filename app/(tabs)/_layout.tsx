@@ -1,7 +1,23 @@
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { View } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { useTheme } from "../../hooks/useTheme";
+
+function TabIcon({ name, focused, colors }: {
+  name: React.ComponentProps<typeof Ionicons>['name'];
+  focused: boolean;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
+  return (
+    <View style={styles.iconWrapper}>
+      <Ionicons
+        name={name}
+        size={22}
+        color={focused ? colors.primary : colors.textMuted}
+      />
+    </View>
+  );
+}
 
 export default function TabsLayout() {
   const router = useRouter();
@@ -12,7 +28,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
           backgroundColor: colors.background,
           borderTopColor: colors.background,
@@ -23,14 +39,18 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: () => <Ionicons name="home" size={22} color={colors.primary} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="home" focused={focused} colors={colors} />
+          ),
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
           title: "Search",
-          tabBarIcon: () => <Ionicons name="search" size={22} color={colors.primary} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="search" focused={focused} colors={colors} />
+          ),
         }}
       />
 
@@ -44,24 +64,15 @@ export default function TabsLayout() {
             marginTop: -10,
           },
           tabBarIcon: () => (
-            <View
-              style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                backgroundColor: colors.background,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
+            <View style={styles.addButton}>
               <Ionicons name="add" size={40} color={colors.primary} />
             </View>
           ),
         }}
         listeners={{
           tabPress: (e) => {
-            e.preventDefault(); // evita navegación normal
-            router.push("/(add)/metrics"); // abre flujo en metrics primero
+            e.preventDefault();
+            router.push("/(add)/metrics");
           },
         }}
       />
@@ -70,16 +81,35 @@ export default function TabsLayout() {
         name="challenges"
         options={{
           title: "Challenges",
-          tabBarIcon: () => <Ionicons name="trophy" size={22} color={colors.primary} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="trophy" focused={focused} colors={colors} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: () => <Ionicons name="person" size={22} color={colors.primary} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="person" focused={focused} colors={colors} />
+          ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  iconWrapper: {
+    alignItems: 'center',
+    gap: 3,
+  },
+addButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

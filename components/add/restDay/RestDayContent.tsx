@@ -36,10 +36,10 @@ export function RestDayContent({
             {error}
           </Text>
         ) : null}
-        <Button variant="primary" size="md" onPress={onJustToday} loading={loading}>
+        <Button variant="primary" size="md" onPress={onJustToday} loading={loading} style={styles.actionButton}>
           Just today
         </Button>
-        <Button variant="outline" size="md" onPress={onPlanRestDays} disabled={loading}>
+        <Button variant="outline" size="md" onPress={onPlanRestDays} disabled={loading} style={styles.actionButton}>
           Plan rest days
         </Button>
       </View>
@@ -69,6 +69,10 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: spacing.md,
+    alignItems: 'center',
+  },
+  actionButton: {
+    width: 220,
   },
   errorText: {
     color: colors.error,
