@@ -25,7 +25,6 @@ export default function ExploreAll() {
         const vm = toChallengeListViewModel(res ?? [], {
           membersLabel: t('challenges.members'),
           unknownCreatorLabel: t('challenges.unknownCreator'),
-          durationLabel: t('challenges.durationUnit'),
           locationFallbackLabel: t('challenges.locationFallback'),
         });
         setChallenges(vm.exploreChallenges);

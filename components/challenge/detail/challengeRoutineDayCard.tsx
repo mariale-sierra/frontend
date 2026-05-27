@@ -5,7 +5,7 @@ import { Text } from '../../ui/text';
 import { Card } from '../../ui/card';
 import { ActivityIcon } from '../../icons/activityIcon';
 import { Row } from '../../layout/row';
-import { colors, spacing, type ActivityType } from '../../../constants/theme';
+import { colors, gradients, spacing, type ActivityType } from '../../../constants/theme';
 
 type Props = {
   day: number;
@@ -23,9 +23,9 @@ export default function ChallengeRoutineDayCard({
   return (
     <Card style={styles.card} variant="basic" onPress={onPress}>
       <LinearGradient
-        colors={[colors.surface,'#131315']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
+        colors={gradients.surfaceHorizontal.colors}
+        start={gradients.surfaceHorizontal.start}
+        end={gradients.surfaceHorizontal.end}
         style={StyleSheet.absoluteFillObject}
       />
       <Row justify="space-between" align="stretch" style={styles.cardRow}>

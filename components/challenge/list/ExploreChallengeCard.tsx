@@ -5,99 +5,77 @@ import { Row } from '../../layout/row';
 import { Stack } from '../../layout/stack';
 import { Text } from '../../ui/text';
 import { ChallengeBadge } from './ChallengeBadge';
-import { radius, spacing } from '../../../constants/theme';
+import { colors, radius, spacing } from '../../../constants/theme';
 import type { ActivityType } from '../../../constants/theme';
 import type { ExploreChallengeViewModel } from './challengeListSections';
 
 interface ExploreChallengeCardProps {
   challenge: ExploreChallengeViewModel;
   onPress?: () => void;
+  daysLabel?: string;
 }
 
-const ICON_PX = 48; // containerSize['lg']
-const SPREAD = 28;  // top-left corner offset between icons; gives ~8 px of circle overlap
+const CATEGORY_NAMES: Record<ActivityType, string> = {
+  strength: 'Strength',
+  cardioIntense: 'Cardio',
+  flexibility: 'Flexibility',
+  cardioLow: 'Light Cardio',
+  mindBody: 'Mind & Body',
+  functional: 'Functional',
+};
 
-function ActivityIconStack({
-  primary,
-  secondary,
-  tertiary,
-}: {
-  primary: ActivityType;
-  secondary?: ActivityType;
-  tertiary?: ActivityType;
-}) {
-  // ">" formation — secondary top-left, tertiary bottom-left, primary center-right
-  if (secondary && tertiary) {
-    return (
-      <View style={{ width: SPREAD + ICON_PX, height: SPREAD * 2 + ICON_PX }}>
-        <View style={[styles.iconSlot, { top: 0, left: 0, zIndex: 1, opacity: 0.78 }]}>
-          <ActivityIcon type={secondary} size="lg" glow />
-        </View>
-        <View style={[styles.iconSlot, { top: SPREAD * 2, left: 0, zIndex: 1, opacity: 0.78 }]}>
-          <ActivityIcon type={tertiary} size="lg" glow />
-        </View>
-        {/* rendered last so it sits on top on both iOS and Android */}
-        <View style={[styles.iconSlot, { top: SPREAD, left: SPREAD, zIndex: 3 }]}>
-          <ActivityIcon type={primary} size="lg" glow />
-        </View>
-      </View>
-    );
-  }
+export function ExploreChallengeCard({ challenge, onPress, daysLabel = 'days' }: ExploreChallengeCardProps) {
+  const activityTypes = [
+    challenge.activityType,
+    challenge.secondaryActivityType,
+    challenge.tertiaryActivityType,
+  ].filter((t): t is ActivityType => Boolean(t));
 
-  // "/" formation — secondary bottom-left, primary top-right
-  if (secondary) {
-    const size = SPREAD + ICON_PX;
-    return (
-      <View style={{ width: size, height: size }}>
-        <View style={[styles.iconSlot, { top: SPREAD, left: 0, zIndex: 1, opacity: 0.78 }]}>
-          <ActivityIcon type={secondary} size="lg" glow />
-        </View>
-        <View style={[styles.iconSlot, { top: 0, left: SPREAD, zIndex: 3 }]}>
-          <ActivityIcon type={primary} size="lg" glow />
-        </View>
-      </View>
-    );
-  }
+  const categoryLabel = activityTypes.map((t) => CATEGORY_NAMES[t]).join(' · ');
 
-  // Single icon
-  return <ActivityIcon type={primary} size="lg" glow />;
-}
-
-export function ExploreChallengeCard({ challenge, onPress }: ExploreChallengeCardProps) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}>
       <View style={styles.card}>
         <LinearGradient
-          colors={['#0a0a0a', '#242323']}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
+          colors={['#1a1a1c', '#050505']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
           style={styles.gradient}
         >
-          <Row justify="space-between" align="stretch" gap="md" style={styles.content}>
-            <Stack style={styles.textAndBadges} justify="space-between">
-              <Stack gap="xs">
-                <Text variant="header" tone="primary" numberOfLines={1}>
-                  {challenge.title}
-                </Text>
-                <Text variant="body" tone="secondary" numberOfLines={1}>
-                  {challenge.subtitle}
-                </Text>
-              </Stack>
+          <View style={styles.content}>
+            <Stack align="center" justify="center" gap="xxs" style={styles.daysStack}>
+              <Text variant="title" tone="primary" style={styles.daysNumber}>
+                {challenge.durationDays}
+              </Text>
+              <Text variant="label" tone="secondary">
+                {daysLabel}
+              </Text>
+            </Stack>
 
-              <Row justify="flex-start" align="center" gap="sm" style={styles.badgesRow}>
-                <ChallengeBadge label={challenge.durationLabel} />
+            <View style={styles.divider} />
+
+            <Stack gap="xs" justify="center" style={styles.textStack}>
+              <Row align="center" justify="flex-start" gap="xs" style={styles.categoryRow}>
+                {activityTypes.map((type) => (
+                  <ActivityIcon key={type} type={type} size="md" variant="dot" />
+                ))}
+                <Text variant="label" numberOfLines={1} style={styles.categoryLabel}>
+                  {categoryLabel}
+                </Text>
+              </Row>
+
+              <Text variant="header" tone="primary" numberOfLines={1}>
+                {challenge.title}
+              </Text>
+              <Text variant="body" tone="secondary" numberOfLines={1} style={styles.subtitle}>
+                {challenge.subtitle}
+              </Text>
+
+              <Row justify="flex-start" align="center" style={styles.badgesRow}>
                 <ChallengeBadge label={challenge.locationLabel} />
               </Row>
             </Stack>
-
-            <View style={styles.iconWrapper}>
-              <ActivityIconStack
-                primary={challenge.activityType}
-                secondary={challenge.secondaryActivityType}
-                tertiary={challenge.tertiaryActivityType}
-              />
-            </View>
-          </Row>
+          </View>
         </LinearGradient>
       </View>
     </Pressable>
@@ -110,32 +88,52 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    minHeight: 130,
-    borderRadius: radius.xl,
+    minHeight: 200,
+    borderRadius: radius.lg,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
   },
   gradient: {
     flex: 1,
-    padding: spacing.lg,
   },
   content: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'stretch',
   },
-  textAndBadges: {
+  daysStack: {
+    width: 92,
+    flexShrink: 0,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  daysNumber: {
+    lineHeight: 32,
+  },
+  divider: {
+    width: 1,
+    backgroundColor: colors.border,
+    opacity: 0.5,
+  },
+  textStack: {
+    flex: 1,
+    minWidth: 0,
+    padding: spacing.lg,
+    paddingLeft: spacing.md,
+  },
+  categoryRow: {
+    minWidth: 0,
+  },
+  categoryLabel: {
     flex: 1,
     minWidth: 0,
   },
+  subtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
   badgesRow: {
+    marginTop: spacing.sm,
     flexWrap: 'wrap',
-  },
-  iconWrapper: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  iconSlot: {
-    position: 'absolute',
   },
   pressed: {
     opacity: 0.86,

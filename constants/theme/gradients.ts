@@ -21,6 +21,11 @@ export const gradients = {
     start: { x: 0, y: 0 },
     end: { x: 1, y: 1 },
   },
+  surfaceHorizontal: {
+    colors: [colors.surface, '#131315'] as const,
+    start: { x: 0, y: 0 },
+    end: { x: 1, y: 0 },
+  },
   metricsBridge: {
     colors: [colors.background, colors.surface, colors.surfaceHighlight] as const,
     start: { x: 0.5, y: 0 },

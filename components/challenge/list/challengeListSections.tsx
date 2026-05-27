@@ -26,7 +26,7 @@ export interface ExploreChallengeViewModel {
   activityType: ActivityType;
   secondaryActivityType?: ActivityType;
   tertiaryActivityType?: ActivityType;
-  durationLabel: string;
+  durationDays: number;
   locationLabel: string;
 }
 

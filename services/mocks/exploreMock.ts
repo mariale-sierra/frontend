@@ -8,7 +8,7 @@ export function buildMockExploreChallenges(): ExploreChallengeViewModel[] {
       title: 'Iron Will',
       subtitle: 'ChallengeApp · 142 members',
       activityType: 'strength',
-      durationLabel: '30 days',
+      durationDays: 30,
       locationLabel: 'Any location',
     },
     {
@@ -17,7 +17,7 @@ export function buildMockExploreChallenges(): ExploreChallengeViewModel[] {
       subtitle: 'MoveFast · 88 members',
       activityType: 'cardioIntense',
       secondaryActivityType: 'flexibility',
-      durationLabel: '21 days',
+      durationDays: 21,
       locationLabel: 'Gym',
     },
     {
@@ -27,7 +27,7 @@ export function buildMockExploreChallenges(): ExploreChallengeViewModel[] {
       activityType: 'functional',
       secondaryActivityType: 'cardioLow',
       tertiaryActivityType: 'mindBody',
-      durationLabel: '45 days',
+      durationDays: 45,
       locationLabel: 'Outdoor',
     },
   ];

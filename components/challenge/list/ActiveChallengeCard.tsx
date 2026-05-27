@@ -20,9 +20,9 @@ interface ActiveChallengeCardProps {
 type ChallengeStatus = ActiveChallengeViewModel['status'];
 
 const GRADIENT_COLORS: Record<ChallengeStatus, readonly [string, string]> = {
-  active: ['#242323', '#000000'],
-  completed: ['#0a0a0a', 'rgba(74, 222, 128, 0.05)'],
-  left: ['#242323', '#000000'],
+  active: ['#1a1a1c', '#050505'],
+  completed: ['#0d0d0d', 'rgba(74, 222, 128, 0.09)'],
+  left: ['#141416', '#050505'],
 };
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
@@ -80,7 +80,7 @@ export function ActiveChallengeCard({
                   <Ionicons name="moon" size={22} color={colors.primary} />
                 </View>
               ) : (
-                <ActivityIcon type={activityType} size="md" glow />
+                <ActivityIcon type={activityType} size="md" />
               )}
             </View>
 
@@ -133,19 +133,17 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 272,
-    minHeight: 200,
-    borderRadius: radius.xl,
+    minHeight: 210,
+    borderRadius: radius.lg,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
   },
   fullCard: {
     width: '100%',
   },
   gradient: {
     width: '100%',
-    minHeight: 200,
-    padding: spacing.md,
+    minHeight: 210,
+    padding: spacing.lg,
     justifyContent: 'space-between',
   },
   content: {

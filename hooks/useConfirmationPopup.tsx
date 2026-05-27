@@ -84,7 +84,7 @@ export function useConfirmationPopup({
           secondaryButton: {
             label: 'Stay',
             onPress: hide,
-            variant: 'outline' as const,
+            variant: 'primary' as const,
             disabled: loading,
           } as ConfirmationButtonConfig,
         };

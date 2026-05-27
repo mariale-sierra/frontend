@@ -33,7 +33,6 @@ export default function Challenges() {
 				const realExplore = toChallengeListViewModel(allChallenges ?? [], {
 						membersLabel: t('challenges.members'),
 						unknownCreatorLabel: t('challenges.unknownCreator'),
-						durationLabel: t('challenges.durationUnit'),
 						locationFallbackLabel: t('challenges.locationFallback'),
 					}).exploreChallenges;
 

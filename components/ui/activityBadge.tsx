@@ -11,7 +11,7 @@ interface ActivityBadgeProps {
 export function ActivityBadge({ label, activityType }: ActivityBadgeProps) {
   return (
     <View style={styles.badge}>
-      <ActivityIcon type={activityType} size="sm" variant="circle-glow" />
+      <ActivityIcon type={activityType} size="sm" variant="circle" />
       <Text variant="body" style={styles.label}>{label}</Text>
     </View>
   );

@@ -6,7 +6,6 @@ import type { ChallengeContract } from '../../types/challenge';
 interface ChallengeListLabels {
   membersLabel: string;
   unknownCreatorLabel: string;
-  durationLabel: string;
   locationFallbackLabel: string;
 }
 
@@ -239,13 +238,12 @@ function toExploreCard(challenge: ChallengeContract, labels: ChallengeListLabels
   const duration = asNumber(challenge.duration_days) ?? 0;
   const creator = pickCreatorName(challenge, labels);
   const members = pickMembersCount(challenge);
-
   return {
     challengeId: String(challenge.id),
     title: asString(challenge.name) || 'Untitled challenge',
     subtitle: `${creator} · ${members} ${labels.membersLabel}`,
     activityType: pickActivityType(challenge),
-    durationLabel: duration > 0 ? `${duration} ${labels.durationLabel}` : labels.durationLabel,
+    durationDays: duration,
     locationLabel: pickLocationLabel(challenge, labels),
   };
 }
@@ -275,7 +273,6 @@ export function toExploreChallengeViewModels(
   const labels: ChallengeListLabels = {
     membersLabel: 'members',
     unknownCreatorLabel: 'Unknown',
-    durationLabel: 'days',
     locationFallbackLabel: 'Any location',
   };
   return challenges.map((c) => toExploreCard(c, labels));

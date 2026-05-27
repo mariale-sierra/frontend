@@ -287,10 +287,10 @@ export default function CreateChallenge() {
                 setActiveOptionInfo({
                   label: option.label,
                   description: option.description,
-                  icon: <ActivityIcon type={option.type as ActivityType} size="lg" variant="circle-glow" />,
+                  icon: <ActivityIcon type={option.type as ActivityType} size="lg" variant="circle" />,
                 });
               }}
-              renderIcon={(option, size) => <ActivityIcon type={option.type as ActivityType} size={size} variant="circle-glow" />}
+              renderIcon={(option, size) => <ActivityIcon type={option.type as ActivityType} size={size} variant="circle" />}
             />
 
             <OptionSelectionPanel

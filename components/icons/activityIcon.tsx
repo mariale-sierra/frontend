@@ -5,13 +5,13 @@ import { colors, ActivityType } from '../../constants/theme';
 interface ActivityIconProps {
   type: ActivityType;
   size?: 'xs' | 'sm' | 'md' | 'lg';
-  variant?: 'circle' | 'circle-glow' | 'plain';
+  variant?: 'circle' | 'plain' | 'dot';
   color?: string;
-  glow?: boolean;
 }
 
 const containerSize = { xs: 18, sm: 28, md: 36, lg: 48 };
 const iconSize = { xs: 12, sm: 18, md: 22, lg: 26 };
+const dotSize = { xs: 6, sm: 8, md: 10, lg: 12 };
 
 const iconMap: Record<ActivityType, keyof typeof Ionicons.glyphMap> = {
   strength: 'barbell',
@@ -22,7 +22,21 @@ const iconMap: Record<ActivityType, keyof typeof Ionicons.glyphMap> = {
   functional: 'musical-notes',
 };
 
-export function ActivityIcon({ type, size = 'md', variant = 'circle', color, glow = false }: ActivityIconProps) {
+export function ActivityIcon({ type, size = 'md', variant = 'circle', color }: ActivityIconProps) {
+
+  if (variant === 'dot') {
+    const sz = dotSize[size];
+    return (
+      <View
+        style={{
+          width: sz,
+          height: sz,
+          borderRadius: sz / 2,
+          backgroundColor: colors.activityType[type],
+        }}
+      />
+    );
+  }
 
   if (variant === 'plain') {
     return (
@@ -34,8 +48,6 @@ export function ActivityIcon({ type, size = 'md', variant = 'circle', color, glo
     );
   }
 
-  const isGlowing = variant === 'circle-glow' || glow;
-
   return (
     <View
       style={[
@@ -45,13 +57,6 @@ export function ActivityIcon({ type, size = 'md', variant = 'circle', color, glo
           width: containerSize[size],
           height: containerSize[size],
           borderRadius: containerSize[size] / 2,
-        },
-        isGlowing && {
-          shadowColor: colors.activityType[type],
-          shadowOpacity: 0.5,
-          shadowRadius: 12,
-          shadowOffset: { width: 0, height: 0 },
-          elevation: 8,
         },
       ]}
     >
