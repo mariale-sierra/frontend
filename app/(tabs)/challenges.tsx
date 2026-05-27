@@ -12,9 +12,6 @@ import { getChallenges } from '../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../services/user/user.service';
 import { toChallengeListViewModel } from '../../services/adapters/index';
 import { toEnrolledChallengesViewModel } from '../../services/adapters/index';
-// REMOVE_MOCK_START: remove these two imports and their spreads once mocks are no longer needed
-import { buildMockExploreChallenges } from '../../services/mocks/exploreMock';
-import { buildMockRestDayChallenges } from '../../services/mocks/activeMock'; // isRestDay design mock
 import { useTranslation } from 'react-i18next';
 
 export default function Challenges() {
@@ -37,10 +34,8 @@ export default function Challenges() {
 					}).exploreChallenges;
 
 					setChallengeView({
-						// REMOVE_MOCK: replace spread with just toEnrolledChallengesViewModel(enrolled ?? [])
-						activeChallenges: [...buildMockRestDayChallenges(), ...toEnrolledChallengesViewModel(enrolled ?? [])],
-						// REMOVE_MOCK: replace spread with just `realExplore`
-						exploreChallenges: [...buildMockExploreChallenges(), ...realExplore],
+						activeChallenges: toEnrolledChallengesViewModel(enrolled ?? []),
+						exploreChallenges: realExplore,
 					});
 			})
 			.catch(() => setError(t('challenges.loadError')))

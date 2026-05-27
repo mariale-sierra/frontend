@@ -15,9 +15,11 @@ export async function getMyChallenges(): Promise<ChallengeContract[]> {
 
   console.log('MY CHALLENGES RAW', payload);
 
-  if (payload?.active && Array.isArray(payload.active)) {
-    return payload.active;
-  }
+  // The API returns grouped challenges by status { active: [], completed: [], left: [] }
+  // Flatten them so callers receive a simple array of challenges with `status` set.
+  const active = Array.isArray(payload?.active) ? payload.active : [];
+  const completed = Array.isArray(payload?.completed) ? payload.completed : [];
+  const left = Array.isArray(payload?.left) ? payload.left : [];
 
-  return [];
+  return [...active, ...completed, ...left];
 }
