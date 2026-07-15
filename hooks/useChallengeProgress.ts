@@ -6,6 +6,14 @@ import type { ChallengeProgressContract } from '../types/challenge';
 
 let cachedProgress: ChallengeProgressContract | null | undefined;
 
+/**
+ * Clears the module-level progress cache. Must be called on login/logout so a
+ * new session never renders the previous user's cached challenge progress.
+ */
+export function invalidateChallengeProgressCache() {
+  cachedProgress = undefined;
+}
+
 export function useChallengeProgress() {
   const [progress, setProgress] = useState<ChallengeProgressContract | null>(
     cachedProgress === undefined ? null : cachedProgress,

@@ -25,13 +25,16 @@ At the start of any task, right after ARCHITECTURE.
 
 | Feature / area | Status | Notes |
 | --- | --- | --- |
-| Auth (login/register/recover/onboarding) | ✅ | `app/(auth)/`, `context/authContext.tsx`, `services/auth/`. |
+| Auth — login/register | ✅ | `app/(auth)/login.tsx`, `app/(auth)/register.tsx`, `context/authContext.tsx`, `services/auth/`. Real forms wired to `useAuth()`/the backend. |
+| Auth — recover password | 🧪 stub | `app/(auth)/recover-password.tsx` is a one-line placeholder (`<Text>Recover Password Screen</Text>`), no form, no service call. |
+| Auth — onboarding (objectives/preferences/profile type) | 🧪 stub | `app/(auth)/onboarding/objectives.tsx`, `preferences.tsx`, `profile_type.tsx` are each a one-line placeholder (`<Text>... Screen</Text>`), no logic. |
 | Bottom tabs (home/search/add/challenges/profile) | ✅ | `app/(tabs)/`. |
-| Challenge discovery/detail/create | 🧪 | Real API mixed with mock data: `app/(tabs)/challenges.tsx` uses `buildMockExploreChallenges()`/`buildMockRestDayChallenges()` (`REMOVE_MOCK` comments); `app/challenge/[id]/routine/[day].tsx` has an `ENABLE_CHALLENGE_DETAIL_MOCK` fallback; `app/challenge/create.tsx` has local mock category/location lists meant to come from backend/reference data; `store/routineBuilderStore.ts` has seed/mock routine data. |
+| Challenge discovery/detail/create | 🧪 | `app/(tabs)/challenges.tsx` fetches real data (`getMyChallenges()` + `getChallenges()`, via `services/user/user.service.ts` / `services/challenge/challenge.service.ts`) and does **not** import `buildMockExploreChallenges()`/`buildMockRestDayChallenges()` — those builders still exist in `services/mocks/exploreMock.ts` / `activeMock.ts` but are dead/unimported code, not live on this screen (corrects a previously stale claim in this doc). Mock data that **is** still live: `app/challenge/[id]/routine/[day].tsx` has an `ENABLE_CHALLENGE_DETAIL_MOCK` fallback; `app/challenge/create.tsx` has local mock category/location lists meant to come from backend/reference data; `store/routineBuilderStore.ts` has seed/mock routine data. |
 | Routine builder / exercise picker | ✅ | `app/challenge/routine/`, `components/routine/`. |
 | Metrics entry / workout logging | ✅ | `app/(add)/`, `hooks/useMetricsScreen.ts`, `store/metricsEntryStore.ts`. |
 | Uploads (camera/preview) | ✅ | `app/(add)/camera.tsx`, `services/uploads/upload.service.ts`. |
-| Profile | ✅ | `app/(tabs)/profile.tsx`, `app/profile/[username].tsx`, `components/profile/`. |
+| Profile — own profile (tab) | ✅ | `app/(tabs)/profile.tsx` fetches real data via `getMe()` (`services/user/user.service.ts`), has loading/error states, uses `components/profile/` (`ProfileHeader`, `PostsViewToggle`, `PostsGrid`, `ProfilePhotoModal`). |
+| Profile — public profile by username | 🧪 stub | `app/profile/[username].tsx` is a one-line placeholder (`<Text>User Profile</Text>` + the raw `username` param), no fetch, no real layout. |
 | Messaging | 📐 not built | `app/messaging/` routes exist and render, but `components/messaging/` is just `.gitkeep` + an empty barrel `index.ts`. Matches the backend: no `spaces`/`direct_conversations`/`direct_messages` module exists yet either. |
 | Notifications | 📐 not built | `app/notifications.tsx` exists as a modal route, but `components/notifications/` is just `.gitkeep` + empty barrel. Matches the backend: no `notifications` module yet. |
 | Social feed / likes | 📐 not built | `components/social/` is `.gitkeep` + empty barrel. Backend has no `user_follows`/`workout_post_likes` module yet either. |

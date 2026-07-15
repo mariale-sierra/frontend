@@ -8,7 +8,6 @@ import type {
 } from '../../types/auth';
 
 export async function login(email: string, password: string) {
-  console.log('login function called with:', email, password); // Debugging log
   try {
     const payload: LoginRequest = { email, password };
     const response = await api.post<AuthSessionResponse>('/auth/login', payload);
@@ -23,12 +22,7 @@ export async function login(email: string, password: string) {
     }
     return response.data;
   } catch (error: any) {
-    console.error('Login error:', {
-      message: error?.message,
-      status: error?.response?.status,
-      data: error?.response?.data,
-      stack: error?.stack,
-    });
+    console.error('[auth] login failed, status:', error?.response?.status);
     throw error; // Re-throw the error after logging
   }
 }
@@ -63,4 +57,14 @@ export async function getUserId() {
 
 export async function getUsername() {
   return await storage.getItem('username');
+}
+
+/**
+ * Validates the current session against the backend and returns the JWT claims
+ * for the authenticated user. Throws (401) if the token is missing/invalid.
+ * Centralized here so no component calls the raw `api` client directly.
+ */
+export async function fetchAuthMe() {
+  const response = await api.get('/auth/me');
+  return response.data;
 }

@@ -30,9 +30,12 @@ The Havit mobile app: Expo + Expo Router + React Native, consuming the `backend/
 7. [DECISIONS.md](./DECISIONS.md) — why things are the way they are.
 8. [ROADMAP.md](./ROADMAP.md) — what's planned.
 9. [TASKS-LOG.md](./TASKS-LOG.md) — completed work log.
+10. [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) — common failures and fixes.
 
 ## Specialized docs
 
-`frontend/` subfolder — routes, components, design system, forms, API client. Read via the `app-builder-frontend` skill.
+`frontend/` subfolder — routes, components, design system, forms, API client, [i18n](./frontend/I18N-GUIDE.md), [testing](./frontend/TESTING-GUIDE.md). Read via the `app-builder-frontend` skill.
+
+See also `backend/docs/ai/SECURITY.md` (in the backend repo) for the shared per-user auth/ownership model this app's client-side token handling must respect.
 
 > This index must reflect the real current codebase, not assumptions.
