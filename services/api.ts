@@ -1,14 +1,22 @@
 import axios from 'axios';
+import Constants from 'expo-constants';
+import i18n from '../i18n';
 import { getAccessToken } from './auth/token.service';
 import { useErrorNotificationStore } from '../store/errorNotificationStore';
 
+// Base URL comes from app config (`extra.apiUrl` in app.config.js), which itself reads the
+// EXPO_PUBLIC_API_URL env var — falls back to the known dev IP if config resolution fails.
+// NOTE: intentionally HTTP, not HTTPS. The backend has no TLS certificate yet; forcing HTTPS
+// here would break every request. Switch the fallback once that infra work lands.
+const FALLBACK_API_URL = 'http://20.63.84.1:3000';
+const baseURL = (Constants.expoConfig?.extra?.apiUrl as string | undefined) ?? FALLBACK_API_URL;
+
 const api = axios.create({
-  baseURL: 'http://20.63.84.1:3000',
+  baseURL,
 });
 
 api.interceptors.request.use(async (config) => {
   const token = await getAccessToken();
-  console.log('[api] attaching Authorization:', Boolean(token));
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -19,37 +27,36 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const errorStore = useErrorNotificationStore.getState();
-    
+
     // Handle different error types
     if (error?.response?.status === 401) {
-      console.log('[api] 401 received from:', error?.config?.url);
       errorStore.show({
-        title: 'Sesión expirada',
-        message: 'Tu sesión ha expirado. Por favor inicia sesión de nuevo.',
+        title: i18n.t('common.errors.sessionExpiredTitle'),
+        message: i18n.t('common.errors.sessionExpiredMessage'),
         duration: 5000,
       });
     } else if (error?.response?.status === 403) {
       errorStore.show({
-        title: 'Acceso denegado',
-        message: 'No tienes permiso para realizar esta acción.',
+        title: i18n.t('common.errors.forbiddenTitle'),
+        message: i18n.t('common.errors.forbiddenMessage'),
         duration: 5000,
       });
     } else if (error?.response?.status === 404) {
       errorStore.show({
-        title: 'No encontrado',
-        message: 'El recurso que buscas no existe.',
+        title: i18n.t('common.errors.notFoundTitle'),
+        message: i18n.t('common.errors.notFoundMessage'),
         duration: 5000,
       });
     } else if (error?.response?.status === 500) {
       errorStore.show({
-        title: 'Error del servidor',
-        message: 'Ha ocurrido un error en el servidor. Intenta nuevamente.',
+        title: i18n.t('common.errors.serverErrorTitle'),
+        message: i18n.t('common.errors.serverErrorMessage'),
         duration: 5000,
       });
     } else if (error?.message === 'Network Error') {
       errorStore.show({
-        title: 'Error de conexión',
-        message: 'No se puede conectar al servidor. Verifica tu conexión a internet.',
+        title: i18n.t('common.errors.networkErrorTitle'),
+        message: i18n.t('common.errors.networkErrorMessage'),
         duration: 5000,
       });
     } else if (error?.response?.data?.message) {
@@ -59,8 +66,8 @@ api.interceptors.response.use(
       });
     } else {
       errorStore.show({
-        title: 'Error',
-        message: 'Ha ocurrido un error desconocido. Intenta nuevamente.',
+        title: i18n.t('common.errors.genericTitle'),
+        message: i18n.t('common.errors.genericMessage'),
         duration: 5000,
       });
     }

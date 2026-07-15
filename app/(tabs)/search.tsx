@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Text } from '../../components/ui/text';
 import { SearchBar } from '../../components/ui/searchBar';
@@ -14,6 +15,7 @@ import { colors, spacing } from '../../constants/theme';
 
 export default function Search() {
   const router = useRouter();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,9 +29,9 @@ export default function Search() {
         const unjoined = allChallenges.filter((c) => !joinedIds.has(String(c.id)));
         setAvailable(toExploreChallengeViewModels(unjoined));
       })
-      .catch(() => setError('Could not load challenges.'))
+      .catch(() => setError(t('challenges.loadError')))
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   const filtered = useMemo(() => {
     const lower = query.trim().toLowerCase();
@@ -48,7 +50,7 @@ export default function Search() {
             <SearchBar
               value={query}
               onChangeText={setQuery}
-              placeholder="Search challenges"
+              placeholder={t('challenges.searchPlaceholder')}
             />
           </View>
         }
@@ -65,7 +67,7 @@ export default function Search() {
               <ActivityIndicator color={colors.textPrimary} />
             </View>
           ) : (
-            <Text tone="secondary">{error ?? 'No challenges available.'}</Text>
+            <Text tone="secondary">{error ?? t('challenges.searchEmpty')}</Text>
           )
         }
       />

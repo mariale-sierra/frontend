@@ -33,3 +33,11 @@ export * from './CreateFlowFixedBottomBar';
 // CreateFlowPrimaryButton: Main rounded CTA used across create-related flows.
 // Design: High-contrast full-width action button for primary progression/submission actions.
 export * from './CreateFlowPrimaryButton';
+
+// OptionSelectionPanel: Generic multi-select grid of option cards (categories, locations, ...).
+// Design: Two-column card grid with a per-card info affordance for a longer description.
+export * from './OptionSelectionPanel';
+
+// OptionInfoModal: Detail dialog shown when a user taps an option card's info affordance.
+// Design: Centered dialog with icon, title, and description over a dimmed backdrop.
+export * from './OptionInfoModal';

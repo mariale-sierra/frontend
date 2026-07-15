@@ -9,13 +9,11 @@ import { CreateRoutinePickerCard, DayRoutineHeader, ExerciseBlock } from '../../
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { spacing } from '../../../constants/theme';
 import { addExerciseToRoutine, createRoutine } from '../../../services/routine/routine.service';
-import { useAuth } from '../../../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 
 export default function CreateRoutineScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { userId } = useAuth();
   const { day } = useLocalSearchParams<{ day: string }>();
   const {
     routineName,
@@ -56,7 +54,6 @@ export default function CreateRoutineScreen() {
       const routine = await createRoutine({
         name: routineName.trim(),
         description: routineDescription.trim() || undefined,
-        createdByUserId: userId ?? undefined,
         is_active: true,
       });
 

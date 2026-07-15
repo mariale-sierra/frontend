@@ -65,7 +65,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
 
         // Error de red, 5xx, CORS, timeout, etc. — preservar sesión
-        // El token sigue en AsyncStorage y el interceptor lo adjuntará en siguientes llamadas
+        // El token sigue en SecureStore y el interceptor lo adjuntará en siguientes llamadas
       }
 
       setToken(storedToken);

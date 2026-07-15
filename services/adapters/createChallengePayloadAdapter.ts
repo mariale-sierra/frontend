@@ -22,10 +22,6 @@ interface BuildChallengePayloadParams {
   routinesByDay: Record<number, RoutineSummary>;
 }
 
-type BuildPayloadResult =
-  | { ok: true; payload: CreateChallengePayload }
-  | { ok: false; errors: string[] };
-
 function mapStrengthSet(set: SetRow) {
   return {
     set_number: set.setNumber,
@@ -74,32 +70,21 @@ function mapExercise(exercise: ExerciseEntry): CreateChallengeExercisePayload {
   };
 }
 
+/**
+ * Builds the `POST /challenges` payload from builder-store state.
+ *
+ * This is a pure data transformation, not a validation step: `useCreateChallengeFlow`'s
+ * `missingConfigurationFields` (built from `getStepErrors`) is the single source of truth
+ * for challenge-create validation and gates every caller before this function runs. Don't
+ * re-add field-presence checks here — that would reintroduce a second, easy-to-drift copy
+ * of the same rules the hook already enforces.
+ */
 export function buildCreateChallengePayload(
   params: BuildChallengePayloadParams,
-): BuildPayloadResult {
-  const errors: string[] = [];
-
-  if (params.title.trim().length === 0) {
-    errors.push('Challenge name is required.');
-  }
-  if (params.cycleDuration <= 0) {
-    errors.push('Cycle duration must be greater than zero.');
-  }
-  if (params.challengeDuration <= 0) {
-    errors.push('Challenge duration must be greater than zero.');
-  }
-
+): CreateChallengePayload {
   const cycleDays = Array.from({ length: params.cycleDuration }, (_, index) => index + 1);
-  const missingDays = cycleDays.filter((day) => !params.routinesByDay[day]);
-  if (missingDays.length > 0) {
-    errors.push(`Every cycle day needs a routine. Missing: ${missingDays.join(', ')}`);
-  }
 
-  if (errors.length > 0) {
-    return { ok: false, errors };
-  }
-
-  const payload: CreateChallengePayload = {
+  return {
     name: params.title.trim(),
     description: params.description.trim() || undefined,
     visibility: params.visibility.toLowerCase() as Lowercase<ChallengeVisibility>,
@@ -120,6 +105,4 @@ export function buildCreateChallengePayload(
       };
     }),
   };
-
-  return { ok: true, payload };
 }

@@ -1,5 +1,5 @@
-import { type ReactNode, useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Row } from '../../components/layout/row';
@@ -12,168 +12,17 @@ import {
   ChallengeVisibilitySection,
   CreateChallengeHeader,
   DurationStepper,
+  OptionSelectionPanel,
+  OptionInfoModal,
+  type OptionInfoModalState,
 } from '../../components/challenge/create';
 import { ActivityIcon } from '../../components/icons/activityIcon';
 import { LocationIcon, type LocationType } from '../../components/icons/locationIcon';
 import { Text } from '../../components/ui/text';
 import { colors, radius, spacing, type ActivityType } from '../../constants/theme';
+import { CATEGORY_OPTIONS, LOCATION_OPTIONS, VISIBILITY_OPTIONS } from '../../constants/challengeCreateOptions';
 import { useCreateChallengeFlow } from '../../hooks/useCreateChallengeFlow';
 import { useTranslation } from 'react-i18next';
-
-// MOCK ONLY: category and location option lists should come from backend/database.
-// Backend team: send these as reference data so challenge setup is fully server-driven.
-const CATEGORY_OPTIONS = [
-  { label: 'Strength', value: 'Strength', type: 'strength' as const, description: 'Load-based training focused on force, power, and muscular growth.' },
-  { label: 'Cardio Intense', value: 'Cardio Intense', type: 'cardioIntense' as const, description: 'High-effort endurance work that elevates heart rate fast.' },
-  { label: 'Cardio Low', value: 'Cardio Low', type: 'cardioLow' as const, description: 'Lower-impact aerobic work built for consistency and recovery.' },
-  { label: 'Flexibility', value: 'Flexibility', type: 'flexibility' as const, description: 'Mobility and range-of-motion sessions to improve movement quality.' },
-  { label: 'Mind-Body', value: 'Mind-Body', type: 'mindBody' as const, description: 'Practices that blend control, breath, and awareness with training.' },
-  { label: 'Functional', value: 'Functional', type: 'functional' as const, description: 'Full-body patterns that transfer to everyday movement and sport.' },
-];
-
-const LOCATION_OPTIONS = [
-  { label: 'Gym', value: 'Gym', type: 'gym' as const, description: 'Equipment-first sessions built around machines, weights, or racks.' },
-  { label: 'Home', value: 'Home', type: 'home' as const, description: 'Minimal-space training designed for home routines and convenience.' },
-  { label: 'Outdoor', value: 'Outdoor', type: 'outdoor' as const, description: 'Running, field work, or open-air movement with more space.' },
-  { label: 'Studio', value: 'Studio', type: 'studio' as const, description: 'Class-like sessions for guided formats such as yoga or pilates.' },
-  { label: 'Anywhere', value: 'Anywhere', type: 'anywhere' as const, description: 'Flexible setups that can be completed in almost any environment.' },
-];
-
-const VISIBILITY_OPTIONS = ['Public', 'Private'];
-
-interface SelectionPanelProps {
-  title: string;
-  subtitle: string;
-  children: ReactNode;
-}
-
-interface OptionCardProps {
-  label: string;
-  selected: boolean;
-  icon: ReactNode;
-  onPress: () => void;
-  onPressInfo: () => void;
-}
-
-interface SelectableOptionBase {
-  label: string;
-  value: string;
-  description: string;
-}
-
-interface OptionInfoModalState {
-  label: string;
-  description: string;
-  icon: ReactNode;
-}
-
-function SelectionPanel({ title, subtitle, children }: SelectionPanelProps) {
-  return (
-    <Stack gap="md">
-      <View>
-        <Text variant="subheader">{title}</Text>
-        <Text variant="body" tone="secondary" style={styles.selectionPanelSubtitle}>{subtitle}</Text>
-      </View>
-      {children}
-    </Stack>
-  );
-}
-
-function OptionCard({ label, selected, icon, onPress, onPressInfo }: OptionCardProps) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.optionCard, selected && styles.optionCardSelected, pressed && styles.pressed]}
-    >
-      <Pressable
-        hitSlop={10}
-        onPress={(event) => {
-          event.stopPropagation();
-          onPressInfo();
-        }}
-        style={({ pressed }) => [styles.optionInfoButton, pressed && styles.pressed]}
-      >
-        <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
-      </Pressable>
-
-      <View style={styles.optionContent}>
-        {icon}
-        <Text variant="body" style={styles.optionTitle}>{label}</Text>
-      </View>
-    </Pressable>
-  );
-}
-
-function OptionInfoModal({
-  info,
-  onClose,
-}: {
-  info: OptionInfoModalState | null;
-  onClose: () => void;
-}) {
-  return (
-    <Modal
-      visible={Boolean(info)}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <Pressable style={styles.infoBackdrop} onPress={onClose}>
-        <Pressable style={styles.infoDialog} onPress={() => {}}>
-          <Pressable hitSlop={10} style={styles.infoCloseButton} onPress={onClose}>
-            <Ionicons name="close" size={20} color={colors.textPrimary} />
-          </Pressable>
-
-          <Stack gap="md" style={styles.infoContent}>
-            <View style={styles.infoIconShell}>{info?.icon ?? null}</View>
-            <Text variant="subheader" style={styles.infoTitle}>{info?.label}</Text>
-            <Text variant="body" tone="secondary" style={styles.infoDescription}>
-              {info?.description}
-            </Text>
-          </Stack>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
-function OptionSelectionPanel<TOption extends SelectableOptionBase>({
-  title,
-  subtitle,
-  options,
-  selectedValues,
-  onToggle,
-  onPressInfo,
-  renderIcon,
-}: {
-  title: string;
-  subtitle: string;
-  options: readonly TOption[];
-  selectedValues: string[];
-  onToggle: (value: string) => void;
-  onPressInfo: (option: TOption) => void;
-  renderIcon: (option: TOption, size: 'sm' | 'lg') => ReactNode;
-}) {
-  return (
-    <SelectionPanel title={title} subtitle={subtitle}>
-      <View style={styles.optionGrid}>
-        {options.map((option) => {
-          const selected = selectedValues.includes(option.value);
-          return (
-            <OptionCard
-              key={option.value}
-              label={option.label}
-              selected={selected}
-              icon={renderIcon(option, 'lg')}
-              onPress={() => onToggle(option.value)}
-              onPressInfo={() => onPressInfo(option)}
-            />
-          );
-        })}
-      </View>
-    </SelectionPanel>
-  );
-}
 
 export default function CreateChallenge() {
   const { t } = useTranslation();
@@ -605,89 +454,6 @@ const styles = StyleSheet.create({
   },
   weekPickerOptionLabel: {
     color: colors.textPrimary,
-  },
-  selectionPanelSubtitle: {
-    marginTop: spacing.xs,
-  },
-  optionGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  optionCard: {
-    width: '48%',
-    minHeight: 150,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    padding: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionCardSelected: {
-    borderColor: 'rgba(255,255,255,0.34)',
-    backgroundColor: 'rgba(255,255,255,0.09)',
-  },
-  optionContent: {
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  optionTitle: {
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  optionInfoButton: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  infoBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  infoDialog: {
-    width: '100%',
-    borderRadius: radius['2xl'],
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    position: 'relative',
-  },
-  infoCloseButton: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
-    zIndex: 2,
-  },
-  infoContent: {
-    alignItems: 'center',
-    paddingTop: spacing.md,
-  },
-  infoIconShell: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  infoTitle: {
-    textAlign: 'center',
-  },
-  infoDescription: {
-    textAlign: 'center',
-    lineHeight: 20,
   },
   summaryContent: {
     paddingHorizontal: spacing.xs,

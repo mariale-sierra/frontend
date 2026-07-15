@@ -29,7 +29,15 @@ Non-grouped stacks: `app/challenge/`, `app/home/`, `app/messaging/`, `app/profil
 | `/` | `app/index.tsx` |
 | `/(tabs)` | `app/(tabs)/_layout.tsx` |
 | `/challenge/[id]` | `app/challenge/[id]/index.tsx` |
+| `/challenge/[id]/progress` | `app/challenge/[id]/progress.tsx` → `components/challenge/progress/ChallengeActiveProgressScreen.tsx` (presentational; data via `hooks/useChallengeActiveProgress.ts`) |
 | `/challenge/create` | `app/challenge/create.tsx` |
 | `/notifications` | `app/notifications.tsx` (modal) |
+
+## `app/challenge/create.tsx` support files (split out 2026-07-15)
+
+- `constants/challengeCreateOptions.ts` — `CATEGORY_OPTIONS`/`LOCATION_OPTIONS`/`VISIBILITY_OPTIONS` reference data (still `MOCK ONLY`, pending a backend reference-data endpoint).
+- `components/challenge/create/OptionSelectionPanel.tsx` — generic multi-select option-card grid (categories/locations step).
+- `components/challenge/create/OptionInfoModal.tsx` — detail dialog for an option card's info affordance.
+- `hooks/useCreateChallengeFlow.ts` — the single source of truth for challenge-create validation (`getStepErrors`/`missingConfigurationFields`; `isFormComplete` derives from the latter, doesn't restate the rules). `services/adapters/createChallengePayloadAdapter.ts`'s `buildCreateChallengePayload` is a pure payload transform, not a second validation layer — don't add field-presence checks back into it.
 
 > Must reflect the real current frontend, not assumptions.

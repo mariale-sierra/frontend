@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Text } from '../../components/ui/text';
 import { colors, radius, spacing } from '../../constants/theme';
@@ -23,28 +24,29 @@ function ActionCard({
 
 export default function Add() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   return (
     <ScreenBackground variant="default">
       <View style={styles.container}>
-        <Text variant="title">Quick actions</Text>
+        <Text variant="title">{t('addMenu.title')}</Text>
         <Text variant="body" tone="secondary">
-          Usa esta pantalla para probar el flujo nuevo de métricas, descanso y progreso.
+          {t('addMenu.subtitle')}
         </Text>
 
         <ActionCard
-          title="Registrar métricas"
-          description="Abre el flujo de entrenamiento conectado al backend."
+          title={t('addMenu.metrics.title')}
+          description={t('addMenu.metrics.description')}
           onPress={() => router.push('/(add)/metrics')}
         />
         <ActionCard
-          title="Registrar descanso"
-          description="Envía progreso al endpoint nuevo sin imagen, ideal para validar la API."
+          title={t('addMenu.restDay.title')}
+          description={t('addMenu.restDay.description')}
           onPress={() => router.push('/(add)/rest-day')}
         />
         <ActionCard
-          title="Ir a cámara"
-          description="Atajo al flujo visual de captura y preview."
+          title={t('addMenu.camera.title')}
+          description={t('addMenu.camera.description')}
           onPress={() => router.push('/(add)/camera')}
         />
       </View>

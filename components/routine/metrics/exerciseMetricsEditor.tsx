@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
 import { ExerciseInput } from './exerciseInput';
 import { RestTimeInput } from './restTimeInput';
@@ -42,6 +43,7 @@ function parseRestInput(value: string): { restMin: number; restSec: number } {
 }
 
 export function ExerciseMetricsEditor({ exercise }: ExerciseMetricsEditorProps) {
+  const { t } = useTranslation();
   const {
     updateStrengthSet,
     removeStrengthSet,
@@ -56,8 +58,8 @@ export function ExerciseMetricsEditor({ exercise }: ExerciseMetricsEditorProps) 
       <View style={styles.strengthCard}>
         <View style={styles.tableHeader}>
           <View style={styles.setColumn} />
-          <Text variant="caption" style={styles.tableHeaderText}>REPS</Text>
-          <Text variant="caption" style={styles.tableHeaderText}>REST</Text>
+          <Text variant="caption" style={styles.tableHeaderText}>{t('metrics.tableHeaders.reps')}</Text>
+          <Text variant="caption" style={styles.tableHeaderText}>{t('metrics.tableHeaders.rest')}</Text>
           <View style={styles.removeColumn} />
         </View>
 

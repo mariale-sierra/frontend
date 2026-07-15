@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
 import { colors, spacing, type ActivityType } from '../../../constants/theme';
 import ChallengeRoutineDayCard from './challengeRoutineDayCard';
@@ -21,6 +22,7 @@ export default function ChallengeRoutineList({
   routine,
   onPressDay,
 }: Props) {
+  const { t } = useTranslation();
   const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
   const [weekPickerOpen, setWeekPickerOpen] = useState(false);
 
@@ -45,7 +47,7 @@ export default function ChallengeRoutineList({
   return (
     <View style={styles.container}>
       <View style={styles.sectionRow}>
-        <Text variant="subheader" style={styles.sectionLabel}>Days Summary</Text>
+        <Text variant="subheader" style={styles.sectionLabel}>{t('challenges.daysSummaryTitle')}</Text>
 
         {showWeekPicker && (
           <View style={styles.weekPickerWrap}>
@@ -54,7 +56,7 @@ export default function ChallengeRoutineList({
               style={({ pressed }) => [styles.weekPickerButton, pressed && styles.pressed]}
             >
               <Text variant="label" style={styles.weekPickerLabel}>
-                Week {Math.min(selectedWeekIndex + 1, maxWeekIndex + 1)}
+                {t('challengeCreate.days.weekLabel', { number: Math.min(selectedWeekIndex + 1, maxWeekIndex + 1) })}
               </Text>
               <Ionicons
                 name={weekPickerOpen ? 'chevron-up' : 'chevron-down'}
@@ -81,7 +83,7 @@ export default function ChallengeRoutineList({
                         pressed && styles.pressed,
                       ]}
                     >
-                      <Text variant="body">Week {index + 1}</Text>
+                      <Text variant="body">{t('challengeCreate.days.weekLabel', { number: index + 1 })}</Text>
                     </Pressable>
                   );
                 })}
@@ -107,7 +109,7 @@ export default function ChallengeRoutineList({
         })}
       </View>
 
-      <Text variant="label" style={styles.repeatLabel}>Repeat until challenge ends</Text>
+      <Text variant="label" style={styles.repeatLabel}>{t('challenges.repeatUntilEnds')}</Text>
     </View>
   );
 }

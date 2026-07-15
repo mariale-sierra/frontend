@@ -10,11 +10,8 @@ import { Text } from '../../../../components/ui/text';
 import { colors, radius, spacing, type ActivityType } from '../../../../constants/theme';
 import { toChallengeDetailViewModel } from '../../../../services/adapters';
 import { getChallenge } from '../../../../services/challenge/challenge.service';
-import { buildMockChallengeDetailViewModel } from '../../../../services/mocks/challengeDetailMock';
 import type { ChallengeContract, ChallengeCycleDayContract, ChallengeExerciseContract } from '../../../../types/challenge';
 import { useTranslation } from 'react-i18next';
-
-const ENABLE_CHALLENGE_DETAIL_MOCK = true;
 
 interface MetricCell {
   value: string;
@@ -245,11 +242,7 @@ export default function RoutineDayDetail() {
   }, [id]);
 
   const challengeViewResult = challenge ? toChallengeDetailViewModel(challenge) : null;
-  const challengeView = challengeViewResult?.ok
-    ? challengeViewResult.value
-    : ENABLE_CHALLENGE_DETAIL_MOCK
-      ? buildMockChallengeDetailViewModel()
-      : null;
+  const challengeView = challengeViewResult?.ok ? challengeViewResult.value : null;
 
   const requestedDay = Number(day ?? 1);
 
@@ -294,7 +287,25 @@ export default function RoutineDayDetail() {
   }
 
   if (!routine) {
-    return null;
+    return (
+      <ScreenBackground variant="default">
+        <View style={styles.screen}>
+          <View style={styles.headerTopRow}>
+            <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
+              <Icon name="chevron-back" size={20} color={colors.textPrimary} />
+            </Pressable>
+          </View>
+          <View style={styles.emptyStateWrap}>
+            <Text variant="header" tone="primary" align="center">
+              {t('challengeRoutineDay.emptyTitle')}
+            </Text>
+            <Text variant="body" tone="secondary" align="center" style={styles.emptyStateMessage}>
+              {t('challengeRoutineDay.emptyMessage')}
+            </Text>
+          </View>
+        </View>
+      </ScreenBackground>
+    );
   }
 
   return (
@@ -310,7 +321,6 @@ export default function RoutineDayDetail() {
               {t('challengeRoutineDay.dayOfLabel', {
                 day: routine.day,
                 total: routine.totalDays,
-                defaultValue: 'DAY {{day}} OF {{total}}',
               })}
             </Text>
 
@@ -320,7 +330,7 @@ export default function RoutineDayDetail() {
           <View style={styles.routineRow}>
             <View style={styles.routineIdentityText}>
               <Text variant="caption" style={styles.routineEyebrow}>
-                {t('challengeRoutineDay.routineLabel', { defaultValue: 'ROUTINE' })}
+                {t('challengeRoutineDay.routineLabel')}
               </Text>
               <Text variant="body" style={styles.routineTitle} numberOfLines={1}>
                 {routine.routineName.toUpperCase()}
@@ -361,6 +371,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  emptyStateWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
+  },
+  emptyStateMessage: {
+    marginTop: spacing.xs,
   },
   headerWrap: {
     paddingTop: spacing.xl,

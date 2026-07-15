@@ -1,4 +1,5 @@
 import { StyleSheet, TextInput, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
 import { colors, spacing } from '../../../constants/theme';
 
@@ -8,14 +9,16 @@ interface ExerciseNoteFieldProps {
 }
 
 export function ExerciseNoteField({ value, onChangeText }: ExerciseNoteFieldProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.noteSection}>
-      <Text variant="label">Note</Text>
+      <Text variant="label">{t('routineCreate.noteLabel')}</Text>
       <TextInput
         style={styles.noteInput}
         value={value}
         onChangeText={onChangeText}
-        placeholder="Add note..."
+        placeholder={t('routineCreate.notePlaceholder')}
         placeholderTextColor={colors.textMuted}
       />
     </View>

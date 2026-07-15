@@ -34,23 +34,17 @@ Every key added to `en.ts` **must** have the same key path added to `es.ts` in t
 
 ## Rule: correct Spanish accents
 
-`es.ts` currently has systematic missing accents (verified, not hypothetical): `'Iniciar sesion'` should be `'Iniciar sesión'`, `'Contrasena'` should be `'Contraseña'`, `'Atras'` should be `'Atrás'`, and the pattern repeats elsewhere in the file (e.g. any `dia`/`sesion`/`contrasena` root). **New Spanish strings must use correct tildes/ñ from the start** — don't propagate the existing pattern into new keys. Fixing the existing ones is tracked as backlog cleanup (plan §6 "i18n y textos"), not something every unrelated change needs to fix, but don't make the file worse.
+**Fixed 2026-07-15** — `es.ts` previously had a systematic missing-accent pattern across the whole file (`'Iniciar sesion'` → `'Iniciar sesión'`, `'Contrasena'` → `'Contraseña'`, `'Atras'` → `'Atrás'`, plus every `dia`/`categoria`/`ubicacion`/`duracion`/`descripcion`/`publico`/`titulo`/`aun` root, etc.). All of it was corrected in one pass, not just new keys. **New Spanish strings must keep using correct tildes/ñ** — this is now a maintained convention, not aspirational. Note: only missing accent marks (á/é/í/ó/ú/ñ) were fixed — the separate `¿`/`¡` inverted-punctuation gap (e.g. `'No tienes cuenta?'` instead of `'¿No tienes cuenta?'`) was left alone as a distinct, smaller cleanup item, not silently expanded into this change.
 
-## Known hardcoded strings not yet in `t()`
+## Hardcoded strings
 
-Roughly 20 UI strings are outside `t()` today, verified across:
-- Stub screens with literal `<Text>` content (`app/(auth)/recover-password.tsx`, `app/(auth)/onboarding/objectives.tsx`, `app/(auth)/onboarding/preferences.tsx`, `app/(auth)/onboarding/profile_type.tsx`, `app/profile/[username].tsx`) — see `frontend/docs/ai/CURRENT-STATE.md` for their stub status. When one of these is built out for real, its strings must go straight into `t()`, not be added as literals first.
-- Literals inside otherwise-real screens, e.g. `app/(tabs)/index.tsx`, `app/(tabs)/search.tsx`, `exerciseMetricsEditor.tsx`, and several `Alert.alert(...)` calls with inline text.
+**Closed 2026-07-15** — the ~20-string gap tracked here (stub screens, `(tabs)/index.tsx`, `(tabs)/add.tsx`, `(tabs)/search.tsx`, `challenge/[id]/index.tsx`, `challenge/routine/select.tsx`, `exerciseMetricsEditor.tsx`, `exerciseNoteField.tsx`, `challengeRoutineList.tsx`, `(add)/plan-rest-days.tsx`, `(add)/camera.tsx`, `exerciseHeader.tsx`'s `Alert.alert`) was swept into `t()`, ~35 new keys added to both `en.ts`/`es.ts`. This also caught and fixed a subtler bug: several `t(key, { defaultValue: '...' })` calls (in `challenge/[id]/index.tsx` and `challenge/[id]/routine/[day].tsx`) referenced keys that didn't actually exist in the resources, meaning the `defaultValue` (always English) silently did all the rendering work regardless of device language — Spanish users were seeing English text with no way to tell from the code that i18n was "wired up." Real keys now exist for all of them; don't reintroduce the `defaultValue`-as-translation pattern — if a key doesn't exist yet, add it to both resource files instead of leaning on `defaultValue`.
 
-Don't add a new hardcoded string next to an existing one "to match the surrounding style" — the surrounding style here is a known gap, not a convention to extend.
+Don't add a new hardcoded string "to match the surrounding style" going forward — there is no longer a surrounding-gap excuse for the files listed above.
 
-## Known gap: API errors bypass i18n entirely
+## Fixed gap: API errors now go through i18n
 
-`services/api.ts`'s response interceptor hardcodes Spanish-only strings directly in the `.ts` file, e.g.:
-```ts
-errorStore.show({ title: 'Sesión expirada', message: 'Tu sesión ha expirado. Por favor inicia sesión de nuevo.', duration: 5000 });
-```
-for 401, with similar blocks for 403/404/500/network-error/unknown. These never go through `i18n.t(...)`, so an English-device user still sees Spanish error toasts. This is a known, verified gap (plan §3.7), not something to copy into new error handling.
+**Fixed 2026-07-15** — `services/api.ts`'s response interceptor previously hardcoded Spanish-only strings directly in the `.ts` file for 401/403/404/500/network/unknown. It now calls `i18n.t('common.errors.<key>')` (imports the `i18n` singleton from `i18n/index.ts` directly, since the interceptor runs outside any React component and can't use the `useTranslation()` hook) for `sessionExpiredTitle`/`Message`, `forbiddenTitle`/`Message`, `notFoundTitle`/`Message`, `serverErrorTitle`/`Message`, `networkErrorTitle`/`Message`, and the generic fallback (`genericTitle`/`genericMessage`). The backend-provided `error.response.data.message` branch (used when the server sends its own message) is intentionally left as-is — that's server-controlled content, not a UI string this repo owns.
 
 ## How to add a text key
 
