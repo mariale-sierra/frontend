@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../hooks/useAuth';
-import { useChallengeProgress } from '../../hooks/useChallengeProgress';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Icon } from '../../components/ui/icon';
 import { Loader } from '../../components/ui/loader';
@@ -11,6 +10,8 @@ import { UserAvatar } from '../../components/ui/userAvatar';
 import { ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
 import { FeedPostCard } from '../../components/home/FeedPostCard';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
+import { getHomeChallengesSorted } from '../../services/adapters/homeAdapter';
+import { getMyChallenges } from '../../services/user/user.service';
 import { getHomeFeed } from '../../services/feed/feed.service';
 import { toFeedPostViewModels } from '../../services/adapters/feedAdapter';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
@@ -20,24 +21,28 @@ import { buildMockFeedPosts } from '../../services/mocks/feedMock';
 import { spacing } from '../../constants/theme';
 import { hoursUntilMidnight } from '../../utils/time';
 
-// REMOVE_MOCK_START: delete once all three badge states are validated in production
-const MOCK_BADGE_CHALLENGES: HomeActiveChallengeViewModel[] = [
-  { challengeId: 'mock-time',  title: 'Iron Will',         currentDay: 14, totalDays: 75, isTodayCompleted: false, isCompleted: false, activityType: 'strength',     isRestDay: false },
-  { challengeId: 'mock-done',  title: 'Thirty Day Flex',   currentDay: 30, totalDays: 30, isTodayCompleted: true,  isCompleted: true,  activityType: 'flexibility',  isRestDay: false },
-  { challengeId: 'mock-rest',  title: 'Morning Cardio 21', currentDay: 8,  totalDays: 21, isTodayCompleted: false, isCompleted: false, activityType: 'cardioLow',    isRestDay: true  },
-];
-// REMOVE_MOCK_END
-
 export default function Home() {
   const { username } = useAuth();
   const insets = useSafeAreaInsets();
-  const { challenge: activeChallenge, loading: challengeLoading } = useChallengeProgress();
+
+  // Same source as the Challenges tab (services/user/user.service.ts getMyChallenges,
+  // i.e. GET /users/me/challenges) so the two screens always show the same set of
+  // challenges — this used to mix hardcoded mock badges with a single, separately
+  // fetched "current" challenge from /challenges/progress.
+  const [challenges, setChallenges] = useState<HomeActiveChallengeViewModel[]>([]);
+  const [challengeLoading, setChallengeLoading] = useState(true);
 
   const [feedPosts, setFeedPosts] = useState<FeedPostViewModel[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
 
   const hoursLeft = hoursUntilMidnight();
-  const challenges: HomeActiveChallengeViewModel[] = activeChallenge ? [activeChallenge] : [];
+
+  useEffect(() => {
+    getMyChallenges()
+      .then((data) => setChallenges(getHomeChallengesSorted(data)))
+      .catch(() => setChallenges([]))
+      .finally(() => setChallengeLoading(false));
+  }, []);
 
   useEffect(() => {
     getHomeFeed()
@@ -68,7 +73,7 @@ export default function Home() {
             <Loader visible={true} overlayStyle={styles.loaderTransparent} />
           </View>
         ) : challenges.length > 0 ? (
-          <ActiveChallengeSection challenges={[...MOCK_BADGE_CHALLENGES, ...challenges]} hoursLeft={hoursLeft} />
+          <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
         ) : (
           <View style={styles.center}>
             <Text variant="body" tone="secondary">No active challenges</Text>

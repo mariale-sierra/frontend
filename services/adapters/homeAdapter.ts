@@ -115,7 +115,14 @@ function isJoinedOrCompleted(challenge: ChallengeContract): boolean {
     status.includes('completed') ||
     status.includes('finished')
   ) return true;
-  if (status.includes('archived') || status.includes('closed')) return false;
+  if (
+    status.includes('archived') ||
+    status.includes('closed') ||
+    status.includes('left') ||
+    status.includes('quit') ||
+    status.includes('abandoned') ||
+    status.includes('dropped')
+  ) return false;
 
   const currentDay = pickCurrentDay(challenge);
   const duration = asNumber(challenge.duration_days) ?? 0;

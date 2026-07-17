@@ -10,19 +10,31 @@ import { Icon } from '../../../components/ui/icon';
 import { Text } from '../../../components/ui/text';
 import { colors, spacing } from '../../../constants/theme';
 import { getChallenge, joinChallenge, leaveChallenge } from '../../../services/challenge/challenge.service';
+import { getMyChallenges } from '../../../services/user/user.service';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
+import { useAuth } from '../../../hooks/useAuth';
 import type { ChallengeContract } from '../../../types/challenge';
 import { useTranslation } from 'react-i18next';
+
+type MembershipStatus = 'creator' | 'joined' | 'none';
 
 export default function ChallengeDetail() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { userId } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [challenge, setChallenge] = useState<ChallengeContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  // Tracks whether the current user created this challenge or already joined it —
+  // without this, "Join Challenge" was always shown/enabled and pressing it for a
+  // challenge you created or already joined always failed against the backend's
+  // valid guardrails ("You cannot join a challenge you created" /
+  // "Already joined this challenge"), surfacing as a generic error alert.
+  const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('none');
+  const [membershipLoading, setMembershipLoading] = useState(true);
 
   // Join confirmation popup
   const joinPopup = useConfirmationPopup({
@@ -39,6 +51,7 @@ export default function ChallengeDetail() {
       }
       try {
         await joinChallenge(challengeId);
+        setMembershipStatus('joined');
         Alert.alert(
           t('challenges.joinSuccessTitle', { defaultValue: 'Joined challenge' }),
           t('challenges.joinSuccessMessage', { defaultValue: 'You are now part of this challenge.' }),
@@ -67,6 +80,7 @@ export default function ChallengeDetail() {
       }
       try {
         await leaveChallenge(challengeId);
+        setMembershipStatus('none');
         Alert.alert(
           t('challenges.leaveSuccessTitle', { defaultValue: 'Left Challenge' }),
           t('challenges.leaveSuccessMessage', { defaultValue: 'You have left this challenge. Your progress was saved.' }),
@@ -88,6 +102,26 @@ export default function ChallengeDetail() {
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!challenge) return;
+
+    if (userId && challenge.created_by_user_id === userId) {
+      setMembershipStatus('creator');
+      setMembershipLoading(false);
+      return;
+    }
+
+    getMyChallenges()
+      .then((enrolled) => {
+        const isMember = enrolled.some(
+          (c) => String(c.id) === String(challenge.id) && c.status !== 'left',
+        );
+        setMembershipStatus(isMember ? 'joined' : 'none');
+      })
+      .catch(() => setMembershipStatus('none'))
+      .finally(() => setMembershipLoading(false));
+  }, [challenge, userId]);
 
   if (loading) {
     return (
@@ -166,15 +200,17 @@ export default function ChallengeDetail() {
                 <Icon name="bookmark-outline" size={20} color={colors.textPrimary} />
               </Pressable>
 
-              <Pressable
-                onPress={leavePopup.show}
-                style={({ pressed }) => [styles.saveIconButton, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel="Leave challenge"
-                hitSlop={12}
-              >
-                <Icon name="exit-outline" size={20} color={colors.error} />
-              </Pressable>
+              {membershipStatus !== 'none' && (
+                <Pressable
+                  onPress={leavePopup.show}
+                  style={({ pressed }) => [styles.saveIconButton, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Leave challenge"
+                  hitSlop={12}
+                >
+                  <Icon name="exit-outline" size={20} color={colors.error} />
+                </Pressable>
+              )}
             </View>
           </View>
 
@@ -198,13 +234,31 @@ export default function ChallengeDetail() {
       </ScrollView>
 
       <CreateFlowFixedBottomBar bottomInset={Math.max(insets.bottom, spacing.lg)} topPadding={spacing.md}>
-        <CreateChallengePrimaryActionButton
-          label={t('challenges.joinButton', { defaultValue: 'Join Challenge' })}
-          accessibilityLabel={t('challenges.joinButtonA11y', { defaultValue: 'Join challenge' })}
-          onPress={joinPopup.show}
-          loading={false}
-          disabled={false || !id || error}
-        />
+        {membershipStatus === 'creator' ? (
+          <CreateChallengePrimaryActionButton
+            label={t('challenges.ownChallengeButton', { defaultValue: 'Your Challenge' })}
+            accessibilityLabel={t('challenges.ownChallengeButtonA11y', { defaultValue: 'This is your challenge' })}
+            onPress={() => {}}
+            loading={false}
+            disabled
+          />
+        ) : membershipStatus === 'joined' ? (
+          <CreateChallengePrimaryActionButton
+            label={t('challenges.alreadyJoinedButton', { defaultValue: 'Already Joined' })}
+            accessibilityLabel={t('challenges.alreadyJoinedButtonA11y', { defaultValue: 'You already joined this challenge' })}
+            onPress={() => {}}
+            loading={false}
+            disabled
+          />
+        ) : (
+          <CreateChallengePrimaryActionButton
+            label={t('challenges.joinButton', { defaultValue: 'Join Challenge' })}
+            accessibilityLabel={t('challenges.joinButtonA11y', { defaultValue: 'Join challenge' })}
+            onPress={joinPopup.show}
+            loading={membershipLoading}
+            disabled={membershipLoading || !id || error}
+          />
+        )}
       </CreateFlowFixedBottomBar>
 
       {/* Confirmation Popups for Join/Leave */}
