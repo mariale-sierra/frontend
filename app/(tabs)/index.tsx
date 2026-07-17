@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { useChallengeProgress } from '../../hooks/useChallengeProgress';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -14,22 +15,12 @@ import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeA
 import { getHomeFeed } from '../../services/feed/feed.service';
 import { toFeedPostViewModels } from '../../services/adapters/feedAdapter';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
-// REMOVE_MOCK_START
-import { buildMockFeedPosts } from '../../services/mocks/feedMock';
-// REMOVE_MOCK_END
 import { spacing } from '../../constants/theme';
 import { hoursUntilMidnight } from '../../utils/time';
 
-// REMOVE_MOCK_START: delete once all three badge states are validated in production
-const MOCK_BADGE_CHALLENGES: HomeActiveChallengeViewModel[] = [
-  { challengeId: 'mock-time',  title: 'Iron Will',         currentDay: 14, totalDays: 75, isTodayCompleted: false, isCompleted: false, activityType: 'strength',     isRestDay: false },
-  { challengeId: 'mock-done',  title: 'Thirty Day Flex',   currentDay: 30, totalDays: 30, isTodayCompleted: true,  isCompleted: true,  activityType: 'flexibility',  isRestDay: false },
-  { challengeId: 'mock-rest',  title: 'Morning Cardio 21', currentDay: 8,  totalDays: 21, isTodayCompleted: false, isCompleted: false, activityType: 'cardioLow',    isRestDay: true  },
-];
-// REMOVE_MOCK_END
-
 export default function Home() {
   const { username } = useAuth();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { challenge: activeChallenge, loading: challengeLoading } = useChallengeProgress();
 
@@ -43,8 +34,9 @@ export default function Home() {
     getHomeFeed()
       .then((data) => setFeedPosts(toFeedPostViewModels(data)))
       .catch(() => {
-        // REMOVE_MOCK: remove fallback once /feed is live
-        setFeedPosts(toFeedPostViewModels(buildMockFeedPosts()));
+        // Feed failed to load — fall through to the empty-feed state below rather
+        // than showing stale/fake data.
+        setFeedPosts([]);
       })
       .finally(() => setFeedLoading(false));
   }, []);
@@ -68,16 +60,16 @@ export default function Home() {
             <Loader visible={true} overlayStyle={styles.loaderTransparent} />
           </View>
         ) : challenges.length > 0 ? (
-          <ActiveChallengeSection challenges={[...MOCK_BADGE_CHALLENGES, ...challenges]} hoursLeft={hoursLeft} />
+          <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
         ) : (
           <View style={styles.center}>
-            <Text variant="body" tone="secondary">No active challenges</Text>
+            <Text variant="body" tone="secondary">{t('home.noActiveChallenge')}</Text>
           </View>
         )}
       </View>
 
       <View style={styles.feedSectionHeader}>
-        <Text variant="header" tone="secondary">Community</Text>
+        <Text variant="header" tone="secondary">{t('home.communityTitle')}</Text>
         <Icon name="people" size={20} color="rgba(255,255,255,0.4)" />
       </View>
     </View>
@@ -100,7 +92,7 @@ export default function Home() {
             <View style={styles.emptyFeed}>
               <Icon name="images-outline" size={34} color="rgba(255,255,255,0.3)" />
               <Text variant="body" tone="secondary" align="center">
-                No posts yet. Be the first to share!
+                {t('home.emptyFeedMessage')}
               </Text>
             </View>
           )

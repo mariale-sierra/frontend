@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
+  fetchAuthMe,
   getToken as getStoredToken,
   getUserId as getStoredUserId,
   getUsername as getStoredUsername,
@@ -7,7 +8,7 @@ import {
   logout as logoutService,
   register as registerService,
 } from '../services/auth/auth.service';
-import api from '../services/api';
+import { invalidateChallengeProgressCache } from '../hooks/useChallengeProgress';
 
 interface AuthContextValue {
   token: string | null;
@@ -34,15 +35,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isRestoring, setIsRestoring] = useState(true);
 
   const restoreSession = useCallback(async () => {
-    console.log('[auth] restoreSession start');
     try {
       const [storedToken, storedUserId, storedUsername] = await Promise.all([
         getStoredToken(),
         getStoredUserId(),
         getStoredUsername(),
       ]);
-
-      console.log('[auth] token from storage exists:', Boolean(storedToken));
 
       if (!storedToken || !storedUserId || !storedUsername) {
         setToken(null);
@@ -51,18 +49,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
 
-      console.log('[auth] /auth/me start');
       try {
-        await api.get('/auth/me');
-        console.log('[auth] /auth/me success');
+        await fetchAuthMe();
       } catch (error: any) {
         const status = error?.response?.status;
-        console.log('[auth] /auth/me failed status:', status, 'data:', JSON.stringify(error?.response?.data));
 
         if (status === 401) {
           // Token genuinamente rechazado por el servidor — limpiar sesión
-          console.log('[auth] 401 → clearing session');
           await logoutService();
+          invalidateChallengeProgressCache();
           setToken(null);
           setUserId(null);
           setUsername(null);
@@ -70,8 +65,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
 
         // Error de red, 5xx, CORS, timeout, etc. — preservar sesión
-        // El token sigue en AsyncStorage y el interceptor lo adjuntará en siguientes llamadas
-        console.log('[auth] non-401 error → preserving session');
+        // El token sigue en SecureStore y el interceptor lo adjuntará en siguientes llamadas
       }
 
       setToken(storedToken);
@@ -79,8 +73,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUsername(storedUsername);
 
     } finally {
-      console.log('[auth] restoreSession done');
-      console.log('[auth] isLoading: false');
       setIsRestoring(false);
     }
   }, []);
@@ -90,6 +82,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [restoreSession]);
 
   const login = useCallback(async (email: string, password: string) => {
+    // Clear any previous session's cached progress before establishing a new one.
+    invalidateChallengeProgressCache();
     const result = await loginService(email, password);
     setToken(result?.accessToken ?? (await getStoredToken()));
     setUserId(result?.user?.id ?? (await getStoredUserId()));
@@ -107,6 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = useCallback(async () => {
     await logoutService();
+    invalidateChallengeProgressCache();
     setToken(null);
     setUserId(null);
     setUsername(null);

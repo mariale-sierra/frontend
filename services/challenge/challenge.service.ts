@@ -61,32 +61,6 @@ export async function leaveChallenge(id: string) {
   return response.data;
 }
 
-export async function getUserEnrolledChallenges(): Promise<ChallengeContract[]> {
-  const response = await api.get<ChallengeContract[] | { data?: ChallengeContract[] }>(
-    '/users/me/challenges',
-  );
-
-  const payload = response.data;
-  console.log('[getUserEnrolledChallenges] raw response', { status: response.status, data: payload });
-  console.log('[getUserEnrolledChallenges] response.data', payload);
-  console.log('[getUserEnrolledChallenges] typeof response.data', typeof payload, '| isArray:', Array.isArray(payload));
-
-  let normalized: ChallengeContract[];
-  if (Array.isArray(payload)) {
-    normalized = payload;
-  } else if (payload && Array.isArray((payload as { data?: ChallengeContract[] }).data)) {
-    normalized = (payload as { data: ChallengeContract[] }).data;
-  } else if (payload && Array.isArray((payload as { active?: ChallengeContract[] }).active)) {
-    normalized = (payload as { active: ChallengeContract[] }).active;
-  } else {
-    console.warn('[getUserEnrolledChallenges] unexpected shape — returning []', payload);
-    normalized = [];
-  }
-
-  console.log('[getUserEnrolledChallenges] normalized challenges', normalized);
-  return normalized;
-}
-
 export async function getTodayRoutineForChallenge(
   challengeId: string,
 ): Promise<TodayRoutineContract> {

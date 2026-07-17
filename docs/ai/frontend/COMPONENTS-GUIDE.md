@@ -20,7 +20,7 @@ See `DESIGN-SYSTEM.md`'s "Component library usage" — full list lives there to 
 
 | Feature | Path |
 | --- | --- |
-| Challenge list/detail/create/progress | `components/challenge/{list,detail,create,progress}/` |
+| Challenge list/detail/create/progress | `components/challenge/{list,detail,create,progress}/`. `create/` includes the generic `OptionSelectionPanel` (multi-select option-card grid) and `OptionInfoModal` (option detail dialog), extracted from `app/challenge/create.tsx` on 2026-07-15 — reuse these for any future multi-select-with-info-card UI rather than rebuilding. `progress/ChallengeActiveProgressScreen.tsx` is presentational only; its data comes from `hooks/useChallengeActiveProgress.ts`. |
 | Routine builder/picker/metrics | `components/routine/{builder,exercise-picker,metrics,shared}/` |
 | Add/metrics entry, rest day | `components/add/` |
 | Home feed | `components/home/` (`ActiveChallengeSection.tsx`, `FeedPostCard.tsx`) |

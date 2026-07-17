@@ -24,7 +24,7 @@ Whenever you need to find where something is implemented.
 | `docs/` | `ARCHITECTURE-GUIDE.md` (canonical), `POPUP_INTEGRATION_GUIDE.md`, `ai/` (this tree) |
 | `hooks/` | Screen-orchestration hooks |
 | `i18n/` | `react-i18next` setup, `resources/{en,es}.ts` |
-| `services/` | `api.ts` (Axios client), per-feature services, `adapters/`, `mocks/` |
+| `services/` | `api.ts` (Axios client, baseURL from `app.config.js`'s `extra.apiUrl`), per-feature services, `adapters/`, `mocks/` (empty as of 2026-07-15 — its last dead files were deleted; recreate only for genuinely temporary mock data, don't let it become a live-screen fallback again) |
 | `store/` | Zustand builder stores |
 | `types/` | API/domain TypeScript contracts |
 | `utils/` | `storage.ts`, `color.ts`, `time.ts`, `challengeCalendar.ts` |
@@ -48,5 +48,6 @@ Whenever you need to find where something is implemented.
 - `app/_layout.tsx` — root layout: `ThemeProvider`, `AuthProvider`, auth redirect, stack screens.
 - `app/index.tsx` — redirects to `/(auth)/login` or `/(tabs)`.
 - `services/api.ts` — the single Axios client.
+- `app.config.js` — dynamic config layer over `app.json`; the only reason it exists is to expose `extra.apiUrl` (backed by the `EXPO_PUBLIC_API_URL` env var) for `services/api.ts`. Don't add unrelated config here without checking whether `app.json` already covers it.
 
 > This map must reflect the real current codebase, not assumptions. If you used it and an entry was wrong or missing, fix it.

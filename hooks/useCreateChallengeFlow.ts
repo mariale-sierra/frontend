@@ -203,13 +203,10 @@ export function useCreateChallengeFlow() {
     validationLabels,
   ]);
 
-  const isFormComplete = title.trim().length > 0
-    && selectedCategories.length > 0
-    && selectedLocations.length > 0
-    && cycleDuration > 0
-    && hasRoutineForEveryDay
-    && effectiveChallengeDuration > 0
-    && Boolean(visibility);
+  // Single source of truth for "is the form complete": derived from the same
+  // `missingConfigurationFields` list used to build the submit-blocking hint, rather than
+  // re-declaring the same rule set as a second boolean chain.
+  const isFormComplete = missingConfigurationFields.length === 0;
 
   const configuredDays = Array.from({ length: cycleDuration }, (_, index) => index + 1)
     .filter((dayNumber) => Boolean(routinesByDay[dayNumber]));
@@ -268,7 +265,10 @@ export function useCreateChallengeFlow() {
       return;
     }
 
-    const payloadResult = buildCreateChallengePayload({
+    // Safe to build without re-validating: the missingConfigurationFields check above
+    // (backed by the same rules as getStepErrors) already guarantees every required field
+    // is present.
+    const payload = buildCreateChallengePayload({
       title,
       description,
       visibility,
@@ -278,16 +278,6 @@ export function useCreateChallengeFlow() {
       selectedLocations,
       routinesByDay,
     });
-
-    if (!payloadResult.ok) {
-      Alert.alert(
-        t('challengeCreate.alerts.cannotBuildPayloadTitle'),
-        payloadResult.errors.map((item) => `• ${item}`).join('\n'),
-      );
-      return;
-    }
-
-    const { payload } = payloadResult;
 
     setIsSubmitting(true);
     try {

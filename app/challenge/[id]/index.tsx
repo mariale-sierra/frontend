@@ -27,26 +27,26 @@ export default function ChallengeDetail() {
   // Join confirmation popup
   const joinPopup = useConfirmationPopup({
     type: 'join',
-    challengeName: challenge?.name ?? 'Challenge',
+    challengeName: challenge?.name ?? t('challenges.fallbackName'),
     onConfirm: async () => {
       const challengeId = typeof id === 'string' ? id : '';
       if (!challengeId) {
         Alert.alert(
           t('common.errors.genericTitle'),
-          t('challenges.joinInvalidId', { defaultValue: 'Challenge id is invalid.' }),
+          t('challenges.joinInvalidId'),
         );
         return;
       }
       try {
         await joinChallenge(challengeId);
         Alert.alert(
-          t('challenges.joinSuccessTitle', { defaultValue: 'Joined challenge' }),
-          t('challenges.joinSuccessMessage', { defaultValue: 'You are now part of this challenge.' }),
+          t('challenges.joinSuccessTitle'),
+          t('challenges.joinSuccessMessage'),
         );
       } catch {
         Alert.alert(
           t('common.errors.genericTitle'),
-          t('challenges.joinError', { defaultValue: 'Could not join challenge right now.' }),
+          t('challenges.joinError'),
         );
       }
     },
@@ -55,27 +55,27 @@ export default function ChallengeDetail() {
   // Leave confirmation popup
   const leavePopup = useConfirmationPopup({
     type: 'leave',
-    challengeName: challenge?.name ?? 'Challenge',
+    challengeName: challenge?.name ?? t('challenges.fallbackName'),
     onConfirm: async () => {
       const challengeId = typeof id === 'string' ? id : '';
       if (!challengeId) {
         Alert.alert(
           t('common.errors.genericTitle'),
-          t('challenges.leaveInvalidId', { defaultValue: 'Challenge id is invalid.' }),
+          t('challenges.leaveInvalidId'),
         );
         return;
       }
       try {
         await leaveChallenge(challengeId);
         Alert.alert(
-          t('challenges.leaveSuccessTitle', { defaultValue: 'Left Challenge' }),
-          t('challenges.leaveSuccessMessage', { defaultValue: 'You have left this challenge. Your progress was saved.' }),
+          t('challenges.leaveSuccessTitle'),
+          t('challenges.leaveSuccessMessage'),
         );
         router.back();
       } catch {
         Alert.alert(
           t('common.errors.genericTitle'),
-          t('challenges.leaveError', { defaultValue: 'Could not leave challenge right now.' }),
+          t('challenges.leaveError'),
         );
       }
     },
@@ -107,7 +107,7 @@ export default function ChallengeDetail() {
             {t('common.errors.genericTitle')}
           </Text>
           <Text style={styles.missingSubtitle}>
-            {t('challenges.loadError', { defaultValue: 'Could not load challenge. Check your connection and try again.' })}
+            {t('challenges.detailLoadError')}
           </Text>
         </View>
       </View>
@@ -121,9 +121,9 @@ export default function ChallengeDetail() {
     return (
       <View style={styles.missingScreen}>
         <View style={styles.missingBlock}>
-          <Text variant="title" style={styles.missingTitle}>Challenge data is incomplete</Text>
+          <Text variant="title" style={styles.missingTitle}>{t('challenges.incompleteTitle')}</Text>
           <Text style={styles.missingSubtitle}>
-            The design requires backend-provided fields. Add these to the challenge payload/database:
+            {t('challenges.incompleteMessage')}
           </Text>
           {(challengeViewResult?.missingData ?? []).map((item) => (
             <Text key={`${item.field}-${item.requirement}`} style={styles.missingItem}>
@@ -145,14 +145,14 @@ export default function ChallengeDetail() {
                 onPress={() => router.back()}
                 style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
                 accessibilityRole="button"
-                accessibilityLabel="Go back"
+                accessibilityLabel={t('metrics.accessibilityBack')}
                 hitSlop={12}
               >
                 <Icon name="chevron-back" size={22} color={colors.textPrimary} />
               </Pressable>
 
               <Text variant="caption" style={styles.authorTopLabel}>
-                By {challengeView.authorName ?? t('challenges.memberAuthor')}
+                {t('challenges.byAuthor', { name: challengeView.authorName ?? t('challenges.memberAuthor') })}
               </Text>
             </View>
 
@@ -160,7 +160,7 @@ export default function ChallengeDetail() {
               <Pressable
                 style={({ pressed }) => [styles.saveIconButton, pressed && styles.pressed]}
                 accessibilityRole="button"
-                accessibilityLabel="Save challenge"
+                accessibilityLabel={t('challenges.saveButtonA11y')}
                 hitSlop={12}
               >
                 <Icon name="bookmark-outline" size={20} color={colors.textPrimary} />
@@ -170,7 +170,7 @@ export default function ChallengeDetail() {
                 onPress={leavePopup.show}
                 style={({ pressed }) => [styles.saveIconButton, pressed && styles.pressed]}
                 accessibilityRole="button"
-                accessibilityLabel="Leave challenge"
+                accessibilityLabel={t('challenges.leaveButtonA11y')}
                 hitSlop={12}
               >
                 <Icon name="exit-outline" size={20} color={colors.error} />
@@ -199,8 +199,8 @@ export default function ChallengeDetail() {
 
       <CreateFlowFixedBottomBar bottomInset={Math.max(insets.bottom, spacing.lg)} topPadding={spacing.md}>
         <CreateChallengePrimaryActionButton
-          label={t('challenges.joinButton', { defaultValue: 'Join Challenge' })}
-          accessibilityLabel={t('challenges.joinButtonA11y', { defaultValue: 'Join challenge' })}
+          label={t('challenges.joinButton')}
+          accessibilityLabel={t('challenges.joinButtonA11y')}
           onPress={joinPopup.show}
           loading={false}
           disabled={false || !id || error}

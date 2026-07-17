@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { IconButton } from '../../components/ui/iconButton';
 import { Button } from '../../components/ui/button';
@@ -14,6 +15,7 @@ const BOTTOM_BAR_BG = 'rgba(0,0,0,0.88)';
 
 export default function PlanRestDays() {
   const router = useRouter();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -45,7 +47,7 @@ export default function PlanRestDays() {
 
   async function handleSetRestDays() {
     if (selectedDates.size === 0) {
-      Alert.alert('No days selected', 'Tap days in the calendar to mark them as rest days.');
+      Alert.alert(t('planRestDays.alerts.noDaysSelectedTitle'), t('planRestDays.alerts.noDaysSelectedMessage'));
       return;
     }
     setSaving(true);
@@ -54,7 +56,7 @@ export default function PlanRestDays() {
       await Promise.resolve();
       router.back();
     } catch {
-      Alert.alert('Error', 'Could not save your rest days. Please try again.');
+      Alert.alert(t('common.errors.genericTitle'), t('planRestDays.alerts.saveFailedMessage'));
     } finally {
       setSaving(false);
     }
@@ -73,14 +75,14 @@ export default function PlanRestDays() {
             iconSize={18}
             variant="ghost"
             accessibilityRole="button"
-            accessibilityLabel="Go back"
+            accessibilityLabel={t('metrics.accessibilityBack')}
           />
         </View>
 
         <View style={styles.titleBlock}>
-          <Text variant="title" align="center">Plan your rest</Text>
+          <Text variant="title" align="center">{t('planRestDays.title')}</Text>
           <Text variant="body" align="center" style={styles.subtitle}>
-            Tap the days you'd like to rest
+            {t('planRestDays.subtitle')}
           </Text>
         </View>
 
@@ -113,7 +115,7 @@ export default function PlanRestDays() {
             disabled={selectedDates.size === 0}
             style={styles.actionButton}
           >
-            Set rest days
+            {t('planRestDays.setButton')}
           </Button>
         </View>
       </View>

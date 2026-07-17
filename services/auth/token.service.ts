@@ -1,4 +1,4 @@
-import { storage } from '../../utils/storage';
+import { secureStorage } from '../../utils/storage';
 
 const TOKEN_KEY = 'token';
 
@@ -13,7 +13,7 @@ async function hydrateTokenIfNeeded() {
 
   if (!hydrationPromise) {
     hydrationPromise = (async () => {
-      tokenInMemory = await storage.getItem(TOKEN_KEY);
+      tokenInMemory = await secureStorage.getItem(TOKEN_KEY);
       tokenHydrated = true;
     })().finally(() => {
       hydrationPromise = null;
@@ -31,11 +31,11 @@ export async function getAccessToken() {
 export async function setAccessToken(token: string) {
   tokenInMemory = token;
   tokenHydrated = true;
-  await storage.setItem(TOKEN_KEY, token);
+  await secureStorage.setItem(TOKEN_KEY, token);
 }
 
 export async function clearAccessToken() {
   tokenInMemory = null;
   tokenHydrated = true;
-  await storage.removeItem(TOKEN_KEY);
+  await secureStorage.removeItem(TOKEN_KEY);
 }

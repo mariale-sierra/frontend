@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { IconButton } from '../../components/ui/iconButton';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
@@ -28,6 +29,7 @@ function VisibilityToggle({
   anim: Animated.Value;
   onToggle: () => void;
 }) {
+  const { t } = useTranslation();
   const isFollowers = visibility === 'followers';
   return (
     <Pressable
@@ -42,7 +44,7 @@ function VisibilityToggle({
           color="#fff"
         />
         <Text style={styles.visibilityLabel}>
-          {isFollowers ? 'Followers' : 'Private'}
+          {isFollowers ? t('camera.visibilityFollowers') : t('camera.visibilityPrivate')}
         </Text>
       </Animated.View>
     </Pressable>
@@ -51,6 +53,7 @@ function VisibilityToggle({
 
 export default function Camera() {
   const router = useRouter();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const selectedChallengeId = useMetricsEntryStore((s) => s.selectedChallengeId);
   const currentRoutineId = useMetricsEntryStore((s) => s.currentRoutineId);
@@ -91,7 +94,7 @@ export default function Camera() {
         setCapturedUri(photo.uri);
       }
     } catch {
-      setError('Could not take photo. Try again.');
+      setError(t('camera.takePhotoError'));
     } finally {
       setIsTakingPicture(false);
     }
@@ -114,8 +117,8 @@ export default function Camera() {
     }
 
     if (!selectedChallengeId) {
-      setError('Select a challenge before saving progress.');
-      Alert.alert('No challenge selected', 'Go back to metrics and select a challenge first.');
+      setError(t('camera.selectChallengeError'));
+      Alert.alert(t('camera.noChallengeSelectedTitle'), t('camera.noChallengeSelectedMessage'));
       return;
     }
 
@@ -131,7 +134,7 @@ export default function Camera() {
       const err = e as AxiosLike;
       console.error('[Camera] confirm failed upload status:', err?.response?.status);
       console.error('[Camera] confirm failed upload data:', err?.response?.data ?? err?.message);
-      setError('Could not upload image. Try again.');
+      setError(t('camera.uploadError'));
       setUploadingImage(false);
       return;
     }
@@ -156,9 +159,9 @@ export default function Camera() {
       const err = e as AxiosLike;
       console.error('[Camera] confirm failed status:', err?.response?.status);
       console.error('[Camera] confirm failed data:', err?.response?.data ?? err?.message);
-      const msg = err?.response?.data?.message ?? 'Could not save progress. Try again.';
+      const msg = err?.response?.data?.message ?? t('camera.saveProgressError');
       setError(msg);
-      Alert.alert('Error', msg);
+      Alert.alert(t('common.errors.genericTitle'), msg);
     } finally {
       setSubmittingProgress(false);
     }
@@ -172,19 +175,19 @@ export default function Camera() {
     return (
       <View style={[styles.fill, styles.center, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl }]}>
         <Text variant="body" tone="secondary" style={styles.permissionText}>
-          Camera permission is required to take proof.
+          {t('camera.permissionMessage')}
         </Text>
         <Pressable
           onPress={requestPermission}
           style={({ pressed }) => [styles.permissionButton, pressed && styles.pressed]}
         >
-          <Text variant="body" style={styles.permissionButtonLabel}>Grant Permission</Text>
+          <Text variant="body" style={styles.permissionButtonLabel}>{t('camera.grantPermission')}</Text>
         </Pressable>
         <Pressable
           onPress={() => router.back()}
           style={({ pressed }) => [styles.backLink, pressed && styles.pressed]}
         >
-          <Text variant="caption" tone="secondary">← Go Back</Text>
+          <Text variant="caption" tone="secondary">{t('camera.goBack')}</Text>
         </Pressable>
       </View>
     );
