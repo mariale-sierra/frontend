@@ -73,22 +73,24 @@ export default function ChallengeHeader({ challenge, detail }: Props) {
         ))}
       </View>
 
-      <View style={styles.descriptionWrap}>
-        <Text
-          variant="body"
-          align="center"
-          numberOfLines={expanded ? undefined : 3}
-          style={styles.descriptionText}
-        >
-          {challenge.description}
-        </Text>
-
-        <Pressable onPress={() => setExpanded((current) => !current)} style={({ pressed }) => [pressed && styles.pressed]}>
-          <Text variant="caption" style={styles.descriptionToggle}>
-            {expanded ? 'Show less' : 'Read more'}
+      {challenge.description.trim().length > 0 && (
+        <View style={styles.descriptionWrap}>
+          <Text
+            variant="body"
+            align="center"
+            numberOfLines={expanded ? undefined : 3}
+            style={styles.descriptionText}
+          >
+            {challenge.description}
           </Text>
-        </Pressable>
-      </View>
+
+          <Pressable onPress={() => setExpanded((current) => !current)} style={({ pressed }) => [pressed && styles.pressed]}>
+            <Text variant="caption" style={styles.descriptionToggle}>
+              {expanded ? 'Show less' : 'Read more'}
+            </Text>
+          </Pressable>
+        </View>
+      )}
     </View>
   );
 }
