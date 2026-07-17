@@ -93,7 +93,8 @@ export interface RoutineContract {
 export interface CreateRoutineRequest {
   name: string;
   description?: string;
-  createdByUserId?: string;
+  // The backend derives the creator from the JWT (`req.user.sub`) — never send
+  // `createdByUserId`, the server ignores it if present.
   is_active?: boolean;
 }
 

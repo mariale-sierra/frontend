@@ -9,14 +9,16 @@ export async function getMe() {
   return response.data;
 }
 
+/**
+ * Canonical source for the current user's enrolled challenges (`GET /users/me/challenges`).
+ * The backend always returns them grouped by status (`{ active, completed, left }`), with
+ * each challenge already carrying its own `status` field — this flattens the groups into a
+ * single array so callers can filter/group client-side as needed (see `ChallengeContract.status`).
+ */
 export async function getMyChallenges(): Promise<ChallengeContract[]> {
   const res = await api.get('/users/me/challenges');
   const payload = res.data;
 
-  console.log('MY CHALLENGES RAW', payload);
-
-  // The API returns grouped challenges by status { active: [], completed: [], left: [] }
-  // Flatten them so callers receive a simple array of challenges with `status` set.
   const active = Array.isArray(payload?.active) ? payload.active : [];
   const completed = Array.isArray(payload?.completed) ? payload.completed : [];
   const left = Array.isArray(payload?.left) ? payload.left : [];

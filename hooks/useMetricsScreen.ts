@@ -5,10 +5,8 @@ import { useMetricsEntryStore } from '../store/metricsEntryStore';
 import { useAuth } from './useAuth';
 import { createWorkoutLog, getWorkoutLog } from '../services/workout-log/workout-log.service';
 import { addMetricToWorkoutLogExercise } from '../services/metrics/metrics.service';
-import {
-  getUserEnrolledChallenges,
-  getTodayRoutineForChallenge,
-} from '../services/challenge/challenge.service';
+import { getTodayRoutineForChallenge } from '../services/challenge/challenge.service';
+import { getMyChallenges } from '../services/user/user.service';
 import {
   adaptChallengesForMetrics,
   adaptTodayRoutineExercises,
@@ -54,10 +52,10 @@ export function useMetricsScreen() {
       setIsLoadingData(true);
       setChallengeLoadError(null);
       try {
-        const rawChallenges = await getUserEnrolledChallenges();
-        console.log('[Metrics] Raw challenges from API:', rawChallenges);
-        const adaptedChallenges = adaptChallengesForMetrics(rawChallenges);
-        console.log('[Metrics] Adapted challenges for dropdown:', adaptedChallenges);
+        const enrolledChallenges = await getMyChallenges();
+        // Only challenges the user is currently active in can receive a new workout log.
+        const activeChallenges = enrolledChallenges.filter((c) => c.status === 'active');
+        const adaptedChallenges = adaptChallengesForMetrics(activeChallenges);
 
         if (!adaptedChallenges.length) {
           hydrateMetricsData({ challenges: [], selectedChallengeId: '', exerciseMetrics: [], routineId: null });
@@ -163,7 +161,6 @@ export function useMetricsScreen() {
     setIsSubmitting(true);
     try {
       const workout: WorkoutLogContract = await createWorkoutLog({
-        userId,
         routineId: currentRoutineId ?? undefined,
       });
       const fullWorkout: WorkoutLogContract = await getWorkoutLog(workout.id);

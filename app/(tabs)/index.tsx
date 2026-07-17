@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Icon } from '../../components/ui/icon';
@@ -15,14 +16,12 @@ import { getMyChallenges } from '../../services/user/user.service';
 import { getHomeFeed } from '../../services/feed/feed.service';
 import { toFeedPostViewModels } from '../../services/adapters/feedAdapter';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
-// REMOVE_MOCK_START
-import { buildMockFeedPosts } from '../../services/mocks/feedMock';
-// REMOVE_MOCK_END
 import { spacing } from '../../constants/theme';
 import { hoursUntilMidnight } from '../../utils/time';
 
 export default function Home() {
   const { username } = useAuth();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   // Same source as the Challenges tab (services/user/user.service.ts getMyChallenges,
@@ -48,8 +47,9 @@ export default function Home() {
     getHomeFeed()
       .then((data) => setFeedPosts(toFeedPostViewModels(data)))
       .catch(() => {
-        // REMOVE_MOCK: remove fallback once /feed is live
-        setFeedPosts(toFeedPostViewModels(buildMockFeedPosts()));
+        // Feed failed to load — fall through to the empty-feed state below rather
+        // than showing stale/fake data.
+        setFeedPosts([]);
       })
       .finally(() => setFeedLoading(false));
   }, []);
@@ -76,13 +76,13 @@ export default function Home() {
           <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
         ) : (
           <View style={styles.center}>
-            <Text variant="body" tone="secondary">No active challenges</Text>
+            <Text variant="body" tone="secondary">{t('home.noActiveChallenge')}</Text>
           </View>
         )}
       </View>
 
       <View style={styles.feedSectionHeader}>
-        <Text variant="header" tone="secondary">Community</Text>
+        <Text variant="header" tone="secondary">{t('home.communityTitle')}</Text>
         <Icon name="people" size={20} color="rgba(255,255,255,0.4)" />
       </View>
     </View>
@@ -105,7 +105,7 @@ export default function Home() {
             <View style={styles.emptyFeed}>
               <Icon name="images-outline" size={34} color="rgba(255,255,255,0.3)" />
               <Text variant="body" tone="secondary" align="center">
-                No posts yet. Be the first to share!
+                {t('home.emptyFeedMessage')}
               </Text>
             </View>
           )

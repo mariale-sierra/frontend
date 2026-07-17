@@ -85,16 +85,16 @@ export default function SelectRoutineScreen() {
 
               {workoutRoutines.length === 0 && (
                 <View style={styles.emptyState}>
-                  <Text variant="body" tone="secondary">Create a routine to continue.</Text>
+                  <Text variant="body" tone="secondary">{t('routineSelect.emptyState')}</Text>
                 </View>
               )}
             </>
           ) : (
             <View style={styles.restModeContent}>
               <Icon name="moon" size={72} color={colors.textPrimary} />
-              <Text variant="subheader" style={styles.restModeTitle}>Rest day</Text>
+              <Text variant="subheader" style={styles.restModeTitle}>{t('routineSelect.restDay.title')}</Text>
               <Text variant="body" tone="secondary" style={styles.restModeSubtitle}>
-                Recovery, mobility, or total reset.
+                {t('routineSelect.restDay.description')}
               </Text>
             </View>
           )}
@@ -105,7 +105,7 @@ export default function SelectRoutineScreen() {
         <CreateChallengePrimaryActionButton
           onPress={mode === 'workout' ? handleConfirmWorkout : handleConfirmRestDay}
           disabled={mode === 'workout' && !selectedRoutineId}
-          label={mode === 'workout' ? 'Confirm routine' : 'Confirm rest day'}
+          label={mode === 'workout' ? t('routineSelect.confirmRoutine') : t('routineSelect.confirmRestDay')}
         />
       </CreateFlowFixedBottomBar>
     </ScreenBackground>

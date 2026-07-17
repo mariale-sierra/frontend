@@ -1,4 +1,5 @@
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
 import { Row } from '../../layout/row';
 import { ActivityIcon } from '../../icons/activityIcon';
@@ -21,17 +22,18 @@ export function ExerciseHeader({
   onToggleCollapsed,
   onRemoveExerciseId,
 }: ExerciseHeaderProps) {
+  const { t } = useTranslation();
   const { removeExercise, addStrengthSet, removeStrengthSet } = useRoutineBuilder();
 
   const strengthSetCount = exercise.metrics.kind === 'strength' ? exercise.metrics.sets.length : null;
 
   function handleOpenOptions() {
     Alert.alert(
-      'Exercise options',
-      'Choose an action for this exercise.',
+      t('routineCreate.exerciseOptions.title'),
+      t('routineCreate.exerciseOptions.message'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Erase exercise', style: 'destructive', onPress: () => removeExercise(onRemoveExerciseId) },
+        { text: t('routineCreate.exerciseOptions.cancel'), style: 'cancel' },
+        { text: t('routineCreate.exerciseOptions.erase'), style: 'destructive', onPress: () => removeExercise(onRemoveExerciseId) },
       ],
     );
   }
@@ -70,7 +72,7 @@ export function ExerciseHeader({
               hitSlop={10}
               style={({ pressed }) => [styles.optionsButton, pressed && styles.pressed]}
               accessibilityRole="button"
-              accessibilityLabel="Exercise options"
+              accessibilityLabel={t('routineCreate.exerciseOptions.optionsA11y')}
             >
               <Icon name="ellipsis-horizontal" size={18} color={colors.textPrimary} />
             </Pressable>
@@ -80,7 +82,7 @@ export function ExerciseHeader({
               hitSlop={10}
               style={({ pressed }) => [styles.optionsButton, pressed && styles.pressed]}
               accessibilityRole="button"
-              accessibilityLabel="Collapse exercise"
+              accessibilityLabel={t('routineCreate.exerciseOptions.collapseA11y')}
             >
               <Icon name="chevron-up" size={18} color="rgba(255,255,255,0.52)" />
             </Pressable>
