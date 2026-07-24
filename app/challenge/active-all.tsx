@@ -102,7 +102,7 @@ export default function ActiveAll() {
             completion.show({
               challengeId: c.challengeId,
               challengeName: c.title,
-              duration: c.duration || '30 days',
+              duration: `${c.day} days`,
               completedAt: new Date(),
             });
             shownCompletions.current.add(c.challengeId);
