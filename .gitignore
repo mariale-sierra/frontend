@@ -42,3 +42,6 @@ yarn-error.*
 
 # AI workflow docs (docs/ai/) — local working docs for Claude Code, not published to the repo
 docs/ai/
+
+# test coverage output
+coverage/
