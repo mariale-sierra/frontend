@@ -191,6 +191,18 @@ export default function ChallengeDetail() {
             </View>
 
             <View style={styles.topRightRow}>
+              {membershipStatus !== 'none' && (
+                <Pressable
+                  onPress={() => router.push(`/challenge/${id}/invite`)}
+                  style={({ pressed }) => [styles.saveIconButton, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('invites.inviteUsersA11y')}
+                  hitSlop={12}
+                >
+                  <Icon name="person-add-outline" size={20} color={colors.textPrimary} />
+                </Pressable>
+              )}
+
               <Pressable
                 style={({ pressed }) => [styles.saveIconButton, pressed && styles.pressed]}
                 accessibilityRole="button"
