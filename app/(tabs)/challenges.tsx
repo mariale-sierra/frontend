@@ -44,7 +44,9 @@ export default function Challenges() {
 
 	const handleCreateChallenge = () => router.push('/challenge/create');
 	const handleOpenChallenge = (id: string) => router.push(`/challenge/${id}`);
-	const handleOpenActiveChallenge = (id: string) => router.push(`/challenge/${id}/progress`);
+	// Active and explore cards both land on the same challenge detail screen —
+	// it shows the Progress tab by default for challenges the user already joined.
+	const handleOpenActiveChallenge = (id: string) => router.push(`/challenge/${id}`);
 	const handleSeeAllActive = () => router.push('/challenge/active-all');
 	const handleSeeAllExplore = () => router.push('/challenge/explore-all');
 
