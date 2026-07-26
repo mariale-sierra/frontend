@@ -69,6 +69,12 @@ export async function getTodayRoutineForChallenge(
 }
 
 export async function getPublicChallengePhotos(challengeId: string): Promise<ChallengePhoto[]> {
-  const response = await api.get<ChallengePhoto[]>(`/challenges/${challengeId}/photos/public`);
+  const response = await api.get<ChallengePhoto[]>(`/workout-posts/challenge/${challengeId}`);
+  return response.data;
+}
+
+/** Current user's own progress photos across all challenges (profile grid). */
+export async function getMyProgressPhotos(): Promise<ChallengePhoto[]> {
+  const response = await api.get<ChallengePhoto[]>('/workout-posts/mine');
   return response.data;
 }
