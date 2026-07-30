@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +23,7 @@ import { Row } from '../../components/layout/row';
 export default function Profile() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { username: sessionUsername } = useAuth();
+  const { username: sessionUsername, logout } = useAuth();
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<MyProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,6 +54,17 @@ export default function Profile() {
 
   const displayName = profile?.display_name ?? sessionUsername ?? 'User name';
   const username = profile?.username ?? sessionUsername ?? 'username';
+
+  function handleLogoutPress() {
+    Alert.alert(
+      t('profile.logoutConfirmTitle', { defaultValue: 'Cerrar sesión' }),
+      t('profile.logoutConfirmMessage', { defaultValue: '¿Seguro que quieres cerrar sesión?' }),
+      [
+        { text: t('common.cancel', { defaultValue: 'Cancelar' }), style: 'cancel' },
+        { text: t('profile.logoutButton', { defaultValue: 'Cerrar sesión' }), style: 'destructive', onPress: () => logout() },
+      ],
+    );
+  }
 
   return (
     <ScreenBackground variant="default">
@@ -90,6 +101,15 @@ export default function Profile() {
                     style={styles.actionButton}
                   >
                     {t('invites.screenTitle')}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onPress={handleLogoutPress}
+                    style={styles.actionButton}
+                    accessibilityLabel={t('profile.logoutButtonA11y', { defaultValue: 'Cerrar sesión' })}
+                  >
+                    {t('profile.logoutButton', { defaultValue: 'Cerrar sesión' })}
                   </Button>
                 </Row>
               }

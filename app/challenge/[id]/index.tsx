@@ -108,10 +108,12 @@ export default function ChallengeDetail() {
           t('challenges.joinSuccessTitle'),
           t('challenges.joinSuccessMessage'),
         );
-      } catch {
+      } catch (err) {
+        const backendMessage = (err as { response?: { data?: { message?: string } } })
+          ?.response?.data?.message;
         Alert.alert(
           t('common.errors.genericTitle'),
-          t('challenges.joinError'),
+          backendMessage ?? t('challenges.joinError'),
         );
       }
     },
