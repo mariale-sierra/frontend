@@ -38,7 +38,7 @@ export interface ChallengeActiveProgressData {
  */
 export function useChallengeActiveProgress(routeChallengeId: string | null): ChallengeActiveProgressData {
   const { t } = useTranslation();
-  const { challenge: backendChallenge, loading: progressLoading } = useChallengeProgress();
+  const { challenge: backendChallenge, loading: progressLoading } = useChallengeProgress(routeChallengeId);
 
   const challengeId = routeChallengeId ?? backendChallenge?.challengeId ?? null;
 

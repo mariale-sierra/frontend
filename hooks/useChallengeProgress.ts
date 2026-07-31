@@ -4,38 +4,43 @@ import { progressToHomeActiveChallengeViewModel } from '../services/adapters/hom
 import type { HomeActiveChallengeViewModel } from '../services/adapters/homeAdapter';
 import type { ChallengeProgressContract } from '../types/challenge';
 
-let cachedProgress: ChallengeProgressContract | null | undefined;
+// Keyed by challengeId (or '' for "the caller's current active challenge",
+// i.e. no id passed) — a single shared value used to cause every challenge's
+// progress screen to show the same card regardless of which one was opened.
+const progressCache = new Map<string, ChallengeProgressContract | null>();
 
 /**
- * Clears the module-level progress cache. Must be called on login/logout so a
- * new session never renders the previous user's cached challenge progress.
+ * Clears the progress cache. Must be called on login/logout so a new session
+ * never renders the previous user's cached challenge progress.
  */
 export function invalidateChallengeProgressCache() {
-  cachedProgress = undefined;
+  progressCache.clear();
 }
 
-export function useChallengeProgress() {
+export function useChallengeProgress(challengeId?: string | null) {
+  const cacheKey = challengeId ?? '';
   const [progress, setProgress] = useState<ChallengeProgressContract | null>(
-    cachedProgress === undefined ? null : cachedProgress,
+    progressCache.has(cacheKey) ? progressCache.get(cacheKey)! : null,
   );
-  const [loading, setLoading] = useState(cachedProgress === undefined);
+  const [loading, setLoading] = useState(!progressCache.has(cacheKey));
 
   useEffect(() => {
     let cancelled = false;
 
-    if (cachedProgress !== undefined) {
-      setProgress(cachedProgress);
+    if (progressCache.has(cacheKey)) {
+      setProgress(progressCache.get(cacheKey)!);
       setLoading(false);
       return;
     }
 
-    getChallengeProgress()
+    setLoading(true);
+    getChallengeProgress(challengeId ?? undefined)
       .then((nextProgress) => {
-        cachedProgress = nextProgress;
+        progressCache.set(cacheKey, nextProgress);
         if (!cancelled) setProgress(nextProgress);
       })
       .catch(() => {
-        cachedProgress = null;
+        progressCache.set(cacheKey, null);
         if (!cancelled) setProgress(null);
       })
       .finally(() => {
@@ -45,7 +50,7 @@ export function useChallengeProgress() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [cacheKey, challengeId]);
 
   const challenge: HomeActiveChallengeViewModel | null = progress
     ? progressToHomeActiveChallengeViewModel(progress)

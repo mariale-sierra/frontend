@@ -66,6 +66,18 @@ export default function Profile() {
     );
   }
 
+  const logoutButton = (
+    <Button
+      variant="danger"
+      size="sm"
+      onPress={handleLogoutPress}
+      style={styles.actionButton}
+      accessibilityLabel={t('profile.logoutButtonA11y', { defaultValue: 'Cerrar sesión' })}
+    >
+      {t('profile.logoutButton', { defaultValue: 'Cerrar sesión' })}
+    </Button>
+  );
+
   return (
     <ScreenBackground variant="default">
       <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.xs }]}>
@@ -76,6 +88,7 @@ export default function Profile() {
         ) : error ? (
           <View style={styles.center}>
             <Text tone="secondary">{error}</Text>
+            <View style={styles.errorLogoutWrap}>{logoutButton}</View>
           </View>
         ) : (
           <>
@@ -102,15 +115,7 @@ export default function Profile() {
                   >
                     {t('invites.screenTitle')}
                   </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onPress={handleLogoutPress}
-                    style={styles.actionButton}
-                    accessibilityLabel={t('profile.logoutButtonA11y', { defaultValue: 'Cerrar sesión' })}
-                  >
-                    {t('profile.logoutButton', { defaultValue: 'Cerrar sesión' })}
-                  </Button>
+                  {logoutButton}
                 </Row>
               }
             />
@@ -134,6 +139,10 @@ const styles = StyleSheet.create({
     minHeight: 280,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.md,
+  },
+  errorLogoutWrap: {
+    minWidth: 160,
   },
   actionButton: {
     flex: 1,

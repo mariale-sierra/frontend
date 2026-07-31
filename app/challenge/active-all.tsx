@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -68,14 +68,14 @@ export default function ActiveAll() {
   });
 
   // Challenge completion notification
-  const completion = useChallengeCompletion({
-    onDismiss: () => {
-      // Refresh challenges after user sees completion notification
-      getMyChallenges()
-        .then((res) => setGrouped(groupByStatus(toEnrolledChallengesViewModel(res ?? []))))
-        .catch(() => setError(t('challenges.loadError')));
-    },
-  });
+  const handleCompletionDismiss = useCallback(() => {
+    // Refresh challenges after user sees completion notification
+    getMyChallenges()
+      .then((res) => setGrouped(groupByStatus(toEnrolledChallengesViewModel(res ?? []))))
+      .catch(() => setError(t('challenges.loadError')));
+  }, [t]);
+
+  const completion = useChallengeCompletion({ onDismiss: handleCompletionDismiss });
 
   const shownCompletions = useRef(new Set<string>());
 
@@ -90,6 +90,8 @@ export default function ActiveAll() {
     tabAnims.map((a) => a.interpolate({ inputRange: [0, 1], outputRange: [1, 1.6] }))
   ).current;
 
+  const { show: showCompletion } = completion;
+
   useEffect(() => {
     getMyChallenges()
       .then((res) => {
@@ -99,7 +101,7 @@ export default function ActiveAll() {
         // Check for newly completed challenges and show notification
         challenges.forEach((c) => {
           if (c.status === 'completed' && !shownCompletions.current.has(c.challengeId)) {
-            completion.show({
+            showCompletion({
               challengeId: c.challengeId,
               challengeName: c.title,
               duration: `${c.day} days`,
@@ -111,7 +113,7 @@ export default function ActiveAll() {
       })
       .catch(() => setError(t('challenges.loadError')))
       .finally(() => setLoading(false));
-  }, [t, completion]);
+  }, [t, showCompletion]);
 
   function switchTab(idx: number) {
     Animated.parallel(

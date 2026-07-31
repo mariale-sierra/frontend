@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
@@ -36,23 +37,47 @@ export default function Home() {
 
   const hoursLeft = hoursUntilMidnight();
 
-  useEffect(() => {
-    getMyChallenges()
-      .then((data) => setChallenges(getHomeChallengesSorted(data)))
-      .catch(() => setChallenges([]))
-      .finally(() => setChallengeLoading(false));
-  }, []);
+  // Refetches on focus (not just on first mount) so returning to this tab after
+  // joining/completing a challenge elsewhere shows up-to-date days/hours-left cards.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getMyChallenges()
+        .then((data) => {
+          if (active) setChallenges(getHomeChallengesSorted(data));
+        })
+        .catch(() => {
+          if (active) setChallenges([]);
+        })
+        .finally(() => {
+          if (active) setChallengeLoading(false);
+        });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
-  useEffect(() => {
-    getHomeFeed()
-      .then((data) => setFeedPosts(toFeedPostViewModels(data)))
-      .catch(() => {
-        // Feed failed to load — fall through to the empty-feed state below rather
-        // than showing stale/fake data.
-        setFeedPosts([]);
-      })
-      .finally(() => setFeedLoading(false));
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getHomeFeed()
+        .then((data) => {
+          if (active) setFeedPosts(toFeedPostViewModels(data));
+        })
+        .catch(() => {
+          // Feed failed to load — fall through to the empty-feed state below rather
+          // than showing stale/fake data.
+          if (active) setFeedPosts([]);
+        })
+        .finally(() => {
+          if (active) setFeedLoading(false);
+        });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   function renderItem({ item }: { item: FeedPostViewModel }) {
     return <FeedPostCard post={item} />;
