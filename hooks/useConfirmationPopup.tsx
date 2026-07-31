@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { ConfirmationPopup, ConfirmationButtonConfig } from '../components/ui/confirmationPopup';
 
 export type ConfirmationPopupType = 'join' | 'leave';
@@ -116,31 +116,42 @@ export function useChallengeCompletion(options?: {
   }, []);
 
   const hide = useCallback(() => {
-    options?.onDismiss?.(completionData!);
     setVisible(false);
-  }, [completionData, options]);
+    setCompletionData((current) => {
+      options?.onDismiss?.(current!);
+      return current;
+    });
+  }, [options]);
 
-  const Component: React.FC = () => {
-    if (!completionData) return null;
+  // Memoized so its identity is stable across renders — otherwise every
+  // render created a brand-new component type, which made React unmount and
+  // remount the underlying Modal on every state update (the popup appeared
+  // to flicker and never fully close).
+  const Component: React.FC = useMemo(
+    () =>
+      function ChallengeCompletionPopup() {
+        if (!completionData) return null;
 
-    return (
-      <ConfirmationPopup
-        visible={visible}
-        title="🎉 Challenge Complete!"
-        description={
-          completionData.duration
-            ? `You completed "${completionData.challengeName}" in ${completionData.duration}!`
-            : `Great job completing "${completionData.challengeName}"!`
-        }
-        primaryButton={{
-          label: 'Awesome!',
-          onPress: hide,
-          variant: 'primary',
-        }}
-        onDismiss={hide}
-      />
-    );
-  };
+        return (
+          <ConfirmationPopup
+            visible={visible}
+            title="🎉 Challenge Complete!"
+            description={
+              completionData.duration
+                ? `You completed "${completionData.challengeName}" in ${completionData.duration}!`
+                : `Great job completing "${completionData.challengeName}"!`
+            }
+            primaryButton={{
+              label: 'Awesome!',
+              onPress: hide,
+              variant: 'primary',
+            }}
+            onDismiss={hide}
+          />
+        );
+      },
+    [visible, completionData, hide],
+  );
 
-  return { Component, show, hide };
+  return useMemo(() => ({ Component, show, hide }), [Component, show, hide]);
 }

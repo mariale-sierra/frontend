@@ -36,8 +36,10 @@ export async function getChallenge(id: string) {
   return response.data;
 }
 
-export async function getChallengeProgress() {
-  const response = await api.get<ChallengeProgressContract | null>('/challenges/progress');
+export async function getChallengeProgress(challengeId?: string) {
+  const response = await api.get<ChallengeProgressContract | null>('/challenges/progress', {
+    params: challengeId ? { challengeId } : undefined,
+  });
   return response.data;
 }
 
