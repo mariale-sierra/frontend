@@ -14,7 +14,6 @@ import { Input } from "../../../components/ui/input";
 import { Text } from "../../../components/ui/text";
 import { Icon } from "../../../components/ui/icon";
 import { ExerciseListItem } from "../../../components/routine/exercise-picker/exerciseListItem";
-import { MuscleGroupPickerModal } from "../../../components/routine/exercise-picker/MuscleGroupPickerModal";
 import { AssignMuscleGroupsModal } from "../../../components/routine/exercise-picker/AssignMuscleGroupsModal";
 import { useRoutineBuilder } from "../../../store/routineBuilderStore";
 import { useChallengeBuilder } from "../../../store/challengeBuilderStore";
@@ -70,7 +69,6 @@ export default function ExercisesScreen() {
     (state) => state.selectedLocations,
   );
   const [query, setQuery] = useState("");
-  const [musclePickerVisible, setMusclePickerVisible] = useState(false);
   const [pendingExercise, setPendingExercise] = useState<ExerciseCandidate | null>(null);
   const [exercises, setExercises] = useState<ExerciseCandidate[]>([]);
   const [backendIdByLocalId, setBackendIdByLocalId] = useState<
@@ -160,7 +158,7 @@ export default function ExercisesScreen() {
         <Text variant="subheader">{t('routineExercises.dayExercisesTitle', { day: day ?? '1' })}</Text>
       </Row>
 
-      {/* Search + muscle group filter */}
+      {/* Search */}
       <View style={styles.controls}>
         <Input
           value={query}
@@ -170,21 +168,6 @@ export default function ExercisesScreen() {
             <Icon name="search" size={18} color={colors.textSecondary} />
           }
         />
-
-        <View style={styles.filters}>
-          <Pressable
-            onPress={() => setMusclePickerVisible(true)}
-            style={({ pressed }) => [
-              styles.muscleBtn,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text variant="caption" style={styles.muscleBtnText}>
-              {t('routineExercises.allMuscles')}
-            </Text>
-            <Icon name="chevron-down" size={14} color={colors.textPrimary} />
-          </Pressable>
-        </View>
       </View>
 
       {isLoading ? (
@@ -216,13 +199,6 @@ export default function ExercisesScreen() {
         />
       )}
 
-      <MuscleGroupPickerModal
-        visible={musclePickerVisible}
-        exercises={exercises}
-        onClose={() => setMusclePickerVisible(false)}
-        onAddExercise={handleAdd}
-      />
-
       <AssignMuscleGroupsModal
         visible={pendingExercise !== null}
         exerciseName={pendingExercise?.name ?? ''}
@@ -247,27 +223,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
     marginBottom: spacing.md,
-  },
-  filters: {
-    alignItems: "center",
-  },
-  muscleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: 99,
-    borderWidth: 1,
-    borderColor: colors.textPrimary,
-    backgroundColor: colors.background,
-  },
-  muscleBtnText: {
-    color: colors.textPrimary,
-    letterSpacing: 1,
-  },
-  pressed: {
-    opacity: 0.75,
   },
   list: {
     paddingBottom: spacing["2xl"],

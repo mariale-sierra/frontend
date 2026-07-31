@@ -38,7 +38,10 @@ export default function Challenges() {
 						exploreChallenges: realExplore,
 					});
 			})
-			.catch(() => setError(t('challenges.loadError')))
+			.catch((err) => {
+				console.error('[challenges] load failed:', err?.response?.status, err?.response?.data ?? err?.message ?? err);
+				setError(t('challenges.loadError'));
+			})
 			.finally(() => setLoading(false));
 	}, [t]);
 
