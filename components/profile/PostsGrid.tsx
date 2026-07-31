@@ -1,52 +1,88 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
 import { colors, radius, spacing } from '../../constants/theme';
+import { Text } from '../ui/text';
+import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
 import type { ChallengePhoto } from '../../types/challenge';
-
-// REMOVE_MOCK_START
-const MOCK_PHOTO: ChallengePhoto = {
-  id: 'mock-profile-1',
-  challengeId: 'mock-challenge',
-  userName: 'camsandvl',
-  imageUrl: null,
-  day: 14,
-  visibility: 'public',
-  description: 'Day 14 done. Feeling stronger every week.',
-  metrics: [
-    { label: 'Bench Press', value: '3 sets · 135 lbs' },
-    { label: 'Squat', value: '3 sets · 185 lbs' },
-    { label: 'Pull Ups', value: '24 reps' },
-  ],
-};
-// REMOVE_MOCK_END
 
 interface PostsGridProps {
   view: 'posts' | 'photos';
   onPhotoPress?: (photo: ChallengePhoto) => void;
 }
 
-function PostSkeleton({ onPress }: { onPress?: () => void }) {
+function PhotoTile({
+  photo,
+  onPress,
+}: {
+  photo: ChallengePhoto;
+  onPress?: () => void;
+}) {
   return (
     <Pressable
-      style={({ pressed }) => [styles.skeleton, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
       onPress={onPress}
     >
-      <View style={styles.skeletonInner} />
+      {photo.imageUrl ? (
+        <Image source={{ uri: photo.imageUrl }} style={styles.image} resizeMode="cover" />
+      ) : (
+        <View style={styles.skeletonInner} />
+      )}
     </Pressable>
   );
 }
 
-const ROW_COUNT = 4;
+const SKELETON_COUNT = 8;
 
 export function PostsGrid({ view: _view, onPhotoPress }: PostsGridProps) {
+  const [photos, setPhotos] = useState<ChallengePhoto[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    getMyProgressPhotos()
+      .then((data) => {
+        if (active) setPhotos(data);
+      })
+      .catch(() => {
+        if (active) setPhotos([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.grid}>
+        {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+          <View key={i} style={styles.tile}>
+            <View style={styles.skeletonInner}>
+              {i === 0 && <ActivityIndicator color={colors.textMuted} />}
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  }
+
+  if (photos.length === 0) {
+    return (
+      <View style={styles.empty}>
+        <Text variant="body" align="center" style={styles.emptyText}>
+          No progress photos yet. Log a workout with a photo to see it here.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.grid}>
-      {Array.from({ length: ROW_COUNT * 2 }).map((_, i) => (
-        <PostSkeleton
-          key={i}
-          // REMOVE_MOCK_START
-          onPress={() => onPhotoPress?.(MOCK_PHOTO)}
-          // REMOVE_MOCK_END
-        />
+      {photos.map((photo) => (
+        <PhotoTile key={photo.id} photo={photo} onPress={() => onPhotoPress?.(photo)} />
       ))}
     </View>
   );
@@ -59,17 +95,31 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingTop: spacing.md,
   },
-  skeleton: {
+  tile: {
     width: '48.5%',
     aspectRatio: 3 / 4,
     borderRadius: radius.xl,
     overflow: 'hidden',
   },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
   skeletonInner: {
     flex: 1,
     backgroundColor: colors.surfaceElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pressed: {
     opacity: 0.7,
+  },
+  empty: {
+    paddingTop: spacing['2xl'],
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: colors.textMuted,
   },
 });

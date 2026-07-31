@@ -14,7 +14,7 @@ import { ACTIVITY_METRIC_CONFIG } from '../../types/metrics';
 import type { LocationType } from '../../components/icons/locationIcon';
 import type { ChallengeContract, TodayRoutineContract } from '../../types/challenge';
 import type { ActivityType } from '../../constants/theme';
-import { asNumber, asString } from './adapterUtils';
+import { asString } from './adapterUtils';
 
 const ALLOWED_ACTIVITY_CATEGORIES = new Set<ActivityCategory>(
   PREDEFINED_ACTIVITY_CATEGORIES,
@@ -66,35 +66,93 @@ function restLabel(restSeconds: number | null): string {
   return `Rest ${restSeconds} sec`;
 }
 
+/** Parses ids that the backend sends as strings (Postgres BIGINT is serialized
+ * as a string) as well as plain numbers. asNumber() only accepts `number`, so
+ * it silently dropped every routine exercise (id came as "1") — that was why
+ * the metrics screen showed "No exercises for today's routine". */
+function toNum(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+/** GET /routine/today/:id returns raw RoutineExercise rows, whose metric targets
+ * (sets[].targets[].metricType.code / targets[].metricType.code) tell us what
+ * the exercise actually tracks. Map those codes onto the activity type whose
+ * ACTIVITY_METRIC_CONFIG surfaces the matching columns, so e.g. a duration-only
+ * exercise shows a duration field instead of reps/lbs. */
+function activityTypeFromMetricCodes(codes: string[]): ActivityType {
+  const set = new Set(codes);
+  if (set.has('distanceKm')) return 'cardioIntense'; // duration + distance
+  if (set.has('reps') || set.has('weight')) return 'strength'; // reps + lbs
+  if (set.has('duration')) return 'flexibility'; // duration only
+  return 'strength';
+}
+
+interface TodayRoutineTarget {
+  metricType?: { code?: string } | null;
+}
+interface TodayRoutineSet {
+  rest_seconds_after?: number | null;
+  targets?: TodayRoutineTarget[] | null;
+}
+interface TodayRoutineExerciseRow {
+  id?: number | string;
+  notes?: string | null;
+  exercise?: { id?: number | string; name?: string } | null;
+  sets?: TodayRoutineSet[] | null;
+  targets?: TodayRoutineTarget[] | null;
+}
+
 export function adaptTodayRoutineExercises(
   contract: TodayRoutineContract,
   challenge: ChallengeOption,
 ): ExerciseMetricsBlock[] {
-  const rawExercises = contract.exercises ?? [];
+  const rawExercises = (contract.exercises ?? []) as TodayRoutineExerciseRow[];
 
   console.log('[adaptTodayRoutineExercises] Input:', contract, challenge);
 
   return rawExercises
-    .map((ex) => {
-      const exerciseId = asNumber(ex.id);
+    .map((ex): ExerciseMetricsBlock | null => {
+      // The backend nests the catalog exercise under `exercise`; `ex.id` is the
+      // routine-exercise row id. Prefer the real exercise id for the payload.
+      const exerciseId = toNum(ex.exercise?.id) ?? toNum(ex.id);
       if (exerciseId === null) return null;
 
-      const name = asString(ex.name);
-      const activityType = (asString(ex.activity_type) || 'strength') as ActivityType;
-      const location = asString(ex.location) as LocationType;
+      const name = asString(ex.exercise?.name);
       const sets = Array.isArray(ex.sets) ? ex.sets : [];
-      const firstRest = asNumber(sets[0]?.rest_seconds ?? null);
+
+      const metricCodes: string[] = [];
+      for (const set of sets) {
+        for (const target of set.targets ?? []) {
+          const code = target.metricType?.code;
+          if (code) metricCodes.push(code);
+        }
+      }
+      for (const target of ex.targets ?? []) {
+        const code = target.metricType?.code;
+        if (code) metricCodes.push(code);
+      }
+
+      const activityType = activityTypeFromMetricCodes(metricCodes);
+      // Per-exercise location isn't returned by this endpoint; default to a
+      // valid value so sanitizeHydratedExercises keeps the row.
+      const location = 'anywhere' as LocationType;
+      const firstRest = toNum(sets[0]?.rest_seconds_after ?? null);
 
       const config: ActivityMetricConfig = ACTIVITY_METRIC_CONFIG[activityType] ?? ACTIVITY_METRIC_CONFIG.strength;
       const rowCount = config.showSetColumn && sets.length > 0 ? sets.length : config.defaultRows;
 
       return {
-        id: String(exerciseId),
+        id: String(ex.id ?? exerciseId),
         exerciseId,
         name,
         activityType,
-        location: ALLOWED_LOCATIONS.has(location) ? location : ('anywhere' as LocationType),
-        notes: '',
+        location,
+        notes: asString(ex.notes),
         restTimeLabel: restLabel(firstRest) ?? 'Rest 60 sec',
         rows: Array.from({ length: rowCount }, (_, i) => {
           const row: ExerciseMetricsRow = { set: i + 1 };
@@ -105,7 +163,7 @@ export function adaptTodayRoutineExercises(
         }),
       } satisfies ExerciseMetricsBlock;
     })
-    .filter((block) => block !== null);
+    .filter((block): block is ExerciseMetricsBlock => block !== null);
 }
 
 export function sanitizeHydratedExercises(

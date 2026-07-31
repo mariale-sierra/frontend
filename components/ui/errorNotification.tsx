@@ -5,10 +5,14 @@ import { colors, radius, spacing } from '../../constants/theme';
 import { Text } from './text';
 import { MaterialIcons } from '@expo/vector-icons';
 
+export type NotificationVariant = 'error' | 'success';
+
 export interface ErrorNotificationConfig {
   message: string;
   title?: string;
   duration?: number; // ms, 0 = no auto-dismiss
+  /** 'error' (red, default) or 'success' (green) */
+  variant?: NotificationVariant;
   action?: {
     label: string;
     onPress: () => void;
@@ -60,7 +64,12 @@ export function ErrorNotification({
         onPress={onDismiss}
         style={styles.touchable}
       >
-        <View style={styles.content}>
+        <View
+          style={[
+            styles.content,
+            config.variant === 'success' && styles.contentSuccess,
+          ]}
+        >
           <View style={styles.textContainer}>
             {config.title && (
               <Text
@@ -117,6 +126,9 @@ const styles = StyleSheet.create({
   },
   touchable: {
     flex: 1,
+  },
+  contentSuccess: {
+    backgroundColor: colors.success,
   },
   content: {
     backgroundColor: colors.error,

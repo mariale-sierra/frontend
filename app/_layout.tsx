@@ -33,12 +33,15 @@ function RootNavigator() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
+      <Stack.Screen name="invitations" options={{ headerShown: false }} />
+      <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
       <Stack.Screen name="(add)" options={{ presentation: 'fullScreenModal', headerShown: false }} />
       <Stack.Screen name="challenge" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/create" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/[id]/progress" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/[id]/info" options={{ headerShown: false }} />
+      <Stack.Screen name="challenge/[id]/invite" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/[id]/routine/[day]" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/routine" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/routine/select" options={{ headerShown: false }} />

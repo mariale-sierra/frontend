@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../constants/theme';
 
 export function getUserAvatarColor(username: string): string {
@@ -14,12 +14,24 @@ export function getUserAvatarColor(username: string): string {
 interface UserAvatarProps {
   username: string;
   size?: number;
+  /** Optional profile photo URL — falls back to the initial when absent. */
+  imageUrl?: string | null;
 }
 
-export function UserAvatar({ username, size = 40 }: UserAvatarProps) {
+export function UserAvatar({ username, size = 40, imageUrl }: UserAvatarProps) {
   const bgColor = getUserAvatarColor(username);
   const initial = username ? username[0].toUpperCase() : '?';
   const fontSize = Math.round(size * 0.38);
+
+  if (imageUrl) {
+    return (
+      <Image
+        source={{ uri: imageUrl }}
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+        accessibilityLabel={username}
+      />
+    );
+  }
 
   return (
     <View style={[styles.circle, { width: size, height: size, borderRadius: size / 2, backgroundColor: bgColor }]}>

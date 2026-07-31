@@ -175,18 +175,18 @@ export function useMetricsScreen() {
           continue;
         }
 
-        const firstRepsRow = block.rows.find((row) => row.reps?.trim().length > 0);
-        const firstLbsRow = block.rows.find((row) => row.lbs?.trim().length > 0);
+        const firstRepsRow = block.rows.find((row) => (row.reps ?? '').trim().length > 0);
+        const firstLbsRow = block.rows.find((row) => (row.lbs ?? '').trim().length > 0);
 
         if (firstRepsRow) {
-          const reps = parseFloat(firstRepsRow.reps);
+          const reps = parseFloat(firstRepsRow.reps ?? '');
           if (Number.isFinite(reps)) {
             await addMetricToWorkoutLogExercise(wle.id, 'reps', reps);
             matchedCount++;
           }
         }
         if (firstLbsRow) {
-          const weight = parseFloat(firstLbsRow.lbs);
+          const weight = parseFloat(firstLbsRow.lbs ?? '');
           if (Number.isFinite(weight)) {
             await addMetricToWorkoutLogExercise(wle.id, 'weight', weight);
             matchedCount++;

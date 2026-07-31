@@ -1,0 +1,298 @@
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import * as ImagePicker from 'expo-image-picker';
+import ScreenBackground from '../../components/layout/screenBackground';
+import { BackButton } from '../../components/ui/backButton';
+import { Text } from '../../components/ui/text';
+import { Button } from '../../components/ui/button';
+import { FormField } from '../../components/ui/formField';
+import { Dropdown } from '../../components/ui/dropdown';
+import { UserAvatar } from '../../components/ui/userAvatar';
+import { Row } from '../../components/layout/row';
+import {
+  getMyProfile,
+  updateMyProfile,
+  updateMyProfilePhoto,
+} from '../../services/user/user.service';
+import { uploadImageAsync } from '../../services/uploads/upload.service';
+import { useErrorNotificationStore } from '../../store/errorNotificationStore';
+import { colors, spacing } from '../../constants/theme';
+import type { MyProfileContract, UpdateProfilePayload } from '../../types/user';
+
+const DISPLAY_NAME_MAX = 150;
+const BIO_MAX = 1000;
+
+/**
+ * Edit-profile screen: loads the current profile, lets the user change
+ * photo / display name / bio / language / privacy, validates locally and
+ * PATCHes only the fields that changed.
+ */
+export default function EditProfile() {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  const [profile, setProfile] = useState<MyProfileContract | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+
+  const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
+  const [language, setLanguage] = useState('en');
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [displayNameError, setDisplayNameError] = useState<string | null>(null);
+
+  const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const { show, showSuccess } = useErrorNotificationStore();
+
+  const loadProfile = () => {
+    setLoading(true);
+    setLoadError(false);
+    getMyProfile()
+      .then((data) => {
+        setProfile(data);
+        setDisplayName(data.display_name);
+        setBio(data.bio ?? '');
+        setLanguage(data.preferred_language || 'en');
+        setIsPrivate(data.is_private);
+      })
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(loadProfile, []);
+
+  const validate = (): boolean => {
+    if (!displayName.trim()) {
+      setDisplayNameError(t('profileEdit.displayNameRequired'));
+      return false;
+    }
+    setDisplayNameError(null);
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!profile || saving || !validate()) return;
+
+    // PATCH semantics: only send what actually changed.
+    const payload: UpdateProfilePayload = {};
+    if (displayName.trim() !== profile.display_name) payload.display_name = displayName.trim();
+    if (bio.trim() !== (profile.bio ?? '')) payload.bio = bio.trim();
+    if (language !== profile.preferred_language) payload.preferred_language = language;
+    if (isPrivate !== profile.is_private) payload.is_private = isPrivate;
+
+    if (Object.keys(payload).length === 0) {
+      router.back();
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const updated = await updateMyProfile(payload);
+      setProfile(updated);
+      if (payload.is_private !== undefined) {
+        showSuccess({ message: t('profileEdit.privacyUpdated') });
+      } else {
+        showSuccess({ message: t('profileEdit.saved') });
+      }
+      router.back();
+    } catch {
+      show({ message: t('profileEdit.saveError') });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePhoto = async () => {
+    if (uploadingPhoto) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+
+    setUploadingPhoto(true);
+    try {
+      // Reuses the shared R2 flow: sign → PUT → persist the public URL.
+      const publicUrl = await uploadImageAsync(result.assets[0].uri, 'image/jpeg');
+      const updated = await updateMyProfilePhoto(publicUrl);
+      setProfile(updated);
+      showSuccess({ message: t('profileEdit.photoUpdated') });
+    } catch {
+      show({ message: t('profileEdit.photoError') });
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <ScreenBackground variant="default">
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      </ScreenBackground>
+    );
+  }
+
+  if (loadError || !profile) {
+    return (
+      <ScreenBackground variant="default">
+        <View style={styles.center}>
+          <Text tone="secondary">{t('profileEdit.loadError')}</Text>
+          <Button variant="outline" size="sm" onPress={loadProfile}>
+            {t('common.actions.continue')}
+          </Button>
+        </View>
+      </ScreenBackground>
+    );
+  }
+
+  return (
+    <ScreenBackground variant="default">
+      <ScrollView
+        contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.sm }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.header}>
+          <BackButton />
+          <Text variant="title">{t('profileEdit.screenTitle')}</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <View style={styles.photoSection}>
+          <Pressable onPress={handleChangePhoto} disabled={uploadingPhoto}>
+            <UserAvatar
+              username={profile.username}
+              imageUrl={profile.profile_image_url}
+              size={96}
+            />
+            {uploadingPhoto && (
+              <View style={styles.photoOverlay}>
+                <ActivityIndicator color={colors.primary} />
+              </View>
+            )}
+          </Pressable>
+          <Button
+            variant="outline"
+            size="sm"
+            onPress={handleChangePhoto}
+            loading={uploadingPhoto}
+            disabled={uploadingPhoto}
+          >
+            {t('profileEdit.changePhoto')}
+          </Button>
+        </View>
+
+        <FormField
+          label={t('profileEdit.displayName')}
+          value={displayName}
+          onChangeText={(value: string) => {
+            setDisplayName(value);
+            if (displayNameError && value.trim()) setDisplayNameError(null);
+          }}
+          maxLength={DISPLAY_NAME_MAX}
+          error={displayNameError}
+          placeholder={t('profileEdit.displayNamePlaceholder')}
+          placeholderVariant="caption"
+        />
+
+        <FormField
+          label={t('profileEdit.bio')}
+          value={bio}
+          onChangeText={setBio}
+          multiline
+          maxLength={BIO_MAX}
+          placeholder={t('profileEdit.bioPlaceholder')}
+          placeholderVariant="caption"
+        />
+
+        <View style={{ gap: spacing.xs }}>
+          <Text variant="subheader">{t('profileEdit.language')}</Text>
+          <Dropdown
+            options={[
+              { value: 'en', label: t('profileEdit.languageEn') },
+              { value: 'es', label: t('profileEdit.languageEs') },
+            ]}
+            selectedValues={[language]}
+            onChange={(values) => {
+              const next = values[values.length - 1];
+              if (next) setLanguage(next);
+            }}
+            maxSelections={1}
+            showValueInline
+          />
+        </View>
+
+        <Row align="center" justify="space-between">
+          <View style={styles.privacyText}>
+            <Text variant="subheader">{t('profileEdit.privacy')}</Text>
+            <Text variant="caption" tone="secondary">
+              {t('profileEdit.privacyHint')}
+            </Text>
+          </View>
+          <Switch
+            value={isPrivate}
+            onValueChange={setIsPrivate}
+            trackColor={{ false: colors.surface, true: colors.success }}
+            thumbColor={colors.primary}
+          />
+        </Row>
+
+        <Button
+          variant="primary"
+          size="lg"
+          onPress={handleSave}
+          loading={saving}
+          disabled={saving || uploadingPhoto}
+        >
+          {t('profileEdit.save')}
+        </Button>
+      </ScrollView>
+    </ScreenBackground>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
+    gap: spacing.lg,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  photoSection: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  photoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 48,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  privacyText: {
+    flex: 1,
+    gap: 2,
+    paddingRight: spacing.md,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+});

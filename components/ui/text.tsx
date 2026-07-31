@@ -24,7 +24,7 @@ type TextVariant =
   | 'label'
   | 'activity';
 
-type TextTone = 'primary' | 'secondary';
+type TextTone = 'primary' | 'secondary' | 'inverse';
 
 /**
  * TextProps defines all configurable props for the Text component.
