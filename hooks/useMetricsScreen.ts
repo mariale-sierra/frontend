@@ -5,6 +5,8 @@ import { useMetricsEntryStore } from '../store/metricsEntryStore';
 import { useAuth } from './useAuth';
 import { createWorkoutLog, getWorkoutLog } from '../services/workout-log/workout-log.service';
 import { addMetricToWorkoutLogExercise } from '../services/metrics/metrics.service';
+import { ACTIVITY_METRIC_CONFIG, type MetricField } from '../types/metrics';
+import type { WorkoutMetricCode } from '../types/workout-log';
 import { getTodayRoutineForChallenge } from '../services/challenge/challenge.service';
 import { getMyChallenges } from '../services/user/user.service';
 import {
@@ -151,6 +153,14 @@ export function useMetricsScreen() {
   }, []);
 
   const submitMetrics = useCallback(async () => {
+    // 'rounds' has no matching backend metric_type yet, so it's intentionally
+    // left unmapped — those rows are skipped rather than sent under a wrong code.
+    const FIELD_TO_METRIC_CODE: Partial<Record<MetricField, WorkoutMetricCode>> = {
+      reps: 'reps',
+      lbs: 'weight',
+      duration: 'duration',
+      distance: 'distanceKm',
+    };
     if (isSubmitting) return;
 
     if (!userId) {
@@ -175,22 +185,29 @@ export function useMetricsScreen() {
           continue;
         }
 
-        const firstRepsRow = block.rows.find((row) => (row.reps ?? '').trim().length > 0);
-        const firstLbsRow = block.rows.find((row) => (row.lbs ?? '').trim().length > 0);
+        // Only the columns this exercise's activity type actually shows (e.g.
+        // duration/distance for cardio, reps/lbs for strength) — previously
+        // this always looked for 'reps'/'lbs' regardless of activityType, so
+        // non-strength exercises silently saved nothing.
+        const columns = ACTIVITY_METRIC_CONFIG[block.activityType].columns;
 
-        if (firstRepsRow) {
-          const reps = parseFloat(firstRepsRow.reps ?? '');
-          if (Number.isFinite(reps)) {
-            await addMetricToWorkoutLogExercise(wle.id, 'reps', reps);
-            matchedCount++;
-          }
-        }
-        if (firstLbsRow) {
-          const weight = parseFloat(firstLbsRow.lbs ?? '');
-          if (Number.isFinite(weight)) {
-            await addMetricToWorkoutLogExercise(wle.id, 'weight', weight);
-            matchedCount++;
-          }
+        for (const column of columns) {
+          const metricCode = FIELD_TO_METRIC_CODE[column.key];
+          if (!metricCode) continue; // e.g. 'rounds' — no backend metric_type yet
+
+          const firstRow = block.rows.find(
+            (row) => (row[column.key] ?? '').trim().length > 0,
+          );
+          if (!firstRow) continue;
+
+          const rawValue = parseFloat(firstRow[column.key] ?? '');
+          if (!Number.isFinite(rawValue)) continue;
+
+          // 'duration' is tracked in minutes in the UI but stored in seconds.
+          const value = column.key === 'duration' ? rawValue * 60 : rawValue;
+
+          await addMetricToWorkoutLogExercise(wle.id, metricCode, value);
+          matchedCount++;
         }
       }
 

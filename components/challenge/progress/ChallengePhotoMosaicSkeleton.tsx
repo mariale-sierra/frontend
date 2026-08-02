@@ -1,4 +1,4 @@
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { radius, spacing } from '../../../constants/theme';
 import type { ChallengePhoto } from '../../../types/challenge';
 
@@ -50,7 +50,11 @@ export function ChallengePhotoMosaicSkeleton({
               { width: itemSize, height: itemSize },
             ]}
           >
-            <View style={styles.innerGlow} />
+            {photo.imageUrl ? (
+              <Image source={{ uri: photo.imageUrl }} style={styles.photoImage} resizeMode="cover" />
+            ) : (
+              <View style={styles.innerGlow} />
+            )}
           </Pressable>
         ))}
       </View>
@@ -74,6 +78,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: '#3A3A3D',
     overflow: 'hidden',
+  },
+  photoImage: {
+    width: '100%',
+    height: '100%',
   },
   innerGlow: {
     position: 'absolute',

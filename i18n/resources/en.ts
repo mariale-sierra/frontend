@@ -303,6 +303,7 @@ const en = {
   home: {
     hoursLeft: '{{hours}}h left',
     completed: 'Completed',
+    todayLogged: 'Progress logged today',
     noActiveChallenge: 'No active challenge',
     communityTitle: 'Community',
     emptyFeedMessage: 'No posts yet. Be the first to share!',

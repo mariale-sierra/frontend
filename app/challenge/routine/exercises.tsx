@@ -14,7 +14,7 @@ import { Input } from "../../../components/ui/input";
 import { Text } from "../../../components/ui/text";
 import { Icon } from "../../../components/ui/icon";
 import { ExerciseListItem } from "../../../components/routine/exercise-picker/exerciseListItem";
-import { AssignMuscleGroupsModal } from "../../../components/routine/exercise-picker/AssignMuscleGroupsModal";
+import { MuscleGroupPickerModal } from "../../../components/routine/exercise-picker/MuscleGroupPickerModal";
 import { useRoutineBuilder } from "../../../store/routineBuilderStore";
 import { useChallengeBuilder } from "../../../store/challengeBuilderStore";
 import { colors, spacing } from "../../../constants/theme";
@@ -47,12 +47,16 @@ function mapBackendExerciseToCandidate(
 ): ExerciseCandidate {
   const activityType: ActivityType =
     (exercise.category && CATEGORY_TO_ACTIVITY[exercise.category]) || 'strength';
+  // Mirrors the backend's own mapping (challenges.service.ts resolveExercise):
+  // metric_type 'strength' <-> tracking_mode 'sets', everything else is 'schema'.
+  const metricType: ExerciseCandidate['metricType'] =
+    exercise.tracking_mode === 'sets' ? 'strength' : 'schema';
 
   return {
     id: String(exercise.id),
     name: exercise.name.toUpperCase(),
     location: exercise.location ?? defaultLocationLabel,
-    metricType: "strength",
+    metricType,
     activityType,
     muscleGroups: exercise.muscle_groups ?? [],
   };
@@ -69,7 +73,7 @@ export default function ExercisesScreen() {
     (state) => state.selectedLocations,
   );
   const [query, setQuery] = useState("");
-  const [pendingExercise, setPendingExercise] = useState<ExerciseCandidate | null>(null);
+  const [musclePickerVisible, setMusclePickerVisible] = useState(false);
   const [exercises, setExercises] = useState<ExerciseCandidate[]>([]);
   const [backendIdByLocalId, setBackendIdByLocalId] = useState<
     Record<string, number>
@@ -116,25 +120,10 @@ export default function ExercisesScreen() {
     };
   }, [t]);
 
-  function commitAdd(exercise: ExerciseCandidate) {
+  function handleAdd(exercise: ExerciseCandidate) {
     const backendId = backendIdByLocalId[exercise.id];
     addExercise(exercise, backendId);
     router.back();
-  }
-
-  function handleAdd(exercise: ExerciseCandidate) {
-    // Already tagged (from a previous submission) — no need to ask again.
-    if (exercise.muscleGroups.length > 0) {
-      commitAdd(exercise);
-      return;
-    }
-    setPendingExercise(exercise);
-  }
-
-  function handleMuscleAssignConfirm(muscleGroups: string[]) {
-    if (!pendingExercise) return;
-    commitAdd({ ...pendingExercise, muscleGroups });
-    setPendingExercise(null);
   }
 
   const filtered = useFilteredExercises({
@@ -158,7 +147,7 @@ export default function ExercisesScreen() {
         <Text variant="subheader">{t('routineExercises.dayExercisesTitle', { day: day ?? '1' })}</Text>
       </Row>
 
-      {/* Search */}
+      {/* Search + muscle group filter */}
       <View style={styles.controls}>
         <Input
           value={query}
@@ -168,6 +157,21 @@ export default function ExercisesScreen() {
             <Icon name="search" size={18} color={colors.textSecondary} />
           }
         />
+
+        <View style={styles.filters}>
+          <Pressable
+            onPress={() => setMusclePickerVisible(true)}
+            style={({ pressed }) => [
+              styles.muscleBtn,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text variant="caption" style={styles.muscleBtnText}>
+              {t('routineExercises.allMuscles')}
+            </Text>
+            <Icon name="chevron-down" size={14} color={colors.textPrimary} />
+          </Pressable>
+        </View>
       </View>
 
       {isLoading ? (
@@ -199,11 +203,11 @@ export default function ExercisesScreen() {
         />
       )}
 
-      <AssignMuscleGroupsModal
-        visible={pendingExercise !== null}
-        exerciseName={pendingExercise?.name ?? ''}
-        onClose={() => setPendingExercise(null)}
-        onConfirm={handleMuscleAssignConfirm}
+      <MuscleGroupPickerModal
+        visible={musclePickerVisible}
+        exercises={exercises}
+        onClose={() => setMusclePickerVisible(false)}
+        onAddExercise={handleAdd}
       />
     </ScreenBackground>
   );
@@ -223,6 +227,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
     marginBottom: spacing.md,
+  },
+  filters: {
+    alignItems: "center",
+  },
+  muscleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 99,
+    borderWidth: 1,
+    borderColor: colors.textPrimary,
+    backgroundColor: colors.background,
+  },
+  muscleBtnText: {
+    color: colors.textPrimary,
+    letterSpacing: 1,
+  },
+  pressed: {
+    opacity: 0.75,
   },
   list: {
     paddingBottom: spacing["2xl"],

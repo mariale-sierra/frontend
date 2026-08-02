@@ -71,9 +71,11 @@ export default function ChallengeDetail() {
   }
 
   function openPhotoGallery(photoId: string) {
-    const photo = progressData.photos.find((item) => item.id === photoId);
+    // Mosaic shows every photo across the challenge, so opening one from here
+    // should browse the full feed — leave selectedDay unset (that filter is
+    // only for the calendar's per-day dots).
     setSelectedPhotoId(photoId);
-    setSelectedDay(photo?.day ?? null);
+    setSelectedDay(null);
   }
 
   function openDayGallery(day: number) {

@@ -48,12 +48,22 @@ function RestDayBadge() {
   );
 }
 
+function TodayLoggedBadge() {
+  const { t } = useTranslation();
+  return (
+    <View style={[styles.badge, styles.todayLoggedBadge]}>
+      <Ionicons name="checkmark-circle" size={13} color={colors.success} />
+      <Text style={styles.todayLoggedBadgeText}>{t('home.todayLogged')}</Text>
+    </View>
+  );
+}
+
 function ChallengeItem({ challenge, hoursLeft }: ItemProps) {
   const showTimeBadge =
     !challenge.isCompleted && !challenge.isTodayCompleted && !challenge.isRestDay && hoursLeft > 0;
 
   return (
-    <View style={styles.item}>
+    <View style={[styles.item, challenge.streakCount > 0 && styles.itemStreakGlow]}>
       <Text variant="subheader">{challenge.title}</Text>
 
       <View style={styles.progressRow}>
@@ -65,6 +75,8 @@ function ChallengeItem({ challenge, hoursLeft }: ItemProps) {
         <CompletedBadge />
       ) : challenge.isRestDay ? (
         <RestDayBadge />
+      ) : challenge.isTodayCompleted ? (
+        <TodayLoggedBadge />
       ) : showTimeBadge ? (
         <TimeBadge hoursLeft={hoursLeft} />
       ) : null}
@@ -103,6 +115,18 @@ const styles = StyleSheet.create({
   item: {
     width: ITEM_WIDTH,
     gap: spacing.sm,
+  },
+  itemStreakGlow: {
+    borderRadius: radius.xl,
+    padding: spacing.md,
+    marginHorizontal: -spacing.md,
+    shadowColor: colors.streakGlow,
+    shadowOpacity: 0.55,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 14,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: colors.streakGlow,
   },
   progressRow: {
     flexDirection: 'row',
@@ -161,5 +185,17 @@ const styles = StyleSheet.create({
   restDayBadgeText: {
     ...typography.caption,
     color: colors.restDayNeon,
+  },
+  todayLoggedBadge: {
+    borderColor: colors.success,
+    shadowColor: colors.success,
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  todayLoggedBadgeText: {
+    ...typography.caption,
+    color: colors.success,
   },
 });

@@ -23,6 +23,7 @@ export const colors = {
   success: '#4ADE80',
   error: '#EF4444',
   warning: '#FACC15',
+  streakGlow: '#FF8A00',
 } as const;
 
 export function getActivityGradient(activityType: keyof typeof colors.activityType): [string, string] {
