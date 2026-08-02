@@ -19,7 +19,7 @@ export interface WorkoutLogContract {
   [key: string]: unknown;
 }
 
-export type WorkoutMetricCode = 'reps' | 'weight';
+export type WorkoutMetricCode = 'reps' | 'weight' | 'duration' | 'distanceKm';
 
 export interface AddWorkoutLogExerciseMetricRequest {
   metricCode: WorkoutMetricCode;

@@ -87,6 +87,7 @@ export function ActiveChallengeCard({
       onPress={onPress}
       style={({ pressed }) => [
         layout === 'compact' ? styles.compactPressable : styles.fullPressable,
+        challenge.streakCount > 0 && styles.streakGlow,
         { opacity: pressed ? 0.86 : 1 },
       ]}
     >
@@ -167,6 +168,14 @@ const styles = StyleSheet.create({
   },
   fullPressable: {
     width: '100%',
+  },
+  streakGlow: {
+    borderRadius: radius.lg,
+    shadowColor: colors.streakGlow,
+    shadowOpacity: 0.6,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 16,
+    elevation: 10,
   },
   card: {
     width: 272,

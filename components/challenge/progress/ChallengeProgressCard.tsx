@@ -12,11 +12,17 @@ interface Props {
 }
 
 export function ChallengeProgressCard({ progress, totalDays, title, timeLeft }: Props) {
+  const percent = totalDays > 0 ? Math.max(0, Math.min(100, (progress / totalDays) * 100)) : 0;
+
   return (
     <View style={styles.card}>
       <View style={styles.progressRow}>
         <Text style={styles.currentDay}>{progress}</Text>
         <Text style={styles.totalDays}>/{totalDays}</Text>
+      </View>
+
+      <View style={styles.progressBarTrack}>
+        <View style={[styles.progressBarFill, { width: `${percent}%` }]} />
       </View>
 
       <Text variant="subheader" style={styles.title}>{title}</Text>
@@ -48,6 +54,19 @@ const styles = StyleSheet.create({
   title: {
     textAlign: 'center',
     marginTop: spacing.xxs,
+  },
+  progressBarTrack: {
+    width: '80%',
+    height: 6,
+    borderRadius: radius.xl,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
+    marginTop: spacing.sm,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: radius.xl,
+    backgroundColor: colors.primary,
   },
   badge: {
     marginTop: spacing.sm,

@@ -12,6 +12,7 @@ function buildChallenge(overrides: Partial<HomeActiveChallengeViewModel> = {}): 
     isCompleted: false,
     activityType: 'strength',
     isRestDay: false,
+    streakCount: 0,
     ...overrides,
   };
 }

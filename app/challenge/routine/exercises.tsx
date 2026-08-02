@@ -15,7 +15,6 @@ import { Text } from "../../../components/ui/text";
 import { Icon } from "../../../components/ui/icon";
 import { ExerciseListItem } from "../../../components/routine/exercise-picker/exerciseListItem";
 import { MuscleGroupPickerModal } from "../../../components/routine/exercise-picker/MuscleGroupPickerModal";
-import { AssignMuscleGroupsModal } from "../../../components/routine/exercise-picker/AssignMuscleGroupsModal";
 import { useRoutineBuilder } from "../../../store/routineBuilderStore";
 import { useChallengeBuilder } from "../../../store/challengeBuilderStore";
 import { colors, spacing } from "../../../constants/theme";
@@ -48,12 +47,16 @@ function mapBackendExerciseToCandidate(
 ): ExerciseCandidate {
   const activityType: ActivityType =
     (exercise.category && CATEGORY_TO_ACTIVITY[exercise.category]) || 'strength';
+  // Mirrors the backend's own mapping (challenges.service.ts resolveExercise):
+  // metric_type 'strength' <-> tracking_mode 'sets', everything else is 'schema'.
+  const metricType: ExerciseCandidate['metricType'] =
+    exercise.tracking_mode === 'sets' ? 'strength' : 'schema';
 
   return {
     id: String(exercise.id),
     name: exercise.name.toUpperCase(),
     location: exercise.location ?? defaultLocationLabel,
-    metricType: "strength",
+    metricType,
     activityType,
     muscleGroups: exercise.muscle_groups ?? [],
   };
@@ -71,7 +74,6 @@ export default function ExercisesScreen() {
   );
   const [query, setQuery] = useState("");
   const [musclePickerVisible, setMusclePickerVisible] = useState(false);
-  const [pendingExercise, setPendingExercise] = useState<ExerciseCandidate | null>(null);
   const [exercises, setExercises] = useState<ExerciseCandidate[]>([]);
   const [backendIdByLocalId, setBackendIdByLocalId] = useState<
     Record<string, number>
@@ -118,25 +120,10 @@ export default function ExercisesScreen() {
     };
   }, [t]);
 
-  function commitAdd(exercise: ExerciseCandidate) {
+  function handleAdd(exercise: ExerciseCandidate) {
     const backendId = backendIdByLocalId[exercise.id];
     addExercise(exercise, backendId);
     router.back();
-  }
-
-  function handleAdd(exercise: ExerciseCandidate) {
-    // Already tagged (from a previous submission) — no need to ask again.
-    if (exercise.muscleGroups.length > 0) {
-      commitAdd(exercise);
-      return;
-    }
-    setPendingExercise(exercise);
-  }
-
-  function handleMuscleAssignConfirm(muscleGroups: string[]) {
-    if (!pendingExercise) return;
-    commitAdd({ ...pendingExercise, muscleGroups });
-    setPendingExercise(null);
   }
 
   const filtered = useFilteredExercises({
@@ -221,13 +208,6 @@ export default function ExercisesScreen() {
         exercises={exercises}
         onClose={() => setMusclePickerVisible(false)}
         onAddExercise={handleAdd}
-      />
-
-      <AssignMuscleGroupsModal
-        visible={pendingExercise !== null}
-        exerciseName={pendingExercise?.name ?? ''}
-        onClose={() => setPendingExercise(null)}
-        onConfirm={handleMuscleAssignConfirm}
       />
     </ScreenBackground>
   );

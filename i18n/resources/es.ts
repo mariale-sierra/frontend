@@ -303,6 +303,7 @@ const es = {
   home: {
     hoursLeft: '{{hours}}h restantes',
     completed: 'Completado',
+    todayLogged: 'Progreso registrado hoy',
     noActiveChallenge: 'Sin reto activo',
     communityTitle: 'Comunidad',
     emptyFeedMessage: 'Aún no hay publicaciones. ¡Sé el primero en compartir!',

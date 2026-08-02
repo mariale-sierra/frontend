@@ -11,6 +11,7 @@ export interface HomeActiveChallengeViewModel {
   isCompleted: boolean;
   activityType: ActivityType;
   isRestDay: boolean;
+  streakCount: number;
 }
 
 
@@ -129,6 +130,21 @@ function isJoinedOrCompleted(challenge: ChallengeContract): boolean {
   return duration > 0 && currentDay > 0;
 }
 
+function pickStreakCount(challenge: ChallengeContract): number {
+  const candidates: Array<unknown> = [
+    challenge.streak,
+    challenge.current_streak,
+    challenge.streak_count,
+  ];
+
+  for (const candidate of candidates) {
+    const value = asNumber(candidate);
+    if (value != null && value >= 0) return Math.floor(value);
+  }
+
+  return 0;
+}
+
 function pickIsRestDay(challenge: ChallengeContract): boolean {
   const direct = asBoolean(
     challenge.today_is_rest_day ?? challenge.is_rest_day_today ?? challenge.is_rest_day,
@@ -150,6 +166,7 @@ export function toHomeActiveChallengeViewModel(challenge: ChallengeContract): Ho
     isCompleted: pickIsCompleted(challenge, currentDay, totalDays),
     activityType: pickActivityType(challenge),
     isRestDay: pickIsRestDay(challenge),
+    streakCount: pickStreakCount(challenge),
   };
 }
 
@@ -168,6 +185,7 @@ export function progressToHomeActiveChallengeViewModel(
     isCompleted: currentDay >= totalDays,
     activityType: 'strength',
     isRestDay: (progress as Record<string, unknown>).today_is_rest_day === true,
+    streakCount: pickStreakCount(progress as unknown as ChallengeContract),
   };
 }
 
