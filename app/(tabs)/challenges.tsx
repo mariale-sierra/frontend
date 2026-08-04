@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import ScreenBackground from '../../components/layout/screenBackground';
 import {
 	ChallengeListSections,
@@ -24,26 +24,38 @@ export default function Challenges() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	useEffect(() => {
-		Promise.all([getMyChallenges(), getChallenges()])
-			.then(([enrolled, allChallenges]) => {
-				const realExplore = toChallengeListViewModel(allChallenges ?? [], {
-						membersLabel: t('challenges.members'),
-						unknownCreatorLabel: t('challenges.unknownCreator'),
-						locationFallbackLabel: t('challenges.locationFallback'),
-					}).exploreChallenges;
+	// Refetches on focus (not just on mount) so joining/leaving/completing a
+	// challenge elsewhere and coming back here shows the current state instead
+	// of whatever was true when this tab first mounted.
+	useFocusEffect(
+		useCallback(() => {
+			let active = true;
+			Promise.all([getMyChallenges(), getChallenges()])
+				.then(([enrolled, allChallenges]) => {
+					if (!active) return;
+					const realExplore = toChallengeListViewModel(allChallenges ?? [], {
+							membersLabel: t('challenges.members'),
+							unknownCreatorLabel: t('challenges.unknownCreator'),
+							locationFallbackLabel: t('challenges.locationFallback'),
+						}).exploreChallenges;
 
-					setChallengeView({
-						activeChallenges: toEnrolledChallengesViewModel(enrolled ?? []),
-						exploreChallenges: realExplore,
-					});
-			})
-			.catch((err) => {
-				console.error('[challenges] load failed:', err?.response?.status, err?.response?.data ?? err?.message ?? err);
-				setError(t('challenges.loadError'));
-			})
-			.finally(() => setLoading(false));
-	}, [t]);
+						setChallengeView({
+							activeChallenges: toEnrolledChallengesViewModel(enrolled ?? []),
+							exploreChallenges: realExplore,
+						});
+				})
+				.catch((err) => {
+					console.error('[challenges] load failed:', err?.response?.status, err?.response?.data ?? err?.message ?? err);
+					if (active) setError(t('challenges.loadError'));
+				})
+				.finally(() => {
+					if (active) setLoading(false);
+				});
+			return () => {
+				active = false;
+			};
+		}, [t]),
+	);
 
 	const handleCreateChallenge = () => router.push('/challenge/create');
 	const handleOpenChallenge = (id: string) => router.push(`/challenge/${id}`);
