@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { colors, radius, spacing } from '../../constants/theme';
 import { Text } from '../ui/text';
 import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
@@ -37,23 +38,27 @@ export function PostsGrid({ view: _view, onPhotoPress }: PostsGridProps) {
   const [photos, setPhotos] = useState<ChallengePhoto[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    getMyProgressPhotos()
-      .then((data) => {
-        if (active) setPhotos(data);
-      })
-      .catch(() => {
-        if (active) setPhotos([]);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  // Refetches on focus (not just on mount) so a photo uploaded elsewhere
+  // shows up here when the user comes back to the profile tab.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setLoading(true);
+      getMyProgressPhotos()
+        .then((data) => {
+          if (active) setPhotos(data);
+        })
+        .catch(() => {
+          if (active) setPhotos([]);
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   if (loading) {
     return (

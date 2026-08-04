@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -9,7 +9,7 @@ import {
   Text as NativeText,
   View,
 } from 'react-native';
-import { Stack as ExpoStack, useRouter } from 'expo-router';
+import { Stack as ExpoStack, useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -92,28 +92,42 @@ export default function ActiveAll() {
 
   const { show: showCompletion } = completion;
 
-  useEffect(() => {
-    getMyChallenges()
-      .then((res) => {
-        const challenges = toEnrolledChallengesViewModel(res ?? []);
-        setGrouped(groupByStatus(challenges));
+  // Refetches on focus (not just on mount) so leaving/completing a challenge
+  // elsewhere and coming back here shows the up-to-date list instead of a
+  // stale snapshot from whenever this screen first mounted.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getMyChallenges()
+        .then((res) => {
+          if (!active) return;
+          const challenges = toEnrolledChallengesViewModel(res ?? []);
+          setGrouped(groupByStatus(challenges));
 
-        // Check for newly completed challenges and show notification
-        challenges.forEach((c) => {
-          if (c.status === 'completed' && !shownCompletions.current.has(c.challengeId)) {
-            showCompletion({
-              challengeId: c.challengeId,
-              challengeName: c.title,
-              duration: `${c.day} days`,
-              completedAt: new Date(),
-            });
-            shownCompletions.current.add(c.challengeId);
-          }
+          // Check for newly completed challenges and show notification
+          challenges.forEach((c) => {
+            if (c.status === 'completed' && !shownCompletions.current.has(c.challengeId)) {
+              showCompletion({
+                challengeId: c.challengeId,
+                challengeName: c.title,
+                duration: `${c.day} days`,
+                completedAt: new Date(),
+              });
+              shownCompletions.current.add(c.challengeId);
+            }
+          });
+        })
+        .catch(() => {
+          if (active) setError(t('challenges.loadError'));
+        })
+        .finally(() => {
+          if (active) setLoading(false);
         });
-      })
-      .catch(() => setError(t('challenges.loadError')))
-      .finally(() => setLoading(false));
-  }, [t, showCompletion]);
+      return () => {
+        active = false;
+      };
+    }, [t, showCompletion]),
+  );
 
   function switchTab(idx: number) {
     Animated.parallel(
