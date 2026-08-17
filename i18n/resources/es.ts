@@ -307,6 +307,13 @@ const es = {
     noActiveChallenge: 'Sin reto activo',
     communityTitle: 'Comunidad',
     emptyFeedMessage: 'Aún no hay publicaciones. ¡Sé el primero en compartir!',
+    feedErrorMessage: 'No se pudo cargar el feed. Intenta de nuevo más tarde.',
+    sendMessage: 'Enviar un mensaje',
+    streaksTitle: 'Amigos',
+    seeMore: 'Ver más',
+    streakDays: '{{count}} días',
+    emptyStreaksMessage: 'Aún no hay rachas de amigos',
+    streaksErrorMessage: 'No se pudieron cargar las rachas de amigos',
   },
   addMenu: {
     title: 'Acciones rápidas',

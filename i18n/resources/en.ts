@@ -307,6 +307,13 @@ const en = {
     noActiveChallenge: 'No active challenge',
     communityTitle: 'Community',
     emptyFeedMessage: 'No posts yet. Be the first to share!',
+    feedErrorMessage: 'Could not load the feed. Try again later.',
+    sendMessage: 'Send a message',
+    streaksTitle: 'Friends',
+    seeMore: 'See more',
+    streakDays: '{{count}} days',
+    emptyStreaksMessage: 'No friend streaks yet',
+    streaksErrorMessage: 'Could not load friend streaks',
   },
   addMenu: {
     title: 'Quick actions',

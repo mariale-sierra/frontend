@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
@@ -11,6 +11,11 @@ import { Text } from '../../components/ui/text';
 import { UserAvatar } from '../../components/ui/userAvatar';
 import { ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
 import { FeedPostCard } from '../../components/home/FeedPostCard';
+import { FriendsStreakSection } from '../../components/home/FriendsStreakSection';
+import type { FriendStreakViewModel } from '../../components/home/FriendStreakCard';
+import { PostCardSkeleton } from '../../components/home/PostCardSkeleton';
+import { EmptyFeed } from '../../components/home/EmptyFeed';
+import { FeedErrorState } from '../../components/home/FeedErrorState';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
 import { getHomeChallengesSorted } from '../../services/adapters/homeAdapter';
 import { getMyChallenges } from '../../services/user/user.service';
@@ -20,10 +25,16 @@ import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
 import { spacing } from '../../constants/theme';
 import { hoursUntilMidnight } from '../../utils/time';
 
+// No backend endpoint for friends' streaks exists yet (see FriendStreakCard),
+// so this stays empty until that service is available — the section already
+// renders its own empty state for this case.
+const FRIEND_STREAKS: FriendStreakViewModel[] = [];
+
 export default function Home() {
   const { username } = useAuth();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   // Same source as the Challenges tab (services/user/user.service.ts getMyChallenges,
   // i.e. GET /users/me/challenges) so the two screens always show the same set of
@@ -34,6 +45,7 @@ export default function Home() {
 
   const [feedPosts, setFeedPosts] = useState<FeedPostViewModel[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
+  const [feedError, setFeedError] = useState(false);
 
   const hoursLeft = hoursUntilMidnight();
 
@@ -63,12 +75,16 @@ export default function Home() {
       let active = true;
       getHomeFeed()
         .then((data) => {
-          if (active) setFeedPosts(toFeedPostViewModels(data));
+          if (!active) return;
+          setFeedPosts(toFeedPostViewModels(data));
+          setFeedError(false);
         })
         .catch(() => {
-          // Feed failed to load — fall through to the empty-feed state below rather
+          // Feed failed to load — show the dedicated error state below rather
           // than showing stale/fake data.
-          if (active) setFeedPosts([]);
+          if (!active) return;
+          setFeedPosts([]);
+          setFeedError(true);
         })
         .finally(() => {
           if (active) setFeedLoading(false);
@@ -106,6 +122,13 @@ export default function Home() {
         )}
       </View>
 
+      <View style={styles.friendsArea}>
+        <FriendsStreakSection
+          friends={FRIEND_STREAKS}
+          onSeeMore={() => router.push('/home/streaks')}
+        />
+      </View>
+
       <View style={styles.feedSectionHeader}>
         <Text variant="header" tone="secondary">{t('home.communityTitle')}</Text>
         <Icon name="people" size={20} color="rgba(255,255,255,0.4)" />
@@ -123,16 +146,15 @@ export default function Home() {
         ItemSeparatorComponent={() => <View style={styles.separator} />}
         ListEmptyComponent={
           feedLoading ? (
-            <View style={styles.feedLoadingArea}>
-              <Loader visible={true} overlayStyle={styles.loaderTransparent} />
+            <View style={styles.feedSkeletonArea}>
+              <PostCardSkeleton />
+              <View style={styles.skeletonSpacer} />
+              <PostCardSkeleton />
             </View>
+          ) : feedError ? (
+            <FeedErrorState />
           ) : (
-            <View style={styles.emptyFeed}>
-              <Icon name="images-outline" size={34} color="rgba(255,255,255,0.3)" />
-              <Text variant="body" tone="secondary" align="center">
-                {t('home.emptyFeedMessage')}
-              </Text>
-            </View>
+            <EmptyFeed />
           )
         }
         showsVerticalScrollIndicator={false}
@@ -173,6 +195,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing['2xl'],
   },
+  friendsArea: {
+    marginTop: spacing['2xl'],
+  },
   feedSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -180,15 +205,13 @@ const styles = StyleSheet.create({
     marginTop: spacing['2xl'],
     marginBottom: spacing.sm,
   },
-  feedLoadingArea: {
-    height: 300,
+  feedSkeletonArea: {
+    paddingTop: spacing.xs,
+  },
+  skeletonSpacer: {
+    height: spacing['2xl'],
   },
   separator: {
     height: spacing['2xl'],
-  },
-  emptyFeed: {
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing['2xl'],
   },
 });
