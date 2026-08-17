@@ -394,6 +394,14 @@ const en = {
     send: 'Invite',
     sentLabel: 'Sent',
   },
+  profile: {
+    settingsButtonA11y: 'Settings',
+    invitationsButtonA11y: 'Invitations',
+    logoutButton: 'Log out',
+    logoutButtonA11y: 'Log out',
+    logoutConfirmTitle: 'Log out?',
+    logoutConfirmMessage: 'You will need to log in again to access your account.',
+  },
   profileEdit: {
     entry: 'Edit profile',
     screenTitle: 'Edit profile',

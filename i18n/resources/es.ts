@@ -394,6 +394,14 @@ const es = {
     send: 'Invitar',
     sentLabel: 'Enviada',
   },
+  profile: {
+    settingsButtonA11y: 'Configuración',
+    invitationsButtonA11y: 'Invitaciones',
+    logoutButton: 'Cerrar sesión',
+    logoutButtonA11y: 'Cerrar sesión',
+    logoutConfirmTitle: '¿Cerrar sesión?',
+    logoutConfirmMessage: 'Tendrás que iniciar sesión de nuevo para acceder a tu cuenta.',
+  },
   profileEdit: {
     entry: 'Editar perfil',
     screenTitle: 'Editar perfil',

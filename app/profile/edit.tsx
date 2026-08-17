@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
@@ -8,10 +7,14 @@ import ScreenBackground from '../../components/layout/screenBackground';
 import { BackButton } from '../../components/ui/backButton';
 import { Text } from '../../components/ui/text';
 import { Button } from '../../components/ui/button';
+import { Icon } from '../../components/ui/icon';
 import { FormField } from '../../components/ui/formField';
 import { Dropdown } from '../../components/ui/dropdown';
 import { UserAvatar } from '../../components/ui/userAvatar';
+import { Divider } from '../../components/ui/divider';
 import { Row } from '../../components/layout/row';
+import { Stack } from '../../components/layout/stack';
+import { LogoutButton } from '../../components/profile/LogoutButton';
 import {
   getMyProfile,
   updateMyProfile,
@@ -33,7 +36,6 @@ const BIO_MAX = 1000;
 export default function EditProfile() {
   const { t } = useTranslation();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
 
   const [profile, setProfile] = useState<MyProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
@@ -149,6 +151,9 @@ export default function EditProfile() {
           <Button variant="outline" size="sm" onPress={loadProfile}>
             {t('common.actions.continue')}
           </Button>
+          <View style={styles.errorLogoutWrap}>
+            <LogoutButton />
+          </View>
         </View>
       </ScreenBackground>
     );
@@ -157,7 +162,7 @@ export default function EditProfile() {
   return (
     <ScreenBackground variant="default">
       <ScrollView
-        contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.sm }]}
+        contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.header}>
@@ -190,70 +195,83 @@ export default function EditProfile() {
           </Button>
         </View>
 
-        <FormField
-          label={t('profileEdit.displayName')}
-          value={displayName}
-          onChangeText={(value: string) => {
-            setDisplayName(value);
-            if (displayNameError && value.trim()) setDisplayNameError(null);
-          }}
-          maxLength={DISPLAY_NAME_MAX}
-          error={displayNameError}
-          placeholder={t('profileEdit.displayNamePlaceholder')}
-          placeholderVariant="caption"
-        />
+        <Divider variant="section" marginVertical="sm" />
 
-        <FormField
-          label={t('profileEdit.bio')}
-          value={bio}
-          onChangeText={setBio}
-          multiline
-          maxLength={BIO_MAX}
-          placeholder={t('profileEdit.bioPlaceholder')}
-          placeholderVariant="caption"
-        />
-
-        <View style={{ gap: spacing.xs }}>
-          <Text variant="subheader">{t('profileEdit.language')}</Text>
-          <Dropdown
-            options={[
-              { value: 'en', label: t('profileEdit.languageEn') },
-              { value: 'es', label: t('profileEdit.languageEs') },
-            ]}
-            selectedValues={[language]}
-            onChange={(values) => {
-              const next = values[values.length - 1];
-              if (next) setLanguage(next);
+        <Stack gap="lg">
+          <FormField
+            label={t('profileEdit.displayName')}
+            value={displayName}
+            onChangeText={(value: string) => {
+              setDisplayName(value);
+              if (displayNameError && value.trim()) setDisplayNameError(null);
             }}
-            maxSelections={1}
-            showValueInline
+            maxLength={DISPLAY_NAME_MAX}
+            error={displayNameError}
+            placeholder={t('profileEdit.displayNamePlaceholder')}
+            placeholderVariant="caption"
           />
-        </View>
 
-        <Row align="center" justify="space-between">
-          <View style={styles.privacyText}>
-            <Text variant="subheader">{t('profileEdit.privacy')}</Text>
-            <Text variant="caption" tone="secondary">
-              {t('profileEdit.privacyHint')}
-            </Text>
+          <FormField
+            label={t('profileEdit.bio')}
+            value={bio}
+            onChangeText={setBio}
+            multiline
+            maxLength={BIO_MAX}
+            placeholder={t('profileEdit.bioPlaceholder')}
+            placeholderVariant="caption"
+          />
+        </Stack>
+
+        <Divider variant="section" marginVertical="sm" />
+
+        <Stack gap="lg">
+          <View style={{ gap: spacing.xs }}>
+            <Text variant="subheader">{t('profileEdit.language')}</Text>
+            <Dropdown
+              options={[
+                { value: 'en', label: t('profileEdit.languageEn') },
+                { value: 'es', label: t('profileEdit.languageEs') },
+              ]}
+              selectedValues={[language]}
+              onChange={(values) => {
+                const next = values[values.length - 1];
+                if (next) setLanguage(next);
+              }}
+              maxSelections={1}
+              showValueInline
+              rightIcon={<Icon name="chevron-down" size={18} color={colors.textSecondary} />}
+            />
           </View>
-          <Switch
-            value={isPrivate}
-            onValueChange={setIsPrivate}
-            trackColor={{ false: colors.surface, true: colors.success }}
-            thumbColor={colors.primary}
-          />
-        </Row>
 
-        <Button
-          variant="primary"
-          size="lg"
-          onPress={handleSave}
-          loading={saving}
-          disabled={saving || uploadingPhoto}
-        >
-          {t('profileEdit.save')}
-        </Button>
+          <Row align="center" justify="space-between">
+            <View style={styles.privacyText}>
+              <Text variant="subheader">{t('profileEdit.privacy')}</Text>
+              <Text variant="caption" tone="secondary">
+                {t('profileEdit.privacyHint')}
+              </Text>
+            </View>
+            <Switch
+              value={isPrivate}
+              onValueChange={setIsPrivate}
+              trackColor={{ false: colors.surface, true: colors.success }}
+              thumbColor={colors.primary}
+            />
+          </Row>
+
+          <Button
+            variant="primary"
+            size="md"
+            onPress={handleSave}
+            loading={saving}
+            disabled={saving || uploadingPhoto}
+          >
+            {t('profileEdit.save')}
+          </Button>
+        </Stack>
+
+        <Divider variant="section" marginVertical="sm" />
+
+        <LogoutButton />
       </ScrollView>
     </ScreenBackground>
   );
@@ -262,6 +280,7 @@ export default function EditProfile() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
     paddingBottom: spacing['2xl'],
     gap: spacing.lg,
   },
@@ -294,5 +313,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
+  },
+  errorLogoutWrap: {
+    width: '100%',
+    maxWidth: 320,
   },
 });

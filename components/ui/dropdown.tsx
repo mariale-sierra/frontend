@@ -131,9 +131,10 @@ export function Dropdown({
 
 const styles = StyleSheet.create({
   header: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 4,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.lg,
+    backgroundColor: colors.surface,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -147,6 +148,7 @@ const styles = StyleSheet.create({
   dropdown: {
     marginTop: spacing.sm,
     borderRadius: radius.lg,
+    backgroundColor: colors.surface,
     overflow: 'hidden',
   },
 
