@@ -405,6 +405,8 @@ const en = {
     logoutButtonA11y: 'Log out',
     logoutConfirmTitle: 'Log out?',
     logoutConfirmMessage: 'You will need to log in again to access your account.',
+    emptyPublicPhotos: 'No public photos yet. Log a workout with a photo to see it here.',
+    emptyAllPhotos: 'No progress photos yet. Log a workout with a photo to see it here.',
   },
   profileEdit: {
     entry: 'Edit profile',

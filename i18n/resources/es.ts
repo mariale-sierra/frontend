@@ -405,6 +405,8 @@ const es = {
     logoutButtonA11y: 'Cerrar sesión',
     logoutConfirmTitle: '¿Cerrar sesión?',
     logoutConfirmMessage: 'Tendrás que iniciar sesión de nuevo para acceder a tu cuenta.',
+    emptyPublicPhotos: 'Aún no tienes fotos públicas. Registra un entrenamiento con foto para verla aquí.',
+    emptyAllPhotos: 'Aún no tienes fotos de progreso. Registra un entrenamiento con foto para verla aquí.',
   },
   profileEdit: {
     entry: 'Editar perfil',
