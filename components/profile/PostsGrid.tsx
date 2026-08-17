@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { colors, radius, spacing } from '../../constants/theme';
 import { Text } from '../ui/text';
 import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
@@ -34,7 +35,8 @@ function PhotoTile({
 
 const SKELETON_COUNT = 8;
 
-export function PostsGrid({ view: _view, onPhotoPress }: PostsGridProps) {
+export function PostsGrid({ view, onPhotoPress }: PostsGridProps) {
+  const { t } = useTranslation();
   const [photos, setPhotos] = useState<ChallengePhoto[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -74,11 +76,15 @@ export function PostsGrid({ view: _view, onPhotoPress }: PostsGridProps) {
     );
   }
 
-  if (photos.length === 0) {
+  // 'posts' = only photos visible to followers; 'photos' = everything,
+  // including private ones (only the owner ever hits this screen).
+  const visiblePhotos = view === 'posts' ? photos.filter((photo) => photo.visibility === 'public') : photos;
+
+  if (visiblePhotos.length === 0) {
     return (
       <View style={styles.empty}>
         <Text variant="body" align="center" style={styles.emptyText}>
-          No progress photos yet. Log a workout with a photo to see it here.
+          {view === 'posts' ? t('profile.emptyPublicPhotos') : t('profile.emptyAllPhotos')}
         </Text>
       </View>
     );
@@ -86,7 +92,7 @@ export function PostsGrid({ view: _view, onPhotoPress }: PostsGridProps) {
 
   return (
     <View style={styles.grid}>
-      {photos.map((photo) => (
+      {visiblePhotos.map((photo) => (
         <PhotoTile key={photo.id} photo={photo} onPress={() => onPhotoPress?.(photo)} />
       ))}
     </View>

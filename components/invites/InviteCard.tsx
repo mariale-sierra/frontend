@@ -1,14 +1,13 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, radius, spacing } from '../../constants/theme';
-import { Card } from '../ui/card';
+import { colors, spacing } from '../../constants/theme';
 import { Text } from '../ui/text';
 import { Button } from '../ui/button';
 import { UserAvatar } from '../ui/userAvatar';
 import { ConfirmationPopup } from '../ui/confirmationPopup';
 import { Row } from '../layout/row';
-import { Stack } from '../layout/stack';
+import { formatRelativeTime } from '../../utils/time';
 import type { ChallengeInviteContract, InviteStatus } from '../../types/invite';
 import type { InviteAction } from '../../hooks/useInvites';
 
@@ -32,9 +31,9 @@ interface InviteCardProps {
 }
 
 /**
- * One invite row for the invitations screen. Cancelling asks for
- * confirmation first; accept/decline run directly but stay disabled while
- * any action is processing so an invite can never be handled twice.
+ * One invite row. Flat, no card chrome — a request-inbox style layout
+ * (avatar + identity + accept/deny pills for pending received invites,
+ * avatar + identity + status/cancel for sent ones) instead of a boxed card.
  */
 export function InviteCard({ invite, direction, busy, processing, onAction }: InviteCardProps) {
   const { t } = useTranslation();
@@ -42,6 +41,7 @@ export function InviteCard({ invite, direction, busy, processing, onAction }: In
 
   const otherUser = direction === 'received' ? invite.sender : invite.recipient;
   const isPending = invite.status === 'pending';
+  const challengeName = invite.challenge?.name ?? t('invites.unknownChallenge');
 
   const handleCancelConfirmed = () => {
     setConfirmCancelVisible(false);
@@ -49,70 +49,62 @@ export function InviteCard({ invite, direction, busy, processing, onAction }: In
   };
 
   return (
-    <Card variant="basicGlass" radius="xl" padding="lg">
-      <Stack gap="sm">
-        <Row align="center" gap="md">
-          <UserAvatar username={otherUser?.username ?? '?'} size={40} />
-          <View style={styles.headerText}>
-            <Text variant="subheader" numberOfLines={1}>
-              {invite.challenge?.name ?? t('invites.unknownChallenge')}
-            </Text>
-            <Text variant="caption" tone="secondary" numberOfLines={1}>
-              {direction === 'received'
-                ? t('invites.from', { username: otherUser?.username ?? '?' })
-                : t('invites.to', { username: otherUser?.username ?? '?' })}
-            </Text>
-          </View>
-          <View style={[styles.statusBadge, { borderColor: STATUS_COLOR[invite.status] }]}>
-            <Text variant="caption" style={{ color: STATUS_COLOR[invite.status] }}>
-              {t(`invites.status.${invite.status}`)}
-            </Text>
-          </View>
-        </Row>
+    <Row align="center" gap="md">
+      <UserAvatar username={otherUser?.username ?? '?'} size={44} />
 
-        {invite.message ? (
-          <Text variant="body" tone="secondary" numberOfLines={2}>
-            “{invite.message}”
-          </Text>
-        ) : null}
+      <View style={styles.textCol}>
+        <Text variant="body" numberOfLines={1} style={styles.name}>
+          @{otherUser?.username ?? '?'}
+        </Text>
+        <Text variant="caption" tone="secondary" numberOfLines={1}>
+          {challengeName}
+        </Text>
+      </View>
 
-        {isPending && (
-          <Row justify="flex-end" gap="sm">
-            {direction === 'received' ? (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={busy}
-                  loading={processing}
-                  onPress={() => onAction('decline', invite)}
-                >
-                  {t('invites.actions.decline')}
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  disabled={busy}
-                  loading={processing}
-                  onPress={() => onAction('accept', invite)}
-                >
-                  {t('invites.actions.accept')}
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="danger"
-                size="sm"
-                disabled={busy}
-                loading={processing}
-                onPress={() => setConfirmCancelVisible(true)}
-              >
-                {t('invites.actions.cancel')}
-              </Button>
-            )}
+      {direction === 'received' ? (
+        isPending && (
+          <Row gap="sm" style={styles.actions}>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={busy}
+              loading={processing}
+              onPress={() => onAction('accept', invite)}
+            >
+              {t('invites.actions.accept')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              loading={processing}
+              onPress={() => onAction('decline', invite)}
+            >
+              {t('invites.actions.decline')}
+            </Button>
           </Row>
-        )}
-      </Stack>
+        )
+      ) : isPending ? (
+        <Pressable
+          onPress={() => setConfirmCancelVisible(true)}
+          disabled={busy}
+          hitSlop={8}
+          accessibilityRole="button"
+        >
+          <Text variant="caption" style={[styles.cancelLabel, busy && styles.cancelLabelDisabled]}>
+            {t('invites.actions.cancel')}
+          </Text>
+        </Pressable>
+      ) : (
+        <View style={styles.statusCol}>
+          <Text variant="caption" style={{ color: STATUS_COLOR[invite.status] }}>
+            {t(`invites.status.${invite.status}`)}
+          </Text>
+          <Text variant="caption" tone="secondary">
+            {formatRelativeTime(invite.responded_at ?? invite.created_at)}
+          </Text>
+        </View>
+      )}
 
       <ConfirmationPopup
         visible={confirmCancelVisible}
@@ -131,19 +123,30 @@ export function InviteCard({ invite, direction, busy, processing, onAction }: In
         }}
         onDismiss={() => setConfirmCancelVisible(false)}
       />
-    </Card>
+    </Row>
   );
 }
 
 const styles = StyleSheet.create({
-  headerText: {
+  textCol: {
     flex: 1,
     gap: 2,
   },
-  statusBadge: {
-    borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+  name: {
+    fontWeight: '700',
+  },
+  actions: {
+    flexShrink: 0,
+  },
+  statusCol: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  cancelLabel: {
+    color: colors.error,
+    fontWeight: '600',
+  },
+  cancelLabelDisabled: {
+    opacity: 0.5,
   },
 });

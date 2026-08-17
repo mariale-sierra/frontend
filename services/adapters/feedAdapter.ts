@@ -1,4 +1,5 @@
 import { normalizeKey } from './adapterUtils';
+import { formatRelativeTime } from '../../utils/time';
 import type { ActivityType } from '../../constants/theme';
 import type { FeedPostContract } from '../../types/feed';
 
@@ -29,16 +30,6 @@ const ACTIVITY_MAP: Record<string, ActivityType> = {
 function toActivityType(raw?: string): ActivityType | undefined {
   if (!raw) return undefined;
   return ACTIVITY_MAP[normalizeKey(raw)];
-}
-
-function formatRelativeTime(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m`;
-  const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) return `${diffH}h`;
-  return `${Math.floor(diffH / 24)}d`;
 }
 
 export function toFeedPostViewModel(post: FeedPostContract): FeedPostViewModel {

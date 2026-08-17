@@ -94,7 +94,6 @@ export function Input({
       {/* INPUT CONTAINER */}
       <Row
         align="center"
-        padding="sm"
         style={[
           styles.container,
           variant === 'filled' && styles.filled,
@@ -133,6 +132,8 @@ export function Input({
 const styles = StyleSheet.create({
   container: {
     borderRadius: radius.lg,
+    paddingVertical: spacing.sm + 4,
+    paddingHorizontal: spacing.md,
   },
 
   filled: {
@@ -142,6 +143,8 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     color: colors.textPrimary,
+    fontSize: 15,
+    lineHeight: 20,
     paddingVertical: 0,
   },
 });

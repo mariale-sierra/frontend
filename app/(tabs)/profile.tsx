@@ -1,19 +1,18 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { colors, spacing } from '../../constants/theme';
 import { Text } from '../../components/ui/text';
-import { Button } from '../../components/ui/button';
+import { IconButton } from '../../components/ui/iconButton';
 import { getMyProfile } from '../../services/user/user.service';
 import type { MyProfileContract } from '../../types/user';
-import { useAuth } from '../../hooks/useAuth';
 import { ProfileHeader, PostsViewToggle, PostsGrid, ProfilePhotoModal } from '../../components/profile';
 import type { PostsView } from '../../components/profile';
 import type { ChallengePhoto } from '../../types/challenge';
 import { Row } from '../../components/layout/row';
+import { useAuth } from '../../hooks/useAuth';
 
 /**
  * Profile tab. Structured so future sections (followers, stats) can slot in
@@ -23,12 +22,15 @@ import { Row } from '../../components/layout/row';
 export default function Profile() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { username: sessionUsername, logout } = useAuth();
-  const insets = useSafeAreaInsets();
+  const { username: sessionUsername } = useAuth();
   const [profile, setProfile] = useState<MyProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<PostsView>('posts');
+  // Default to "all" so your own profile isn't a surprise empty state the
+  // moment most of your history happens to be private (rest-day check-ins
+  // and any log without an explicit visibility default to private
+  // server-side). "Public" stays one tap away via the eye toggle.
+  const [view, setView] = useState<PostsView>('photos');
   const [selectedPhoto, setSelectedPhoto] = useState<ChallengePhoto | null>(null);
 
   useFocusEffect(
@@ -55,32 +57,31 @@ export default function Profile() {
   const displayName = profile?.display_name ?? sessionUsername ?? 'User name';
   const username = profile?.username ?? sessionUsername ?? 'username';
 
-  function handleLogoutPress() {
-    Alert.alert(
-      t('profile.logoutConfirmTitle', { defaultValue: 'Cerrar sesión' }),
-      t('profile.logoutConfirmMessage', { defaultValue: '¿Seguro que quieres cerrar sesión?' }),
-      [
-        { text: t('common.cancel', { defaultValue: 'Cancelar' }), style: 'cancel' },
-        { text: t('profile.logoutButton', { defaultValue: 'Cerrar sesión' }), style: 'destructive', onPress: () => logout() },
-      ],
-    );
-  }
-
-  const logoutButton = (
-    <Button
-      variant="danger"
-      size="sm"
-      onPress={handleLogoutPress}
-      style={styles.actionButton}
-      accessibilityLabel={t('profile.logoutButtonA11y', { defaultValue: 'Cerrar sesión' })}
-    >
-      {t('profile.logoutButton', { defaultValue: 'Cerrar sesión' })}
-    </Button>
+  const topBar = (
+    <Row justify="flex-end" gap="md" style={styles.topBar}>
+      <IconButton
+        name="mail"
+        iconSize={24}
+        onPress={() => router.push('/invitations')}
+        accessibilityRole="button"
+        accessibilityLabel={t('profile.invitationsButtonA11y')}
+        hitSlop={10}
+      />
+      <IconButton
+        name="settings"
+        iconSize={24}
+        onPress={() => router.push('/profile/edit')}
+        accessibilityRole="button"
+        accessibilityLabel={t('profile.settingsButtonA11y')}
+        hitSlop={10}
+      />
+    </Row>
   );
 
   return (
     <ScreenBackground variant="default">
-      <ScrollView contentContainerStyle={[styles.container, { paddingTop: insets.top + spacing.xs }]}>
+      {topBar}
+      <ScrollView contentContainerStyle={styles.container}>
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator color={colors.primary} />
@@ -88,7 +89,6 @@ export default function Profile() {
         ) : error ? (
           <View style={styles.center}>
             <Text tone="secondary">{error}</Text>
-            <View style={styles.errorLogoutWrap}>{logoutButton}</View>
           </View>
         ) : (
           <>
@@ -97,27 +97,6 @@ export default function Profile() {
               username={username}
               bio={profile?.bio}
               imageUrl={profile?.profile_image_url}
-              actions={
-                <Row gap="sm" justify="flex-start">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onPress={() => router.push('/profile/edit')}
-                    style={styles.actionButton}
-                  >
-                    {t('profileEdit.entry')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onPress={() => router.push('/invitations')}
-                    style={styles.actionButton}
-                  >
-                    {t('invites.screenTitle')}
-                  </Button>
-                  {logoutButton}
-                </Row>
-              }
             />
             <PostsViewToggle view={view} onViewChange={setView} />
             <PostsGrid view={view} onPhotoPress={setSelectedPhoto} />
@@ -130,8 +109,13 @@ export default function Profile() {
 }
 
 const styles = StyleSheet.create({
+  topBar: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
+  },
   container: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
     paddingBottom: spacing['2xl'],
     gap: spacing.lg,
   },
@@ -140,11 +124,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
-  },
-  errorLogoutWrap: {
-    minWidth: 160,
-  },
-  actionButton: {
-    flex: 1,
   },
 });
