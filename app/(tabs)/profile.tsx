@@ -13,6 +13,7 @@ import type { PostsView } from '../../components/profile';
 import type { ChallengePhoto } from '../../types/challenge';
 import { Row } from '../../components/layout/row';
 import { useAuth } from '../../hooks/useAuth';
+import { useFollows } from '../../hooks/useFollows';
 
 /**
  * Profile tab. Structured so future sections (followers, stats) can slot in
@@ -23,6 +24,7 @@ export default function Profile() {
   const { t } = useTranslation();
   const router = useRouter();
   const { username: sessionUsername } = useAuth();
+  const { followers, following } = useFollows();
   const [profile, setProfile] = useState<MyProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +99,10 @@ export default function Profile() {
               username={username}
               bio={profile?.bio}
               imageUrl={profile?.profile_image_url}
+              followersCount={followers.length}
+              followingCount={following.length}
+              onPressFollowers={() => router.push('/profile/followers?tab=followers')}
+              onPressFollowing={() => router.push('/profile/followers?tab=following')}
             />
             <PostsViewToggle view={view} onViewChange={setView} />
             <PostsGrid view={view} onPhotoPress={setSelectedPhoto} />
