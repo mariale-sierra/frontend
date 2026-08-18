@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useChallengeProgress } from './useChallengeProgress';
+import { useChallengeParticipants } from './useChallengeParticipants';
 import { usePublicChallengePhotos } from './usePublicChallengePhotos';
 import { hoursUntilMidnight } from '../utils/time';
 import type { ChallengePhoto } from '../types/challenge';
@@ -28,13 +29,14 @@ export interface ChallengeActiveProgressData {
 /**
  * Data-fetching for the challenge active-progress screen, kept out of the presentational
  * component (`ChallengeActiveProgressScreen`). Sources real data from `useChallengeProgress`
- * (the cached `GET /challenges/progress` result) and `usePublicChallengePhotos`.
+ * (the cached `GET /challenges/progress` result), `useChallengeParticipants`
+ * (`GET /challenges/{id}/users`) and `usePublicChallengePhotos`.
  *
- * Known backend gaps (tracked, not faked here): `GET /challenges/progress` does not expose
- * a participant roster or a per-day completion array, so `participants`/`completedWorkoutDays`
- * are honest empty defaults rather than mock data. `startDate` is derived from today's date
- * and `currentDay` (same approach as `app/(add)/plan-rest-days.tsx`) since the backend doesn't
- * return the challenge's actual start date either.
+ * Known backend gap (tracked, not faked here): `GET /challenges/progress` does not expose a
+ * per-day completion array, so `completedWorkoutDays` is an honest empty default rather than
+ * mock data. `startDate` is derived from today's date and `currentDay` (same approach as
+ * `app/(add)/plan-rest-days.tsx`) since the backend doesn't return the challenge's actual
+ * start date either.
  */
 export function useChallengeActiveProgress(routeChallengeId: string | null): ChallengeActiveProgressData {
   const { t } = useTranslation();
@@ -43,10 +45,20 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
   const challengeId = routeChallengeId ?? backendChallenge?.challengeId ?? null;
 
   const { photos, loading: photosLoading } = usePublicChallengePhotos(challengeId);
+  const { participants: members, loading: participantsLoading } = useChallengeParticipants(challengeId);
 
   const photoDays = useMemo(
     () => Array.from(new Set(photos.map((photo) => photo.day))),
     [photos],
+  );
+
+  const participants = useMemo(
+    () => members.map((member): Participant => ({ id: member.id, name: member.username })),
+    [members],
+  );
+  const participantsLabel = useMemo(
+    () => members.map((member) => member.username).join(', '),
+    [members],
   );
 
   const startDate = useMemo(() => {
@@ -60,13 +72,13 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
 
   return {
     challengeId,
-    loading: progressLoading || photosLoading,
+    loading: progressLoading || photosLoading || participantsLoading,
     progress: backendChallenge?.currentDay ?? 0,
     totalDays: backendChallenge?.totalDays ?? 0,
     title: backendChallenge?.title?.toUpperCase() ?? '',
     timeLeft: t('home.hoursLeft', { hours: hoursUntilMidnight() }),
-    participants: [],
-    participantsLabel: '',
+    participants,
+    participantsLabel,
     startDate,
     completedWorkoutDays: [],
     photos,

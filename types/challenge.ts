@@ -97,6 +97,15 @@ export interface JoinChallengeResponse {
   [key: string]: unknown;
 }
 
+/** Raw backend contract for a challenge member (see GET /challenges/{id}/users). */
+export interface ChallengeParticipantContract {
+  id: string;
+  username: string;
+  role: string;
+  status: string;
+  joined_at: string;
+}
+
 export interface ChallengeProgressContract {
   challenge: {
     id: string;

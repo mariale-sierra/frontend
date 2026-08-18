@@ -1,6 +1,7 @@
 import api from '../api';
 import type {
   ChallengeContract,
+  ChallengeParticipantContract,
   ChallengePhoto,
   ChallengeProgressContract,
   CreateChallengePayload,
@@ -13,6 +14,13 @@ type ChallengesListResponse =
   | ChallengeContract[]
   | {
       data?: ChallengeContract[];
+      message?: string;
+    };
+
+type ChallengeUsersResponse =
+  | ChallengeParticipantContract[]
+  | {
+      data?: ChallengeParticipantContract[];
       message?: string;
     };
 
@@ -34,6 +42,22 @@ export async function getChallenges() {
 export async function getChallenge(id: string) {
   const response = await api.get<ChallengeContract>(`/challenges/${id}`);
   return response.data;
+}
+
+/** Members of a challenge (id, username, role, status) — used for the active-progress header's avatar stack. */
+export async function getChallengeUsers(challengeId: string): Promise<ChallengeParticipantContract[]> {
+  const response = await api.get<ChallengeUsersResponse>(`/challenges/${challengeId}/users`);
+  const payload = response.data;
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  if (payload && Array.isArray(payload.data)) {
+    return payload.data;
+  }
+
+  return [];
 }
 
 export async function getChallengeProgress(challengeId?: string) {
