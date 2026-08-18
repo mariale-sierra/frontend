@@ -1,9 +1,3 @@
-export interface CreateWorkoutLogRequest {
-  // The backend derives the owner from the JWT (`req.user.sub`) — never send a `userId`,
-  // the server ignores it if present.
-  routineId?: number;
-}
-
 export interface WorkoutLogExerciseContract {
   id: number;
   exercise: {

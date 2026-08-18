@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -13,7 +13,6 @@ import type { PostsView } from '../../components/profile';
 import type { ChallengePhoto } from '../../types/challenge';
 import { Row } from '../../components/layout/row';
 import { useAuth } from '../../hooks/useAuth';
-import { useFollows } from '../../hooks/useFollows';
 
 /**
  * Profile tab. Structured so future sections (followers, stats) can slot in
@@ -24,7 +23,6 @@ export default function Profile() {
   const { t } = useTranslation();
   const router = useRouter();
   const { username: sessionUsername } = useAuth();
-  const { followers, following } = useFollows();
   const [profile, setProfile] = useState<MyProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,10 +97,32 @@ export default function Profile() {
               username={username}
               bio={profile?.bio}
               imageUrl={profile?.profile_image_url}
-              followersCount={followers.length}
-              followingCount={following.length}
-              onPressFollowers={() => router.push('/profile/followers?tab=followers')}
-              onPressFollowing={() => router.push('/profile/followers?tab=following')}
+              actions={
+                <Row gap="lg">
+                  <Pressable
+                    onPress={() => router.push('/profile/followers')}
+                    accessibilityRole="button"
+                  >
+                    <Text variant="body">
+                      <Text variant="body" style={styles.countNumber}>
+                        {profile?.followers_count ?? 0}
+                      </Text>{' '}
+                      {t('profile.followersLabel')}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => router.push('/profile/following')}
+                    accessibilityRole="button"
+                  >
+                    <Text variant="body">
+                      <Text variant="body" style={styles.countNumber}>
+                        {profile?.following_count ?? 0}
+                      </Text>{' '}
+                      {t('profile.followingLabel')}
+                    </Text>
+                  </Pressable>
+                </Row>
+              }
             />
             <PostsViewToggle view={view} onViewChange={setView} />
             <PostsGrid view={view} onPhotoPress={setSelectedPhoto} />
@@ -124,6 +144,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing['2xl'],
     gap: spacing.lg,
+  },
+  countNumber: {
+    fontWeight: '700',
   },
   center: {
     minHeight: 280,

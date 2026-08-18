@@ -1,4 +1,4 @@
-/** Raw backend contract for a follow relation (see GET /follows/followers|following). */
+/** GET /follows/followers | /follows/following row (backend FollowUserSummaryDto). */
 export interface FollowUserSummaryContract {
   id: string;
   username: string;
