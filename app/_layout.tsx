@@ -15,7 +15,7 @@ function RootNavigator() {
     if (isRestoring) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    if (!isAuthenticated) {
+    if (!isAuthenticated && !inAuthGroup) {
       console.log('[router] redirecting to login from:', segments.join('/') || 'root');
       router.replace('/(auth)/login');
       return;
