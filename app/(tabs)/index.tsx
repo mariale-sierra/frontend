@@ -46,6 +46,8 @@ export default function Home() {
   const [feedPosts, setFeedPosts] = useState<FeedPostViewModel[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedError, setFeedError] = useState(false);
+  const [feedNextCursor, setFeedNextCursor] = useState<string | undefined>(undefined);
+  const [feedLoadingMore, setFeedLoadingMore] = useState(false);
 
   const hoursLeft = hoursUntilMidnight();
 
@@ -73,10 +75,12 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
+      setFeedLoading(true);
       getHomeFeed()
-        .then((data) => {
+        .then(({ posts, nextCursor }) => {
           if (!active) return;
-          setFeedPosts(toFeedPostViewModels(data));
+          setFeedPosts(toFeedPostViewModels(posts));
+          setFeedNextCursor(nextCursor);
           setFeedError(false);
         })
         .catch(() => {
@@ -84,6 +88,7 @@ export default function Home() {
           // than showing stale/fake data.
           if (!active) return;
           setFeedPosts([]);
+          setFeedNextCursor(undefined);
           setFeedError(true);
         })
         .finally(() => {
@@ -94,6 +99,22 @@ export default function Home() {
       };
     }, []),
   );
+
+  const loadMoreFeed = useCallback(() => {
+    if (feedLoadingMore || feedLoading || !feedNextCursor) return;
+    setFeedLoadingMore(true);
+    getHomeFeed(feedNextCursor)
+      .then(({ posts, nextCursor }) => {
+        setFeedPosts((prev) => [...prev, ...toFeedPostViewModels(posts)]);
+        setFeedNextCursor(nextCursor);
+      })
+      .catch(() => {
+        // Leave the already-loaded posts on screen; simply stop paginating
+        // rather than surfacing a second error state mid-scroll.
+        setFeedNextCursor(undefined);
+      })
+      .finally(() => setFeedLoadingMore(false));
+  }, [feedLoadingMore, feedLoading, feedNextCursor]);
 
   function renderItem({ item }: { item: FeedPostViewModel }) {
     return <FeedPostCard post={item} />;
@@ -157,6 +178,15 @@ export default function Home() {
             <EmptyFeed />
           )
         }
+        ListFooterComponent={
+          feedLoadingMore ? (
+            <View style={styles.feedFooterLoading}>
+              <Loader visible={true} overlayStyle={styles.loaderTransparent} />
+            </View>
+          ) : null
+        }
+        onEndReached={loadMoreFeed}
+        onEndReachedThreshold={0.4}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.listContent,
@@ -210,6 +240,9 @@ const styles = StyleSheet.create({
   },
   skeletonSpacer: {
     height: spacing['2xl'],
+  },
+  feedFooterLoading: {
+    height: 60,
   },
   separator: {
     height: spacing['2xl'],

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -97,6 +97,32 @@ export default function Profile() {
               username={username}
               bio={profile?.bio}
               imageUrl={profile?.profile_image_url}
+              actions={
+                <Row gap="lg">
+                  <Pressable
+                    onPress={() => router.push('/profile/followers')}
+                    accessibilityRole="button"
+                  >
+                    <Text variant="body">
+                      <Text variant="body" style={styles.countNumber}>
+                        {profile?.followers_count ?? 0}
+                      </Text>{' '}
+                      {t('profile.followersLabel')}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => router.push('/profile/following')}
+                    accessibilityRole="button"
+                  >
+                    <Text variant="body">
+                      <Text variant="body" style={styles.countNumber}>
+                        {profile?.following_count ?? 0}
+                      </Text>{' '}
+                      {t('profile.followingLabel')}
+                    </Text>
+                  </Pressable>
+                </Row>
+              }
             />
             <PostsViewToggle view={view} onViewChange={setView} />
             <PostsGrid view={view} onPhotoPress={setSelectedPhoto} />
@@ -118,6 +144,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing['2xl'],
     gap: spacing.lg,
+  },
+  countNumber: {
+    fontWeight: '700',
   },
   center: {
     minHeight: 280,

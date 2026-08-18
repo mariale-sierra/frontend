@@ -3,17 +3,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useMetricsEntryStore } from '../store/metricsEntryStore';
 import { useAuth } from './useAuth';
-import { createWorkoutLog, getWorkoutLog } from '../services/workout-log/workout-log.service';
-import { addMetricToWorkoutLogExercise } from '../services/metrics/metrics.service';
-import { ACTIVITY_METRIC_CONFIG, type MetricField } from '../types/metrics';
-import type { WorkoutMetricCode } from '../types/workout-log';
 import { getTodayRoutineForChallenge } from '../services/challenge/challenge.service';
 import { getMyChallenges } from '../services/user/user.service';
 import {
   adaptChallengesForMetrics,
   adaptTodayRoutineExercises,
 } from '../services/adapters/index';
-import type { WorkoutLogContract } from '../types/workout-log';
 import { useTranslation } from 'react-i18next';
 
 export function useMetricsScreen() {
@@ -34,7 +29,6 @@ export function useMetricsScreen() {
   const hydrateMetricsData = useMetricsEntryStore((state) => state.hydrateMetricsData);
 
   const [activeRowKey, setActiveRowKey] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [challengeLoadError, setChallengeLoadError] = useState<string | null>(null);
 
@@ -152,88 +146,12 @@ export function useMetricsScreen() {
     router.back();
   }, []);
 
-  const submitMetrics = useCallback(async () => {
-    // 'rounds' has no matching backend metric_type yet, so it's intentionally
-    // left unmapped — those rows are skipped rather than sent under a wrong code.
-    const FIELD_TO_METRIC_CODE: Partial<Record<MetricField, WorkoutMetricCode>> = {
-      reps: 'reps',
-      lbs: 'weight',
-      duration: 'duration',
-      distance: 'distanceKm',
-    };
-    if (isSubmitting) return;
-
-    if (!userId) {
-      Alert.alert(t('metrics.alerts.notLoggedInTitle'), t('metrics.alerts.notLoggedInMessage'));
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const workout: WorkoutLogContract = await createWorkoutLog({
-        routineId: currentRoutineId ?? undefined,
-      });
-      const fullWorkout: WorkoutLogContract = await getWorkoutLog(workout.id);
-      const wles = fullWorkout.exercises ?? [];
-
-      let matchedCount = 0;
-
-      for (const block of exerciseMetrics) {
-        const wle = wles.find((candidate) => candidate.exercise?.id === block.exerciseId);
-        if (!wle) {
-          console.warn(`[Metrics] No WLE match for exerciseId=${block.exerciseId} "${block.name}" — skipping`);
-          continue;
-        }
-
-        // Only the columns this exercise's activity type actually shows (e.g.
-        // duration/distance for cardio, reps/lbs for strength) — previously
-        // this always looked for 'reps'/'lbs' regardless of activityType, so
-        // non-strength exercises silently saved nothing.
-        const columns = ACTIVITY_METRIC_CONFIG[block.activityType].columns;
-
-        for (const column of columns) {
-          const metricCode = FIELD_TO_METRIC_CODE[column.key];
-          if (!metricCode) continue; // e.g. 'rounds' — no backend metric_type yet
-
-          const firstRow = block.rows.find(
-            (row) => (row[column.key] ?? '').trim().length > 0,
-          );
-          if (!firstRow) continue;
-
-          const rawValue = parseFloat(firstRow[column.key] ?? '');
-          if (!Number.isFinite(rawValue)) continue;
-
-          // 'duration' is tracked in minutes in the UI but stored in seconds.
-          const value = column.key === 'duration' ? rawValue * 60 : rawValue;
-
-          await addMetricToWorkoutLogExercise(wle.id, metricCode, value);
-          matchedCount++;
-        }
-      }
-
-      if (matchedCount === 0) {
-        Alert.alert(t('metrics.alerts.loggedTitle'), t('metrics.alerts.noMatchMessage'));
-      }
-
-      router.push('/(add)/preview');
-    } catch (error: any) {
-      console.error('[Metrics] Submit failed:', error?.response?.data ?? error?.message);
-      Alert.alert(
-        t('metrics.alerts.submitErrorTitle'),
-        error?.response?.data?.message ?? t('metrics.alerts.submitErrorFallback'),
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [currentRoutineId, exerciseMetrics, isSubmitting, t, userId]);
-
   return {
     challenges,
     selectedChallengeId,
     isChallengeMenuOpen,
     exerciseMetrics,
     activeRowKey,
-    isSubmitting,
     isLoadingData,
     challengeLoadError,
     toggleChallengeMenu,
@@ -245,6 +163,5 @@ export function useMetricsScreen() {
     goToCamera,
     goToRestDay,
     goBack,
-    submitMetrics,
   };
 }

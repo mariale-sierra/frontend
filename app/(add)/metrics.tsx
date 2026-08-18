@@ -22,7 +22,6 @@ export default function Metrics() {
     isChallengeMenuOpen,
     exerciseMetrics,
     activeRowKey,
-    isSubmitting,
     isLoadingData,
     challengeLoadError,
     toggleChallengeMenu,
@@ -34,7 +33,6 @@ export default function Metrics() {
     goToCamera,
     goToRestDay,
     goBack,
-    submitMetrics,
   } = useMetricsScreen();
 
   const selectedChallenge =

@@ -32,7 +32,7 @@ const mockedGetHomeFeed = getHomeFeed as jest.Mock;
 describe('Home screen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedGetHomeFeed.mockResolvedValue([]);
+    mockedGetHomeFeed.mockResolvedValue({ posts: [], nextCursor: undefined });
   });
 
   it('renders the current username', async () => {

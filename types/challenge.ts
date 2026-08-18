@@ -153,6 +153,12 @@ export interface ChallengePhoto {
   userName: string;
   imageUrl: string | null;
   day: number;
+  // The backend collapses a post's real visibility ('private' | 'followers'
+  // | 'public') down to this binary field on purpose: 'followers' reads as
+  // 'public' here, same as an actual public post — this endpoint only tells
+  // you whether the viewer is allowed to see it (already enforced
+  // server-side), not the original enum value. Confirmed intentional in
+  // WorkoutPostsService.mapRowsToChallengePhotos (backend).
   visibility: 'public' | 'private';
   metrics: ChallengePhotoMetric[];
   description: string;
