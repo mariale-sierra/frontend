@@ -15,7 +15,9 @@ export async function getWorkoutLog(id: number) {
   return response.data;
 }
 
-export async function submitWorkoutProgress(data: ProgressSubmissionRequest) {
-  const response = await api.post('/workout-logs/progress', data);
+export async function submitWorkoutProgress(
+  data: ProgressSubmissionRequest,
+): Promise<WorkoutLogContract> {
+  const response = await api.post<WorkoutLogContract>('/workout-logs/progress', data);
   return response.data;
 }

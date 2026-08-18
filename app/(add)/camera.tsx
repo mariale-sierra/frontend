@@ -18,7 +18,9 @@ import { Text } from '../../components/ui/text';
 import { spacing, radius } from '../../constants/theme';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
 import { submitWorkoutProgress } from '../../services/workout-log/workout-log.service';
+import { applyExerciseMetrics } from '../../services/metrics/applyExerciseMetrics';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
+import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
 
 function VisibilityToggle({
   visibility,
@@ -57,6 +59,7 @@ export default function Camera() {
   const insets = useSafeAreaInsets();
   const selectedChallengeId = useMetricsEntryStore((s) => s.selectedChallengeId);
   const currentRoutineId = useMetricsEntryStore((s) => s.currentRoutineId);
+  const exerciseMetrics = useMetricsEntryStore((s) => s.exerciseMetrics);
 
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
@@ -106,15 +109,7 @@ export default function Camera() {
   }
 
   async function handleConfirm() {
-    console.log('[Camera] confirm pressed');
-    console.log('[Camera] capturedUri:', capturedUri);
-    console.log('[Camera] selectedChallengeId:', selectedChallengeId);
-    console.log('[Camera] currentRoutineId:', currentRoutineId);
-
-    if (isBusy || !capturedUri) {
-      console.log('[Camera] confirm blocked — isBusy:', isBusy, '| capturedUri:', capturedUri);
-      return;
-    }
+    if (isBusy || !capturedUri) return;
 
     if (!selectedChallengeId) {
       setError(t('camera.selectChallengeError'));
@@ -124,16 +119,13 @@ export default function Camera() {
 
     setError(null);
     setUploadingImage(true);
-    console.log('[Camera] upload start');
     let publicUrl: string;
     try {
       publicUrl = await uploadImageAsync(capturedUri, 'image/jpeg');
-      console.log('[Camera] upload success publicUrl:', publicUrl);
     } catch (e: unknown) {
       type AxiosLike = { response?: { status?: number; data?: unknown }; message?: string };
       const err = e as AxiosLike;
-      console.error('[Camera] confirm failed upload status:', err?.response?.status);
-      console.error('[Camera] confirm failed upload data:', err?.response?.data ?? err?.message);
+      console.error('[Camera] upload failed:', err?.response?.status, err?.response?.data ?? err?.message);
       setError(t('camera.uploadError'));
       setUploadingImage(false);
       return;
@@ -147,18 +139,29 @@ export default function Camera() {
       visibility,
       routineId: currentRoutineId ?? undefined,
     };
-    console.log('[Camera] progress payload:', progressPayload);
 
     setSubmittingProgress(true);
     try {
-      await submitWorkoutProgress(progressPayload);
-      console.log('[Camera] progress success');
+      const workout = await submitWorkoutProgress(progressPayload);
+      // The routine copy inside POST /workout-logs/progress only creates
+      // target (goal) rows for each exercise — the values actually entered
+      // on the metrics screen still need to be saved against them here.
+      if (exerciseMetrics.length > 0) {
+        try {
+          await applyExerciseMetrics(workout, exerciseMetrics);
+        } catch (metricsError) {
+          // The workout + photo already saved successfully — a metrics
+          // save failure shouldn't block the flow or look like data loss,
+          // just log it for now.
+          console.error('[Camera] applyExerciseMetrics failed:', metricsError);
+        }
+      }
+      invalidateChallengeProgressCache();
       router.replace('/(add)/preview');
     } catch (e: unknown) {
       type AxiosLike = { response?: { status?: number; data?: { message?: string } }; message?: string };
       const err = e as AxiosLike;
-      console.error('[Camera] confirm failed status:', err?.response?.status);
-      console.error('[Camera] confirm failed data:', err?.response?.data ?? err?.message);
+      console.error('[Camera] confirm failed:', err?.response?.status, err?.response?.data ?? err?.message);
       const msg = err?.response?.data?.message ?? t('camera.saveProgressError');
       setError(msg);
       Alert.alert(t('common.errors.genericTitle'), msg);

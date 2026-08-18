@@ -18,6 +18,8 @@ export interface MyProfileContract {
   preferred_language: string;
   profile_image_url: string | null;
   is_private: boolean;
+  followers_count: number;
+  following_count: number;
 }
 
 /** What the backend exposes about OTHER users (never includes email). */
@@ -28,6 +30,10 @@ export interface PublicProfileContract {
   bio: string | null;
   profile_image_url: string | null;
   is_private: boolean;
+  followers_count: number;
+  following_count: number;
+  /** Whether the authenticated caller actively follows this user. */
+  is_following: boolean;
 }
 
 export interface UpdateProfilePayload {

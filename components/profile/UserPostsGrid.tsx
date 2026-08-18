@@ -1,29 +1,33 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
+import { getUserPosts } from '../../services/challenge/challenge.service';
 import { PhotoGrid } from './PhotoGrid';
 import type { ChallengePhoto } from '../../types/challenge';
 
-interface PostsGridProps {
-  view: 'posts' | 'photos';
+interface UserPostsGridProps {
+  userId: string;
   onPhotoPress?: (photo: ChallengePhoto) => void;
 }
 
-export function PostsGrid({ view, onPhotoPress }: PostsGridProps) {
+/**
+ * First page of :userId's progress photos (GET /workout-posts/user/:userId).
+ * The backend already applies visibility rules for the viewer (public posts,
+ * plus 'followers'-visibility posts if the viewer follows them) — nothing to
+ * filter client-side.
+ */
+export function UserPostsGrid({ userId, onPhotoPress }: UserPostsGridProps) {
   const { t } = useTranslation();
   const [photos, setPhotos] = useState<ChallengePhoto[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Refetches on focus (not just on mount) so a photo uploaded elsewhere
-  // shows up here when the user comes back to the profile tab.
   useFocusEffect(
     useCallback(() => {
       let active = true;
       setLoading(true);
-      getMyProgressPhotos()
-        .then((data) => {
-          if (active) setPhotos(data);
+      getUserPosts(userId)
+        .then(({ photos: page }) => {
+          if (active) setPhotos(page);
         })
         .catch(() => {
           if (active) setPhotos([]);
@@ -34,18 +38,14 @@ export function PostsGrid({ view, onPhotoPress }: PostsGridProps) {
       return () => {
         active = false;
       };
-    }, []),
+    }, [userId]),
   );
-
-  // 'posts' = only photos visible to followers; 'photos' = everything,
-  // including private ones (only the owner ever hits this screen).
-  const visiblePhotos = view === 'posts' ? photos.filter((photo) => photo.visibility === 'public') : photos;
 
   return (
     <PhotoGrid
-      photos={visiblePhotos}
+      photos={photos}
       loading={loading}
-      emptyLabel={view === 'posts' ? t('profile.emptyPublicPhotos') : t('profile.emptyAllPhotos')}
+      emptyLabel={t('profile.emptyUserPhotos')}
       onPhotoPress={onPhotoPress}
     />
   );

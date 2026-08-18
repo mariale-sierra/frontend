@@ -9,6 +9,7 @@ import { colors, spacing } from '../../constants/theme';
 import { getChallengeProgress } from '../../services/challenge/challenge.service';
 import { submitWorkoutProgress } from '../../services/workout-log/workout-log.service';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
+import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
 
 export default function RestDay() {
   const router = useRouter();
@@ -36,6 +37,7 @@ export default function RestDay() {
         isRestDay: true,
         visibility: 'private',
       });
+      invalidateChallengeProgressCache();
       router.push('/(add)/preview');
     } catch (e: any) {
       setError(e?.response?.data?.message ?? 'Could not save your rest day.');
