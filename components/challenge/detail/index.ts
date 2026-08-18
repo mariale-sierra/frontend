@@ -11,3 +11,7 @@ export { default as ChallengeRoutineList } from './challengeRoutineList';
 // ChallengeRoutineDayCard: Card component for individual routine days.
 // Displays day information with routine assignments and completion status.
 export { default as ChallengeRoutineDayCard } from './challengeRoutineDayCard';
+
+// ChallengeParticipantsList: Horizontal avatar row of challenge members.
+// Tapping a member opens their public profile (with the Follow button).
+export { default as ChallengeParticipantsList } from './challengeParticipantsList';

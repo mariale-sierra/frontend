@@ -94,6 +94,8 @@ const en = {
     leaveError: 'Could not leave challenge right now.',
     joinButton: 'Join Challenge',
     joinButtonA11y: 'Join challenge',
+    participantsTitle: 'Participants',
+    participantA11y: 'View {{name}}\'s profile',
   },
   challengeProgress: {
     gallery: {

@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ActivityScrollGradient from '../../../components/layout/activityScrollGradient';
-import { ChallengeHeader, ChallengeRoutineList } from '../../../components/challenge/detail';
+import { ChallengeHeader, ChallengeParticipantsList, ChallengeRoutineList } from '../../../components/challenge/detail';
 import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '../../../components/challenge/create';
 import { Icon } from '../../../components/ui/icon';
 import { Text } from '../../../components/ui/text';
@@ -13,6 +13,7 @@ import { getChallenge, joinChallenge, leaveChallenge } from '../../../services/c
 import { getMyChallenges } from '../../../services/user/user.service';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
+import { useChallengeParticipants } from '../../../hooks/useChallengeParticipants';
 import { useAuth } from '../../../hooks/useAuth';
 import type { ChallengeContract } from '../../../types/challenge';
 import { useTranslation } from 'react-i18next';
@@ -42,6 +43,9 @@ export default function ChallengeDetail() {
   // "Already joined this challenge"), surfacing as a generic error alert.
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('none');
   const [membershipLoading, setMembershipLoading] = useState(true);
+  const { participants, loading: participantsLoading } = useChallengeParticipants(
+    typeof id === 'string' ? id : null,
+  );
 
   // Join confirmation popup
   const joinPopup = useConfirmationPopup({
@@ -247,6 +251,7 @@ export default function ChallengeDetail() {
               membersJoined: challengeView.membersJoined,
             }}
           />
+          <ChallengeParticipantsList participants={participants} loading={participantsLoading} />
           <ChallengeRoutineList
             routine={challengeView.days}
             onPressDay={(day) => router.push(`/challenge/${id}/routine/${day}`)}

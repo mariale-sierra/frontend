@@ -94,6 +94,8 @@ const es = {
     leaveError: 'No se pudo abandonar el reto en este momento.',
     joinButton: 'Unirse al reto',
     joinButtonA11y: 'Unirse al reto',
+    participantsTitle: 'Participantes',
+    participantA11y: 'Ver perfil de {{name}}',
   },
   challengeProgress: {
     gallery: {
