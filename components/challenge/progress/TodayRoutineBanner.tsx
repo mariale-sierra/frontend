@@ -13,18 +13,24 @@ interface TodayRoutineBannerProps {
 
 /**
  * The "Today's routine: {name}" pill from Challenge-Detail-Grid/Calendar —
- * a `primary` Hero CTA card (see Components → Card variants) linking through
- * to the existing Routine-Detail route. Purposefully minimal for the
- * rest-day state (no press, no chevron) — a dedicated wireframe for this
- * component's own states is coming separately per the user; this covers
- * only what the two Challenge-Detail wireframes actually specify.
+ * a Hero CTA card (see Components → Card variants) linking through to the
+ * existing Routine-Detail route. Background is state-driven, same pairing
+ * ChallengeStatusCard already established (its rest-state card background
+ * is `colors.rest` with `inverse`/ink-colored title text on top — confirmed
+ * contrast pairing, reused here rather than re-deriving one): `primary`
+ * (lime) on a train day, `rest` (purple) on a rest day — the "signature
+ * purple" rest-state color used everywhere else in the app, not a one-off.
+ * Purposefully minimal for the rest-day state (no press, no chevron) — a
+ * dedicated wireframe for this component's own states is coming separately
+ * per the user; this covers only what the two Challenge-Detail wireframes
+ * actually specify.
  */
 export function TodayRoutineBanner({ routineName, isRestDay, onPress }: TodayRoutineBannerProps) {
   const { t } = useTranslation();
 
   if (isRestDay || !routineName) {
     return (
-      <View style={styles.banner}>
+      <View style={[styles.banner, { backgroundColor: colors.rest }]}>
         <Icon name="moon-outline" size={18} color={colors.ink} />
         <Text variant="label" weight="bold" style={styles.label}>
           {t('challengeProgress.todayRoutine.restDayMessage')}
@@ -36,7 +42,7 @@ export function TodayRoutineBanner({ routineName, isRestDay, onPress }: TodayRou
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.banner, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.banner, { backgroundColor: colors.primary }, pressed && styles.pressed]}
       accessibilityRole="button"
     >
       <Text variant="label" weight="bold" style={styles.label}>
@@ -58,7 +64,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.base,
     borderRadius: radius.big,
-    backgroundColor: colors.primary,
   },
   pressed: {
     opacity: 0.9,

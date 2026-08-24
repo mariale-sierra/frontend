@@ -21,8 +21,14 @@ export const colors = {
   primary: '#E4FF1A', // neon lime — main brand color. Spotlight, not a surface.
   secondary: '#FF5C1A', // orange — secondary buttons, in-progress indicators
   accent: '#EF3B66', // pink — social/community moments only, never a status color
-  ink: '#0E0F0B', // screen background
-  surface: '#191A13', // elevated surface (cards, nav, tab tracks)
+  // Screen background. The wireframes literally specify `#0E0F0B` (matched
+  // exactly at first) — deepened to `#080906` on explicit user request: same
+  // hue/saturation (~75° olive-green, ~15%), lightness taken from ~5.1% down
+  // to ~3% so it reads as a deep near-black instead of "a gray with a green
+  // tint." Keep the hue/saturation if this ever needs adjusting again — only
+  // lightness was the complaint.
+  ink: '#080906',
+  surface: '#191A13', // elevated surface (cards, nav, tab tracks) — confirmed correct as-is, don't touch
   paper: '#F3F2E2', // primary text on dark backgrounds / light-theme background
   success: '#37E0A4',
   warning: '#F2A93B', // no confirmed use case yet — see Open Items Tracker
