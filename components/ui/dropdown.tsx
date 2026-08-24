@@ -6,6 +6,7 @@ import {
 import { useState } from 'react';
 import { Text } from './text';
 import { spacing, radius, colors } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 
 interface Option {
   label: string;
@@ -133,7 +134,7 @@ const styles = StyleSheet.create({
   header: {
     paddingVertical: spacing.sm + 4,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.lg,
+    borderRadius: radius.medium,
     backgroundColor: colors.surface,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -147,7 +148,7 @@ const styles = StyleSheet.create({
 
   dropdown: {
     marginTop: spacing.sm,
-    borderRadius: radius.lg,
+    borderRadius: radius.medium,
     backgroundColor: colors.surface,
     overflow: 'hidden',
   },
@@ -158,10 +159,10 @@ const styles = StyleSheet.create({
   },
 
   selected: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: withAlpha(colors.paper, 0.06),
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    borderRadius: radius['2xl'],
+    borderColor: withAlpha(colors.paper, 0.14),
+    borderRadius: radius.big,
   },
 
   disabledOption: {

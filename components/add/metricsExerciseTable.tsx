@@ -1,8 +1,7 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, TextInput, View } from 'react-native';
 import { ActivityIcon } from '../icons/activityIcon';
 import { Text } from '../ui/text';
-import { colors, gradients, spacing, typography } from '../../constants/theme';
+import { colors, spacing, typography } from '../../constants/theme';
 import type { ExerciseMetricsBlock, MetricField } from '../../types/metrics';
 import { ACTIVITY_METRIC_CONFIG } from '../../types/metrics';
 import { useTranslation } from 'react-i18next';
@@ -133,12 +132,9 @@ export function MetricsExerciseTable({
         </View>
       </View>
 
-      <LinearGradient
-        colors={gradients.surface.colors}
-        start={gradients.surface.start}
-        end={gradients.surface.end}
-        style={styles.tableWrap}
-      >
+      {/* Gradients are retired — flat `surface` panel. See design system →
+          Explicitly Rejected Patterns. */}
+      <View style={styles.tableWrap}>
         <MetricsTableHeader columns={tableColumns} />
 
         {exercise.rows.map((row, rowIndex) => (
@@ -154,7 +150,7 @@ export function MetricsExerciseTable({
             onMetricChange={onMetricChange}
           />
         ))}
-      </LinearGradient>
+      </View>
 
       <View style={styles.notesWrap}>
         {exercise.restTimeLabel ? (
@@ -217,6 +213,7 @@ const styles = StyleSheet.create({
   },
   tableWrap: {
     marginHorizontal: 0,
+    backgroundColor: colors.surface,
   },
   tableHeader: {
     flexDirection: 'row',

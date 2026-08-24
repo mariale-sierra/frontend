@@ -22,7 +22,11 @@ export function CompletedChallengeCard({
   onPress,
 }: CompletedChallengeCardProps) {
   const { activityType, title, progressPercent } = challenge;
-  const categoryColor = colors.activityType[activityType];
+  // Category is icon + name only now, never a color (see design system →
+  // Explicitly Rejected Patterns) — this was a per-category accent, now
+  // flattened to a neutral `paper`. The gradient/glow treatment below is
+  // pre-existing and still pending its own migration pass.
+  const categoryColor = colors.paper;
 
   return (
     <Pressable

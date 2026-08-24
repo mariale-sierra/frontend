@@ -4,15 +4,18 @@ import {
   PressableProps,
   ActivityIndicator,
 } from 'react-native';
-import { colors, radius, spacing, ActivityType } from '../../constants/theme';
+import { colors, radius, spacing } from '../../constants/theme';
 import { Text } from './text';
 
 /**
  * ButtonVariant defines the available button styles:
- * - primary: White background, black text, for main actions
- * - activity: Activity type background color, black text, for activity-specific actions
- * - outline: Black background, white border and text, for secondary actions
- * - danger: Black background, red border and text, for destructive actions
+ * - primary: `primary` (lime) background, `ink` text, for the one main action on a screen
+ * - outline: `ink` background, `paper`-bordered, for secondary actions
+ * - danger: `ink` background, `error`-bordered, for destructive actions
+ *
+ * `activity` (background color driven by workout category) is retired — see
+ * design system → Explicitly Rejected Patterns. It now renders identically
+ * to `primary`; the variant name is kept so existing call sites compile.
  */
 type ButtonVariant = 'primary' | 'activity' | 'outline' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
@@ -22,7 +25,8 @@ interface ButtonProps extends Omit<PressableProps, 'children'> {
   size?: ButtonSize;
   loading?: boolean;
   disabled?: boolean;
-  activityType?: ActivityType;
+  /** @deprecated the `activity` variant no longer color-codes by category — this prop has no effect. Kept for call-site compatibility. */
+  activityType?: string;
   rightIcon?: React.ReactNode;
   children: string;
 }
@@ -32,7 +36,7 @@ export function Button({
   size = 'md',
   loading = false,
   disabled = false,
-  activityType,
+  activityType: _activityType,
   rightIcon,
   children,
   style,
@@ -41,13 +45,11 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const textColor =
-    variant === 'primary' || variant === 'activity'
-      ? colors.textInverse
-      : variant === 'danger'
-      ? colors.error
-      : colors.textPrimary;
+    variant === 'primary' || variant === 'activity' ? colors.ink : variant === 'danger' ? colors.error : colors.paper;
 
   const loaderColor = textColor;
+
+  const variantKey = variant === 'activity' ? 'primary' : variant;
 
   return (
     <Pressable
@@ -56,16 +58,10 @@ export function Button({
         const computedStyle =
           typeof style === 'function' ? style({ pressed }) : style;
 
-        const variantStyle = variant === 'activity'
-          ? activityType
-            ? { backgroundColor: colors.activityType[activityType] }
-            : styles.primary // fallback to primary if no activityType
-          : styles[variant as Exclude<ButtonVariant, 'activity'>];
-
         return [
           styles.button,
           styles[size],
-          variantStyle,
+          styles[variantKey],
           pressed && !isDisabled && styles.pressed,
           isDisabled && styles.disabled,
           computedStyle,
@@ -96,7 +92,7 @@ export function Button({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: radius.xl,
+    borderRadius: radius.big,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
@@ -109,13 +105,13 @@ const styles = StyleSheet.create({
   },
 
   outline: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.ink,
     borderWidth: 1,
-    borderColor: colors.textPrimary,
+    borderColor: colors.paper,
   },
 
   danger: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.ink,
     borderWidth: 1,
     borderColor: colors.error,
   },
@@ -146,7 +142,6 @@ const styles = StyleSheet.create({
   },
 
   text: {
-    fontWeight: '600',
     marginRight: spacing.xs,
   },
 });

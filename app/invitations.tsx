@@ -77,7 +77,7 @@ export default function Invitations() {
         ) : (
           <>
             <View style={styles.section}>
-              <Text variant="subheader" style={styles.sectionLabel}>
+              <Text variant="subheader" tone="secondary">
                 {t('invites.requestsSectionTitle')}
               </Text>
 
@@ -118,7 +118,7 @@ export default function Invitations() {
             <Divider variant="section" marginVertical="lg" />
 
             <View style={styles.section}>
-              <Text variant="subheader" style={styles.sectionLabel}>
+              <Text variant="subheader" tone="secondary">
                 {t('invites.sentTab')}
               </Text>
 
@@ -167,9 +167,6 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: spacing.md,
-  },
-  sectionLabel: {
-    color: colors.textSecondary,
   },
   rows: {
     gap: 0,

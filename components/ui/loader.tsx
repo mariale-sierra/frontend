@@ -15,7 +15,7 @@ export function Loader({ visible, overlayStyle }: LoaderProps) {
 
 	return (
 		<View style={[styles.overlay, overlayStyle]}>
-			<ActivityIndicator size="large" color={colors.textPrimary} />
+			<ActivityIndicator size="large" color={colors.paper} />
 		</View>
 	);
 }

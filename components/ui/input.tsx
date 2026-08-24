@@ -11,7 +11,8 @@ import {
 import { useState } from 'react';
 import { Text } from './text';
 import { Row } from '../layout/row';
-import { spacing, radius, colors } from '../../constants/theme';
+import { spacing, radius, colors, textOpacity } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 
 /**
  * InputVariant defines the available input field styles:
@@ -78,11 +79,11 @@ export function Input({
     }
   }
 
-  // Map placeholder variant to color
+  // Map placeholder variant to color (paper at the matching opacity tier)
   const placeholderColorMap = {
-    body: colors.textPrimary,
-    secondary: colors.textSecondary,
-    caption: colors.textMuted,
+    body: withAlpha(colors.paper, textOpacity.primary),
+    secondary: withAlpha(colors.paper, textOpacity.secondary),
+    caption: withAlpha(colors.paper, textOpacity.tertiary),
   } as const;
 
   return (
@@ -131,8 +132,8 @@ export function Input({
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: radius.lg,
-    paddingVertical: spacing.sm + 4,
+    borderRadius: radius.medium,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
   },
 
@@ -142,9 +143,9 @@ const styles = StyleSheet.create({
 
   input: {
     flex: 1,
-    color: colors.textPrimary,
-    fontSize: 15,
-    lineHeight: 20,
+    color: colors.paper,
+    fontSize: 16,
+    lineHeight: 24,
     paddingVertical: 0,
   },
 });

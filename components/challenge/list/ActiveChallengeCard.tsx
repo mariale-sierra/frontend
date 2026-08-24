@@ -75,11 +75,15 @@ export function ActiveChallengeCard({
   const { status, activityType, isRestDay } = challenge;
   const gradientColors = GRADIENT_COLORS[status];
   const footerIcon = FOOTER_ICON[status];
+  // Category is icon + name only now, never a color — see design system →
+  // Explicitly Rejected Patterns. Was a per-category accent; flattened to
+  // neutral `paper`. The rest-day case below already uses the current
+  // `colors.rest` token (renamed from the old `restDayNeon`).
   const footerIconColor = status !== 'active'
     ? footerIcon.color
     : isRestDay
-      ? colors.restDayNeon
-      : colors.activityType[activityType];
+      ? colors.rest
+      : colors.paper;
   const isLeft = status === 'left';
 
   return (
@@ -219,7 +223,7 @@ const styles = StyleSheet.create({
   // Rest day: bare moon icon with neon glow, no container circle.
   restDayMoon: {
     marginTop: 3,
-    shadowColor: colors.restDayNeon,
+    shadowColor: colors.rest,
     shadowOpacity: 0.9,
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 10,

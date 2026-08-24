@@ -2,18 +2,22 @@ import {
   Text as RNText,
   TextProps as RNTextProps,
 } from 'react-native';
-import type { ActivityType } from '../../constants/theme';
-import { useTheme } from '../../hooks/useTheme';
+import { colors, textOpacity, typography } from '../../constants/theme';
+import type { FontSizeToken, FontWeightToken } from '../../constants/theme';
 
 /**
- * TextVariant defines the available text styles:
- * - title: Large (28px), bold (700), white color, for main headings
- * - subheader: Medium (12px), semi-bold (600), white color, uppercase, for subheadings
- * - header: Standard (16px), semi-bold (600), gray by default, optionally white with tone='primary'
- * - body: Standard (14px), normal (400), white by default, optionally gray with tone='secondary'
- * - caption: Small (10px), normal (400), muted gray color, for captions
- * - label: Small (10px), medium (500), gray color, uppercase, for labels
- * - activity: Standard (16px), normal (400), color driven by activity category prop
+ * TextVariant picks the font family/weight/size for a content role, per the
+ * design system's Typography scale:
+ * - title: Bebas Neue display heading — screen titles (H1)
+ * - subheader: Bebas Neue display heading, smaller — section headings (H2/H3)
+ * - header: DM Sans bold, small, uppercase — eyebrow/section labels
+ * - body: DM Sans regular — default body text
+ * - label: DM Sans medium, small — tags, form labels, buttons
+ * - caption: DM Sans regular, smallest — timestamps, captions, member counts
+ * - activity: same as body. Workout category color-coding is retired — a
+ *   category is icon + name only now, rendered like any other label. Kept
+ *   as its own variant (and the `activity` prop below) only so existing
+ *   call sites still compile during migration; neither affects color.
  */
 type TextVariant =
   | 'title'
@@ -24,83 +28,118 @@ type TextVariant =
   | 'label'
   | 'activity';
 
-type TextTone = 'primary' | 'secondary' | 'inverse';
-
-/**
- * TextProps defines all configurable props for the Text component.
- *
- * In addition to the custom props below, this interface extends React Native's
- * Text props (`RNTextProps`), so you can also pass native props like
- * `numberOfLines`, `ellipsizeMode`, `selectable`, `onPress`, and accessibility props.
- *
- * @property variant - Preset typography style and default color (default: 'body')
- * @property align - Horizontal text alignment (`left`, `center`, `right`, `justify`)
- * @property tone - Optional text tone for `header` and `body` variants
- * @property activity - Activity category key; required when variant is 'activity'
- */
+/** Opacity tier applied to the text color — see design system Typography → Text opacity scale. */
+type TextTone = 'primary' | 'secondary' | 'tertiary' | 'inverse';
 
 interface TextProps extends RNTextProps {
   variant?: TextVariant;
   align?: 'left' | 'center' | 'right' | 'justify';
   tone?: TextTone;
-  activity?: ActivityType;
+  /** Render on a light/lime surface using `ink` instead of `paper` as the base color. */
+  inverse?: boolean;
+  /** Override the variant's default size with another token from the fontSize scale. */
+  size?: FontSizeToken;
+  /** Override the variant's default weight with another DM Sans weight token. Has no visible effect on `title`/`subheader` (Bebas Neue only ships one weight). */
+  weight?: FontWeightToken;
+  /**
+   * @deprecated Workout category is icon + name only, never color-coded —
+   * this no longer affects rendering. Kept only so pre-existing call sites
+   * (`<Text variant="activity" activity={type} />`) still compile.
+   */
+  activity?: string;
 }
+
+// @expo-google-fonts ships each DM Sans weight as its OWN font family name
+// (DMSans_400Regular / _500Medium / _700Bold), not one family switched via
+// `fontWeight`. Setting `fontWeight` alone without also pointing
+// `fontFamily` at the matching file renders the wrong weight silently (the
+// loaded family's own weight wins) — every DM Sans style below, and the
+// `weight` override, must set both together.
+const DM_SANS_FAMILY: Record<FontWeightToken, string> = {
+  regular: typography.fontFamily.regular,
+  medium: typography.fontFamily.medium,
+  bold: typography.fontFamily.bold,
+};
+
+function dmSans(weight: FontWeightToken) {
+  return {
+    fontFamily: DM_SANS_FAMILY[weight],
+    fontWeight: typography.fontWeight[weight],
+  };
+}
+
+const VARIANT_STYLE = {
+  title: {
+    fontFamily: typography.fontFamily.display,
+    fontSize: typography.fontSize['3xl'],
+    lineHeight: typography.lineHeight['3xl'],
+    letterSpacing: typography.bebasLetterSpacing(typography.fontSize['3xl']),
+  },
+  subheader: {
+    fontFamily: typography.fontFamily.display,
+    fontSize: typography.fontSize.xl,
+    lineHeight: typography.lineHeight.xl,
+    letterSpacing: typography.bebasLetterSpacing(typography.fontSize.xl),
+  },
+  header: {
+    ...dmSans('bold'),
+    fontSize: typography.fontSize.sm,
+    lineHeight: typography.lineHeight.sm,
+    textTransform: 'uppercase' as const,
+  },
+  body: {
+    ...dmSans('regular'),
+    fontSize: typography.fontSize.base,
+    lineHeight: typography.lineHeight.base,
+  },
+  label: {
+    ...dmSans('medium'),
+    fontSize: typography.fontSize.sm,
+    lineHeight: typography.lineHeight.sm,
+  },
+  caption: {
+    ...dmSans('regular'),
+    fontSize: typography.fontSize.xs,
+    lineHeight: typography.lineHeight.xs,
+  },
+  activity: {
+    ...dmSans('regular'),
+    fontSize: typography.fontSize.base,
+    lineHeight: typography.lineHeight.base,
+  },
+} as const;
+
+const DISPLAY_VARIANTS = new Set<TextVariant>(['title', 'subheader']);
 
 export function Text({
   variant = 'body',
   align,
-  tone,
-  activity,
+  tone = 'primary',
+  inverse = false,
+  size,
+  weight,
+  activity: _activity,
   style,
   children,
   ...props
 }: TextProps) {
-  const { colors, typography } = useTheme();
+  const useInk = inverse || tone === 'inverse';
+  const opacityTier = tone === 'inverse' ? 'primary' : tone;
+  const isDisplay = DISPLAY_VARIANTS.has(variant);
 
-  const variantMap = {
-    title: {
-      ...typography.title,
-      color: colors.textPrimary,
-    },
-    subheader: {
-      ...typography.header,
-      fontSize: 13,
-      lineHeight: 23,
-      color: colors.textPrimary,
-    },
-    header: {
-      ...typography.body,
-      fontWeight: '600',
-      color: tone === 'primary' ? colors.textPrimary : colors.textSecondary,
-    },
-    body: {
-      ...typography.body,
-      fontSize: 15,
-      lineHeight: 20,
-      color: tone === 'secondary' ? colors.textSecondary : colors.textPrimary,
-    },
-    caption: {
-      ...typography.caption,
-      fontSize: 10,
-      lineHeight: 14,
-      color: colors.textMuted,
-    },
-    label: {
-      ...typography.label,
-      fontSize: 11,
-      lineHeight: 14,
-      color: colors.textSecondary,
-    },
-    activity: {
-      ...typography.body,
-      color: activity ? colors.activityType[activity] : colors.textSecondary,
-    },
-  } as const;
+  const sizeOverride = size && {
+    fontSize: typography.fontSize[size],
+    lineHeight: typography.lineHeight[size],
+    ...(isDisplay && { letterSpacing: typography.bebasLetterSpacing(typography.fontSize[size]) }),
+  };
 
   return (
     <RNText
       style={[
-        variantMap[variant],
+        VARIANT_STYLE[variant],
+        { color: useInk ? colors.ink : colors.paper, opacity: textOpacity[opacityTier] },
+        sizeOverride,
+        weight && !isDisplay && dmSans(weight),
         align && { textAlign: align },
         style,
       ]}

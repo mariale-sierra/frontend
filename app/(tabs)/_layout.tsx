@@ -1,19 +1,21 @@
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { View, StyleSheet } from "react-native";
-import { useTheme } from "../../hooks/useTheme";
+import { colors, radius } from "../../constants/theme";
+import { withAlpha } from "../../utils/color";
 
-function TabIcon({ name, focused, colors }: {
+const INACTIVE_ICON_COLOR = withAlpha(colors.paper, 0.42); // text-tertiary, see design system → Typography → Text opacity scale
+
+function TabIcon({ name, focused }: {
   name: React.ComponentProps<typeof Ionicons>['name'];
   focused: boolean;
-  colors: ReturnType<typeof useTheme>['colors'];
 }) {
   return (
     <View style={styles.iconWrapper}>
       <Ionicons
         name={name}
         size={22}
-        color={focused ? colors.primary : colors.textMuted}
+        color={focused ? colors.primary : INACTIVE_ICON_COLOR}
       />
     </View>
   );
@@ -21,18 +23,14 @@ function TabIcon({ name, focused, colors }: {
 
 export default function TabsLayout() {
   const router = useRouter();
-  const { colors } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: colors.background,
-          borderTopColor: colors.background,
-        },
+        tabBarInactiveTintColor: INACTIVE_ICON_COLOR,
+        tabBarStyle: styles.tabBar,
       }}
     >
       <Tabs.Screen
@@ -40,7 +38,7 @@ export default function TabsLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="home" focused={focused} colors={colors} />
+            <TabIcon name="home-outline" focused={focused} />
           ),
         }}
       />
@@ -49,7 +47,7 @@ export default function TabsLayout() {
         options={{
           title: "Search",
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="search" focused={focused} colors={colors} />
+            <TabIcon name="search-outline" focused={focused} />
           ),
         }}
       />
@@ -65,7 +63,7 @@ export default function TabsLayout() {
           },
           tabBarIcon: () => (
             <View style={styles.addButton}>
-              <Ionicons name="add" size={40} color={colors.primary} />
+              <Ionicons name="add-outline" size={26} color={colors.ink} />
             </View>
           ),
         }}
@@ -82,7 +80,7 @@ export default function TabsLayout() {
         options={{
           title: "Challenges",
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="trophy" focused={focused} colors={colors} />
+            <TabIcon name="trophy-outline" focused={focused} />
           ),
         }}
       />
@@ -91,7 +89,7 @@ export default function TabsLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ focused }) => (
-            <TabIcon name="person" focused={focused} colors={colors} />
+            <TabIcon name="person-outline" focused={focused} />
           ),
         }}
       />
@@ -104,12 +102,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
   },
-addButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#000000',
+  tabBar: {
+    backgroundColor: colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: withAlpha(colors.paper, 0.08),
+  },
+  addButton: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.big,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: -26,
+    // Documented exception to "shadowColor is always #000" — the FAB
+    // specifically gets a lime glow, see design system → Components →
+    // Bottom Navigation.
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.28,
+    shadowRadius: 22,
+    elevation: 8,
   },
 });

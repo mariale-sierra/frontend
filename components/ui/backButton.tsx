@@ -10,11 +10,11 @@ interface BackButtonProps {
   onPress?: () => void;
 }
 
-export function BackButton({ iconColor = colors.textPrimary, size = 44, style, onPress }: BackButtonProps) {
+export function BackButton({ iconColor = colors.paper, size = 44, style, onPress }: BackButtonProps) {
   const router = useRouter();
   return (
     <IconButton
-      name="chevron-back"
+      name="chevron-back-outline"
       iconSize={24}
       iconColor={iconColor}
       size={size}

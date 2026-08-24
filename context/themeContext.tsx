@@ -8,7 +8,6 @@ interface ThemeContextValue {
   radius: Theme['radius'];
   typography: Theme['typography'];
   shadows: Theme['shadows'];
-  gradients: Theme['gradients'];
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -26,7 +25,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
       radius: theme.radius,
       typography: theme.typography,
       shadows: theme.shadows,
-      gradients: theme.gradients,
     }),
     [],
   );

@@ -1,4 +1,4 @@
-import type { ActivityType } from '../constants/theme';
+import type { ActivityType } from './activity';
 import type { ExerciseMetricType } from './routine';
 
 export type ChallengeVisibility = 'Public' | 'Private';

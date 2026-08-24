@@ -1,6 +1,7 @@
 import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, ActivityType } from '../../constants/theme';
+import { colors } from '../../constants/theme';
+import type { ActivityType } from '../../types/activity';
 
 interface ActivityIconProps {
   type: ActivityType;
@@ -22,6 +23,10 @@ const iconMap: Record<ActivityType, keyof typeof Ionicons.glyphMap> = {
   functional: 'musical-notes',
 };
 
+// Category is icon + name only now — no per-category color (see design
+// system → Explicitly Rejected Patterns). Every variant renders in the same
+// neutral tokens regardless of `type`; the icon glyph is still selected per
+// category via iconMap above.
 export function ActivityIcon({ type, size = 'md', variant = 'circle', color }: ActivityIconProps) {
 
   if (variant === 'dot') {
@@ -32,7 +37,7 @@ export function ActivityIcon({ type, size = 'md', variant = 'circle', color }: A
           width: sz,
           height: sz,
           borderRadius: sz / 2,
-          backgroundColor: colors.activityType[type],
+          backgroundColor: colors.paper,
         }}
       />
     );
@@ -43,7 +48,7 @@ export function ActivityIcon({ type, size = 'md', variant = 'circle', color }: A
       <Ionicons
         name={iconMap[type]}
         size={iconSize[size]}
-        color={color ?? colors.textPrimary}
+        color={color ?? colors.paper}
       />
     );
   }
@@ -53,7 +58,7 @@ export function ActivityIcon({ type, size = 'md', variant = 'circle', color }: A
       style={[
         styles.container,
         {
-          backgroundColor: colors.activityType[type],
+          backgroundColor: colors.surface,
           width: containerSize[size],
           height: containerSize[size],
           borderRadius: containerSize[size] / 2,
@@ -63,7 +68,7 @@ export function ActivityIcon({ type, size = 'md', variant = 'circle', color }: A
       <Ionicons
         name={iconMap[type]}
         size={iconSize[size]}
-        color={colors.textPrimary}
+        color={colors.paper}
       />
     </View>
   );

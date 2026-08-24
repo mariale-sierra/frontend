@@ -5,6 +5,15 @@ export function hoursUntilMidnight(): number {
   return Math.max(0, Math.floor((midnight.getTime() - now.getTime()) / (1000 * 60 * 60)));
 }
 
+/** "Sunday, 23 Aug" — today's date for the Home screen greeting header. */
+export function formatTodayLabel(): string {
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+  }).format(new Date());
+}
+
 /** Compact relative time ("just now", "5m", "2h", "3d") for feed/activity rows. */
 export function formatRelativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();

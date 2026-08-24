@@ -1,18 +1,19 @@
 import { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import ScreenBackground from '../../components/layout/screenBackground';
+import { Divider } from '../../components/ui/divider';
 import { Icon } from '../../components/ui/icon';
 import { Loader } from '../../components/ui/loader';
 import { Text } from '../../components/ui/text';
-import { UserAvatar } from '../../components/ui/userAvatar';
+import { Row } from '../../components/layout/row';
 import { ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
 import { FeedPostCard } from '../../components/home/FeedPostCard';
 import { FriendsStreakSection } from '../../components/home/FriendsStreakSection';
-import type { FriendStreakViewModel } from '../../components/home/FriendStreakCard';
+import type { FriendStreakViewModel } from '../../services/adapters/followAdapter';
 import { PostCardSkeleton } from '../../components/home/PostCardSkeleton';
 import { EmptyFeed } from '../../components/home/EmptyFeed';
 import { FeedErrorState } from '../../components/home/FeedErrorState';
@@ -22,13 +23,10 @@ import { getMyChallenges } from '../../services/user/user.service';
 import { getHomeFeed } from '../../services/feed/feed.service';
 import { toFeedPostViewModels } from '../../services/adapters/feedAdapter';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
-import { spacing } from '../../constants/theme';
-import { hoursUntilMidnight } from '../../utils/time';
-
-// No backend endpoint for friends' streaks exists yet (see FriendStreakCard),
-// so this stays empty until that service is available — the section already
-// renders its own empty state for this case.
-const FRIEND_STREAKS: FriendStreakViewModel[] = [];
+import { getFollowingStreaks } from '../../services/follow/follow.service';
+import { toFriendStreakViewModels } from '../../services/adapters/followAdapter';
+import { colors, spacing } from '../../constants/theme';
+import { formatTodayLabel, hoursUntilMidnight } from '../../utils/time';
 
 export default function Home() {
   const { username } = useAuth();
@@ -48,6 +46,10 @@ export default function Home() {
   const [feedError, setFeedError] = useState(false);
   const [feedNextCursor, setFeedNextCursor] = useState<string | undefined>(undefined);
   const [feedLoadingMore, setFeedLoadingMore] = useState(false);
+
+  const [friendStreaks, setFriendStreaks] = useState<FriendStreakViewModel[]>([]);
+  const [friendStreaksLoading, setFriendStreaksLoading] = useState(true);
+  const [friendStreaksError, setFriendStreaksError] = useState(false);
 
   const hoursLeft = hoursUntilMidnight();
 
@@ -100,6 +102,30 @@ export default function Home() {
     }, []),
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setFriendStreaksLoading(true);
+      getFollowingStreaks()
+        .then((rows) => {
+          if (!active) return;
+          setFriendStreaks(toFriendStreakViewModels(rows));
+          setFriendStreaksError(false);
+        })
+        .catch(() => {
+          if (!active) return;
+          setFriendStreaks([]);
+          setFriendStreaksError(true);
+        })
+        .finally(() => {
+          if (active) setFriendStreaksLoading(false);
+        });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+
   const loadMoreFeed = useCallback(() => {
     if (feedLoadingMore || feedLoading || !feedNextCursor) return;
     setFeedLoadingMore(true);
@@ -121,13 +147,27 @@ export default function Home() {
   }
 
   const listHeader = (
-    <View style={[styles.listHeader, { paddingTop: insets.top + spacing.xs }]}>
-      <View style={styles.profileRow}>
-        <UserAvatar username={username ?? ''} size={44} />
-        <Text variant="body" style={styles.username}>
-          {username ?? ''}
-        </Text>
-      </View>
+    <View style={styles.listHeader}>
+      <Row justify="space-between" align="flex-start">
+        <View style={styles.greetingBlock}>
+          <Text variant="caption" tone="secondary" style={styles.dateLabel}>
+            {formatTodayLabel()}
+          </Text>
+          <Text variant="title">{t('home.greeting', { name: username ?? '' })}</Text>
+        </View>
+
+        <Row gap="sm">
+          {/* Messaging/notifications routes exist but aren't wired to real
+              unread state yet — the dot below is decorative for now. */}
+          <Pressable style={styles.iconButton} onPress={() => router.push('/messaging')}>
+            <Icon name="chatbubble-ellipses-outline" size={22} />
+          </Pressable>
+          <Pressable style={styles.iconButton} onPress={() => router.push('/notifications')}>
+            <Icon name="notifications-outline" size={22} />
+            <View style={styles.notificationDot} />
+          </Pressable>
+        </Row>
+      </Row>
 
       <View style={styles.challengeArea}>
         {challengeLoading ? (
@@ -145,15 +185,14 @@ export default function Home() {
 
       <View style={styles.friendsArea}>
         <FriendsStreakSection
-          friends={FRIEND_STREAKS}
+          friends={friendStreaks}
+          loading={friendStreaksLoading}
+          error={friendStreaksError}
           onSeeMore={() => router.push('/home/streaks')}
         />
       </View>
 
-      <View style={styles.feedSectionHeader}>
-        <Text variant="header" tone="secondary">{t('home.communityTitle')}</Text>
-        <Icon name="people" size={20} color="rgba(255,255,255,0.4)" />
-      </View>
+      <Divider style={styles.divider} />
     </View>
   );
 
@@ -202,18 +241,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   listHeader: {
+    // ScreenBackground already pads for the safe-area top inset — this is
+    // just the small gap between that and the greeting row, matching the
+    // wireframe's status-bar-to-content spacing.
+    paddingTop: spacing.md,
     marginBottom: spacing.lg,
+    gap: spacing.xl,
   },
-  profileRow: {
-    flexDirection: 'row',
+  greetingBlock: {
+    gap: spacing.xs,
+  },
+  dateLabel: {
+    textTransform: 'uppercase',
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
-    gap: spacing.sm,
+    justifyContent: 'center',
   },
-  username: {
-    fontWeight: '600',
+  notificationDot: {
+    position: 'absolute',
+    top: 10,
+    right: 11,
+    width: 8,
+    height: 8,
+    borderRadius: 8,
+    backgroundColor: colors.accent,
+    borderWidth: 2,
+    borderColor: colors.ink,
   },
   challengeArea: {
-    marginTop: spacing['2xl'] + spacing.lg,
+    marginHorizontal: -spacing.lg,
   },
   challengeLoadingArea: {
     height: 120,
@@ -225,15 +284,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing['2xl'],
   },
-  friendsArea: {
-    marginTop: spacing['2xl'],
-  },
-  feedSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing['2xl'],
-    marginBottom: spacing.sm,
+  friendsArea: {},
+  divider: {
+    marginTop: spacing.xs,
   },
   feedSkeletonArea: {
     paddingTop: spacing.xs,

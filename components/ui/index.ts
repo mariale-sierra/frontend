@@ -42,7 +42,8 @@ export * from './input';
 export * from './loader';
 
 // Text: Core typography component with variants (title, subheader, header, body, caption, label, activity),
-// tone options (default, muted, inverted), alignment control, and activity-type color support.
+// tone options (primary, secondary, tertiary, inverse — opacity tiers, not activity-type colors),
+// alignment control, and an `inverse` flag for text on light/lime surfaces.
 export * from './text';
 
 // ErrorNotification: Toast-style error notification that slides in from the top with an auto-dismiss timer,
@@ -53,8 +54,8 @@ export * from './errorNotification';
 // throughout your application. Add this to your root layout (_layout.tsx).
 export * from './ErrorNotificationProvider';
 
-// UserAvatar: Circular avatar showing the user's first initial on a deterministic activity-type color
-// derived from their username. Use getUserAvatarColor(username) to get the color standalone.
+// UserAvatar: Circular avatar showing the user's photo, or their first initial on a neutral
+// (paper @ 20%) placeholder fill when no photo is set.
 export * from './userAvatar';
 
 // PhotoUserOverlay: Absolute-positioned overlay for photo cards showing a UserAvatar and username

@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, radius } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import { Icon } from './icon';
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
@@ -46,9 +47,9 @@ const styles = StyleSheet.create({
 		justifyContent: 'center',
 	},
 	surface: {
-		borderRadius: radius.lg,
+		borderRadius: radius.medium,
 		borderWidth: 1,
-		borderColor: colors.border,
+		borderColor: withAlpha(colors.paper, 0.08),
 		backgroundColor: colors.surface,
 	},
 });

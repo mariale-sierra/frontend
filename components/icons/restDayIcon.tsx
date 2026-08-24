@@ -20,20 +20,20 @@ export function RestDayIcon({ size = 'md' }: RestDayIconProps) {
       <View style={{
         position: 'absolute',
         width: cs, height: cs, borderRadius: cs / 2,
-        backgroundColor: withAlpha(colors.restDayNeon, 0.09),
+        backgroundColor: withAlpha(colors.rest, 0.09),
       }} />
       <View style={{
         position: 'absolute',
         width: cs * 0.64, height: cs * 0.64, borderRadius: cs * 0.32,
-        backgroundColor: withAlpha(colors.restDayNeon, 0.16),
+        backgroundColor: withAlpha(colors.rest, 0.16),
       }} />
       <View style={{
         position: 'absolute',
         width: cs * 0.36, height: cs * 0.36, borderRadius: cs * 0.18,
-        backgroundColor: withAlpha(colors.restDayNeon, 0.25),
+        backgroundColor: withAlpha(colors.rest, 0.25),
       }} />
       <View style={{
-        shadowColor: colors.restDayNeon,
+        shadowColor: colors.rest,
         shadowOpacity: 0.9,
         shadowOffset: { width: 0, height: 0 },
         shadowRadius: 10,

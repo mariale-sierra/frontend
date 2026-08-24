@@ -20,6 +20,13 @@ export interface MyProfileContract {
   is_private: boolean;
   followers_count: number;
   following_count: number;
+  /**
+   * Overall daily-activity streak (not per-challenge — see
+   * BadgesService.currentStreakDays on the backend). No endpoint sends this
+   * yet, so it's optional; ProfileHeader hides the streak badge/stat
+   * entirely when absent rather than showing a fabricated 0.
+   */
+  streak_days?: number;
 }
 
 /** What the backend exposes about OTHER users (never includes email). */
@@ -34,6 +41,8 @@ export interface PublicProfileContract {
   following_count: number;
   /** Whether the authenticated caller actively follows this user. */
   is_following: boolean;
+  /** See MyProfileContract.streak_days — same "not sent yet" caveat. */
+  streak_days?: number;
 }
 
 export interface UpdateProfilePayload {

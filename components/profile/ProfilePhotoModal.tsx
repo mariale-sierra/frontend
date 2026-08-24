@@ -42,7 +42,7 @@ export function ProfilePhotoModal({ photo, onClose }: ProfilePhotoModalProps) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.ink,
   },
   header: {
     paddingHorizontal: spacing.lg,

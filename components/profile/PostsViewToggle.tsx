@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { colors, spacing } from '../../constants/theme';
+import { colors, radius, spacing, textOpacity } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import { Icon } from '../ui/icon';
 
 export type PostsView = 'posts' | 'photos';
@@ -9,55 +10,51 @@ interface PostsViewToggleProps {
   onViewChange: (view: PostsView) => void;
 }
 
+const SEGMENT_SIZE = { width: 64, height: 36 };
+const INACTIVE_ICON_COLOR = withAlpha(colors.paper, textOpacity.tertiary);
+
+// Segmented control, per design system → Components → Segmented control:
+// `surface` track, `big` radius, `xs` internal padding; active segment is a
+// filled `primary` pill (also `big` radius, fills its slot); inactive is
+// transparent with a `text-tertiary` icon.
 export function PostsViewToggle({ view, onViewChange }: PostsViewToggleProps) {
   return (
-    <View style={styles.wrapper}>
-      <View style={styles.tabs}>
-        <Pressable style={styles.tab} onPress={() => onViewChange('posts')}>
-          <Icon
-            name="eye"
-            size={22}
-            color={view === 'posts' ? colors.textPrimary : colors.textMuted}
-          />
-          {view === 'posts' && <View style={styles.indicator} />}
-        </Pressable>
-        <Pressable style={styles.tab} onPress={() => onViewChange('photos')}>
-          <Icon
-            name="camera"
-            size={22}
-            color={view === 'photos' ? colors.textPrimary : colors.textMuted}
-          />
-          {view === 'photos' && <View style={styles.indicator} />}
-        </Pressable>
-      </View>
-      <View style={styles.divider} />
+    <View style={styles.track}>
+      <Pressable
+        style={[styles.segment, view === 'posts' && styles.segmentActive]}
+        onPress={() => onViewChange('posts')}
+        accessibilityRole="button"
+      >
+        <Icon name="eye-outline" size={20} color={view === 'posts' ? colors.ink : INACTIVE_ICON_COLOR} />
+      </Pressable>
+      <Pressable
+        style={[styles.segment, view === 'photos' && styles.segmentActive]}
+        onPress={() => onViewChange('photos')}
+        accessibilityRole="button"
+      >
+        <Icon name="camera-outline" size={20} color={view === 'photos' ? colors.ink : INACTIVE_ICON_COLOR} />
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    marginTop: spacing.sm,
-  },
-  tabs: {
+  track: {
     flexDirection: 'row',
-    gap: spacing.xl,
-    justifyContent: 'center',
-    paddingBottom: spacing.sm,
-  },
-  tab: {
-    alignItems: 'center',
+    alignSelf: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    padding: spacing.xs,
+    borderRadius: radius.big,
+    backgroundColor: colors.surface,
   },
-  indicator: {
-    width: 24,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: colors.textPrimary,
+  segment: {
+    width: SEGMENT_SIZE.width,
+    height: SEGMENT_SIZE.height,
+    borderRadius: radius.big,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
+  segmentActive: {
+    backgroundColor: colors.primary,
   },
 });

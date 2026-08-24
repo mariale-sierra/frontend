@@ -58,7 +58,7 @@ export function ConfirmationPopup({
         disabled={!!(primaryButton.loading || secondaryButton?.loading)}
       >
         <Pressable>
-          <Card variant="basicGlass" radius="2xl" padding="xl" style={styles.card}>
+          <Card variant="basicGlass" radius="big" padding="xl" style={styles.card}>
             <Stack gap="lg">
               <Stack gap="sm" align="center" style={styles.textContent}>
                 <Text variant="title" align="center">

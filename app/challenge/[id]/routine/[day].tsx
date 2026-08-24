@@ -337,12 +337,14 @@ export default function RoutineDayDetail() {
               </Text>
             </View>
 
+            {/* Category is icon + name only now, never a color — see design
+                system → Explicitly Rejected Patterns. Was a per-category
+                accent wrap; flattened to a neutral `surface` fill. */}
             <View
               style={[
                 styles.primaryIconWrap,
                 {
-                  shadowColor: colors.activityType[routine.activityType],
-                  backgroundColor: colors.activityType[routine.activityType],
+                  backgroundColor: colors.surface,
                 },
               ]}
             >

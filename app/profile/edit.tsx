@@ -22,7 +22,8 @@ import {
 } from '../../services/user/user.service';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
-import { colors, spacing } from '../../constants/theme';
+import { colors, radius, spacing } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import type { MyProfileContract, UpdateProfilePayload } from '../../types/user';
 
 const DISPLAY_NAME_MAX = 150;
@@ -239,7 +240,7 @@ export default function EditProfile() {
               }}
               maxSelections={1}
               showValueInline
-              rightIcon={<Icon name="chevron-down" size={18} color={colors.textSecondary} />}
+              rightIcon={<Icon name="chevron-down-outline" size={18} color={withAlpha(colors.paper, 0.55)} />}
             />
           </View>
 
@@ -298,8 +299,11 @@ const styles = StyleSheet.create({
   },
   photoOverlay: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 48,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    // Matches UserAvatar's own corner radius (always the flat `big` token,
+    // not size/2 — see userAvatar.tsx) so the loading dim doesn't bleed past
+    // the avatar's actual squircle shape.
+    borderRadius: radius.big,
+    backgroundColor: withAlpha(colors.ink, 0.5),
     alignItems: 'center',
     justifyContent: 'center',
   },

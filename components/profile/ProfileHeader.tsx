@@ -1,5 +1,8 @@
-import { StyleSheet, View } from 'react-native';
-import { spacing } from '../../constants/theme';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { colors, radius, spacing } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
+import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 
@@ -8,25 +11,114 @@ interface ProfileHeaderProps {
   username: string;
   bio?: string | null;
   imageUrl?: string | null;
-  /** Optional action buttons rendered under the identity block (e.g. Edit profile). */
+  /**
+   * Overall daily-activity streak. No backend field sends this yet (see
+   * types/user.ts) — omit it and both the flame badge on the avatar and the
+   * "Day streak" stat column hide themselves rather than showing a
+   * fabricated 0.
+   */
+  streakDays?: number;
+  followersCount: number;
+  followingCount: number;
+  onPressFollowers?: () => void;
+  onPressFollowing?: () => void;
+  /** Extra content below the stats row — e.g. a FollowButton on another user's profile. */
   actions?: React.ReactNode;
 }
 
-export function ProfileHeader({ displayName, username, bio, imageUrl, actions }: ProfileHeaderProps) {
+const AVATAR_SIZE = 88;
+
+function StatColumn({
+  value,
+  label,
+  onPress,
+  highlight,
+}: {
+  value: number;
+  label: string;
+  onPress?: () => void;
+  highlight?: boolean;
+}) {
+  const content = (
+    <View style={styles.stat}>
+      <Text variant="body" size="xl" weight="bold" style={highlight ? styles.statHighlight : undefined}>
+        {value}
+      </Text>
+      <Text variant="caption" tone="secondary">
+        {label}
+      </Text>
+    </View>
+  );
+
+  if (!onPress) return content;
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button">
+      {content}
+    </Pressable>
+  );
+}
+
+function StatDivider() {
+  return <View style={styles.statDivider} />;
+}
+
+export function ProfileHeader({
+  displayName,
+  username,
+  bio,
+  imageUrl,
+  streakDays,
+  followersCount,
+  followingCount,
+  onPressFollowers,
+  onPressFollowing,
+  actions,
+}: ProfileHeaderProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.wrapper}>
-      <View style={styles.container}>
-        <UserAvatar username={username} imageUrl={imageUrl} size={90} />
-        <View style={styles.info}>
-          <Text variant="title">{displayName}</Text>
-          <Text variant="body" tone="secondary">@{username}</Text>
+      <View style={styles.identity}>
+        <View style={styles.avatarWrap}>
+          <UserAvatar username={username} imageUrl={imageUrl} size={AVATAR_SIZE} />
+          {streakDays != null && (
+            <View style={styles.streakBadge}>
+              <Icon name="flame-outline" size={12} color={colors.ink} />
+              <Text variant="caption" weight="bold" inverse>
+                {streakDays}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.nameBlock}>
+          <Text variant="title" align="center">
+            {displayName}
+          </Text>
+          <Text variant="label" weight="medium" style={styles.handle}>
+            @{username}
+          </Text>
         </View>
       </View>
+
       {bio ? (
-        <Text variant="body" tone="secondary">
+        <Text variant="body" tone="secondary" align="center">
           {bio}
         </Text>
       ) : null}
+
+      <View style={styles.statsRow}>
+        <StatColumn value={followersCount} label={t('profile.followersLabel')} onPress={onPressFollowers} />
+        <StatDivider />
+        <StatColumn value={followingCount} label={t('profile.followingLabel')} onPress={onPressFollowing} />
+        {streakDays != null && (
+          <>
+            <StatDivider />
+            <StatColumn value={streakDays} label={t('profile.streakLabel')} highlight />
+          </>
+        )}
+      </View>
+
       {actions}
     </View>
   );
@@ -34,15 +126,57 @@ export function ProfileHeader({ displayName, username, bio, imageUrl, actions }:
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: spacing.sm,
-  },
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing.md,
   },
-  info: {
-    flex: 1,
+  identity: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  avatarWrap: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+  },
+  streakBadge: {
+    position: 'absolute',
+    bottom: -spacing.sm,
+    left: '50%',
+    transform: [{ translateX: -22 }],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.big,
+    borderWidth: 3,
+    borderColor: colors.ink,
+    backgroundColor: colors.primary,
+  },
+  nameBlock: {
+    alignItems: 'center',
     gap: 2,
+  },
+  handle: {
+    color: colors.primary,
+    opacity: 1,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xl,
+    paddingTop: spacing.sm,
+  },
+  stat: {
+    alignItems: 'center',
+    gap: 2,
+    minWidth: 56,
+  },
+  statHighlight: {
+    color: colors.primary,
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: withAlpha(colors.paper, 0.08),
   },
 });

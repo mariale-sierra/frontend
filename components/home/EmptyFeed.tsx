@@ -2,14 +2,15 @@ import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
-import { spacing } from '../../constants/theme';
+import { colors, spacing } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 
 export function EmptyFeed() {
   const { t } = useTranslation();
 
   return (
     <View style={styles.container}>
-      <Icon name="images-outline" size={34} color="rgba(255,255,255,0.3)" />
+      <Icon name="images-outline" size={34} color={withAlpha(colors.paper, 0.3)} />
       <Text variant="body" tone="secondary" align="center">
         {t('home.emptyFeedMessage')}
       </Text>

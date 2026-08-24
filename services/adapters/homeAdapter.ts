@@ -1,5 +1,5 @@
 import { asString, asNumber, asBoolean, normalizeKey } from './adapterUtils';
-import type { ActivityType } from '../../constants/theme';
+import type { ActivityType } from '../../types/activity';
 import type { ChallengeContract, ChallengeProgressContract } from '../../types/challenge';
 
 export interface HomeActiveChallengeViewModel {

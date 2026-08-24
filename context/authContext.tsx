@@ -36,11 +36,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const restoreSession = useCallback(async () => {
     try {
-      const [storedToken, storedUserId, storedUsername] = await Promise.all([
-        getStoredToken(),
-        getStoredUserId(),
-        getStoredUsername(),
-      ]);
+      let storedToken: string | null = null;
+      let storedUserId: string | null = null;
+      let storedUsername: string | null = null;
+      try {
+        [storedToken, storedUserId, storedUsername] = await Promise.all([
+          getStoredToken(),
+          getStoredUserId(),
+          getStoredUsername(),
+        ]);
+      } catch {
+        // Reading stored session data itself failed (e.g. a storage backend
+        // that isn't available on this platform) — treat exactly like "no
+        // session found" rather than letting this become an unhandled
+        // rejection that breaks the rest of app startup.
+      }
 
       if (!storedToken || !storedUserId || !storedUsername) {
         setToken(null);

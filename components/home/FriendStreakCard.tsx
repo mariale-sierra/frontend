@@ -1,37 +1,32 @@
 import { StyleSheet, View } from 'react-native';
-import { useTranslation } from 'react-i18next';
 import { Text } from '../ui/text';
-import { UserAvatar, getUserAvatarColor } from '../ui/userAvatar';
+import { UserAvatar } from '../ui/userAvatar';
 import { colors, radius, spacing } from '../../constants/theme';
-
-/**
- * UI-only view model: there is no backend endpoint for friends' streaks yet
- * (only the current user's own per-challenge streak exists today). Shaped so
- * a real service/adapter can be dropped in later without changing this card.
- */
-export interface FriendStreakViewModel {
-  userId: string;
-  username: string;
-  avatarUrl?: string;
-  streakDays: number;
-}
+import type { FriendStreakViewModel } from '../../services/adapters/followAdapter';
 
 interface FriendStreakCardProps {
   friend: FriendStreakViewModel;
 }
 
+const AVATAR_SIZE = 58;
+
 export function FriendStreakCard({ friend }: FriendStreakCardProps) {
-  const { t } = useTranslation();
-  const accentColor = getUserAvatarColor(friend.username);
+  // Confirmed rule (see havit-design-system-SKILL.md Open Items): lime badge
+  // when this friend logged a workout today, dark `surface` otherwise.
+  const badgeColor = friend.loggedToday ? colors.primary : colors.surface;
 
   return (
-    <View style={[styles.card, { borderColor: accentColor, shadowColor: accentColor }]}>
-      <UserAvatar username={friend.username} imageUrl={friend.avatarUrl} size={36} />
-      <Text variant="body" numberOfLines={1} style={styles.name}>
+    <View style={styles.card}>
+      <View style={styles.avatarWrap}>
+        <UserAvatar username={friend.username} imageUrl={friend.avatarUrl} size={AVATAR_SIZE} />
+        <View style={[styles.badge, { backgroundColor: badgeColor }]}>
+          <Text variant="caption" weight="bold" inverse={friend.loggedToday}>
+            {friend.streakDays}
+          </Text>
+        </View>
+      </View>
+      <Text variant="caption" tone="secondary" numberOfLines={1} style={styles.name}>
         {friend.username}
-      </Text>
-      <Text variant="label" style={[styles.days, { color: accentColor }]}>
-        {t('home.streakDays', { count: friend.streakDays })}
       </Text>
     </View>
   );
@@ -39,24 +34,29 @@ export function FriendStreakCard({ friend }: FriendStreakCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
+    width: AVATAR_SIZE + spacing.xs,
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    backgroundColor: colors.background,
-    shadowOpacity: 0.35,
-    shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 8,
-    elevation: 4,
-    minWidth: 180,
+  },
+  avatarWrap: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+  },
+  badge: {
+    position: 'absolute',
+    bottom: -spacing.xs,
+    left: '50%',
+    transform: [{ translateX: -14 }],
+    minWidth: 28,
+    alignItems: 'center',
+    paddingHorizontal: spacing.xs + 2,
+    paddingVertical: 2,
+    borderRadius: radius.small,
+    borderWidth: 2,
+    borderColor: colors.ink,
   },
   name: {
-    flex: 1,
-  },
-  days: {
-    textTransform: 'none',
+    maxWidth: AVATAR_SIZE + spacing.xs,
+    textAlign: 'center',
   },
 });

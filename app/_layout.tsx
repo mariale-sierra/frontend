@@ -1,5 +1,8 @@
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import { useFonts } from 'expo-font';
+import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
+import { BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
 import { AuthProvider } from '../context/authContext';
 import { ThemeProvider } from '../context/themeContext';
 import { useAuth } from '../hooks/useAuth';
@@ -54,6 +57,21 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  // NOTE: intentionally NOT gating first paint on fontsLoaded/fontError
+  // anymore — blocking the root route's initial render (returning null
+  // before the Stack ever mounts) is suspected of breaking touch handling
+  // on iOS entirely (nav bar became unresponsive app-wide after this gate
+  // was added; still investigating, this is the first thing being ruled
+  // out). Fonts still load here, they just pop in once ready instead of
+  // blocking first paint — same tradeoff Bebas Neue/DM Sans already had
+  // before this gate existed.
+  useFonts({
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_700Bold,
+    BebasNeue_400Regular,
+  });
+
   return (
     <ThemeProvider>
       <AuthProvider>

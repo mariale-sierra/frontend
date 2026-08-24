@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { colors, gradients, radius } from '../../constants/theme';
+import { colors, radius } from '../../constants/theme';
 
 interface MetricsPanelProps {
   children: ReactNode;

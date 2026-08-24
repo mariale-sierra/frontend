@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { colors, spacing } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import { Text } from '../ui/text';
 import { Button } from '../ui/button';
 import { UserAvatar } from '../ui/userAvatar';
@@ -11,12 +12,14 @@ import { formatRelativeTime } from '../../utils/time';
 import type { ChallengeInviteContract, InviteStatus } from '../../types/invite';
 import type { InviteAction } from '../../hooks/useInvites';
 
+const MUTED = withAlpha(colors.paper, 0.3);
+
 const STATUS_COLOR: Record<InviteStatus, string> = {
   pending: colors.primary,
   accepted: colors.success,
   declined: colors.error,
-  cancelled: colors.textMuted,
-  expired: colors.textMuted,
+  cancelled: MUTED,
+  expired: MUTED,
 };
 
 interface InviteCardProps {
@@ -53,7 +56,7 @@ export function InviteCard({ invite, direction, busy, processing, onAction }: In
       <UserAvatar username={otherUser?.username ?? '?'} size={44} />
 
       <View style={styles.textCol}>
-        <Text variant="body" numberOfLines={1} style={styles.name}>
+        <Text variant="body" weight="bold" numberOfLines={1}>
           @{otherUser?.username ?? '?'}
         </Text>
         <Text variant="caption" tone="secondary" numberOfLines={1}>
@@ -91,7 +94,11 @@ export function InviteCard({ invite, direction, busy, processing, onAction }: In
           hitSlop={8}
           accessibilityRole="button"
         >
-          <Text variant="caption" style={[styles.cancelLabel, busy && styles.cancelLabelDisabled]}>
+          <Text
+            variant="caption"
+            weight="medium"
+            style={[styles.cancelLabel, busy && styles.cancelLabelDisabled]}
+          >
             {t('invites.actions.cancel')}
           </Text>
         </Pressable>
@@ -132,9 +139,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
-  name: {
-    fontWeight: '700',
-  },
   actions: {
     flexShrink: 0,
   },
@@ -144,7 +148,6 @@ const styles = StyleSheet.create({
   },
   cancelLabel: {
     color: colors.error,
-    fontWeight: '600',
   },
   cancelLabelDisabled: {
     opacity: 0.5,
