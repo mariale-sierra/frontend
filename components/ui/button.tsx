@@ -3,6 +3,7 @@ import {
   StyleSheet,
   PressableProps,
   ActivityIndicator,
+  View,
 } from 'react-native';
 import { colors, radius, spacing } from '../../constants/theme';
 import { Text } from './text';
@@ -27,6 +28,7 @@ interface ButtonProps extends Omit<PressableProps, 'children'> {
   disabled?: boolean;
   /** @deprecated the `activity` variant no longer color-codes by category — this prop has no effect. Kept for call-site compatibility. */
   activityType?: string;
+  leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   children: string;
 }
@@ -37,6 +39,7 @@ export function Button({
   loading = false,
   disabled = false,
   activityType: _activityType,
+  leftIcon,
   rightIcon,
   children,
   style,
@@ -73,6 +76,7 @@ export function Button({
         <ActivityIndicator color={loaderColor} />
       ) : (
         <>
+          {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
           <Text
             variant={size === 'sm' ? 'caption' : 'label'}
             style={[
@@ -142,6 +146,10 @@ const styles = StyleSheet.create({
   },
 
   text: {
+    marginRight: spacing.xs,
+  },
+
+  leftIcon: {
     marginRight: spacing.xs,
   },
 });

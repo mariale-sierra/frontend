@@ -1,119 +1,160 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Row } from '../../layout/row';
-import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
 import { BackButton } from '../../ui/backButton';
-import { colors, radius, spacing, typography } from '../../../constants/theme';
-import { ParticipantAvatarStack } from './ParticipantAvatarStack';
-import { ChallengePagerDots } from './ChallengePagerDots';
-import { ChallengeProgressCard } from './ChallengeProgressCard';
-
-interface Participant {
-  id: string;
-  name: string;
-}
+import { IconButton } from '../../ui/iconButton';
+import { colors, spacing } from '../../../constants/theme';
+import { STATE_COLOR } from '../../../services/adapters/challengeState';
+import type { ChallengeCardState } from '../../../services/adapters/challengeState';
+import { ChallengeProgressRing } from './ChallengeProgressRing';
+import { TodayRoutineBanner } from './TodayRoutineBanner';
 
 interface ChallengeProgressHeaderProps {
-  progress: number;
-  totalDays: number;
+  state: ChallengeCardState;
   title: string;
-  timeLeft: string;
-  participantsLabel: string;
-  participants: Participant[];
-  activePage: number;
+  currentDay: number;
+  totalDays: number;
+  ticks: string[];
+  todayRoutineName: string | null;
+  isTodayRestDay: boolean;
+  onPressRoutine: () => void;
+  onPressMembers: () => void;
   onPressInfo: () => void;
 }
 
+// challenges.trainDay/restDay/finished/left — the exact same eyebrow copy
+// Challenges-Mine's status pill already uses (see ChallengeStatusCard),
+// reused rather than re-worded here. `completed` is the one exception: this
+// screen's own copy says "Day completed" (not just "Completed") since,
+// unlike a card glanced at in a list, this is a full "how am I doing today"
+// screen where the bare word read as ambiguous with "challenge completed."
+const STATE_LABEL_KEY: Record<ChallengeCardState, string> = {
+  active: 'challenges.trainDay',
+  rest: 'challenges.restDay',
+  completed: 'challengeProgress.dayCompletedLabel',
+  won: 'challenges.finished',
+  left: 'challenges.left',
+};
+
 export function ChallengeProgressHeader({
-  progress,
-  totalDays,
+  state,
   title,
-  timeLeft,
-  participantsLabel,
-  participants,
-  activePage,
+  currentDay,
+  totalDays,
+  ticks,
+  todayRoutineName,
+  isTodayRestDay,
+  onPressRoutine,
+  onPressMembers,
   onPressInfo,
 }: ChallengeProgressHeaderProps) {
+  const { t } = useTranslation();
+  const stateColor = STATE_COLOR[state];
+
   return (
-    <View style={styles.header}>
-      <Row justify="space-between" align="center">
-        <Row justify="flex-start" align="center" gap="sm" style={styles.participantRow}>
-          <BackButton size={36} />
-          <ParticipantAvatarStack participants={participants} />
-          <Text
-            variant="body"
-            tone="secondary"
-            numberOfLines={1}
-            style={styles.participantLabel}
-          >
-            {participantsLabel}
-          </Text>
-        </Row>
-
-        <Row justify="flex-end" align="center" gap="sm">
-          <Pressable onPress={onPressInfo} style={({ pressed }) => [styles.infoButton, pressed && styles.pressed]}>
-            <Text variant="label" style={styles.infoText}>INFO</Text>
-          </Pressable>
-
-          <Pressable style={({ pressed }) => [styles.gearButton, pressed && styles.pressed]}>
-            <Icon name="settings-outline" size={21} color={colors.textPrimary} />
-          </Pressable>
+    <View>
+      <Row justify="space-between" align="center" style={styles.topRow}>
+        <BackButton style={styles.backButton} />
+        <Row gap="xs" align="center">
+          <IconButton
+            name="people-outline"
+            onPress={onPressMembers}
+            accessibilityLabel={t('challengeProgress.membersA11y')}
+          />
+          <IconButton
+            name="information-circle-outline"
+            onPress={onPressInfo}
+            accessibilityLabel={t('challengeProgress.infoA11y')}
+          />
         </Row>
       </Row>
 
-      <ChallengeProgressCard
-        progress={progress}
-        totalDays={totalDays}
-        title={title}
-        timeLeft={timeLeft}
-      />
+      <View style={styles.centerBlock}>
+        <View style={styles.titleGroup}>
+          <Text
+            variant="caption"
+            weight="bold"
+            align="center"
+            style={[styles.eyebrow, { color: stateColor }]}
+          >
+            {t(STATE_LABEL_KEY[state])}
+          </Text>
+          <Text variant="title" align="center">{title}</Text>
+        </View>
 
-      <ChallengePagerDots activeIndex={activePage} />
+        <ChallengeProgressRing ticks={ticks}>
+          {/* Wireframe's center number is 52px — above the `3xl` (30px) cap, which
+              is a hard rule (see skill → Explicitly Rejected Patterns: "no typography
+              size above 3xl... redesign the layout instead"), so this stays at
+              `title`'s default 3xl rather than matching the wireframe literally,
+              same tradeoff already made for Home/Challenges-Mine's day counters. */}
+          <Text variant="title">{currentDay}</Text>
+          <Text variant="caption" weight="bold" tone="secondary" style={styles.ringSubLabel}>
+            {t('challengeProgress.consistency.ofDays', { count: totalDays })}
+          </Text>
+        </ChallengeProgressRing>
+
+        <Row gap="base" justify="center">
+          <Row gap="xs" align="center">
+            <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+            <Text variant="caption" tone="secondary">{t('challengeProgress.consistency.legendPhotoDays')}</Text>
+          </Row>
+          <Row gap="xs" align="center">
+            <View style={[styles.legendDot, { backgroundColor: colors.rest }]} />
+            <Text variant="caption" tone="secondary">{t('challengeProgress.consistency.legendRestDays')}</Text>
+          </Row>
+        </Row>
+      </View>
+
+      <View style={styles.bannerWrap}>
+        <TodayRoutineBanner
+          routineName={todayRoutineName}
+          isRestDay={isTodayRestDay}
+          onPress={onPressRoutine}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: spacing.lg,
+  topRow: {
+    paddingHorizontal: spacing.base,
     paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-    gap: spacing['2xl'],
+    paddingBottom: spacing.base,
   },
-  participantRow: {
-    flex: 1,
-    minWidth: 0,
+  backButton: {
+    marginLeft: -spacing.sm,
   },
-  participantLabel: {
-    flexShrink: 1,
-    color: 'rgba(255,255,255,0.74)',
-  },
-  infoButton: {
-    minWidth: 58,
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-    borderRadius: 999,
-    backgroundColor: colors.textPrimary,
+  centerBlock: {
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.base,
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.lg,
   },
-  infoText: {
-    ...typography.label,
-    fontSize: 12,
-    lineHeight: 14,
-    color: colors.textInverse,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-  },
-  gearButton: {
-    width: 44,
-    height: 44,
+  titleGroup: {
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    gap: spacing.xs,
   },
-  pressed: {
-    opacity: 0.82,
+  eyebrow: {
+    textTransform: 'uppercase',
+    opacity: 1,
+  },
+  ringSubLabel: {
+    textTransform: 'uppercase',
+  },
+  legendDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+  },
+  bannerWrap: {
+    paddingHorizontal: spacing.base,
+    // Wireframe's own gap here is the same `lg` (24) as centerBlock's bottom
+    // padding above — bumped an extra `sm` (8) per explicit request for
+    // slightly more breathing room before the routine banner specifically
+    // (24 + 8 = 32 = `xl`, still a real token, not an arbitrary value).
+    marginTop: spacing.sm,
   },
 });

@@ -1,141 +1,138 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { ActivityIcon } from '../../icons/activityIcon';
-import { Row } from '../../layout/row';
-import { Stack } from '../../layout/stack';
+import { useTranslation } from 'react-i18next';
+import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
-import { ChallengeBadge } from './ChallengeBadge';
+import { Row } from '../../layout/row';
 import { colors, radius, spacing } from '../../../constants/theme';
-import type { ActivityType } from '../../../constants/theme';
+import { formatCount } from '../../../utils/format';
 import type { ExploreChallengeViewModel } from './challengeListSections';
 
 interface ExploreChallengeCardProps {
   challenge: ExploreChallengeViewModel;
   onPress?: () => void;
-  daysLabel?: string;
 }
 
-const CATEGORY_NAMES: Record<ActivityType, string> = {
-  strength: 'Strength',
-  cardioIntense: 'Cardio',
-  flexibility: 'Flexibility',
-  cardioLow: 'Light Cardio',
-  mindBody: 'Mind & Body',
-  functional: 'Functional',
-};
-
-export function ExploreChallengeCard({ challenge, onPress, daysLabel = 'days' }: ExploreChallengeCardProps) {
-  const activityTypes = [
-    challenge.activityType,
-    challenge.secondaryActivityType,
-    challenge.tertiaryActivityType,
-  ].filter((t): t is ActivityType => Boolean(t));
-
-  const categoryLabel = activityTypes.map((t) => CATEGORY_NAMES[t]).join(' · ');
+export function ExploreChallengeCard({ challenge, onPress }: ExploreChallengeCardProps) {
+  const { t } = useTranslation();
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.pressable, pressed && styles.pressed]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
       <View style={styles.card}>
-        <LinearGradient
-          colors={['#1a1a1c', '#050505']}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={styles.gradient}
-        >
-          <View style={styles.content}>
-            <Stack align="center" justify="center" gap="xxs" style={styles.daysStack}>
-              <Text variant="title" tone="primary" style={styles.daysNumber}>
-                {challenge.durationDays}
-              </Text>
-              <Text variant="label" tone="secondary">
-                {daysLabel}
-              </Text>
-            </Stack>
-
-            <View style={styles.divider} />
-
-            <Stack gap="xs" justify="center" style={styles.textStack}>
-              <Row align="center" justify="flex-start" gap="xs" style={styles.categoryRow}>
-                {activityTypes.map((type) => (
-                  <ActivityIcon key={type} type={type} size="md" variant="dot" />
-                ))}
-                <Text variant="label" numberOfLines={1} style={styles.categoryLabel}>
-                  {categoryLabel}
-                </Text>
-              </Row>
-
-              <Text variant="header" tone="primary" numberOfLines={1}>
-                {challenge.title}
-              </Text>
-              <Text variant="body" tone="secondary" numberOfLines={1} style={styles.subtitle}>
-                {challenge.subtitle}
-              </Text>
-
-              <Row justify="flex-start" align="center" style={styles.badgesRow}>
-                <ChallengeBadge label={challenge.locationLabel} />
-              </Row>
-            </Stack>
+        <View style={styles.top}>
+          <View style={styles.durationBadge}>
+            <Icon name="calendar-outline" size={14} color={colors.ink} />
+            <Text variant="caption" weight="bold" style={styles.durationText}>
+              {t('challenges.durationDaysLabel', { count: challenge.durationDays })}
+            </Text>
           </View>
-        </LinearGradient>
+
+          <View style={styles.titleBlock}>
+            <Text variant="body" size="xl" weight="bold" numberOfLines={1}>
+              {challenge.title}
+            </Text>
+            <Text variant="caption" tone="secondary">
+              {challenge.restDaysCount > 0
+                ? t('challenges.cycleSummary', {
+                    cycle: challenge.cycleLengthDays,
+                    count: challenge.restDaysCount,
+                  })
+                : t('challenges.noRestDays')}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.bottom}>
+          <Row justify="flex-start" style={styles.tagsRow}>
+            <Row gap="xs" style={styles.tag}>
+              <Icon name="location-outline" size={14} color={colors.paper} />
+              <Text variant="caption" tone="secondary" numberOfLines={1}>
+                {challenge.locationsLabel}
+              </Text>
+            </Row>
+            <Row gap="xs" style={styles.tag}>
+              <Icon name="flash-outline" size={14} color={colors.paper} />
+              <Text variant="caption" tone="secondary" numberOfLines={1}>
+                {challenge.categoriesLabel}
+              </Text>
+            </Row>
+          </Row>
+
+          <Row justify="space-between" align="center">
+            <Row gap="sm" align="center">
+              <Icon name="people-outline" size={18} color={colors.accent} />
+              <Text variant="label" weight="bold" style={styles.membersText}>
+                {t('challenges.membersCount', { count: formatCount(challenge.membersCount) })}
+              </Text>
+            </Row>
+
+            <Row gap="xs" align="center">
+              <Text variant="label" weight="bold" style={styles.viewText}>
+                {t('challenges.view')}
+              </Text>
+              <Icon name="chevron-forward-outline" size={16} color={colors.primary} />
+            </Row>
+          </Row>
+        </View>
       </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  pressable: {
-    width: '100%',
+  pressed: {
+    opacity: 0.9,
   },
   card: {
     width: '100%',
-    minHeight: 200,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
+    height: 176,
+    borderRadius: radius.big,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    justifyContent: 'space-between',
+    gap: spacing.base,
   },
-  gradient: {
-    flex: 1,
+  top: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    paddingTop: spacing.xs,
   },
-  content: {
-    flex: 1,
+  durationBadge: {
+    alignSelf: 'flex-start',
     flexDirection: 'row',
-    alignItems: 'stretch',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.small,
+    backgroundColor: colors.paper,
   },
-  daysStack: {
-    width: 92,
-    flexShrink: 0,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
+  durationText: {
+    color: colors.ink,
+    textTransform: 'uppercase',
+    opacity: 1,
   },
-  daysNumber: {
-    lineHeight: 32,
+  titleBlock: {
+    gap: 2,
   },
-  divider: {
-    width: 1,
-    backgroundColor: colors.border,
-    opacity: 0.5,
+  bottom: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    paddingBottom: spacing.xs,
   },
-  textStack: {
-    flex: 1,
-    minWidth: 0,
-    padding: spacing.lg,
-    paddingLeft: spacing.md,
-  },
-  categoryRow: {
-    minWidth: 0,
-  },
-  categoryLabel: {
-    flex: 1,
-    minWidth: 0,
-  },
-  subtitle: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  badgesRow: {
-    marginTop: spacing.sm,
+  tagsRow: {
     flexWrap: 'wrap',
+    rowGap: spacing.xs,
+    columnGap: spacing.base,
   },
-  pressed: {
-    opacity: 0.86,
+  tag: {
+    flexShrink: 1,
+  },
+  membersText: {
+    color: colors.accent,
+    opacity: 1,
+  },
+  viewText: {
+    color: colors.primary,
+    opacity: 1,
   },
 });

@@ -5,6 +5,7 @@ import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
+import { STATE_COLOR } from '../../services/adapters/challengeState';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
 
 const ITEM_WIDTH = Dimensions.get('window').width - spacing.lg * 2;
@@ -37,40 +38,31 @@ function StatusPill({
   return (
     <View style={styles.pill}>
       <Icon name={icon} size={13} color={accentColor} />
-      <Text variant="label" weight="bold" inverse style={[styles.pillText, { color: accentColor }]}>{label}</Text>
+      <Text variant="label" weight="bold" style={[styles.pillText, { color: accentColor }]}>{label}</Text>
     </View>
   );
 }
 
-// Hero card background signals challenge state — confirmed exception to the
-// Status Card rule being scoped to Challenges-Mine, see design system →
-// Status Card exception. Rest day = `rest`, completed = `success`, otherwise
-// the default `primary`. The status pill's accent reuses this same color.
-function cardBackgroundColor(challenge: HomeActiveChallengeViewModel): string {
-  if (challenge.isRestDay) return colors.rest;
-  if (challenge.isCompleted) return colors.success;
-  return colors.primary;
-}
-
 function ChallengeItem({ challenge, hoursLeft }: ItemProps) {
   const { t } = useTranslation();
-  const showTimeBadge =
-    !challenge.isCompleted && !challenge.isTodayCompleted && !challenge.isRestDay && hoursLeft > 0;
+  // Card background signals state — same shared STATE_COLOR (challengeState.ts)
+  // used by Challenges-Mine's status card and the progress-ring eyebrow.
+  // `completed` means TODAY has a logged photo, not "the whole challenge is
+  // done" (a genuinely finished/left challenge never reaches this component
+  // at all — getHomeChallengesSorted excludes those, see homeAdapter.ts).
+  const accentColor = STATE_COLOR[challenge.state];
+  const showTimeBadge = challenge.state === 'active' && hoursLeft > 0;
   const progress = challenge.totalDays > 0 ? Math.min(challenge.currentDay / challenge.totalDays, 1) : 0;
-
-  const accentColor = cardBackgroundColor(challenge);
 
   return (
     <View style={[styles.card, { backgroundColor: accentColor }]}>
       <View style={styles.topRow}>
         <Text variant="header" inverse tone="secondary">{t('home.activeChallenge')}</Text>
 
-        {challenge.isCompleted ? (
-          <StatusPill icon="checkmark-circle-outline" label={t('home.completed')} accentColor={accentColor} />
-        ) : challenge.isRestDay ? (
+        {challenge.state === 'completed' ? (
+          <StatusPill icon="checkmark-outline" label={t('home.completed')} accentColor={accentColor} />
+        ) : challenge.state === 'rest' ? (
           <StatusPill icon="moon-outline" label={t('home.restDay')} accentColor={accentColor} />
-        ) : challenge.isTodayCompleted ? (
-          <StatusPill icon="checkmark-circle-outline" label={t('home.todayLogged')} accentColor={colors.success} />
         ) : showTimeBadge ? (
           <StatusPill icon="flame-outline" label={t('home.hoursLeft', { hours: hoursLeft })} accentColor={accentColor} />
         ) : null}
@@ -161,8 +153,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.ink,
   },
   pillText: {
-    color: colors.primary,
     textTransform: 'uppercase',
+    // Text's tone-opacity (85% by default) applies even to a custom `color`
+    // override — cancel it back to fully opaque, same fix as
+    // ChallengeStatusCard's pill text.
+    opacity: 1,
   },
   progressArea: {
     gap: spacing.sm,

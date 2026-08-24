@@ -8,6 +8,7 @@ export default function ChallengeLayout() {
       <Stack.Screen name="info" options={{ headerShown: false }} />
       <Stack.Screen name="invite" options={{ headerShown: false }} />
       <Stack.Screen name="routine/[day]" options={{ headerShown: false }} />
+      <Stack.Screen name="members" options={{ headerShown: false }} />
     </Stack>
   );
 }

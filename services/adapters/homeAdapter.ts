@@ -1,48 +1,24 @@
-import { asString, asNumber, asBoolean, normalizeKey } from './adapterUtils';
-import type { ActivityType } from '../../types/activity';
-import type { ChallengeContract, ChallengeProgressContract } from '../../types/challenge';
+import { asString, asNumber, asBoolean } from './adapterUtils';
+import { pickChallengeStatus, deriveChallengeCardState } from './challengeState';
+import type { ChallengeCardState } from './challengeState';
+import type { ChallengeContract, ChallengePhoto, ChallengeProgressContract } from '../../types/challenge';
 
+/**
+ * Home's hero card view model. `state` uses the SAME state machine as
+ * Challenges-Mine's status card (challengeState.ts) — `completed` means
+ * TODAY has a logged photo, not "the whole challenge is done." Only
+ * 'active' | 'rest' | 'completed' are reachable here: getHomeChallengesSorted
+ * excludes 'won'/'left' challenges entirely — a challenge that's finished or
+ * abandoned isn't something to act on today, so it doesn't belong on Home;
+ * it still shows up on the Challenges tab.
+ */
 export interface HomeActiveChallengeViewModel {
   challengeId: string;
   title: string;
   currentDay: number;
   totalDays: number;
-  isTodayCompleted: boolean;
-  isCompleted: boolean;
-  activityType: ActivityType;
-  isRestDay: boolean;
+  state: Extract<ChallengeCardState, 'active' | 'rest' | 'completed'>;
   streakCount: number;
-}
-
-
-function normalizeToActivityType(value: string): ActivityType | null {
-  const map: Record<string, ActivityType> = {
-    strength: 'strength',
-    cardiointense: 'cardioIntense',
-    cardiolow: 'cardioLow',
-    flexibility: 'flexibility',
-    mindbody: 'mindBody',
-    functional: 'functional',
-  };
-  return map[normalizeKey(value)] ?? null;
-}
-
-function pickActivityType(challenge: ChallengeContract): ActivityType {
-  const fromActivities = Array.isArray(challenge.activities)
-    ? challenge.activities
-        .map((item) => normalizeToActivityType(asString(item?.type)))
-        .find((type): type is ActivityType => Boolean(type))
-    : null;
-
-  if (fromActivities) return fromActivities;
-
-  const fromCategories = Array.isArray(challenge.categories)
-    ? challenge.categories
-        .map((cat) => normalizeToActivityType(asString(cat)))
-        .find((type): type is ActivityType => Boolean(type))
-    : null;
-
-  return fromCategories ?? 'strength';
 }
 
 function pickCurrentDay(challenge: ChallengeContract): number {
@@ -61,73 +37,12 @@ function pickCurrentDay(challenge: ChallengeContract): number {
   return 1;
 }
 
-function pickIsTodayCompleted(challenge: ChallengeContract): boolean {
-  const candidates: Array<unknown> = [
-    challenge.today_completed,
-    challenge.is_today_completed,
-    challenge.current_day_completed,
-    challenge.day_completed,
-  ];
-
-  for (const candidate of candidates) {
-    const value = asBoolean(candidate);
-    if (value != null) return value;
-  }
-
+function pickIsRestDay(challenge: ChallengeContract): boolean {
+  const direct = asBoolean(
+    challenge.today_is_rest_day ?? challenge.is_rest_day_today ?? challenge.is_rest_day,
+  );
+  if (direct != null) return direct;
   return false;
-}
-
-function pickIsCompleted(challenge: ChallengeContract, currentDay: number, totalDays: number): boolean {
-  const candidates: Array<unknown> = [challenge.is_completed, challenge.completed];
-
-  for (const candidate of candidates) {
-    const value = asBoolean(candidate);
-    if (value != null) return value;
-  }
-
-  const status = asString(challenge.status || challenge.challenge_status).toLowerCase();
-  if (status.includes('completed') || status.includes('finished')) return true;
-
-  return currentDay >= totalDays;
-}
-
-function isJoinedOrCompleted(challenge: ChallengeContract): boolean {
-  const completedCandidates: Array<unknown> = [challenge.is_completed, challenge.completed];
-  for (const c of completedCandidates) {
-    if (asBoolean(c) === true) return true;
-  }
-
-  const activeCandidates: Array<unknown> = [
-    challenge.is_active,
-    challenge.joined,
-    challenge.is_joined,
-    challenge.in_progress,
-  ];
-  for (const c of activeCandidates) {
-    const v = asBoolean(c);
-    if (v != null) return v;
-  }
-
-  const status = asString(challenge.status || challenge.challenge_status).toLowerCase();
-  if (
-    status.includes('active') ||
-    status.includes('progress') ||
-    status.includes('ongoing') ||
-    status.includes('completed') ||
-    status.includes('finished')
-  ) return true;
-  if (
-    status.includes('archived') ||
-    status.includes('closed') ||
-    status.includes('left') ||
-    status.includes('quit') ||
-    status.includes('abandoned') ||
-    status.includes('dropped')
-  ) return false;
-
-  const currentDay = pickCurrentDay(challenge);
-  const duration = asNumber(challenge.duration_days) ?? 0;
-  return duration > 0 && currentDay > 0;
 }
 
 function pickStreakCount(challenge: ChallengeContract): number {
@@ -145,29 +60,83 @@ function pickStreakCount(challenge: ChallengeContract): number {
   return 0;
 }
 
-function pickIsRestDay(challenge: ChallengeContract): boolean {
-  const direct = asBoolean(
-    challenge.today_is_rest_day ?? challenge.is_rest_day_today ?? challenge.is_rest_day,
-  );
-  if (direct != null) return direct;
-  return false;
+function isEnrolled(challenge: ChallengeContract): boolean {
+  const activeCandidates: Array<unknown> = [
+    challenge.is_active,
+    challenge.joined,
+    challenge.is_joined,
+    challenge.in_progress,
+  ];
+  for (const c of activeCandidates) {
+    const v = asBoolean(c);
+    if (v != null) return v;
+  }
+
+  const status = asString(challenge.status || challenge.challenge_status).toLowerCase();
+  if (status.includes('active') || status.includes('progress') || status.includes('ongoing')) return true;
+  // 'completed'/'left' challenges ARE enrolled (they just get filtered out by
+  // state below, not here) — only genuinely unrelated statuses return false.
+  if (status.includes('completed') || status.includes('finished') || status.includes('left')
+    || status.includes('quit') || status.includes('abandoned') || status.includes('dropped')) return true;
+  if (status.includes('archived') || status.includes('closed')) return false;
+
+  const currentDay = pickCurrentDay(challenge);
+  const duration = asNumber(challenge.duration_days) ?? 0;
+  return duration > 0 && currentDay > 0;
 }
 
-export function toHomeActiveChallengeViewModel(challenge: ChallengeContract): HomeActiveChallengeViewModel {
-  const currentDay = pickCurrentDay(challenge);
-  const totalDays = asNumber(challenge.duration_days) ?? 1;
-
+function toHomeActiveChallengeViewModel(
+  challenge: ChallengeContract,
+  state: HomeActiveChallengeViewModel['state'],
+): HomeActiveChallengeViewModel {
   return {
     challengeId: String(challenge.id),
     title: asString(challenge.name) || 'Challenge',
-    currentDay,
-    totalDays,
-    isTodayCompleted: pickIsTodayCompleted(challenge),
-    isCompleted: pickIsCompleted(challenge, currentDay, totalDays),
-    activityType: pickActivityType(challenge),
-    isRestDay: pickIsRestDay(challenge),
+    currentDay: pickCurrentDay(challenge),
+    totalDays: asNumber(challenge.duration_days) ?? 1,
+    state,
     streakCount: pickStreakCount(challenge),
   };
+}
+
+/**
+ * The user's own latest-per-challenge photos (see challengeState.ts's
+ * groupLatestPhotoByChallengeId — from GET /workout-posts/mine, genuinely
+ * scoped to this user) are required here, same as Challenges-Mine, to tell
+ * "today's photo exists" (→ completed) from "still needs one" (→ active).
+ */
+export function getHomeChallengesSorted(
+  challenges: ChallengeContract[],
+  latestPhotoByChallengeId: Map<string, ChallengePhoto>,
+): HomeActiveChallengeViewModel[] {
+  const withState = challenges
+    .filter(isEnrolled)
+    .map((challenge) => {
+      const currentDay = pickCurrentDay(challenge);
+      const state = deriveChallengeCardState({
+        status: pickChallengeStatus(challenge),
+        isRestDay: pickIsRestDay(challenge),
+        currentDay,
+        latestPhotoDay: latestPhotoByChallengeId.get(String(challenge.id))?.day ?? null,
+      });
+      return { challenge, state };
+    })
+    // 'won'/'left' challenges belong on the Challenges tab, not Home — see
+    // the HomeActiveChallengeViewModel doc comment.
+    .filter((entry): entry is { challenge: ChallengeContract; state: HomeActiveChallengeViewModel['state'] } =>
+      entry.state === 'active' || entry.state === 'rest' || entry.state === 'completed',
+    );
+
+  const vms = withState.map(({ challenge, state }) => toHomeActiveChallengeViewModel(challenge, state));
+
+  // Still-actionable challenges (active/rest) first, soonest-to-finish first;
+  // already-completed-today ones last (nothing left to do today).
+  const actionable = vms
+    .filter((vm) => vm.state !== 'completed')
+    .sort((a, b) => (a.totalDays - a.currentDay) - (b.totalDays - b.currentDay));
+  const completedToday = vms.filter((vm) => vm.state === 'completed');
+
+  return [...actionable, ...completedToday];
 }
 
 export function progressToHomeActiveChallengeViewModel(
@@ -175,28 +144,20 @@ export function progressToHomeActiveChallengeViewModel(
 ): HomeActiveChallengeViewModel {
   const currentDay = progress.currentDay ?? 1;
   const totalDays = progress.totalDays;
+  const isRestDay = (progress as Record<string, unknown>).today_is_rest_day === true;
 
   return {
     challengeId: String(progress.challenge.id),
     title: progress.challenge.name,
     currentDay,
     totalDays,
-    isTodayCompleted: progress.completedToday ?? false,
-    isCompleted: currentDay >= totalDays,
-    activityType: 'strength',
-    isRestDay: (progress as Record<string, unknown>).today_is_rest_day === true,
+    // No photo lookup available from this data source (challenge-progress
+    // detail screen, not the Home list) — best-effort from the fields this
+    // contract already has. Not consumed by any current caller (checked:
+    // useChallengeActiveProgress only reads currentDay/totalDays/title), so
+    // this is a reasonable placeholder rather than something worth wiring a
+    // whole extra fetch for.
+    state: progress.completedToday ? 'completed' : isRestDay ? 'rest' : 'active',
     streakCount: pickStreakCount(progress as unknown as ChallengeContract),
   };
-}
-
-export function getHomeChallengesSorted(challenges: ChallengeContract[]): HomeActiveChallengeViewModel[] {
-  const vms = challenges.filter(isJoinedOrCompleted).map(toHomeActiveChallengeViewModel);
-
-  const active = vms
-    .filter((vm) => !vm.isCompleted)
-    .sort((a, b) => (a.totalDays - a.currentDay) - (b.totalDays - b.currentDay));
-
-  const completed = vms.filter((vm) => vm.isCompleted);
-
-  return [...active, ...completed];
 }

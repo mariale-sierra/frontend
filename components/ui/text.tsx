@@ -28,7 +28,19 @@ type TextVariant =
   | 'label'
   | 'activity';
 
-/** Opacity tier applied to the text color — see design system Typography → Text opacity scale. */
+/**
+ * Opacity tier applied to the text color — see design system Typography →
+ * Text opacity scale.
+ *
+ * ⚠️ This opacity applies unconditionally, even under a custom `color`
+ * override passed via `style` (brand/accent colors on a pill, a badge, a
+ * "View" link, etc.) — there's no tone value that means "fully opaque," the
+ * scale tops out at `primary` (85%). A custom-colored `Text` will render
+ * MUTED unless the caller's style also sets `opacity: 1` to cancel this
+ * back out. This has already caused real, shipped bugs (Home hero card's
+ * status pill, Challenges-Mine's status pill, Explore card's member/view
+ * text) — always add `opacity: 1` alongside any `color` override on `Text`.
+ */
 type TextTone = 'primary' | 'secondary' | 'tertiary' | 'inverse';
 
 interface TextProps extends RNTextProps {

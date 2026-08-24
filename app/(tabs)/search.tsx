@@ -64,7 +64,7 @@ export default function Search() {
         ListEmptyComponent={
           loading ? (
             <View style={styles.center}>
-              <ActivityIndicator color={colors.textPrimary} />
+              <ActivityIndicator color={colors.primary} />
             </View>
           ) : (
             <Text tone="secondary">{error ?? t('challenges.searchEmpty')}</Text>

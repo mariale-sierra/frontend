@@ -17,10 +17,24 @@ interface RestDayCalendarProps {
   onToggleDate: (dateKey: string) => void;
 }
 
+// No rest-day cycle exists yet at this pre-join planning stage (that's what
+// this screen is collecting) — every real day is either future/selectable
+// or already past, no photo/rest classification applies here.
+const NO_REST_DAYS = () => false;
+
 export function RestDayCalendar({ startDate, totalDays, selectedDates, onToggleDate }: RestDayCalendarProps) {
+  const currentDay = useMemo(() => {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((today.getTime() - start.getTime()) / 86_400_000);
+    return diffDays + 1;
+  }, [startDate]);
+
   const months = useMemo(
-    () => buildChallengeCalendar(startDate, totalDays, [], []),
-    [startDate, totalDays],
+    () => buildChallengeCalendar(startDate, totalDays, currentDay, [], NO_REST_DAYS),
+    [startDate, totalDays, currentDay],
   );
 
   return (

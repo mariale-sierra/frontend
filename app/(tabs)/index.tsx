@@ -19,7 +19,9 @@ import { EmptyFeed } from '../../components/home/EmptyFeed';
 import { FeedErrorState } from '../../components/home/FeedErrorState';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
 import { getHomeChallengesSorted } from '../../services/adapters/homeAdapter';
+import { groupLatestPhotoByChallengeId } from '../../services/adapters/challengeState';
 import { getMyChallenges } from '../../services/user/user.service';
+import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
 import { getHomeFeed } from '../../services/feed/feed.service';
 import { toFeedPostViewModels } from '../../services/adapters/feedAdapter';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
@@ -54,13 +56,16 @@ export default function Home() {
   const hoursLeft = hoursUntilMidnight();
 
   // Refetches on focus (not just on first mount) so returning to this tab after
-  // joining/completing a challenge elsewhere shows up-to-date days/hours-left cards.
+  // joining/completing a challenge elsewhere — or logging today's photo, which
+  // flips a card from active to completed — shows up-to-date state.
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      getMyChallenges()
-        .then((data) => {
-          if (active) setChallenges(getHomeChallengesSorted(data));
+      Promise.all([getMyChallenges(), getMyProgressPhotos()])
+        .then(([data, myPhotos]) => {
+          if (!active) return;
+          const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(myPhotos ?? []);
+          setChallenges(getHomeChallengesSorted(data ?? [], latestPhotoByChallengeId));
         })
         .catch(() => {
           if (active) setChallenges([]);

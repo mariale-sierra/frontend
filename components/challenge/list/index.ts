@@ -1,7 +1,8 @@
 // Challenge list components for the challenges tab/screen
 
-// ChallengeListSections: Main container component for the challenges tab.
-// Displays active challenges and explore sections with proper layout and interactions.
+// challengeListSections: view-model types shared by the list screens/adapter
+// (ActiveChallengeViewModel, ExploreChallengeViewModel, ChallengesScreenViewModel).
+// No component lives here anymore — see ChallengeStatusCard/ChallengesViewToggle below.
 export * from './challengeListSections';
 
 // ActiveChallengeCard: Card component for displaying active challenges.
@@ -19,3 +20,13 @@ export * from './ChallengeBadge';
 // ChallengeProgressBar: Progress bar component for challenge completion.
 // Shows visual progress with customizable colors and styling.
 export * from './ChallengeProgressBar';
+
+// ChallengeStatusCard: Challenges-Mine card — state-driven background
+// (active/rest/completed/won/left — won/left share one neutral "no longer
+// in progress" treatment), ink status pill, progress bar, and an "Add
+// photo" CTA or the user's latest photo for the challenge (placeholder if
+// they haven't posted one yet).
+export * from './ChallengeStatusCard';
+
+// ChallengesViewToggle: Mine/Explore segmented control for the Challenges tab.
+export * from './ChallengesViewToggle';

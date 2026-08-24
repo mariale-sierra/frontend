@@ -5,11 +5,12 @@ import type { CalendarMonth } from '../utils/challengeCalendar';
 export function useChallengeCalendar(
   startDate: Date | null,
   totalDays: number,
-  completedDays: number[],
+  currentDay: number,
   photoDays: number[],
+  isRestDayFn: (challengeDay: number) => boolean,
 ): CalendarMonth[] {
   return useMemo(() => {
     if (!startDate || totalDays <= 0) return [];
-    return buildChallengeCalendar(startDate, totalDays, completedDays, photoDays);
-  }, [startDate, totalDays, completedDays, photoDays]);
+    return buildChallengeCalendar(startDate, totalDays, currentDay, photoDays, isRestDayFn);
+  }, [startDate, totalDays, currentDay, photoDays, isRestDayFn]);
 }
