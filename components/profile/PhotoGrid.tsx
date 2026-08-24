@@ -69,11 +69,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-    paddingTop: spacing.md,
   },
   tile: {
     width: '48.5%',
-    aspectRatio: 3 / 4,
+    // Wireframe tiles are ~175×214 (2-col grid at a 390px screen width,
+    // `sm` gap) — that's a 4:5 ratio, not 3:4. Using aspectRatio (not a
+    // fixed height) so it holds up at real device widths.
+    aspectRatio: 4 / 5,
     borderRadius: radius.small,
     overflow: 'hidden',
   },

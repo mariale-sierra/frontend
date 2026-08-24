@@ -138,11 +138,16 @@ export default function Profile() {
 
 const styles = StyleSheet.create({
   topBar: {
-    paddingHorizontal: spacing.lg,
+    // Matches the wireframe's consistent 16px (`base`) edge margin —
+    // everything on this screen (icon row, avatar block, toggle, grid) sits
+    // at that inset except the stats row, which adds its own extra padding
+    // on top (see ProfileHeader's statsRow) to reach the wireframe's wider
+    // 32px there specifically.
+    paddingHorizontal: spacing.base,
     paddingTop: spacing.md,
   },
   container: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing['2xl'],
     gap: spacing.lg,
