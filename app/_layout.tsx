@@ -57,14 +57,15 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
-  // NOTE: intentionally NOT gating first paint on fontsLoaded/fontError
-  // anymore — blocking the root route's initial render (returning null
-  // before the Stack ever mounts) is suspected of breaking touch handling
-  // on iOS entirely (nav bar became unresponsive app-wide after this gate
-  // was added; still investigating, this is the first thing being ruled
-  // out). Fonts still load here, they just pop in once ready instead of
-  // blocking first paint — same tradeoff Bebas Neue/DM Sans already had
-  // before this gate existed.
+  // Not gating first paint on fontsLoaded/fontError — an earlier version of
+  // this file returned null until fonts resolved and was suspected of
+  // causing the iOS tab bar to go unresponsive to touch app-wide. That was a
+  // red herring: the actual cause (root-caused and fixed in
+  // app/(tabs)/_layout.tsx) was React Navigation's `tabBarStyle` option
+  // itself, unrelated to font loading. This still not gating first paint on
+  // fonts is kept anyway on its own merits — it avoids a blank screen while
+  // fonts load, letting the UI render with fallback fonts and pop in Bebas
+  // Neue/DM Sans once ready instead.
   useFonts({
     DMSans_400Regular,
     DMSans_500Medium,
