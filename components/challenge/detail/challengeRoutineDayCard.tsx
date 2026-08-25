@@ -1,90 +1,94 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
-import { Card } from '../../ui/card';
-import { ActivityIcon } from '../../icons/activityIcon';
 import { Row } from '../../layout/row';
-import { colors, spacing } from '../../../constants/theme';
-import type { ActivityType } from '../../../types/activity';
+import { colors, radius, spacing } from '../../../constants/theme';
 
-type Props = {
+interface ChallengeRoutineDayCardProps {
   day: number;
-  title: string;
-  activity?: ActivityType;
+  isRestDay: boolean;
+  /** Routine name for a workout day — unused for a rest day, which always shows the localized "Rest day" label instead. */
+  routineName: string;
+  /** Already-formatted "{{n}} exercises · {{location}}" — unused for a rest day. */
+  subtitle: string;
   onPress?: () => void;
-};
+}
 
-export default function ChallengeRoutineDayCard({
-  day,
-  title,
-  activity,
-  onPress,
-}: Props) {
+/** One row in "The cycle" list (Challenge-Info) — List-row card pattern
+ * (`surface` bg, `medium` radius) with a numbered circle badge instead of an
+ * icon. Rest days share the same row shape but read as non-interactive: no
+ * chevron, `rest`-colored title, muted "no photo needed" subtitle, since
+ * there's no routine to view. */
+export default function ChallengeRoutineDayCard({ day, isRestDay, routineName, subtitle, onPress }: ChallengeRoutineDayCardProps) {
+  const { t } = useTranslation();
+  const badgeColor = isRestDay ? colors.rest : colors.primary;
+
+  const content = (
+    <Row align="center" gap="md" style={styles.row}>
+      <View style={[styles.badge, { backgroundColor: badgeColor }]}>
+        <Text variant="label" weight="bold" style={styles.badgeText}>{day}</Text>
+      </View>
+
+      <View style={styles.textColumn}>
+        <Text variant="body" weight="bold" numberOfLines={1} style={isRestDay ? styles.restTitle : styles.title}>
+          {isRestDay ? t('challengeInfo.restDayLabel') : routineName}
+        </Text>
+        <Text variant="caption" tone="secondary" numberOfLines={1}>
+          {isRestDay ? t('challengeInfo.restDayNoPhoto') : subtitle}
+        </Text>
+      </View>
+
+      {!isRestDay && <Icon name="chevron-forward-outline" size={18} color={colors.paper} />}
+    </Row>
+  );
+
+  if (isRestDay) {
+    return <View style={styles.card}>{content}</View>;
+  }
+
   return (
-    <Card style={styles.card} variant="basic" onPress={onPress}>
-      <Row justify="space-between" align="stretch" style={styles.cardRow}>
-        <View style={styles.leftIconWrap}>
-          {activity ? <ActivityIcon type={activity} size="md" variant="plain" /> : null}
-        </View>
-
-        <View style={styles.centerTextColumn}>
-          <Text variant="caption" style={styles.dayLabel}>Day {day}</Text>
-          <Text variant="header" tone="primary" style={styles.title}>{title}</Text>
-        </View>
-
-        <Pressable
-          onPress={onPress}
-          style={({ pressed }) => [styles.chevronButton, pressed && styles.pressed]}
-          hitSlop={10}
-        >
-          <Ionicons name="chevron-forward" size={18} color={colors.textPrimary} />
-        </Pressable>
-      </Row>
-    </Card>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]} accessibilityRole="button">
+      {content}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    minHeight: 80,
-    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.medium,
+    paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
   },
-  cardRow: {
+  pressed: {
+    opacity: 0.9,
+  },
+  row: {
     width: '100%',
   },
-  leftIconWrap: {
-    width: 40,
+  badge: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.big,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
-  centerTextColumn: {
+  badgeText: {
+    color: colors.ink,
+    opacity: 1,
+  },
+  textColumn: {
     flex: 1,
-    marginLeft: spacing.sm,
-    justifyContent: 'center',
-  },
-  dayLabel: {
-    fontSize: 11,
-    lineHeight: 14,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    letterSpacing: 0.8,
-    opacity: 0.9,
-    textTransform: 'uppercase',
+    minWidth: 0,
+    gap: 2,
   },
   title: {
-    fontSize: 18,
-    lineHeight: 22,
-    marginTop: spacing.xxs,
+    opacity: 1,
   },
-  chevronButton: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-  },
-  pressed: {
-    opacity: 0.86,
+  restTitle: {
+    color: colors.rest,
+    opacity: 1,
   },
 });

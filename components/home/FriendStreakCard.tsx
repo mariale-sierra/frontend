@@ -36,7 +36,10 @@ const styles = StyleSheet.create({
   card: {
     width: AVATAR_SIZE + spacing.xs,
     alignItems: 'center',
-    gap: spacing.sm,
+    // Bumped one token up from `sm` to `md` — the badge below was moved
+    // further down by that same `xs` step (see its `bottom` offset), so this
+    // compensates to keep the badge→username gap visually unchanged.
+    gap: spacing.md,
   },
   avatarWrap: {
     width: AVATAR_SIZE,
@@ -44,7 +47,9 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    bottom: -spacing.xs,
+    // Moved down one token step from `-xs` — was sitting right at the
+    // avatar's edge, now reads more clearly as "cut into" it lower down.
+    bottom: -spacing.sm,
     left: '50%',
     transform: [{ translateX: -14 }],
     minWidth: 28,

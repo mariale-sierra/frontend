@@ -1,501 +1,421 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-
-import { ActivityIcon } from '../../../../components/icons/activityIcon';
-import ScreenBackground from '../../../../components/layout/screenBackground';
-import { Icon } from '../../../../components/ui/icon';
-import { Text } from '../../../../components/ui/text';
-import { colors, radius, spacing, type ActivityType } from '../../../../constants/theme';
-import { toChallengeDetailViewModel } from '../../../../services/adapters';
-import { getChallenge } from '../../../../services/challenge/challenge.service';
-import type { ChallengeContract, ChallengeCycleDayContract, ChallengeExerciseContract } from '../../../../types/challenge';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-interface MetricCell {
-  value: string;
-  unit: string;
-}
+import ScreenBackground from '../../../../components/layout/screenBackground';
+import { Row } from '../../../../components/layout/row';
+import { BackButton } from '../../../../components/ui/backButton';
+import { Icon } from '../../../../components/ui/icon';
+import { Text } from '../../../../components/ui/text';
+import { colors, radius, spacing } from '../../../../constants/theme';
+import { withAlpha } from '../../../../utils/color';
+import { toTitleCase } from '../../../../utils/format';
+import { toChallengeDetailViewModel } from '../../../../services/adapters/index';
+import { getChallenge, joinChallenge } from '../../../../services/challenge/challenge.service';
+import { getMyChallenges } from '../../../../services/user/user.service';
+import { useConfirmationPopup } from '../../../../hooks/useConfirmationPopup';
+import type { ChallengeContract, ChallengeCycleDayContract } from '../../../../types/challenge';
 
-interface ExerciseDetail {
+type MembershipStatus = 'creator' | 'joined' | 'none';
+
+interface ExerciseRow {
   name: string;
-  metrics: MetricCell[];
-  activityType: ActivityType;
+  /** "4 × 12" / "3 × 45s" style — placeholder data (see the doc comment on PLACEHOLDER_METRICS below). */
+  setsLabel: string;
+  restLabel: string;
 }
 
-interface RoutineDetail {
-  totalDays: number;
-  day: number;
-  routineName: string;
-  categoryName: string;
-  activityType: ActivityType;
-  exercises: ExerciseDetail[];
-}
+/**
+ * Cycle-day exercises don't carry real set/rep/rest data in the current
+ * backend response (`ChallengesService.getCycleDaySummaries()` only selects
+ * `name`/`activity_type` — no sets/targets/metrics, unlike
+ * `RoutineService.getTodayRoutine()`, which DOES join that data but for a
+ * different endpoint). Flat placeholder numbers for every exercise until
+ * that's wired up — see the skill's Open Items Tracker. Not varied per
+ * exercise/category on purpose: inventing *specific*-looking numbers per
+ * exercise would misrepresent them as real programmed data, which they
+ * aren't.
+ */
+const PLACEHOLDER_SETS_LABEL = '3 × 10';
+const PLACEHOLDER_REST_LABEL = '45s';
 
-const ACTIVITY_TYPES: ActivityType[] = [
-  'strength',
-  'cardioIntense',
-  'cardioLow',
-  'flexibility',
-  'mindBody',
-  'functional',
-];
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-function asString(value: unknown) {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-function asNumber(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
-}
-
-function isActivityType(value: unknown): value is ActivityType {
-  return typeof value === 'string' && ACTIVITY_TYPES.includes(value as ActivityType);
-}
-
-function buildDefaultMetrics(activityType: ActivityType): MetricCell[] {
-  const defaultByType: Record<ActivityType, MetricCell[]> = {
-    strength: [
-      { value: '4', unit: 'sets' },
-      { value: '8', unit: 'reps' },
-      { value: '90', unit: 'sec' },
-    ],
-    cardioIntense: [
-      { value: '6', unit: 'rounds' },
-      { value: '30', unit: 'sec work' },
-      { value: '20', unit: 'sec rest' },
-    ],
-    cardioLow: [
-      { value: '30', unit: 'min' },
-      { value: '120', unit: 'bpm' },
-      { value: '1', unit: 'session' },
-    ],
-    flexibility: [
-      { value: '3', unit: 'blocks' },
-      { value: '60', unit: 'sec hold' },
-      { value: '1', unit: 'flow' },
-    ],
-    mindBody: [
-      { value: '20', unit: 'min' },
-      { value: '1', unit: 'session' },
-      { value: '4', unit: 'breath sets' },
-    ],
-    functional: [
-      { value: '5', unit: 'rounds' },
-      { value: '10', unit: 'reps' },
-      { value: '60', unit: 'sec' },
-    ],
-  };
-
-  return defaultByType[activityType];
-}
-
-function mapMetricsFromExercisePayload(
-  rawMetrics: unknown,
-  fallbackActivityType: ActivityType,
-): MetricCell[] {
-  if (!isRecord(rawMetrics)) {
-    return buildDefaultMetrics(fallbackActivityType);
-  }
-
-  const kind = asString(rawMetrics.kind);
-
-  if (kind === 'strength' && Array.isArray(rawMetrics.sets) && rawMetrics.sets.length > 0) {
-    const firstSet = isRecord(rawMetrics.sets[0]) ? rawMetrics.sets[0] : null;
-    const reps = firstSet ? asNumber(firstSet.reps) : null;
-    const rest = firstSet ? asNumber(firstSet.rest_seconds) : null;
-
-    return [
-      { value: String(rawMetrics.sets.length), unit: 'sets' },
-      { value: reps != null ? String(reps) : '-', unit: 'reps' },
-      { value: rest != null ? String(rest) : '-', unit: 'sec' },
-    ];
-  }
-
-  if (kind === 'schema' && isRecord(rawMetrics.values)) {
-    const valueCount = Object.keys(rawMetrics.values).length;
-    const templateId = asString(rawMetrics.template_id);
-
-    return [
-      { value: String(valueCount), unit: 'fields' },
-      { value: templateId || '-', unit: 'template' },
-    ];
-  }
-
-  return buildDefaultMetrics(fallbackActivityType);
-}
-
-function mapExercisesFromCycleDay(
-  cycleDay: ChallengeCycleDayContract | undefined,
-  fallbackActivityType: ActivityType,
-): ExerciseDetail[] {
-  if (!cycleDay || !Array.isArray(cycleDay.exercises) || cycleDay.exercises.length === 0) {
-    return [];
-  }
-
-  return cycleDay.exercises.map((exercise: ChallengeExerciseContract, index) => {
-    const activityType = isActivityType(exercise.activity_type)
-      ? exercise.activity_type
-      : fallbackActivityType;
-
-    const name = asString(exercise.name) || `Exercise ${index + 1}`;
-    const metrics = mapMetricsFromExercisePayload(exercise.metrics, activityType);
-
+function buildExerciseRows(cycleDay: ChallengeCycleDayContract | undefined): ExerciseRow[] {
+  const exercises = Array.isArray(cycleDay?.exercises) ? cycleDay.exercises : [];
+  return exercises.map((exercise, index) => {
+    const rawName = typeof exercise.name === 'string' && exercise.name.trim() ? exercise.name.trim() : `Exercise ${index + 1}`;
     return {
-      name,
-      metrics,
-      activityType,
+      // The shared exercise-library catalog stores names in all caps
+      // ("HIP THRUST") — toTitleCase() normalizes that for display without
+      // touching a name that's already reasonably cased. See its own doc
+      // comment (utils/format.ts) for why this looked like a font bug at
+      // first: shouty-uppercase text read as "unstyled" against the
+      // wireframe's plain-case design, not an actual missing-font issue.
+      name: toTitleCase(rawName),
+      setsLabel: PLACEHOLDER_SETS_LABEL,
+      restLabel: PLACEHOLDER_REST_LABEL,
     };
   });
-}
-
-function buildFallbackExercises(activityType: ActivityType): ExerciseDetail[] {
-  const namesByType: Record<ActivityType, string[]> = {
-    strength: ['Back Squat', 'Romanian Deadlift', 'Walking Lunges'],
-    cardioIntense: ['Sprint Intervals', 'Burpees', 'Row Sprints'],
-    cardioLow: ['Brisk Walk', 'Cycling', 'Step-Ups'],
-    flexibility: ['Hamstring Flow', 'Hip Openers', 'Thoracic Mobility'],
-    mindBody: ['Breath Work', 'Mobility Flow', 'Core Control'],
-    functional: ['Kettlebell Circuit', 'Loaded Carries', 'Box Step-Downs'],
-  };
-
-  return namesByType[activityType].map((name) => ({
-    name,
-    metrics: buildDefaultMetrics(activityType),
-    activityType,
-  }));
-}
-
-function ExerciseRow({ exercise, index }: { exercise: ExerciseDetail; index: number }) {
-  return (
-    <View>
-      <View style={styles.exerciseHeader}>
-        <View style={styles.exerciseOrderBadge}>
-          <Text variant="caption" style={styles.exerciseOrderText}>{index + 1}</Text>
-        </View>
-        <View style={styles.exerciseTitleWrap}>
-          <View style={styles.exerciseTitleRow}>
-            <Text variant="header" tone="primary" style={styles.exerciseName}>{exercise.name}</Text>
-            <ActivityIcon type={exercise.activityType} size="md" variant="plain" />
-          </View>
-        </View>
-      </View>
-      <LinearGradient
-        colors={[colors.surface, '#000000']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={styles.metricsSurface}
-      >
-        <View style={styles.metricsRow}>
-          {exercise.metrics.map((metric, metricIndex) => (
-            <View key={`${exercise.name}-${metric.unit}-${metricIndex}`} style={styles.metricCell}>
-              <Text variant="header" tone="primary" style={styles.metricValue}>{metric.value}</Text>
-              <Text variant="caption" style={styles.metricUnit}>{metric.unit}</Text>
-            </View>
-          ))}
-        </View>
-      </LinearGradient>
-    </View>
-  );
 }
 
 export default function RoutineDayDetail() {
   const { t } = useTranslation();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id, day } = useLocalSearchParams<{ id: string; day: string }>();
   const [challenge, setChallenge] = useState<ChallengeContract | null>(null);
   const [loading, setLoading] = useState(true);
+  const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('none');
+  const [membershipLoading, setMembershipLoading] = useState(true);
+
+  const joinPopup = useConfirmationPopup({
+    type: 'join',
+    challengeName: challenge?.name ?? t('challenges.fallbackName'),
+    onConfirm: async () => {
+      const challengeId = typeof id === 'string' ? id : '';
+      if (!challengeId) return;
+      try {
+        await joinChallenge(challengeId);
+        setMembershipStatus('joined');
+      } catch {
+        // Confirmation popup surfaces its own error state.
+      }
+    },
+  });
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadChallenge() {
-      if (!id) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const data = await getChallenge(String(id));
-        if (cancelled) return;
-        setChallenge(data);
-      } catch {
-        if (cancelled) return;
-        setChallenge(null);
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
+    if (!id) {
+      setLoading(false);
+      return;
     }
-
-    loadChallenge();
-
+    let cancelled = false;
+    getChallenge(String(id))
+      .then((data) => {
+        if (!cancelled) setChallenge(data);
+      })
+      .catch(() => {
+        if (!cancelled) setChallenge(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
   }, [id]);
 
-  const challengeViewResult = challenge ? toChallengeDetailViewModel(challenge) : null;
-  const challengeView = challengeViewResult?.ok ? challengeViewResult.value : null;
+  useEffect(() => {
+    if (!challenge) return;
+    getMyChallenges()
+      .then((enrolled) => {
+        const isMember = enrolled.some((c) => String(c.id) === String(challenge.id) && c.status !== 'left');
+        setMembershipStatus(isMember ? 'joined' : 'none');
+      })
+      .catch(() => setMembershipStatus('none'))
+      .finally(() => setMembershipLoading(false));
+  }, [challenge]);
+
+  const detailLabels = useMemo(
+    () => ({ locationFallbackLabel: t('challenges.locationFallback'), categoryFallbackLabel: t('challenges.categoryFallback') }),
+    [t],
+  );
 
   const requestedDay = Number(day ?? 1);
+  const result = challenge ? toChallengeDetailViewModel(challenge, detailLabels) : null;
+  const view = result?.ok ? result.value : null;
 
-  const routine = useMemo<RoutineDetail | null>(() => {
-    if (!challengeView || challengeView.days.length === 0) {
-      return null;
-    }
+  const selectedDay = view?.days.find((item) => item.day === requestedDay) ?? null;
+  const rawCycleDay = Array.isArray(challenge?.cycle_days)
+    ? challenge.cycle_days.find((item) => Number(item.day_number) === requestedDay)
+    : undefined;
+  const exercises = useMemo(() => buildExerciseRows(rawCycleDay), [rawCycleDay]);
 
-    const selectedDay = challengeView.days.find((item) => item.day === requestedDay) ?? challengeView.days[0];
-    const primaryActivity = selectedDay.activities[0] ?? challengeView.dominantActivity;
+  const nextDay = view && view.cycleLengthDays > 0 ? (requestedDay % view.cycleLengthDays) + 1 : null;
+  const nextDaySummary = nextDay != null ? view?.days.find((item) => item.day === nextDay) ?? null : null;
 
-    const cycleDay = Array.isArray(challenge?.cycle_days)
-      ? challenge.cycle_days.find((item) => asNumber(item.day_number) === selectedDay.day)
-      : undefined;
-
-    const backendExercises = mapExercisesFromCycleDay(cycleDay, primaryActivity);
-    const exercises = backendExercises.length > 0
-      ? backendExercises
-      : buildFallbackExercises(primaryActivity);
-
-    const categoryName =
-      challengeView.activities.find((item) => item.activityType === primaryActivity)?.label ?? selectedDay.title;
-
-    return {
-      totalDays: challengeView.days.length,
-      day: selectedDay.day,
-      routineName: selectedDay.title,
-      categoryName,
-      activityType: primaryActivity,
-      exercises,
-    };
-  }, [challenge, challengeView, requestedDay]);
+  function handleShare() {
+    if (!challenge || !selectedDay) return;
+    Share.share({ message: t('challengeInfo.shareMessage', { name: `${challenge.name} — ${selectedDay.routineName}` }) }).catch(() => {});
+  }
 
   if (loading) {
     return (
       <ScreenBackground variant="default">
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator color={colors.textPrimary} />
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} />
         </View>
       </ScreenBackground>
     );
   }
 
-  if (!routine) {
+  if (!view || !selectedDay || selectedDay.isRestDay) {
     return (
-      <ScreenBackground variant="default">
-        <View style={styles.screen}>
-          <View style={styles.headerTopRow}>
-            <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
-              <Icon name="chevron-back" size={20} color={colors.textPrimary} />
-            </Pressable>
-          </View>
-          <View style={styles.emptyStateWrap}>
-            <Text variant="header" tone="primary" align="center">
-              {t('challengeRoutineDay.emptyTitle')}
-            </Text>
-            <Text variant="body" tone="secondary" align="center" style={styles.emptyStateMessage}>
-              {t('challengeRoutineDay.emptyMessage')}
-            </Text>
-          </View>
+      <ScreenBackground variant="default" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
+        <Row justify="space-between" align="center" style={styles.topBar}>
+          <BackButton style={styles.backButton} />
+          <View style={styles.iconButton} />
+        </Row>
+        <View style={styles.center}>
+          <Text variant="header" tone="primary" align="center">
+            {selectedDay?.isRestDay ? t('challengeRoutineDay.restDayTitle') : t('challengeRoutineDay.emptyTitle')}
+          </Text>
+          <Text variant="body" tone="secondary" align="center" style={styles.emptyMessage}>
+            {selectedDay?.isRestDay ? t('challengeRoutineDay.restDayMessage') : t('challengeRoutineDay.emptyMessage')}
+          </Text>
         </View>
       </ScreenBackground>
     );
   }
 
   return (
-    <ScreenBackground variant="default">
-      <View style={styles.screen}>
-        <View style={styles.headerWrap}>
-          <View style={styles.headerTopRow}>
-            <Pressable onPress={() => router.back()} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
-              <Icon name="chevron-back" size={20} color={colors.textPrimary} />
-            </Pressable>
+    <ScreenBackground variant="default" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: membershipStatus === 'none' ? spacing['2xl'] : insets.bottom + spacing.xl }}
+      >
+        <Row justify="space-between" align="center" style={styles.topBar}>
+          <BackButton style={styles.backButton} />
+          <Pressable
+            onPress={handleShare}
+            style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel={t('challengeRoutineDay.shareA11y')}
+          >
+            <Icon name="share-outline" size={22} color={colors.paper} />
+          </Pressable>
+        </Row>
 
-            <Text variant="caption" style={styles.dayOfLabel}>
-              {t('challengeRoutineDay.dayOfLabel', {
-                day: routine.day,
-                total: routine.totalDays,
-              })}
+        <View style={styles.heroWrap}>
+          <View style={styles.hero}>
+            <Text variant="caption" weight="bold" inverse tone="secondary" style={styles.heroEyebrow}>
+              {t('challengeRoutineDay.routineOfLabel', { current: requestedDay, total: view.cycleLengthDays })}
             </Text>
-
-            <View style={styles.backButton} />
+            <Text variant="title" inverse>{selectedDay.routineName}</Text>
+            <Text variant="label" weight="medium" inverse style={styles.heroSubtitle}>
+              {selectedDay.location}
+            </Text>
           </View>
+        </View>
 
-          <View style={styles.routineRow}>
-            <View style={styles.routineIdentityText}>
-              <Text variant="caption" style={styles.routineEyebrow}>
-                {t('challengeRoutineDay.routineLabel')}
-              </Text>
-              <Text variant="body" style={styles.routineTitle} numberOfLines={1}>
-                {routine.routineName.toUpperCase()}
-              </Text>
-            </View>
+        <View style={styles.tableSection}>
+          <Row justify="space-between" style={styles.tableHeaderRow}>
+            <Text variant="caption" tone="secondary" style={styles.tableHeaderExercise}>
+              {t('challengeRoutineDay.exerciseColumnLabel')}
+            </Text>
+            <Text variant="caption" tone="secondary">{t('challengeRoutineDay.setsColumnLabel')}</Text>
+            <Text variant="caption" tone="secondary" style={styles.tableHeaderRest}>
+              {t('challengeRoutineDay.restColumnLabel')}
+            </Text>
+          </Row>
 
-            {/* Category is icon + name only now, never a color — see design
-                system → Explicitly Rejected Patterns. Was a per-category
-                accent wrap; flattened to a neutral `surface` fill. */}
-            <View
-              style={[
-                styles.primaryIconWrap,
-                {
-                  backgroundColor: colors.surface,
-                },
-              ]}
+          {exercises.map((exercise, index) => (
+            <Row
+              key={`${exercise.name}-${index}`}
+              justify="space-between"
+              align="center"
+              style={[styles.exerciseRow, index < exercises.length - 1 && styles.exerciseRowDivider]}
             >
-              <ActivityIcon type={routine.activityType} size="lg" variant="circle" />
-            </View>
-          </View>
+              <Text variant="body" weight="regular" numberOfLines={1} style={styles.exerciseName}>{exercise.name}</Text>
+              <Text variant="body" weight="bold" style={styles.exerciseSets}>{exercise.setsLabel}</Text>
+              <Text variant="label" weight="medium" style={styles.tableHeaderRest}>{exercise.restLabel}</Text>
+            </Row>
+          ))}
         </View>
 
-        <View style={styles.panel}>
-          <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-            {routine.exercises.map((exercise, index) => (
-              <ExerciseRow key={`${exercise.name}-${index}`} exercise={exercise} index={index} />
-            ))}
-          </ScrollView>
+        <View style={styles.notesSection}>
+          <Text variant="label" weight="bold">{t('challengeRoutineDay.notesLabel')}</Text>
+          <Text variant="body" style={styles.notesText}>
+            {typeof rawCycleDay?.routine_description === 'string' && rawCycleDay.routine_description.trim()
+              ? rawCycleDay.routine_description
+              : selectedDay.routineName}
+          </Text>
         </View>
-      </View>
+
+        {nextDaySummary && (
+          <View style={styles.nextSection}>
+            <Pressable
+              onPress={() => router.push(`/challenge/${id}/routine/${nextDaySummary.day}`)}
+              style={({ pressed }) => [styles.nextCard, pressed && styles.pressed]}
+              accessibilityRole="button"
+            >
+              <View style={[styles.nextBadge, { backgroundColor: nextDaySummary.isRestDay ? colors.rest : colors.primary }]}>
+                <Text variant="label" weight="bold" style={styles.nextBadgeText}>{nextDaySummary.day}</Text>
+              </View>
+              <View style={styles.nextTextColumn}>
+                <Text variant="caption" tone="secondary">{t('challengeRoutineDay.nextInCycleLabel')}</Text>
+                <Text
+                  variant="body"
+                  weight="bold"
+                  numberOfLines={1}
+                  style={nextDaySummary.isRestDay ? styles.nextTitleRest : styles.nextTitle}
+                >
+                  {nextDaySummary.isRestDay ? t('challengeInfo.restDayLabel') : nextDaySummary.routineName}
+                </Text>
+              </View>
+              <Icon name="chevron-forward-outline" size={18} color={colors.paper} />
+            </Pressable>
+          </View>
+        )}
+      </ScrollView>
+
+      {!membershipLoading && membershipStatus === 'none' && (
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+          <Pressable
+            onPress={joinPopup.show}
+            style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel={t('challenges.joinButtonA11y')}
+          >
+            <Text variant="body" weight="bold" style={styles.joinButtonText}>
+              {t('challengeInfo.joinChallengeButton')}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      <joinPopup.Component />
     </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
-  loadingWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyStateWrap: {
+  center: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
   },
-  emptyStateMessage: {
-    marginTop: spacing.xs,
+  emptyMessage: {
+    opacity: 1,
   },
-  headerWrap: {
-    paddingTop: spacing.xl,
-    paddingHorizontal: spacing.lg,
+  topBar: {
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.md,
     paddingBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
   backButton: {
-    minWidth: 28,
-    minHeight: 28,
+    marginLeft: -spacing.sm,
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  dayOfLabel: {
-    color: colors.textPrimary,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  routineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.lg,
-  },
-  primaryIconWrap: {
-    borderRadius: 24,
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
-  },
-  routineIdentityText: {
-    flex: 1,
-  },
-  routineEyebrow: {
-    color: colors.textSecondary,
-    letterSpacing: 1.2,
-  },
-  routineTitle: {
-    color: colors.textPrimary,
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginTop: spacing.xxs,
-    fontWeight: '500',
-  },
-  panel: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContainer: {
-    paddingBottom: spacing['2xl'],
-  },
-  exerciseHeader: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.background,
-  },
-  exerciseOrderBadge: {
-    width: 30,
-    alignItems: 'center',
-  },
-  exerciseOrderText: {
-    color: colors.textPrimary,
-    fontSize: 24,
-    lineHeight: 26,
-    fontWeight: '700',
-  },
-  exerciseTitleWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
-  exerciseTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: spacing.sm,
-  },
-  exerciseName: {
-    flexShrink: 1,
-  },
-  metricsSurface: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    padding: spacing.md,
-  },
-  metricCell: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  metricValue: {
-    fontSize: 16,
-  },
-  metricUnit: {
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    marginTop: spacing.xxs,
+    marginRight: -spacing.sm,
   },
   pressed: {
-    opacity: 0.88,
+    opacity: 0.9,
+  },
+  heroWrap: {
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.lg,
+  },
+  hero: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.big,
+    padding: spacing.lg,
+    gap: spacing.xs,
+  },
+  heroEyebrow: {
+    textTransform: 'uppercase',
+  },
+  heroSubtitle: {
+    color: colors.ink,
+    opacity: 1,
+  },
+  tableSection: {
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.lg,
+  },
+  tableHeaderRow: {
+    paddingBottom: spacing.sm,
+  },
+  tableHeaderExercise: {
+    flex: 1,
+  },
+  tableHeaderRest: {
+    width: 56,
+    textAlign: 'right',
+  },
+  exerciseRow: {
+    paddingVertical: spacing.md,
+    gap: spacing.md,
+  },
+  exerciseRowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: withAlpha(colors.paper, 0.08),
+  },
+  exerciseName: {
+    flex: 1,
+    minWidth: 0,
+  },
+  exerciseSets: {
+    color: colors.primary,
+    opacity: 1,
+  },
+  notesSection: {
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  notesText: {
+    opacity: 1,
+  },
+  nextSection: {
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.lg,
+  },
+  nextCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.medium,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+  },
+  nextBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.big,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  nextBadgeText: {
+    color: colors.ink,
+    opacity: 1,
+  },
+  nextTextColumn: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  nextTitle: {
+    opacity: 1,
+  },
+  nextTitleRest: {
+    color: colors.rest,
+    opacity: 1,
+  },
+  bottomBar: {
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.md,
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: withAlpha(colors.paper, 0.08),
+  },
+  joinButton: {
+    height: 52,
+    borderRadius: radius.big,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  joinButtonText: {
+    color: colors.ink,
+    opacity: 1,
   },
 });

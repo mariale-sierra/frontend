@@ -113,6 +113,31 @@ describe('getHomeChallengesSorted', () => {
     expect(viewModel.state).toBe('rest');
   });
 
+  // Real shipped bug: GET /users/me/challenges (the actual data source for
+  // this screen) never sets `today_is_rest_day` — only `GET /challenges/:id`
+  // returns `cycle_days`, which app/(tabs)/index.tsx now merges in via
+  // enrichChallenges.ts before calling this function. Without that merge (or
+  // without this fallback), every rest day silently rendered as "active."
+  it('derives `rest` from `cycle_days` when no direct rest-day flag is present', () => {
+    const challenge = buildChallenge({
+      id: 'A',
+      current_day: 4, // 4-day cycle, day 4 = position 4 = the rest day below
+      duration_days: 30,
+      status: 'active',
+      cycle_length_days: 4,
+      cycle_days: [
+        { day_number: 1, is_rest_day: false },
+        { day_number: 2, is_rest_day: false },
+        { day_number: 3, is_rest_day: false },
+        { day_number: 4, is_rest_day: true },
+      ],
+    });
+
+    const [viewModel] = getHomeChallengesSorted([challenge], NO_PHOTOS);
+
+    expect(viewModel.state).toBe('rest');
+  });
+
   it("today's photo takes priority over the rest-day flag", () => {
     const challenge = buildChallenge({
       id: 'A',

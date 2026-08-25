@@ -37,9 +37,19 @@ export default function Challenges() {
       Promise.all([getMyChallenges(), getChallenges(), getMyProgressPhotos()])
         .then(([enrolledRaw, all, myPhotos]) => {
           if (!active) return;
+          const enrolled = enrolledRaw ?? [];
           const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(myPhotos ?? []);
-          setMineChallenges(toChallengeMineViewModels(enrolledRaw ?? [], latestPhotoByChallengeId));
-          setExploreChallenges(toExploreChallengeViewModels(all ?? []));
+          setMineChallenges(toChallengeMineViewModels(enrolled, latestPhotoByChallengeId));
+
+          // GET /challenges (getChallenges) returns every challenge, joined
+          // or not — Explore is meant to be "what you could join," so any
+          // challenge already in Mine (joined, or created — creating one
+          // enrolls you immediately) has to be excluded here, same filter
+          // app/(tabs)/search.tsx already does. Without this, a challenge
+          // you're already in showed up in both tabs at once.
+          const enrolledIds = new Set(enrolled.map((c) => String(c.id)));
+          const explorable = (all ?? []).filter((c) => !enrolledIds.has(String(c.id)));
+          setExploreChallenges(toExploreChallengeViewModels(explorable));
           setError(null);
         })
         .catch((err) => {
@@ -119,7 +129,9 @@ export default function Challenges() {
           data={mineChallenges}
           keyExtractor={(item) => item.challengeId}
           renderItem={({ item }) => (
-            <ChallengeStatusCard challenge={item} onPress={() => handleOpenMineChallenge(item.challengeId)} />
+            <View style={styles.itemWrap}>
+              <ChallengeStatusCard challenge={item} onPress={() => handleOpenMineChallenge(item.challengeId)} />
+            </View>
           )}
           ListHeaderComponent={listHeader}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -138,7 +150,9 @@ export default function Challenges() {
           data={exploreChallenges}
           keyExtractor={(item) => item.challengeId}
           renderItem={({ item }) => (
-            <ExploreChallengeCard challenge={item} onPress={() => handleOpenExploreChallenge(item.challengeId)} />
+            <View style={styles.itemWrap}>
+              <ExploreChallengeCard challenge={item} onPress={() => handleOpenExploreChallenge(item.challengeId)} />
+            </View>
           )}
           ListHeaderComponent={listHeader}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -170,16 +184,26 @@ const styles = StyleSheet.create({
   newButtonPressed: {
     opacity: 0.9,
   },
+  // Real, fixed padding of its own now, not relying on also being nested
+  // inside listContent's own paddingHorizontal to reach its final inset
+  // (that stacking only actually happened once the FlatList took over
+  // rendering it, causing a visible jump — see itemWrap below). `lg` (24) —
+  // the app-wide screen-margin default (see design system → Screen edge
+  // margin) — matches Home's own single, uniform edge padding.
   listHeader: {
-    paddingHorizontal: spacing.base,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
     gap: spacing.lg,
   },
+  // No paddingHorizontal here anymore — each item wraps itself (see
+  // itemWrap) so the list's own edge inset can't stack with listHeader's.
   listContent: {
-    paddingHorizontal: spacing.base,
     paddingBottom: spacing['2xl'],
     flexGrow: 1,
+  },
+  itemWrap: {
+    paddingHorizontal: spacing.lg,
   },
   separator: {
     height: spacing.md,

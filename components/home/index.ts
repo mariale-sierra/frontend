@@ -3,8 +3,10 @@
 // and time remaining. Uses snap scrolling so one card is always centered.
 export * from './ActiveChallengeSection';
 
-// FeedPostCard: Feed post card — author photo/overlay (via PhotoFrame), optional caption,
-// likes/relative-time, and a "send a message" action pointing at the messaging placeholder route.
+// FeedPostCard: Feed post card — header row (avatar/username/timestamp) above the
+// photo, optional caption, likes/relative-time, and a "send a message" action
+// pointing at the messaging placeholder route. PhotoDetailCard (components/ui)
+// mirrors this same header-row-above-the-photo structure for photo detail views.
 export * from './FeedPostCard';
 
 // PostCardSkeleton: Loading placeholder matching FeedPostCard's size/layout, used while the feed loads.

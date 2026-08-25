@@ -58,14 +58,8 @@ export * from './ErrorNotificationProvider';
 // (paper @ 20%) placeholder fill when no photo is set.
 export * from './userAvatar';
 
-// PhotoUserOverlay: Absolute-positioned overlay for photo cards showing a UserAvatar and username
-// with a text shadow for legibility. Drop it directly inside any photo frame View.
-export * from './photoUserOverlay';
-
-// PhotoFrame: Reusable portrait photo card (3/4 aspect ratio) with an image/placeholder fallback
-// and a PhotoUserOverlay. Used in FeedPostCard and ChallengePhotoGalleryModal.
-export * from './photoFrame';
-
-// PhotoDetailCard: Photo card with optional description and metrics table below the image.
-// Used in ChallengePhotoGalleryModal and ProfilePhotoModal.
+// PhotoDetailCard: One photo in a vertical detail feed — header row (avatar/
+// username/day), photo, caption, metrics table. Mirrors FeedPostCard's
+// header-row-above-the-photo structure rather than overlaying text on the
+// image. Used in ChallengePhotoGalleryModal and ProfilePhotoModal.
 export * from './photoDetailCard';

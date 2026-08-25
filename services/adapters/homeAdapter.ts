@@ -1,6 +1,7 @@
 import { asString, asNumber, asBoolean } from './adapterUtils';
 import { pickChallengeStatus, deriveChallengeCardState } from './challengeState';
 import type { ChallengeCardState } from './challengeState';
+import { isRestDay as isRestDayForCycle } from '../../utils/challengeCycle';
 import type { ChallengeContract, ChallengePhoto, ChallengeProgressContract } from '../../types/challenge';
 
 /**
@@ -38,10 +39,24 @@ function pickCurrentDay(challenge: ChallengeContract): number {
 }
 
 function pickIsRestDay(challenge: ChallengeContract): boolean {
+  // Direct flag — GET /users/me/challenges (getMyChallenges) now returns a
+  // real `is_rest_day` boolean per challenge (backend fix, see the skill's
+  // Open Items Tracker), computed server-side in bulk. This is the path that
+  // actually resolves in normal operation now.
   const direct = asBoolean(
     challenge.today_is_rest_day ?? challenge.is_rest_day_today ?? challenge.is_rest_day,
   );
   if (direct != null) return direct;
+
+  // Defense-in-depth fallback, not expected to fire in normal operation
+  // anymore — same shared cycle-day derivation Challenges-Mine uses
+  // (challengeListAdapter.ts). See that file's matching comment.
+  if (Array.isArray(challenge.cycle_days) && challenge.cycle_days.length > 0) {
+    const currentDay = pickCurrentDay(challenge);
+    const cycleLength = asNumber(challenge.cycle_length_days) ?? challenge.cycle_days.length;
+    return isRestDayForCycle(currentDay, cycleLength, challenge.cycle_days);
+  }
+
   return false;
 }
 

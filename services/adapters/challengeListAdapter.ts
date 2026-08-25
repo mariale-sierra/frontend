@@ -1,10 +1,11 @@
 import { asString, asNumber, asBoolean, normalizeKey } from './adapterUtils';
 import { pickChallengeStatus, deriveChallengeCardState } from './challengeState';
+import { isRestDay as isRestDayForCycle } from '../../utils/challengeCycle';
 import type { ActiveChallengeViewModel, ChallengesScreenViewModel, ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import type { ActivityType } from '../../types/activity';
 import type { ChallengeContract, ChallengePhoto } from '../../types/challenge';
 
-interface ChallengeListLabels {
+export interface ChallengeListLabels {
   locationFallbackLabel: string;
   categoryFallbackLabel: string;
 }
@@ -53,19 +54,25 @@ function asActivityType(value: string): ActivityType | null {
 }
 
 function pickIsRestDay(challenge: ChallengeContract): boolean {
-  // Direct flag — some API shapes return this at the top level
+  // Direct flag — GET /users/me/challenges (getMyChallenges) now returns a
+  // real `is_rest_day` boolean per challenge (backend fix, see the skill's
+  // Open Items Tracker), computed server-side in bulk. This is the path that
+  // actually resolves in normal operation now.
   const direct = asBoolean(
     challenge.today_is_rest_day ?? challenge.is_rest_day_today ?? challenge.is_rest_day,
   );
   if (direct != null) return direct;
 
-  // Derive from cycle_days: find the cycle day that matches the current day in the cycle
+  // Defense-in-depth fallback, not expected to fire in normal operation
+  // anymore: derive from `cycle_days` (same shared formula as the
+  // Consistency screen's utils/challengeCycle.ts) if a caller ever passes a
+  // challenge object that has `cycle_days` but not the direct flag — e.g.
+  // GET /challenges/:id's full detail shape, which has always included
+  // `cycle_days` and never `is_rest_day` at the top level.
   if (Array.isArray(challenge.cycle_days) && challenge.cycle_days.length > 0) {
     const currentDay = pickCurrentDay(challenge);
     const cycleLength = asNumber(challenge.cycle_length_days) ?? challenge.cycle_days.length;
-    const dayInCycle = ((currentDay - 1) % cycleLength) + 1;
-    const cycleDay = challenge.cycle_days.find((d) => asNumber(d.day_number) === dayInCycle);
-    if (cycleDay) return asBoolean(cycleDay.is_rest_day) ?? false;
+    return isRestDayForCycle(currentDay, cycleLength, challenge.cycle_days);
   }
 
   return false;
@@ -155,7 +162,7 @@ function pickStreakCount(challenge: ChallengeContract): number {
   return 0;
 }
 
-function pickMembersCount(challenge: ChallengeContract): number {
+export function pickMembersCount(challenge: ChallengeContract): number {
   const candidates: Array<unknown> = [
     challenge.members_count,
     challenge.member_count,
@@ -174,7 +181,7 @@ function pickMembersCount(challenge: ChallengeContract): number {
 }
 
 /** All locations joined ("Gym, Home, or Studio") — Explore card's location row. */
-function pickLocationsLabel(challenge: ChallengeContract, fallback: string): string {
+export function pickLocationsLabel(challenge: ChallengeContract, fallback: string): string {
   const items = (challenge.locations ?? []).map((l) => asString(l)).filter(Boolean);
   if (items.length === 0) return fallback;
   try {
@@ -185,18 +192,18 @@ function pickLocationsLabel(challenge: ChallengeContract, fallback: string): str
 }
 
 /** Raw category strings joined ("Strength, Cardio, Mobility") — Explore card's category row. Deliberately NOT normalized through the strict ActivityType enum: this is a whole-challenge tag summary, not per-exercise icon data. */
-function pickCategoriesLabel(challenge: ChallengeContract, fallback: string): string {
+export function pickCategoriesLabel(challenge: ChallengeContract, fallback: string): string {
   const items = (challenge.categories ?? []).map((c) => asString(c)).filter(Boolean);
   return items.length > 0 ? items.join(', ') : fallback;
 }
 
-function pickCycleLengthDays(challenge: ChallengeContract): number {
+export function pickCycleLengthDays(challenge: ChallengeContract): number {
   const direct = asNumber(challenge.cycle_length_days);
   if (direct != null) return direct;
   return Array.isArray(challenge.cycle_days) ? challenge.cycle_days.length : 0;
 }
 
-function pickRestDaysCount(challenge: ChallengeContract): number {
+export function pickRestDaysCount(challenge: ChallengeContract): number {
   if (!Array.isArray(challenge.cycle_days)) return 0;
   return challenge.cycle_days.filter((d) => asBoolean(d.is_rest_day) === true).length;
 }

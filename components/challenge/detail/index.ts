@@ -1,17 +1,24 @@
 // Challenge detail components for challenge detail views
 
-// ChallengeHeader: Header component for challenge detail screens.
-// Displays challenge title, description, activity badges, and location icons.
+// ChallengeHeader: Title + info-rows block (Challenge-Info wireframe) —
+// icon/label/value rows ("Lasts", "Do it at", "Focus", "Daily proof").
 export { default as ChallengeHeader } from './challengeHeader';
+export type { ChallengeInfoRow } from './challengeHeader';
 
-// ChallengeRoutineList: List component for displaying challenge routines.
-// Shows daily routines with expandable day cards and routine details.
+// ChallengeAboutSection: "About" section with a 4-line collapse/"Read more" toggle.
+export { default as ChallengeAboutSection } from './challengeAboutSection';
+
+// ChallengeRoutineList: "The cycle" section — flat list of cycle days
+// (rest days included), no week pagination (a cycle repeats as a whole).
 export { default as ChallengeRoutineList } from './challengeRoutineList';
 
-// ChallengeRoutineDayCard: Card component for individual routine days.
-// Displays day information with routine assignments and completion status.
+// ChallengeRoutineDayCard: One numbered row in the cycle list — workout day
+// (tappable, chevron) or rest day (not tappable, `rest`-colored title).
 export { default as ChallengeRoutineDayCard } from './challengeRoutineDayCard';
 
 // ChallengeParticipantsList: Horizontal avatar row of challenge members.
 // Tapping a member opens their public profile (with the Follow button).
+// Not used by Challenge-Info anymore (its member-count pill now links to
+// /challenge/:id/members instead) — left in place, unused, in case a future
+// wireframe wants this specific horizontal-strip treatment.
 export { default as ChallengeParticipantsList } from './challengeParticipantsList';
