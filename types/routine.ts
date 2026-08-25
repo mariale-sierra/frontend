@@ -1,4 +1,4 @@
-import type { ActivityType } from '../constants/theme';
+import type { ActivityType } from './activity';
 
 export interface RoutineOption {
   id: number;

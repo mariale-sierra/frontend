@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ActivityType } from '../constants/theme';
+import type { ActivityType } from '../types/activity';
 import type {
   ExerciseEntry,
   ExerciseMetricType,
@@ -42,6 +42,7 @@ interface RoutineBuilderState {
   assignRestDayToDay: (day: number) => void;
   unassignRoutineFromDay: (day: number) => void;
   pruneRoutinesAfterDay: (day: number) => void;
+  removeDayAndShift: (day: number, totalDaysBeforeRemoval: number) => void;
   resetBuilder: () => void;
 }
 
@@ -632,6 +633,26 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
         Object.entries(state.routinesByDay).filter(([key]) => Number(key) <= day)
       ),
     })),
+
+  // Removes one day slot from the middle of the cycle (the wireframe's per-row
+  // "×") and shifts every later day's routine assignment down by one, so day
+  // numbers stay contiguous 1..(totalDaysBeforeRemoval - 1) afterward.
+  removeDayAndShift: (day, totalDaysBeforeRemoval) =>
+    set((state) => {
+      const nextRoutinesByDay: Record<number, RoutineSummary> = {};
+
+      for (let dayNumber = 1; dayNumber <= totalDaysBeforeRemoval; dayNumber += 1) {
+        if (dayNumber === day) continue;
+
+        const routine = state.routinesByDay[dayNumber];
+        if (!routine) continue;
+
+        const targetDay = dayNumber < day ? dayNumber : dayNumber - 1;
+        nextRoutinesByDay[targetDay] = routine;
+      }
+
+      return { routinesByDay: nextRoutinesByDay };
+    }),
 
   resetBuilder: () => set({
     dayIndex: null,
