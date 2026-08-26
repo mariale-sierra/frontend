@@ -162,7 +162,7 @@ export default function CreateRoutineScreen() {
               </Stack>
             </Stack>
           ) : (
-            <Stack gap="sm">
+            <Stack gap="base">
               {exercises.map((exercise, index) => (
                 <ExerciseBlock key={exercise.id} exercise={exercise} index={index} />
               ))}

@@ -94,7 +94,7 @@ export default function TabsLayout() {
         options={{
           title: "Add",
           tabBarItemStyle: styles.fabItem,
-          tabBarButton: () => <FabButton onPress={() => router.push("/(add)/metrics")} />,
+          tabBarButton: () => <FabButton onPress={() => router.push("/log")} />,
         }}
         listeners={{
           tabPress: (e) => {

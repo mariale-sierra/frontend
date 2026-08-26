@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useMetricsEntryStore } from '../store/metricsEntryStore';
@@ -14,6 +14,10 @@ import { useTranslation } from 'react-i18next';
 export function useMetricsScreen() {
   const { userId } = useAuth();
   const { t } = useTranslation();
+  // Set when arriving from the "Log today's progress" challenge picker
+  // (app/log.tsx) — preselects that challenge instead of always the first
+  // one. Falls back to the first active challenge when absent/invalid.
+  const { challengeId: requestedChallengeId } = useLocalSearchParams<{ challengeId?: string }>();
 
   const challenges = useMetricsEntryStore((state) => state.challenges);
   const selectedChallengeId = useMetricsEntryStore((state) => state.selectedChallengeId);
@@ -59,20 +63,21 @@ export function useMetricsScreen() {
         }
 
         // Store challenges first so the dropdown is populated even if the routine fetch fails.
-        const firstChallenge = adaptedChallenges[0];
-        lastFetchedChallengeId.current = firstChallenge.id;
+        const initialChallenge =
+          adaptedChallenges.find((c) => c.id === requestedChallengeId) ?? adaptedChallenges[0];
+        lastFetchedChallengeId.current = initialChallenge.id;
         console.log('[useMetricsScreen] challenges before store', adaptedChallenges);
         hydrateMetricsData({
           challenges: adaptedChallenges,
-          selectedChallengeId: firstChallenge.id,
+          selectedChallengeId: initialChallenge.id,
           exerciseMetrics: [],
           routineId: null,
         });
 
         // Then fetch today's routine separately — failure here won't block the dropdown.
         try {
-          const routineData = await getTodayRoutineForChallenge(firstChallenge.id);
-          const exercises = adaptTodayRoutineExercises(routineData, firstChallenge);
+          const routineData = await getTodayRoutineForChallenge(initialChallenge.id);
+          const exercises = adaptTodayRoutineExercises(routineData, initialChallenge);
           setExerciseMetrics(exercises, routineData.routine_id);
         } catch (routineErr: any) {
           console.warn(

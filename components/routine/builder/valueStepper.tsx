@@ -1,7 +1,7 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Row } from '../../layout/row';
 import { Text } from '../../ui/text';
-import { Icon } from '../../ui/icon';
+import { IconButton } from '../../ui/iconButton';
 import { colors, radius, spacing } from '../../../constants/theme';
 
 interface ValueStepperProps {
@@ -12,58 +12,75 @@ interface ValueStepperProps {
   decreaseDisabled?: boolean;
 }
 
-/** Label + [–][value][+] row — the routine builder's Sets / Reps per set /
- * Rest between sets controls. Minus button is `ink`, plus is `primary`,
- * matching the wireframe exactly. */
+/** Label + [–][value][+] pill row — the routine builder's Sets / Reps per
+ * set / Rest between sets controls. Whole row is an `ink` track; minus/plus
+ * reuse the shared `IconButton` (`variant="surface"`, radius overridden to
+ * `big` so it reads as a circle) instead of bespoke buttons; the value itself
+ * is the one `primary`-filled pill, matching the wireframe exactly. */
 export function ValueStepper({ label, valueLabel, onIncrease, onDecrease, decreaseDisabled = false }: ValueStepperProps) {
   return (
-    <Row justify="space-between" align="center">
+    <View style={styles.track}>
       <Text variant="label" weight="medium" tone="secondary">{label}</Text>
 
-      <Row align="center" gap="md">
-        <Pressable
+      <Row align="center" gap="sm">
+        <IconButton
+          name="remove-outline"
+          variant="surface"
+          size={32}
+          iconSize={14}
+          iconColor={colors.paper}
           onPress={onDecrease}
           disabled={decreaseDisabled}
-          style={({ pressed }) => [styles.button, styles.buttonMinus, pressed && !decreaseDisabled && styles.pressed, decreaseDisabled && styles.disabled]}
-        >
-          <Icon name="remove-outline" size={14} color={colors.paper} />
-        </Pressable>
+          style={[styles.stepButton, decreaseDisabled && styles.stepButtonDisabled]}
+        />
 
-        <Text variant="body" weight="bold" style={styles.value}>{valueLabel}</Text>
+        <View style={styles.valuePill}>
+          <Text variant="label" weight="bold" style={styles.valueText}>{valueLabel}</Text>
+        </View>
 
-        <Pressable
+        <IconButton
+          name="add-outline"
+          variant="surface"
+          size={32}
+          iconSize={14}
+          iconColor={colors.paper}
           onPress={onIncrease}
-          style={({ pressed }) => [styles.button, styles.buttonPlus, pressed && styles.pressed]}
-        >
-          <Icon name="add-outline" size={14} color={colors.ink} />
-        </Pressable>
+          style={styles.stepButton}
+        />
       </Row>
-    </Row>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    width: 32,
-    height: 32,
+  track: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    height: 48,
     borderRadius: radius.big,
+    backgroundColor: colors.ink,
+    paddingLeft: spacing.base,
+    paddingRight: spacing.xs,
+  },
+  stepButton: {
+    borderRadius: radius.big,
+    borderWidth: 0,
+  },
+  stepButtonDisabled: {
+    opacity: 0.4,
+  },
+  valuePill: {
+    minWidth: 44,
+    height: 32,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.big,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonMinus: {
-    backgroundColor: colors.ink,
-  },
-  buttonPlus: {
-    backgroundColor: colors.primary,
-  },
-  value: {
-    minWidth: 32,
-    textAlign: 'center',
-  },
-  pressed: {
-    opacity: 0.82,
-  },
-  disabled: {
-    opacity: 0.4,
+  valueText: {
+    color: colors.ink,
+    opacity: 1,
   },
 });

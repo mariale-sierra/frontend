@@ -22,7 +22,7 @@ export interface HomeActiveChallengeViewModel {
   streakCount: number;
 }
 
-function pickCurrentDay(challenge: ChallengeContract): number {
+export function pickCurrentDay(challenge: ChallengeContract): number {
   const candidates: Array<unknown> = [
     challenge.current_day,
     challenge.currentDay,
@@ -38,7 +38,7 @@ function pickCurrentDay(challenge: ChallengeContract): number {
   return 1;
 }
 
-function pickIsRestDay(challenge: ChallengeContract): boolean {
+export function pickIsRestDay(challenge: ChallengeContract): boolean {
   // Direct flag — GET /users/me/challenges (getMyChallenges) now returns a
   // real `is_rest_day` boolean per challenge (backend fix, see the skill's
   // Open Items Tracker), computed server-side in bulk. This is the path that

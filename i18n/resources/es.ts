@@ -198,6 +198,16 @@ const es = {
       submitErrorFallback: 'Error de red. Intenta de nuevo.',
     },
   },
+  logMetrics: {
+    pickChallenge: {
+      title: 'Registra tu progreso de hoy',
+      subtitle: '¿Qué reto?',
+      dayLabel: 'Día {{day}}',
+      emptyMessage: 'Aún no perteneces a ningún reto.',
+      errorMessage: 'No se pudieron cargar tus retos.',
+      exploreCta: 'Explorar retos',
+    },
+  },
   challengeCreate: {
     stepLabel: 'Paso {{current}} de {{total}}',
     fields: {

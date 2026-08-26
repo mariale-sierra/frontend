@@ -12,9 +12,11 @@ import type {
 } from '../../types/metrics';
 import { ACTIVITY_METRIC_CONFIG } from '../../types/metrics';
 import type { LocationType } from '../../components/icons/locationIcon';
-import type { ChallengeContract, TodayRoutineContract } from '../../types/challenge';
+import type { ChallengeContract, ChallengePhoto, TodayRoutineContract } from '../../types/challenge';
 import type { ActivityType } from '../../constants/theme';
 import { asString } from './adapterUtils';
+import { pickChallengeStatus } from './challengeState';
+import { pickCurrentDay, pickIsRestDay } from './homeAdapter';
 
 const ALLOWED_ACTIVITY_CATEGORIES = new Set<ActivityCategory>(
   PREDEFINED_ACTIVITY_CATEGORIES,
@@ -31,6 +33,42 @@ function sanitizeLocations(locations: unknown[]): LocationType[] {
   return (locations as string[]).filter((value): value is LocationType =>
     ALLOWED_LOCATIONS.has(value as LocationType),
   );
+}
+
+/** Log-today's-progress bottom sheet — one row per active challenge that
+ * can actually receive a log today (rest days excluded, see below). */
+export interface LogChallengeQuickPick {
+  id: string;
+  name: string;
+  currentDay: number;
+  /** From the same `GET /workout-posts/mine` grouping the challenge cards
+   * already use (challengeState.ts's groupLatestPhotoByChallengeId) — this
+   * user's own latest photo for the challenge, or null if they haven't
+   * posted one yet. */
+  photoUrl: string | null;
+}
+
+/** Real day number (already attached server-side to `GET /users/me/challenges`,
+ * see homeAdapter.ts) — deliberately NOT a routine name, which that endpoint
+ * doesn't return per challenge (only `GET /routine/today/:challengeId`,
+ * per-challenge, would — an N+1 fetch this list can't afford). See the
+ * design system skill's Open Items Tracker for the backend gap.
+ *
+ * Rest-day challenges are excluded entirely, not just visually de-emphasized
+ * — there's nothing to log on a rest day, so it's not a valid quick-pick
+ * target at all. */
+export function getLogChallengeQuickPicks(
+  challenges: ChallengeContract[],
+  latestPhotoByChallengeId: Map<string, ChallengePhoto>,
+): LogChallengeQuickPick[] {
+  return challenges
+    .filter((challenge) => pickChallengeStatus(challenge) === 'active' && !pickIsRestDay(challenge))
+    .map((challenge) => ({
+      id: String(challenge.id),
+      name: asString(challenge.name) || 'Challenge',
+      currentDay: pickCurrentDay(challenge),
+      photoUrl: latestPhotoByChallengeId.get(String(challenge.id))?.imageUrl ?? null,
+    }));
 }
 
 export function sanitizeChallengeOptions(challenges: ChallengeOption[]): ChallengeOption[] {

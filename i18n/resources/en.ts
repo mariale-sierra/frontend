@@ -201,6 +201,16 @@ const en = {
       submitErrorFallback: 'Network error. Please try again.',
     },
   },
+  logMetrics: {
+    pickChallenge: {
+      title: "Log today's progress",
+      subtitle: 'Which challenge?',
+      dayLabel: 'Day {{day}}',
+      emptyMessage: 'You are not part of any challenge yet.',
+      errorMessage: 'Could not load your challenges.',
+      exploreCta: 'Explore challenges',
+    },
+  },
   challengeCreate: {
     stepLabel: 'Step {{current}} of {{total}}',
     fields: {

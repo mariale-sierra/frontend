@@ -67,7 +67,7 @@ export function ExerciseHeader({
 
         <View style={styles.textColumn}>
           <Text variant="body" weight="bold" numberOfLines={1}>{exercise.name}</Text>
-          <Text variant="caption" tone={collapsed ? 'secondary' : 'primary'} numberOfLines={1} style={!collapsed && styles.metaHighlighted}>
+          <Text variant="caption" weight="medium" tone="primary" numberOfLines={1}>
             {getMetaSummary(exercise, t)}
           </Text>
         </View>
@@ -120,10 +120,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     gap: 2,
-  },
-  metaHighlighted: {
-    color: colors.primary,
-    opacity: 1,
   },
   optionsButton: {
     width: 28,

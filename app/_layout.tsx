@@ -39,6 +39,16 @@ function RootNavigator() {
       <Stack.Screen name="invitations" options={{ headerShown: false }} />
       <Stack.Screen name="home/streaks" options={{ headerShown: false }} />
       <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
+      {/* Top-level on purpose, not nested inside "(add)" — that group is
+          itself a `fullScreenModal` (opaque), so a transparentModal screen
+          nested inside it only reveals that opaque modal's own backdrop, not
+          the tabs screen underneath (confirmed on device: solid white).
+          Living as a direct sibling of "(tabs)" here makes the tabs
+          navigator the actual "previous screen" this reveals. See log.tsx. */}
+      <Stack.Screen
+        name="log"
+        options={{ headerShown: false, presentation: 'transparentModal', animation: 'fade', contentStyle: { backgroundColor: 'transparent' } }}
+      />
       <Stack.Screen name="(add)" options={{ presentation: 'fullScreenModal', headerShown: false }} />
       <Stack.Screen name="challenge" options={{ headerShown: false }} />
       <Stack.Screen name="challenge/create" options={{ headerShown: false }} />

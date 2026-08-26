@@ -4,8 +4,7 @@ import { Text } from '../../ui/text';
 import { ExerciseInput } from './exerciseInput';
 import { RestTimeInput } from './restTimeInput';
 import { ValueStepper } from '../builder/valueStepper';
-import { colors, spacing } from '../../../constants/theme';
-import { withAlpha } from '../../../utils/color';
+import { spacing } from '../../../constants/theme';
 import { useRoutineBuilder, getTotalRestSeconds } from '../../../store/routineBuilderStore';
 import type { ExerciseEntry } from '../../../types/routine';
 
@@ -124,21 +123,18 @@ export function ExerciseMetricsEditor({ exercise }: ExerciseMetricsEditorProps) 
 }
 
 const styles = StyleSheet.create({
+  // No border-top hairline here — the Builder (Strength Expanded) wireframe's
+  // expanded body sits directly under the header row with no divider between
+  // them, unlike most other expanding cards in the app.
   strengthCard: {
     paddingHorizontal: spacing.base,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.lg,
-    gap: spacing.base,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: withAlpha(colors.paper, 0.08),
+    paddingBottom: spacing.base,
+    gap: spacing.sm,
   },
   schemaCard: {
     paddingHorizontal: spacing.base,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.base,
     gap: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: withAlpha(colors.paper, 0.08),
   },
   fieldStack: {
     gap: spacing.md,
