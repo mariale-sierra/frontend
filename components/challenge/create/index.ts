@@ -20,11 +20,14 @@ export * from './VisibilityCardGroup';
 // ChallengeReviewSummary: Hero card + Setup/Cycle summary cards (Step 5 — Review).
 export * from './ChallengeReviewSummary';
 
-// ChallengeTitleInputs, CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar:
-// still used by the not-yet-refactored routine create/select sub-screens
-// (app/challenge/routine/{create,select}.tsx) — left as-is, out of scope for
-// this pass. Do not remove until those screens get their own wireframe.
-export * from './ChallengeTitleInputs';
+// CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar: routine
+// create/select/exercises all got their own wireframe pass and moved off
+// these (now use CreateFlowPrimaryButton + a plain bottom-bar View instead —
+// see app/challenge/routine/{create,select,exercises}.tsx). The only
+// remaining consumer is app/(add)/metrics.tsx, out of scope for this pass —
+// left as-is until that screen gets its own wireframe. `ChallengeTitleInputs`
+// had zero remaining consumers once routine/create.tsx moved off it and was
+// deleted outright.
 export * from './CreateChallengePrimaryActionButton';
 export * from './CreateFlowFixedBottomBar';
 

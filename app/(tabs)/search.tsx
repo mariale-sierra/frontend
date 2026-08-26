@@ -98,7 +98,7 @@ export default function Search() {
     <ScreenBackground variant="default" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + spacing['2xl'] }}>
         <View style={styles.titleWrap}>
-          <Text variant="title">{t('search.screenTitle')}</Text>
+          <Text variant="title" align="center">{t('search.screenTitle')}</Text>
         </View>
 
         <View style={styles.searchBarWrap}>

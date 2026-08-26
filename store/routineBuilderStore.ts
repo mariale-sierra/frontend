@@ -29,6 +29,10 @@ interface RoutineBuilderState {
   updateStrengthSet: (exerciseId: string, setIndex: number, patch: Partial<SetRow>) => void;
   addStrengthSet: (exerciseId: string) => void;
   removeStrengthSet: (exerciseId: string, setIndex: number) => void;
+  /** Applies the same reps value to every set — the routine builder edits sets uniformly, not per-row. */
+  setUniformReps: (exerciseId: string, reps: number) => void;
+  /** Applies the same total rest (in seconds) to every set. */
+  setUniformRestSeconds: (exerciseId: string, totalSeconds: number) => void;
   // Future backend handoff: call this with a raw API template; store validates at runtime.
   applyBackendMetricTemplate: (exerciseId: string, rawTemplate: unknown) => void;
   updateSchemaMetricNumber: (exerciseId: string, fieldKey: string, value: number) => void;
@@ -291,6 +295,10 @@ export function getUniqueActivityTypes(exercises: ExerciseEntry[]): ActivityType
   return Array.from(new Set(exercises.map((exercise) => exercise.activityType)));
 }
 
+export function getTotalRestSeconds(row: SetRow): number {
+  return row.restMin * 60 + row.restSec;
+}
+
 export function getRoutineLocationSummary(exercises: ExerciseEntry[]): string {
   const locations = Array.from(
     new Set(
@@ -418,13 +426,19 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
           return exercise;
         }
 
+        // Copies the last row's reps/rest instead of resetting to hardcoded
+        // defaults — the builder edits reps/rest uniformly across all sets
+        // (see setUniformReps/setUniformRestSeconds), so a newly added set
+        // should match what's already dialed in, not jump back to 8/1:00.
+        const lastSet = exercise.metrics.sets[exercise.metrics.sets.length - 1] ?? defaultSet();
+
         return {
           ...exercise,
           metrics: {
             kind: 'strength',
             sets: [
               ...exercise.metrics.sets,
-              { ...defaultSet(), setNumber: exercise.metrics.sets.length + 1 },
+              { ...lastSet, setNumber: exercise.metrics.sets.length + 1 },
             ],
           },
         };
@@ -445,6 +459,44 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
             sets: exercise.metrics.sets
               .filter((_, index) => index !== setIndex)
               .map((row, index) => ({ ...row, setNumber: index + 1 })),
+          },
+        };
+      }),
+    })),
+
+  setUniformReps: (exerciseId, reps) =>
+    set((state) => ({
+      exercises: state.exercises.map((exercise) => {
+        if (exercise.id !== exerciseId || exercise.metrics.kind !== 'strength') {
+          return exercise;
+        }
+
+        return {
+          ...exercise,
+          metrics: {
+            kind: 'strength',
+            sets: exercise.metrics.sets.map((row) => ({ ...row, reps })),
+          },
+        };
+      }),
+    })),
+
+  setUniformRestSeconds: (exerciseId, totalSeconds) =>
+    set((state) => ({
+      exercises: state.exercises.map((exercise) => {
+        if (exercise.id !== exerciseId || exercise.metrics.kind !== 'strength') {
+          return exercise;
+        }
+
+        const clamped = Math.max(0, totalSeconds);
+        const restMin = Math.floor(clamped / 60);
+        const restSec = clamped % 60;
+
+        return {
+          ...exercise,
+          metrics: {
+            kind: 'strength',
+            sets: exercise.metrics.sets.map((row) => ({ ...row, restMin, restSec })),
           },
         };
       }),

@@ -18,7 +18,7 @@
 // ---------------------------------------------------------------------------
 
 export const colors = {
-  primary: '#E4FF1A', // neon lime — main brand color. Spotlight, not a surface.
+  primary: '#EEFF5C', // neon lime — main brand color. Spotlight, not a surface.
   secondary: '#FF5C1A', // orange — secondary buttons, in-progress indicators
   accent: '#EF3B66', // pink — social/community moments only, never a status color
   // Screen background. The wireframes literally specify `#0E0F0B` (matched

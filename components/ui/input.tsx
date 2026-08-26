@@ -53,6 +53,8 @@ interface InputProps extends TextInputProps {
 
   multiline?: boolean;
   maxLength?: number;
+  /** Set false to suppress the auto-rendered below-input counter when a caller renders its own (e.g. inline in a label row). Default true. */
+  showCounter?: boolean;
 }
 
 export function Input({
@@ -66,6 +68,7 @@ export function Input({
   variant = 'default',
   multiline = false,
   maxLength,
+  showCounter = true,
   style,
   ...props
 }: InputProps) {
@@ -109,6 +112,7 @@ export function Input({
           multiline={multiline}
           maxLength={maxLength}
           onContentSizeChange={handleContentSizeChange}
+          textAlignVertical="center"
           style={[
             styles.input,
             multiline && { height: Math.max(40, height) },
@@ -121,7 +125,7 @@ export function Input({
       </Row>
 
       {/* MAX LENGTH */}
-      {maxLength && (
+      {maxLength && showCounter && (
         <Text variant="caption">
           {props.value?.toString().length ?? 0}/{maxLength}
         </Text>
@@ -145,7 +149,7 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.paper,
     fontSize: 16,
-    lineHeight: 24,
     paddingVertical: 0,
+    includeFontPadding: false,
   },
 });

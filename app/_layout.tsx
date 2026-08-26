@@ -37,6 +37,7 @@ function RootNavigator() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
       <Stack.Screen name="invitations" options={{ headerShown: false }} />
+      <Stack.Screen name="home/streaks" options={{ headerShown: false }} />
       <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
       <Stack.Screen name="(add)" options={{ presentation: 'fullScreenModal', headerShown: false }} />
       <Stack.Screen name="challenge" options={{ headerShown: false }} />

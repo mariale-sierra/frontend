@@ -5,6 +5,8 @@ import { Text } from '../../ui/text';
 interface CreateFlowPrimaryButtonProps extends Omit<PressableProps, 'children'> {
   label: string;
   loading?: boolean;
+  /** `rest` swaps the fill to the rest/recovery token — e.g. a "Confirm rest day" CTA. Defaults to `primary`. */
+  tone?: 'primary' | 'rest';
 }
 
 /** Full-width 52px primary CTA — same spec as Challenge-Info's Join button (body/bold/ink on primary, `radius.big`). */
@@ -12,6 +14,7 @@ export function CreateFlowPrimaryButton({
   label,
   loading = false,
   disabled = false,
+  tone = 'primary',
   style,
   ...props
 }: CreateFlowPrimaryButtonProps) {
@@ -25,6 +28,7 @@ export function CreateFlowPrimaryButton({
         const computedStyle = typeof style === 'function' ? style({ pressed }) : style;
         return [
           styles.button,
+          tone === 'rest' && styles.buttonRest,
           pressed && !isDisabled && styles.pressed,
           isDisabled && styles.disabled,
           computedStyle,
@@ -47,6 +51,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,
+  },
+  buttonRest: {
+    backgroundColor: colors.rest,
   },
   label: {
     color: colors.ink,

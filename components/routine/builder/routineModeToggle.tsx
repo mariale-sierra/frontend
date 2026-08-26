@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
 import { colors, radius, spacing } from '../../../constants/theme';
 
@@ -11,10 +12,12 @@ interface RoutineModeToggleProps {
 
 function ToggleOption({
   active,
+  color,
   label,
   onPress,
 }: {
   active: boolean;
+  color: string;
   label: string;
   onPress: () => void;
 }) {
@@ -23,26 +26,42 @@ function ToggleOption({
       onPress={onPress}
       style={({ pressed }) => [
         styles.option,
-        active && styles.optionActive,
+        active && { backgroundColor: color },
         pressed && styles.pressed,
       ]}
     >
-      <Text variant="label" style={[styles.optionLabel, active && styles.optionLabelActive]}>{label}</Text>
+      <Text
+        variant="label"
+        weight={active ? 'bold' : 'medium'}
+        inverse={active}
+        tone={active ? 'primary' : 'secondary'}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
 
+// Segmented control, per design system → Components → Segmented control:
+// `surface` track, `big` radius, `xs` internal padding. Active segment reuses
+// the standing `primary` (workout day) / `rest` (rest day) pairing already
+// established everywhere else a day's workout/rest status needs a color
+// (Today's-routine banner, ChallengeStatusCard, numbered cycle badges).
 export function RoutineModeToggle({ value, onChange }: RoutineModeToggleProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.shell}>
       <ToggleOption
         active={value === 'workout'}
-        label="Workout"
+        color={colors.primary}
+        label={t('routineSelect.modeToggle.workout')}
         onPress={() => onChange('workout')}
       />
       <ToggleOption
         active={value === 'rest'}
-        label="Rest day"
+        color={colors.rest}
+        label={t('routineSelect.modeToggle.rest')}
         onPress={() => onChange('rest')}
       />
     </View>
@@ -52,29 +71,17 @@ export function RoutineModeToggle({ value, onChange }: RoutineModeToggleProps) {
 const styles = StyleSheet.create({
   shell: {
     flexDirection: 'row',
-    borderRadius: radius['2xl'],
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    padding: spacing.xxs,
+    borderRadius: radius.big,
+    backgroundColor: colors.surface,
+    padding: spacing.xs,
     gap: spacing.xs,
   },
   option: {
     flex: 1,
-    minHeight: 44,
-    borderRadius: radius.xl,
+    height: 48,
+    borderRadius: radius.big,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  optionActive: {
-    backgroundColor: colors.textPrimary,
-  },
-  optionLabel: {
-    color: colors.textPrimary,
-    letterSpacing: 0.8,
-  },
-  optionLabelActive: {
-    color: colors.textInverse,
   },
   pressed: {
     opacity: 0.85,

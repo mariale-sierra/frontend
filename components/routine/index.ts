@@ -1,12 +1,11 @@
 // builder — components used in the routine creation / editing flow
 export * from './builder/exerciseBlock';
-export * from './builder/dayRoutineHeader';
 export * from './builder/exerciseHeader';
-export * from './builder/exerciseSetCounter';
 export * from './builder/exerciseNoteField';
 export * from './builder/restDayOptionCard';
 export * from './builder/routinePickerCard';
 export * from './builder/routineModeToggle';
+export * from './builder/valueStepper';
 
 // exercise-picker — browsing and selecting exercises to add to a routine
 export * from './exercise-picker/exerciseListItem';

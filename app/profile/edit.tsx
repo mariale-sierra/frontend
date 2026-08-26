@@ -173,7 +173,13 @@ export default function EditProfile() {
         </View>
 
         <View style={styles.photoSection}>
-          <Pressable onPress={handleChangePhoto} disabled={uploadingPhoto}>
+          <Pressable
+            onPress={handleChangePhoto}
+            disabled={uploadingPhoto}
+            style={styles.avatarWrap}
+            accessibilityRole="button"
+            accessibilityLabel={t('profileEdit.changePhoto')}
+          >
             <UserAvatar
               username={profile.username}
               imageUrl={profile.profile_image_url}
@@ -184,16 +190,10 @@ export default function EditProfile() {
                 <ActivityIndicator color={colors.primary} />
               </View>
             )}
+            <View style={styles.editBadge}>
+              <Icon name="camera-outline" size={16} color={colors.ink} />
+            </View>
           </Pressable>
-          <Button
-            variant="outline"
-            size="sm"
-            onPress={handleChangePhoto}
-            loading={uploadingPhoto}
-            disabled={uploadingPhoto}
-          >
-            {t('profileEdit.changePhoto')}
-          </Button>
         </View>
 
         <Divider variant="section" marginVertical="sm" />
@@ -295,7 +295,10 @@ const styles = StyleSheet.create({
   },
   photoSection: {
     alignItems: 'center',
-    gap: spacing.sm,
+  },
+  avatarWrap: {
+    width: 96,
+    height: 96,
   },
   photoOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -304,6 +307,24 @@ const styles = StyleSheet.create({
     // the avatar's actual squircle shape.
     borderRadius: radius.big,
     backgroundColor: withAlpha(colors.ink, 0.5),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Camera badge overlapping the avatar's bottom-right corner — the
+  // industry-standard "tap the avatar to change it" affordance, replacing a
+  // separate "Change photo" text button below. Same "cut into" treatment
+  // (ink border) as every other avatar-overlapping badge in the app
+  // (ProfileHeader's streak badge, Home's streak-chip badge).
+  editBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 32,
+    height: 32,
+    borderRadius: radius.big,
+    backgroundColor: colors.primary,
+    borderWidth: 3,
+    borderColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -2,30 +2,50 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
 import { Row } from '../../layout/row';
-import { ActivityIcon } from '../../icons/activityIcon';
 import { Icon } from '../../ui/icon';
-import { ExerciseSetCounter } from './exerciseSetCounter';
-import { colors, spacing } from '../../../constants/theme';
-import { useRoutineBuilder } from '../../../store/routineBuilderStore';
+import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
+import { withAlpha } from '../../../utils/color';
+import { useRoutineBuilder, getTotalRestSeconds } from '../../../store/routineBuilderStore';
 import type { ExerciseEntry } from '../../../types/routine';
 
 interface ExerciseHeaderProps {
   exercise: ExerciseEntry;
+  index: number;
   collapsed: boolean;
   onToggleCollapsed: () => void;
   onRemoveExerciseId: string;
 }
 
+function getMetaSummary(exercise: ExerciseEntry, t: (key: string, options?: Record<string, unknown>) => string): string {
+  if (exercise.metrics.kind === 'strength') {
+    const firstSet = exercise.metrics.sets[0];
+    return t('routineCreate.stepper.metaSummary', {
+      sets: exercise.metrics.sets.length,
+      reps: firstSet?.reps ?? 0,
+      rest: firstSet ? getTotalRestSeconds(firstSet) : 0,
+    });
+  }
+
+  const numberField = exercise.metrics.template.fields.find((field) => field.type === 'number');
+  if (numberField) {
+    const value = exercise.metrics.values[numberField.key];
+    const numericValue = typeof value === 'number' ? value : numberField.defaultValue;
+    const valueLabel = numberField.unit ? `${numericValue} ${numberField.unit}` : String(numericValue);
+    return t('routineCreate.stepper.schemaMetaSummary', { value: valueLabel });
+  }
+
+  return t('routineCreate.stepper.schemaMetaSummaryFallback');
+}
+
 export function ExerciseHeader({
   exercise,
+  index,
   collapsed,
   onToggleCollapsed,
   onRemoveExerciseId,
 }: ExerciseHeaderProps) {
   const { t } = useTranslation();
-  const { removeExercise, addStrengthSet, removeStrengthSet } = useRoutineBuilder();
-
-  const strengthSetCount = exercise.metrics.kind === 'strength' ? exercise.metrics.sets.length : null;
+  const { removeExercise } = useRoutineBuilder();
 
   function handleOpenOptions() {
     Alert.alert(
@@ -40,31 +60,20 @@ export function ExerciseHeader({
 
   return (
     <Pressable onPress={collapsed ? onToggleCollapsed : undefined} style={styles.headerSection}>
-      <Row justify="space-between" align="center" style={styles.mainRow}>
-        <Row align="center" gap="sm" style={styles.leadingRow}>
-          <ActivityIcon type={exercise.activityType} size="md" variant="plain" />
+      <Row justify="space-between" align="center" gap="md">
+        <View style={styles.badge}>
+          <Text variant="caption" weight="bold">{index + 1}</Text>
+        </View>
 
-          <View style={styles.textColumn}>
-            <Text variant="header" tone="primary" numberOfLines={1} style={styles.exerciseTitle}>
-              {exercise.name}
-            </Text>
-
-            <Text variant="caption" numberOfLines={1} style={styles.exerciseSubtitle}>
-              {exercise.location}
-            </Text>
-          </View>
-        </Row>
-
-        {!collapsed && strengthSetCount != null ? (
-          <ExerciseSetCounter
-            count={strengthSetCount}
-            onIncrease={() => addStrengthSet(exercise.id)}
-            onDecrease={() => removeStrengthSet(exercise.id, strengthSetCount - 1)}
-          />
-        ) : null}
+        <View style={styles.textColumn}>
+          <Text variant="body" weight="bold" numberOfLines={1}>{exercise.name}</Text>
+          <Text variant="caption" tone={collapsed ? 'secondary' : 'primary'} numberOfLines={1} style={!collapsed && styles.metaHighlighted}>
+            {getMetaSummary(exercise, t)}
+          </Text>
+        </View>
 
         {collapsed ? (
-          <Icon name="chevron-down" size={18} color="rgba(255,255,255,0.42)" />
+          <Icon name="chevron-forward-outline" size={18} color={withAlpha(colors.paper, textOpacity.secondary)} />
         ) : (
           <Row align="center" gap="xs">
             <Pressable
@@ -74,7 +83,7 @@ export function ExerciseHeader({
               accessibilityRole="button"
               accessibilityLabel={t('routineCreate.exerciseOptions.optionsA11y')}
             >
-              <Icon name="ellipsis-horizontal" size={18} color={colors.textPrimary} />
+              <Icon name="ellipsis-horizontal-outline" size={18} color={colors.paper} />
             </Pressable>
 
             <Pressable
@@ -84,7 +93,7 @@ export function ExerciseHeader({
               accessibilityRole="button"
               accessibilityLabel={t('routineCreate.exerciseOptions.collapseA11y')}
             >
-              <Icon name="chevron-up" size={18} color="rgba(255,255,255,0.52)" />
+              <Icon name="chevron-up-outline" size={18} color={colors.paper} />
             </Pressable>
           </Row>
         )}
@@ -95,35 +104,30 @@ export function ExerciseHeader({
 
 const styles = StyleSheet.create({
   headerSection: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
   },
-  mainRow: {
-    width: '100%',
-    gap: spacing.sm,
-  },
-  leadingRow: {
-    flex: 1,
-    minHeight: 40,
+  badge: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.big,
+    backgroundColor: withAlpha(colors.paper, 0.12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   textColumn: {
     flex: 1,
-    justifyContent: 'center',
+    minWidth: 0,
     gap: 2,
   },
-  exerciseTitle: {
-    flexShrink: 1,
-    fontSize: 16,
-    lineHeight: 20,
-  },
-  exerciseSubtitle: {
-    color: 'rgba(255,255,255,0.56)',
-    fontSize: 10,
-    lineHeight: 14,
+  metaHighlighted: {
+    color: colors.primary,
+    opacity: 1,
   },
   optionsButton: {
-    minWidth: 28,
-    minHeight: 28,
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },

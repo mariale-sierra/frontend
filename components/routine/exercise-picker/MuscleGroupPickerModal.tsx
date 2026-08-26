@@ -125,9 +125,9 @@ export function MuscleGroupPickerModal({
               renderItem={({ item }) => (
                 <ExerciseListItem
                   name={item.name}
-                  location={item.location}
-                  activityType={item.activityType}
-                  onAdd={() => handleAdd(item)}
+                  meta={item.location}
+                  selected={false}
+                  onPress={() => handleAdd(item)}
                 />
               )}
               ListEmptyComponent={
