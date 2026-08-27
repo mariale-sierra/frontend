@@ -20,16 +20,11 @@ export * from './VisibilityCardGroup';
 // ChallengeReviewSummary: Hero card + Setup/Cycle summary cards (Step 5 — Review).
 export * from './ChallengeReviewSummary';
 
-// CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar: routine
-// create/select/exercises all got their own wireframe pass and moved off
-// these (now use CreateFlowPrimaryButton + a plain bottom-bar View instead —
-// see app/challenge/routine/{create,select,exercises}.tsx). The only
-// remaining consumer is app/(add)/metrics.tsx, out of scope for this pass —
-// left as-is until that screen gets its own wireframe. `ChallengeTitleInputs`
-// had zero remaining consumers once routine/create.tsx moved off it and was
-// deleted outright.
-export * from './CreateChallengePrimaryActionButton';
-export * from './CreateFlowFixedBottomBar';
+// CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar: deleted —
+// app/(add)/metrics.tsx (their last remaining consumer) got its own wireframe
+// pass and moved onto CreateFlowPrimaryButton + a plain bottom-bar View, the
+// same swap routine create/select/exercises already made. `ChallengeTitleInputs`
+// was deleted the same way once routine/create.tsx moved off it.
 
 // CreateFlowPrimaryButton: Full-width 52px primary CTA, retokenized — used by
 // every step of the create-challenge flow.

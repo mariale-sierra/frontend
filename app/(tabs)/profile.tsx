@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -9,7 +9,7 @@ import { IconButton } from '../../components/ui/iconButton';
 import { getMyProfile } from '../../services/user/user.service';
 import { getPendingInvites } from '../../services/invites/invite.service';
 import type { MyProfileContract } from '../../types/user';
-import { ProfileHeader, PostsViewToggle, PostsGrid, ProfilePhotoModal } from '../../components/profile';
+import { ProfileHeader, PostsViewToggle, PostsGrid, ProfilePhotoModal, ProfileContentSkeleton } from '../../components/profile';
 import type { PostsView } from '../../components/profile';
 import type { ChallengePhoto } from '../../types/challenge';
 import { Row } from '../../components/layout/row';
@@ -106,9 +106,7 @@ export default function Profile() {
       {topBar}
       <ScrollView contentContainerStyle={styles.container}>
         {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.primary} />
-          </View>
+          <ProfileContentSkeleton />
         ) : error ? (
           <View style={styles.center}>
             <Text tone="secondary">{error}</Text>

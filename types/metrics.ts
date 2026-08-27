@@ -36,6 +36,12 @@ export interface ExerciseMetricsRow {
   duration?: string;
   distance?: string;
   rounds?: string;
+  /** Original per-set plan value for whichever fields above have a real
+   * backend target (routine_exercise_set_targets), keyed the same way. Seeds
+   * the field's initial value and lets the Log-Metrics screen tell an
+   * untouched set from an adjusted one. Absent for a field with no target
+   * (e.g. no weight target was ever set on this set). */
+  targets?: Partial<Record<MetricField, number>>;
 }
 
 export interface ExerciseMetricsBlock {
@@ -62,22 +68,22 @@ export const ACTIVITY_METRIC_CONFIG: Record<ActivityType, ActivityMetricConfig> 
     showSetColumn: true,
   },
   cardioIntense: {
-    columns: [{ key: 'duration', label: 'min' }, { key: 'distance', label: 'km' }],
+    columns: [{ key: 'duration', label: 'sec' }, { key: 'distance', label: 'km' }],
     defaultRows: 1,
     showSetColumn: false,
   },
   cardioLow: {
-    columns: [{ key: 'duration', label: 'min' }, { key: 'distance', label: 'km' }],
+    columns: [{ key: 'duration', label: 'sec' }, { key: 'distance', label: 'km' }],
     defaultRows: 1,
     showSetColumn: false,
   },
   flexibility: {
-    columns: [{ key: 'duration', label: 'min' }],
+    columns: [{ key: 'duration', label: 'sec' }],
     defaultRows: 1,
     showSetColumn: false,
   },
   mindBody: {
-    columns: [{ key: 'duration', label: 'min' }],
+    columns: [{ key: 'duration', label: 'sec' }],
     defaultRows: 1,
     showSetColumn: false,
   },

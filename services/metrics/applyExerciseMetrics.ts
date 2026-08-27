@@ -40,11 +40,8 @@ export async function applyExerciseMetrics(
       const firstRow = block.rows.find((row) => (row[column.key] ?? '').trim().length > 0);
       if (!firstRow) continue;
 
-      const rawValue = parseFloat(firstRow[column.key] ?? '');
-      if (!Number.isFinite(rawValue)) continue;
-
-      // 'duration' is tracked in minutes in the UI but stored in seconds.
-      const value = column.key === 'duration' ? rawValue * 60 : rawValue;
+      const value = parseFloat(firstRow[column.key] ?? '');
+      if (!Number.isFinite(value)) continue;
 
       await addMetricToWorkoutLogExercise(wle.id, metricCode, value);
       matchedCount++;

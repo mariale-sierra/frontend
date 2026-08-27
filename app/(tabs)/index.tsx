@@ -14,7 +14,7 @@ import { ActiveChallengeSection } from '../../components/home/ActiveChallengeSec
 import { FeedPostCard } from '../../components/home/FeedPostCard';
 import { FriendsStreakSection } from '../../components/home/FriendsStreakSection';
 import type { FriendStreakViewModel } from '../../services/adapters/followAdapter';
-import { PostCardSkeleton } from '../../components/home/PostCardSkeleton';
+import { HomeContentSkeleton } from '../../components/home/HomeContentSkeleton';
 import { EmptyFeed } from '../../components/home/EmptyFeed';
 import { FeedErrorState } from '../../components/home/FeedErrorState';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
@@ -151,6 +151,12 @@ export default function Home() {
     return <FeedPostCard post={item} />;
   }
 
+  // One combined gate instead of three independent loading flags each
+  // rendering their own fallback — the screen reveals once, fully populated,
+  // instead of the hero card / streaks / feed popping in separately as each
+  // fetch happens to resolve. See HomeContentSkeleton.
+  const isReady = !challengeLoading && !feedLoading && !friendStreaksLoading;
+
   const listHeader = (
     <View style={styles.listHeader}>
       <Row justify="space-between" align="flex-start">
@@ -174,54 +180,43 @@ export default function Home() {
         </Row>
       </Row>
 
-      <View style={styles.challengeArea}>
-        {challengeLoading ? (
-          <View style={styles.challengeLoadingArea}>
-            <Loader visible={true} overlayStyle={styles.loaderTransparent} />
+      {!isReady ? (
+        <HomeContentSkeleton />
+      ) : (
+        <>
+          <View style={styles.challengeArea}>
+            {challenges.length > 0 ? (
+              <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
+            ) : (
+              <View style={styles.center}>
+                <Text variant="body" tone="secondary">{t('home.noActiveChallenge')}</Text>
+              </View>
+            )}
           </View>
-        ) : challenges.length > 0 ? (
-          <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
-        ) : (
-          <View style={styles.center}>
-            <Text variant="body" tone="secondary">{t('home.noActiveChallenge')}</Text>
+
+          <View style={styles.friendsArea}>
+            <FriendsStreakSection
+              friends={friendStreaks}
+              error={friendStreaksError}
+              onSeeMore={() => router.push('/home/streaks')}
+            />
           </View>
-        )}
-      </View>
 
-      <View style={styles.friendsArea}>
-        <FriendsStreakSection
-          friends={friendStreaks}
-          loading={friendStreaksLoading}
-          error={friendStreaksError}
-          onSeeMore={() => router.push('/home/streaks')}
-        />
-      </View>
-
-      <Divider style={styles.divider} />
+          <Divider style={styles.divider} />
+        </>
+      )}
     </View>
   );
 
   return (
     <ScreenBackground variant="default">
       <FlatList
-        data={feedPosts}
+        data={isReady ? feedPosts : []}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ListHeaderComponent={listHeader}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
-        ListEmptyComponent={
-          feedLoading ? (
-            <View style={styles.feedSkeletonArea}>
-              <PostCardSkeleton />
-              <View style={styles.skeletonSpacer} />
-              <PostCardSkeleton />
-            </View>
-          ) : feedError ? (
-            <FeedErrorState />
-          ) : (
-            <EmptyFeed />
-          )
-        }
+        ListEmptyComponent={!isReady ? null : feedError ? <FeedErrorState /> : <EmptyFeed />}
         ListFooterComponent={
           feedLoadingMore ? (
             <View style={styles.feedFooterLoading}>
@@ -279,9 +274,6 @@ const styles = StyleSheet.create({
   challengeArea: {
     marginHorizontal: -spacing.lg,
   },
-  challengeLoadingArea: {
-    height: 120,
-  },
   loaderTransparent: {
     backgroundColor: 'transparent',
   },
@@ -292,12 +284,6 @@ const styles = StyleSheet.create({
   friendsArea: {},
   divider: {
     marginTop: spacing.xs,
-  },
-  feedSkeletonArea: {
-    paddingTop: spacing.xs,
-  },
-  skeletonSpacer: {
-    height: spacing['2xl'],
   },
   feedFooterLoading: {
     height: 60,

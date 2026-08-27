@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 import { useMetricsEntryStore } from '../store/metricsEntryStore';
 import { useAuth } from './useAuth';
 import { getTodayRoutineForChallenge } from '../services/challenge/challenge.service';
+import { getRoutine } from '../services/routine/routine.service';
 import { getMyChallenges } from '../services/user/user.service';
 import {
   adaptChallengesForMetrics,
@@ -21,24 +22,36 @@ export function useMetricsScreen() {
 
   const challenges = useMetricsEntryStore((state) => state.challenges);
   const selectedChallengeId = useMetricsEntryStore((state) => state.selectedChallengeId);
-  const isChallengeMenuOpen = useMetricsEntryStore((state) => state.isChallengeMenuOpen);
   const exerciseMetrics = useMetricsEntryStore((state) => state.exerciseMetrics);
   const currentRoutineId = useMetricsEntryStore((state) => state.currentRoutineId);
 
-  const toggleChallengeMenu = useMetricsEntryStore((state) => state.toggleChallengeMenu);
-  const selectChallenge = useMetricsEntryStore((state) => state.selectChallenge);
   const setExerciseMetrics = useMetricsEntryStore((state) => state.setExerciseMetrics);
   const updateMetricValue = useMetricsEntryStore((state) => state.updateMetricValue);
-  const updateExerciseNotes = useMetricsEntryStore((state) => state.updateExerciseNotes);
   const hydrateMetricsData = useMetricsEntryStore((state) => state.hydrateMetricsData);
 
-  const [activeRowKey, setActiveRowKey] = useState<string | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [challengeLoadError, setChallengeLoadError] = useState<string | null>(null);
+  // Cycle-day number + routine name for the header ("Day {{n}} · {{routine}}").
+  // Neither is on the challenge itself — both come from the today-routine
+  // fetch below (routineName needs one extra, non-blocking GET /routine/:id
+  // since getTodayRoutine only returns routine_id, not the routine's name).
+  const [currentDay, setCurrentDay] = useState<number | null>(null);
+  const [routineName, setRoutineName] = useState<string | null>(null);
 
   // Tracks which challengeId we last fetched a routine for, to avoid double-fetching
   // after the init effect sets selectedChallengeId via hydrateMetricsData.
   const lastFetchedChallengeId = useRef<string>('');
+
+  const loadDayAndRoutineName = useCallback((routineData: { currentDayInCycle?: number; currentDay?: number; routine_id?: number | null }) => {
+    setCurrentDay(routineData.currentDayInCycle ?? routineData.currentDay ?? null);
+    if (routineData.routine_id) {
+      getRoutine(routineData.routine_id)
+        .then((routine) => setRoutineName(routine.name))
+        .catch(() => setRoutineName(null));
+    } else {
+      setRoutineName(null);
+    }
+  }, []);
 
   useEffect(() => {
     console.log('[useMetricsScreen] store challenges after set', challenges, '| length:', challenges.length);
@@ -79,6 +92,7 @@ export function useMetricsScreen() {
           const routineData = await getTodayRoutineForChallenge(initialChallenge.id);
           const exercises = adaptTodayRoutineExercises(routineData, initialChallenge);
           setExerciseMetrics(exercises, routineData.routine_id);
+          loadDayAndRoutineName(routineData);
         } catch (routineErr: any) {
           console.warn(
             '[Metrics] Could not load today\'s routine (dropdown still works):',
@@ -116,6 +130,7 @@ export function useMetricsScreen() {
 
         lastFetchedChallengeId.current = selectedChallengeId;
         setExerciseMetrics(exercises, routineData.routine_id);
+        loadDayAndRoutineName(routineData);
       } catch (error: any) {
         console.error('[Metrics] Routine load failed:', error?.response?.data ?? error?.message);
         Alert.alert(t('metrics.alerts.submitErrorTitle'), t('metrics.alerts.submitErrorFallback'));
@@ -127,24 +142,8 @@ export function useMetricsScreen() {
     loadRoutine();
   }, [selectedChallengeId]);
 
-  const onRowFocus = useCallback((rowKey: string) => {
-    setActiveRowKey(rowKey);
-  }, []);
-
-  const onRowBlur = useCallback((rowKey: string) => {
-    setActiveRowKey((current) => (current === rowKey ? null : current));
-  }, []);
-
-  useEffect(() => {
-    setActiveRowKey(null);
-  }, [selectedChallengeId]);
-
   const goToCamera = useCallback(() => {
     router.push('/(add)/camera');
-  }, []);
-
-  const goToRestDay = useCallback(() => {
-    router.push('/(add)/rest-day');
   }, []);
 
   const goBack = useCallback(() => {
@@ -154,19 +153,13 @@ export function useMetricsScreen() {
   return {
     challenges,
     selectedChallengeId,
-    isChallengeMenuOpen,
     exerciseMetrics,
-    activeRowKey,
     isLoadingData,
     challengeLoadError,
-    toggleChallengeMenu,
-    selectChallenge,
+    currentDay,
+    routineName,
     updateMetricValue,
-    updateExerciseNotes,
-    onRowFocus,
-    onRowBlur,
     goToCamera,
-    goToRestDay,
     goBack,
   };
 }

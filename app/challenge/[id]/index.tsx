@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,7 @@ import { Row } from '../../../components/layout/row';
 import { BackButton } from '../../../components/ui/backButton';
 import { Icon } from '../../../components/ui/icon';
 import { Text } from '../../../components/ui/text';
-import { ChallengeHeader, ChallengeAboutSection, ChallengeRoutineList } from '../../../components/challenge/detail';
+import { ChallengeHeader, ChallengeAboutSection, ChallengeRoutineList, ChallengeInfoContentSkeleton } from '../../../components/challenge/detail';
 import type { ChallengeInfoRow } from '../../../components/challenge/detail';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
@@ -88,9 +88,11 @@ export default function ChallengeDetail() {
   if (loading) {
     return (
       <ScreenBackground variant="default">
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
+        <Row justify="space-between" align="center" style={styles.topBar}>
+          <BackButton style={styles.backButton} />
+          <View style={styles.iconButton} />
+        </Row>
+        <ChallengeInfoContentSkeleton />
       </ScreenBackground>
     );
   }

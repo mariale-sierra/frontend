@@ -12,6 +12,11 @@ export * from './FeedPostCard';
 // PostCardSkeleton: Loading placeholder matching FeedPostCard's size/layout, used while the feed loads.
 export * from './PostCardSkeleton';
 
+// HomeContentSkeleton: One combined placeholder (hero + streaks + feed) shown
+// until every Home fetch is done, so sections reveal together instead of
+// popping in one by one. Built from components/ui/skeleton's Skeleton primitive.
+export * from './HomeContentSkeleton';
+
 // EmptyFeed: Centered icon+text state shown when the feed loaded successfully but has no posts.
 export * from './EmptyFeed';
 
@@ -30,3 +35,7 @@ export * from './FriendsStreakSection';
 // count badge + name) — same badge treatment as FriendStreakCard, plus an optional
 // `primary` ring for the signed-in user's own tile.
 export * from './StreakGridItem';
+
+// StreaksGridSkeleton: Placeholder grid matching StreakGridItem's shape,
+// shown while the Streaks-All screen's one fetch is in flight.
+export * from './StreaksGridSkeleton';

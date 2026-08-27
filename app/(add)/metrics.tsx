@@ -1,64 +1,44 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import ScreenBackground from '../../components/layout/screenBackground';
-import { MetricsExerciseTable } from '../../components/add/metricsExerciseTable';
-import { MetricsPanel } from '../../components/add/metricsPanel';
-import { MetricsTopBar } from '../../components/add/metricsTopBar';
-import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '../../components/challenge/create';
-import { Divider } from '../../components/ui/divider';
-import { colors, radius, spacing } from '../../constants/theme';
-import { useMetricsScreen } from '../../hooks/useMetricsScreen';
 import { useTranslation } from 'react-i18next';
+import ScreenBackground from '../../components/layout/screenBackground';
+import { Row } from '../../components/layout/row';
+import { Stack } from '../../components/layout/stack';
+import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
+import { LogMetricsExerciseCard } from '../../components/add/logMetricsExerciseCard';
+import { CreateFlowPrimaryButton } from '../../components/challenge/create';
+import { colors, spacing, textOpacity } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
+import { useMetricsScreen } from '../../hooks/useMetricsScreen';
+import { countAdjustedSets } from '../../services/adapters/index';
 
 export default function Metrics() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const {
     challenges,
     selectedChallengeId,
-    isChallengeMenuOpen,
     exerciseMetrics,
-    activeRowKey,
     isLoadingData,
     challengeLoadError,
-    toggleChallengeMenu,
-    selectChallenge,
+    currentDay,
+    routineName,
     updateMetricValue,
-    updateExerciseNotes,
-    onRowFocus,
-    onRowBlur,
     goToCamera,
-    goToRestDay,
     goBack,
   } = useMetricsScreen();
 
-  const selectedChallenge =
-    challenges.find((challenge) => challenge.id === selectedChallengeId) ?? challenges[0];
-
+  const selectedChallenge = challenges.find((challenge) => challenge.id === selectedChallengeId) ?? challenges[0];
   const hasChallenges = challenges.length > 0;
   const isEmpty = !isLoadingData && !challengeLoadError && !hasChallenges;
+  const totalAdjusted = exerciseMetrics.reduce((sum, exercise) => sum + countAdjustedSets(exercise), 0);
 
-  function renderPanelContent() {
+  function renderContent() {
     if (isLoadingData) {
       return (
         <View style={styles.stateWrap}>
-          <ActivityIndicator color={colors.textSecondary} />
-          <Text variant="body" tone="secondary" style={styles.stateText}>
-            Loading your challenges...
-          </Text>
-        </View>
-      );
-    }
-
-    if (challengeLoadError === '401') {
-      return (
-        <View style={styles.stateWrap}>
-          <Text variant="body" tone="secondary" style={styles.stateText}>
-            Please log in again.
-          </Text>
+          <ActivityIndicator color={withAlpha(colors.paper, textOpacity.secondary)} />
         </View>
       );
     }
@@ -66,9 +46,7 @@ export default function Metrics() {
     if (challengeLoadError) {
       return (
         <View style={styles.stateWrap}>
-          <Text variant="body" tone="secondary" style={styles.stateText}>
-            Could not load your challenges.
-          </Text>
+          <Text tone="secondary" align="center">{t('metrics.alerts.submitErrorFallback')}</Text>
         </View>
       );
     }
@@ -76,17 +54,7 @@ export default function Metrics() {
     if (isEmpty) {
       return (
         <View style={styles.stateWrap}>
-          <Text variant="body" tone="secondary" style={styles.stateText}>
-            You are not part of any challenge yet.
-          </Text>
-          <Pressable
-            onPress={() => router.replace('/challenge/explore-all')}
-            style={({ pressed }) => [styles.exploreButton, pressed && styles.pressed]}
-          >
-            <Text variant="body" style={styles.exploreLabel}>
-              Explore challenges
-            </Text>
-          </Pressable>
+          <Text tone="secondary" align="center">{t('logMetrics.pickChallenge.emptyMessage')}</Text>
         </View>
       );
     }
@@ -94,110 +62,118 @@ export default function Metrics() {
     if (exerciseMetrics.length === 0) {
       return (
         <View style={styles.stateWrap}>
-          <Text variant="body" tone="secondary" style={styles.stateText}>
-            No exercises for today's routine.
-          </Text>
+          <Text tone="secondary" align="center">{t('logMetrics.entry.noExercises')}</Text>
         </View>
       );
     }
 
     return (
-      <ScrollView
-        style={styles.metricsScroll}
-        contentContainerStyle={styles.metricsContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {exerciseMetrics.map((exercise, exerciseIndex) => (
-          <MetricsExerciseTable
-            key={exercise.id}
-            exercise={exercise}
-            index={exerciseIndex}
-            activeRowKey={activeRowKey}
-            onRowFocus={onRowFocus}
-            onRowBlur={onRowBlur}
-            onMetricChange={updateMetricValue}
-            onNotesChange={updateExerciseNotes}
-          />
-        ))}
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
+        <Stack gap="base">
+          {exerciseMetrics.map((exercise) => (
+            <LogMetricsExerciseCard
+              key={exercise.id}
+              exercise={exercise}
+              onChangeValue={(rowIndex, field, nextValue) =>
+                updateMetricValue(exercise.id, rowIndex, field, String(nextValue))
+              }
+            />
+          ))}
+        </Stack>
       </ScrollView>
     );
   }
 
   return (
-    <ScreenBackground variant="default">
-      <View style={styles.screen}>
-        <View style={styles.headerWrap}>
-          <MetricsTopBar
-            challenges={challenges}
-            selectedChallengeId={selectedChallengeId}
-            isChallengeMenuOpen={isChallengeMenuOpen}
-            onToggleChallengeMenu={toggleChallengeMenu}
-            onSelectChallenge={selectChallenge}
-            onBack={goBack}
-            onRestDay={goToRestDay}
-            onSkip={goToCamera}
-          />
+    <ScreenBackground variant="default" applyTopInset={false}>
+      <View style={styles.headerPanel}>
+        <Row justify="space-between" align="center" style={[styles.topBar, { paddingTop: insets.top + spacing.md }]}>
+          <Pressable onPress={goBack} hitSlop={12} style={styles.iconButton}>
+            <Icon name="chevron-back-outline" size={24} color={colors.paper} />
+          </Pressable>
+          <View style={styles.iconButton} />
+        </Row>
+
+        <View style={styles.titleBlock}>
+          <Text variant="header" size="xs" numberOfLines={1} style={styles.eyebrow}>
+            {selectedChallenge?.label ?? ''}
+          </Text>
+          <Text variant="title" numberOfLines={2}>
+            {routineName
+              ? t('logMetrics.entry.dayWithRoutine', { day: currentDay ?? 1, routine: routineName })
+              : t('logMetrics.pickChallenge.dayLabel', { day: currentDay ?? 1 })}
+          </Text>
         </View>
+      </View>
 
-        <Divider variant="section" />
+      <View style={styles.headerDivider} />
 
-        <MetricsPanel>
-          {renderPanelContent()}
-        </MetricsPanel>
+      <View style={styles.contentWrap}>{renderContent()}</View>
 
-        <CreateFlowFixedBottomBar bottomInset={Math.max(insets.bottom, spacing.lg)}>
-          <CreateChallengePrimaryActionButton
-            onPress={goToCamera}
-            loading={false}
-            label="Next"
-            disabled={!hasChallenges}
-          />
-        </CreateFlowFixedBottomBar>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+        <Text variant="caption" tone="secondary" align="center">
+          {t('logMetrics.entry.footerCaption', { count: totalAdjusted })}
+        </Text>
+        <CreateFlowPrimaryButton
+          onPress={goToCamera}
+          label={t('logMetrics.entry.logDayCta')}
+          disabled={!hasChallenges}
+        />
       </View>
     </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
+  headerPanel: {
+    backgroundColor: colors.surface,
+  },
+  topBar: {
+    paddingHorizontal: spacing.base,
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleBlock: {
+    gap: spacing.xs,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.base,
+  },
+  eyebrow: {
+    color: colors.primary,
+    opacity: 1,
+  },
+  headerDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: withAlpha(colors.paper, 0.08),
+  },
+  contentWrap: {
+    flex: 1,
+    paddingTop: spacing.base,
+  },
+  scroll: {
     flex: 1,
   },
-  headerWrap: {
-    paddingTop: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  metricsScroll: {
-    flex: 1,
-  },
-  metricsContent: {
+  list: {
+    paddingHorizontal: spacing.base,
     paddingBottom: spacing['2xl'] + 132,
   },
   stateWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.md,
     paddingHorizontal: spacing.xl,
   },
-  stateText: {
-    textAlign: 'center',
-  },
-  exploreButton: {
-    paddingVertical: spacing.sm,
+  bottomBar: {
+    gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingTop: spacing.md,
     backgroundColor: colors.surface,
-    marginTop: spacing.xs,
-  },
-  exploreLabel: {
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  pressed: {
-    opacity: 0.82,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: withAlpha(colors.paper, 0.08),
   },
 });

@@ -30,3 +30,8 @@ export * from './ChallengeStatusCard';
 
 // ChallengesViewToggle: Mine/Explore segmented control for the Challenges tab.
 export * from './ChallengesViewToggle';
+
+// ChallengesContentSkeleton: a few card-shaped Skeleton blocks shown while
+// the one challenges fetch (Mine + Explore + photos) is in flight, in place
+// of a bare centered spinner. See components/ui/skeleton.tsx.
+export * from './ChallengesContentSkeleton';

@@ -1,6 +1,7 @@
 export * from './ChallengeActiveProgressScreen';
 export * from './ChallengePhotoGalleryModal';
 export * from './ChallengePhotoMosaicSkeleton';
+export * from './ChallengeProgressContentSkeleton';
 export * from './ChallengeProgressHeader';
 export * from './ChallengeProgressRing';
 export * from './TodayRoutineBanner';

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -9,6 +9,7 @@ import { Text } from '../../components/ui/text';
 import { ChallengeStatusCard } from '../../components/challenge/list/ChallengeStatusCard';
 import { ExploreChallengeCard } from '../../components/challenge/list/ExploreChallengeCard';
 import { ChallengesViewToggle } from '../../components/challenge/list/ChallengesViewToggle';
+import { ChallengesContentSkeleton } from '../../components/challenge/list/ChallengesContentSkeleton';
 import type { ChallengesView } from '../../components/challenge/list/ChallengesViewToggle';
 import type { ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import type { ChallengeMineCardViewModel } from '../../services/adapters/challengeListAdapter';
@@ -104,8 +105,8 @@ export default function Challenges() {
     return (
       <ScreenBackground variant="default">
         {listHeader}
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
+        <View style={styles.skeletonWrap}>
+          <ChallengesContentSkeleton />
         </View>
       </ScreenBackground>
     );
@@ -203,6 +204,9 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   itemWrap: {
+    paddingHorizontal: spacing.lg,
+  },
+  skeletonWrap: {
     paddingHorizontal: spacing.lg,
   },
   separator: {

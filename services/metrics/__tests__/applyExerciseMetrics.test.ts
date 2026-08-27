@@ -42,11 +42,11 @@ describe('applyExerciseMetrics', () => {
     expect(matched).toBe(2);
   });
 
-  it('converts duration from minutes (UI) to seconds (backend)', async () => {
+  it('submits duration as-is — it is tracked in seconds end to end, matching metric_types.duration', async () => {
     mockedAddMetric.mockResolvedValue({});
     const block = strengthBlock({
       activityType: 'cardioIntense',
-      rows: [{ set: 1, duration: '5', distance: '2' }],
+      rows: [{ set: 1, duration: '300', distance: '2' }],
     });
 
     await applyExerciseMetrics(workoutWithExercise(42), [block]);

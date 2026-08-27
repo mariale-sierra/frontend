@@ -1,14 +1,14 @@
 import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { BackButton } from '../../components/ui/backButton';
 import { Text } from '../../components/ui/text';
-import { StreakGridItem } from '../../components/home';
+import { StreakGridItem, StreaksGridSkeleton } from '../../components/home';
 import { getFollowingStreaks } from '../../services/follow/follow.service';
 import { toFriendStreakViewModels, type FriendStreakViewModel } from '../../services/adapters/followAdapter';
-import { colors, spacing } from '../../constants/theme';
+import { spacing } from '../../constants/theme';
 
 type GridRow = FriendStreakViewModel | { userId: string; filler: true };
 
@@ -75,8 +75,8 @@ export default function StreaksAllScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
+        <View style={styles.skeletonWrap}>
+          <StreaksGridSkeleton />
         </View>
       ) : error ? (
         <View style={styles.center}>
@@ -135,6 +135,9 @@ const styles = StyleSheet.create({
   cell: {
     flex: 1,
     alignItems: 'center',
+  },
+  skeletonWrap: {
+    paddingHorizontal: spacing.lg,
   },
   center: {
     minHeight: 220,

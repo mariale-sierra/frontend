@@ -81,8 +81,6 @@ export default function LogChallengePicker() {
           many challenges there are. Only the list below the title scrolls; the
           sheet's own bounds never move. */}
       <Pressable style={[styles.sheet, { height: windowHeight * 0.5 }]} onPress={() => {}}>
-        <View style={styles.handle} />
-
         <Stack gap="xs">
           <Text variant="title" size="2xl">{t('logMetrics.pickChallenge.title')}</Text>
           <Text variant="body" size="sm" tone="secondary">{t('logMetrics.pickChallenge.subtitle')}</Text>
@@ -146,13 +144,6 @@ const styles = StyleSheet.create({
   },
   list: {
     flex: 1,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: radius.small,
-    backgroundColor: withAlpha(colors.paper, textOpacity.tertiary),
-    alignSelf: 'center',
   },
   stateWrap: {
     flex: 1,

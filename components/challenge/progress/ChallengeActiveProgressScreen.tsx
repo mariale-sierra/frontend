@@ -1,9 +1,9 @@
-import { ActivityIndicator, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { colors, spacing } from '../../../constants/theme';
+import { spacing } from '../../../constants/theme';
 import { Text } from '../../ui/text';
 import { SegmentedIconToggle } from '../../ui/segmentedIconToggle';
 import { useChallengeActiveProgress } from '../../../hooks/useChallengeActiveProgress';
@@ -11,6 +11,7 @@ import ScreenBackground from '../../layout/screenBackground';
 import { ChallengeProgressHeader } from './ChallengeProgressHeader';
 import { ChallengePhotoGalleryModal } from './ChallengePhotoGalleryModal';
 import { ChallengePhotoMosaicSkeleton } from './ChallengePhotoMosaicSkeleton';
+import { ChallengeProgressContentSkeleton } from './ChallengeProgressContentSkeleton';
 import { ChallengeWorkoutCalendar } from './ChallengeWorkoutCalendar';
 
 type ConsistencyView = 'grid' | 'calendar';
@@ -67,9 +68,7 @@ export function ChallengeActiveProgressScreen() {
   if (data.loading) {
     return (
       <ScreenBackground variant="challenges" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
+        <ChallengeProgressContentSkeleton />
       </ScreenBackground>
     );
   }
@@ -148,10 +147,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
-  },
-  loadingWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
