@@ -15,7 +15,8 @@ import { useTranslation } from 'react-i18next';
 import { IconButton } from '../../components/ui/iconButton';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
-import { spacing, radius } from '../../constants/theme';
+import { colors, spacing, radius } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
 import { submitWorkoutProgress } from '../../services/workout-log/workout-log.service';
 import { applyExerciseMetrics } from '../../services/metrics/applyExerciseMetrics';
@@ -43,7 +44,7 @@ function VisibilityToggle({
         <Icon
           name={isFollowers ? 'eye-outline' : 'eye-off-outline'}
           size={19}
-          color="#fff"
+          color={colors.paper}
         />
         <Text style={styles.visibilityLabel}>
           {isFollowers ? t('camera.visibilityFollowers') : t('camera.visibilityPrivate')}
@@ -205,7 +206,7 @@ export default function Camera() {
             onPress={handleRetry}
             size={40}
             iconSize={22}
-            iconColor="#fff"
+            iconColor={colors.paper}
           />
         </View>
 
@@ -227,9 +228,9 @@ export default function Camera() {
             ]}
           >
             {uploadingImage || submittingProgress ? (
-              <ActivityIndicator color="#000" size="large" />
+              <ActivityIndicator color={colors.ink} size="large" />
             ) : (
-              <Icon name="checkmark" size={38} color="#000" />
+              <Icon name="checkmark" size={38} color={colors.ink} />
             )}
           </Pressable>
         </View>
@@ -245,14 +246,14 @@ export default function Camera() {
           onPress={() => router.back()}
           size={40}
           iconSize={22}
-          iconColor="#fff"
+          iconColor={colors.paper}
         />
         <IconButton
           name="camera-reverse-outline"
           onPress={flipCamera}
           size={40}
           iconSize={26}
-          iconColor="#fff"
+          iconColor={colors.paper}
         />
       </View>
 
@@ -274,7 +275,7 @@ export default function Camera() {
           ]}
         >
           {isTakingPicture ? (
-            <ActivityIndicator color="#000" size="large" />
+            <ActivityIndicator color={colors.ink} size="large" />
           ) : (
             <View style={styles.captureInner} />
           )}
@@ -287,7 +288,7 @@ export default function Camera() {
 const styles = StyleSheet.create({
   fill: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.ink,
   },
   center: {
     alignItems: 'center',
@@ -304,7 +305,9 @@ const styles = StyleSheet.create({
   cameraContainer: {
     flex: 1,
     marginHorizontal: spacing.sm,
-    borderRadius: radius['2xl'],
+    // Legacy radius['2xl'] (24) — that key no longer exists on the current
+    // scale (none/small/medium/big); `big` (28) is the nearest token.
+    borderRadius: radius.big,
     overflow: 'hidden',
   },
   cameraFill: {
@@ -318,29 +321,32 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
+  // Fixed-diameter true circles (72/52px) — size/2 radius is the documented
+  // exception to "always radius.big for circular elements" (see design
+  // system skill's Numbered circle badge note).
   captureButton: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#fff',
+    backgroundColor: colors.paper,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.4)',
+    borderColor: withAlpha(colors.paper, 0.4),
   },
   captureInner: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#fff',
+    backgroundColor: colors.paper,
     borderWidth: 2,
-    borderColor: 'rgba(0,0,0,0.15)',
+    borderColor: withAlpha(colors.ink, 0.15),
   },
   confirmButton: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#fff',
+    backgroundColor: colors.paper,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -355,19 +361,23 @@ const styles = StyleSheet.create({
     gap: 7,
     paddingVertical: 8,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.xl,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    // Legacy radius.xl (18) — nearest current token is `medium` (16).
+    borderRadius: radius.medium,
+    backgroundColor: withAlpha(colors.ink, 0.45),
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: withAlpha(colors.paper, 0.18),
   },
+  // No `opacity: 1` alongside this custom color, unlike the usual rule for
+  // Text custom-color overrides — kept exactly as shipped (already rendering
+  // at the tone's default 85%) per an explicit "don't change this visually" request.
   visibilityLabel: {
-    color: '#fff',
+    color: colors.paper,
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: 0.3,
   },
   errorText: {
-    color: '#FF6B6B',
+    color: colors.error,
     fontSize: 14,
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
@@ -380,14 +390,15 @@ const styles = StyleSheet.create({
   permissionButton: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xl,
-    borderRadius: radius.xl,
+    // Legacy radius.xl (18) — nearest current token is `medium` (16).
+    borderRadius: radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: withAlpha(colors.paper, 0.3),
+    backgroundColor: withAlpha(colors.paper, 0.1),
     marginTop: spacing.xs,
   },
   permissionButtonLabel: {
-    color: '#fff',
+    color: colors.paper,
     fontWeight: '600',
   },
   backLink: {
