@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ConfirmationPopup, ConfirmationButtonConfig } from '../components/ui/confirmationPopup';
 
 export type ConfirmationPopupType = 'join' | 'leave';
@@ -19,7 +20,10 @@ interface UseConfirmationPopupReturn {
 export interface ChallengeCompletionData {
   challengeId: string;
   challengeName: string;
-  duration?: string; // e.g., "30 days", "7 weeks"
+  /** Whole-challenge length in days, e.g. 75 — kept as raw data, not a
+   * pre-formatted string, so the popup can pluralize it correctly via i18n
+   * (challenges.completionPopup.descriptionWithDuration_one/_other). */
+  totalDays?: number;
   completedAt?: Date;
 }
 
@@ -107,6 +111,7 @@ export function useConfirmationPopup({
 export function useChallengeCompletion(options?: {
   onDismiss?: (data: ChallengeCompletionData) => void;
 }): UseChallengeCompletionReturn {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [completionData, setCompletionData] = useState<ChallengeCompletionData | null>(null);
 
@@ -132,17 +137,20 @@ export function useChallengeCompletion(options?: {
       function ChallengeCompletionPopup() {
         if (!completionData) return null;
 
+        const description = completionData.totalDays
+          ? t('challenges.completionPopup.descriptionWithDuration', {
+              name: completionData.challengeName,
+              count: completionData.totalDays,
+            })
+          : t('challenges.completionPopup.description', { name: completionData.challengeName });
+
         return (
           <ConfirmationPopup
             visible={visible}
-            title="🎉 Challenge Complete!"
-            description={
-              completionData.duration
-                ? `You completed "${completionData.challengeName}" in ${completionData.duration}!`
-                : `Great job completing "${completionData.challengeName}"!`
-            }
+            title={t('challenges.completionPopup.title')}
+            description={description}
             primaryButton={{
-              label: 'Awesome!',
+              label: t('challenges.completionPopup.cta'),
               onPress: hide,
               variant: 'primary',
             }}
@@ -150,7 +158,7 @@ export function useChallengeCompletion(options?: {
           />
         );
       },
-    [visible, completionData, hide],
+    [visible, completionData, hide, t],
   );
 
   return useMemo(() => ({ Component, show, hide }), [Component, show, hide]);

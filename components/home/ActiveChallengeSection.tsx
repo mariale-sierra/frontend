@@ -5,7 +5,7 @@ import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
-import { STATE_COLOR } from '../../services/adapters/challengeState';
+import { getChallengeCardColor } from '../../services/adapters/challengeState';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
 
 const ITEM_WIDTH = Dimensions.get('window').width - spacing.lg * 2;
@@ -45,12 +45,17 @@ function StatusPill({
 
 function ChallengeItem({ challenge, hoursLeft }: ItemProps) {
   const { t } = useTranslation();
-  // Card background signals state — same shared STATE_COLOR (challengeState.ts)
-  // used by Challenges-Mine's status card and the progress-ring eyebrow.
-  // `completed` means TODAY has a logged photo, not "the whole challenge is
-  // done" (a genuinely finished/left challenge never reaches this component
-  // at all — getHomeChallengesSorted excludes those, see homeAdapter.ts).
-  const accentColor = STATE_COLOR[challenge.state];
+  // Card background signals state — same shared getChallengeCardColor()
+  // (challengeState.ts) used by Challenges-Mine's status card and the
+  // progress-ring eyebrow. `rest`/`completed` keep their own fixed meaning
+  // (purple/green) unchanged; only `active` resolves to the challenge's own
+  // dominant-activity color now (Activity Color System v2), falling back to
+  // `colors.primary` (white) when the challenge has no dominant category
+  // yet. `completed` means TODAY has a logged photo, not "the whole
+  // challenge is done" (a genuinely finished/left challenge never reaches
+  // this component at all — getHomeChallengesSorted excludes those, see
+  // homeAdapter.ts).
+  const accentColor = getChallengeCardColor(challenge.state, challenge.dominantActivityCategory);
   const showTimeBadge = challenge.state === 'active' && hoursLeft > 0;
   const progress = challenge.totalDays > 0 ? Math.min(challenge.currentDay / challenge.totalDays, 1) : 0;
 

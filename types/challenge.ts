@@ -88,6 +88,13 @@ export interface ChallengeContract {
   activities?: ChallengeActivityContract[];
   days?: ChallengeDayContract[];
   cycle_days?: ChallengeCycleDayContract[];
+  /** This challenge's single dominant activity category — computed
+   * backend-side, live, from the actual exercise composition of its
+   * routines (NOT the `categories` list above, which is just what the
+   * creation flow's Add-Exercises picker filtered by). `null` when the
+   * challenge has no exercises yet to determine one from. See
+   * havit-design-system-SKILL.md → Activity Color System v2. */
+  dominant_activity_category?: ActivityType | null;
   [key: string]: unknown;
 }
 

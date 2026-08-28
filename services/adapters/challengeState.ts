@@ -1,5 +1,6 @@
 import { asString } from './adapterUtils';
-import { colors } from '../../constants/theme';
+import { colors, activityColors } from '../../constants/theme';
+import type { ActivityType } from '../../types/activity';
 import type { ChallengeContract, ChallengePhoto } from '../../types/challenge';
 
 export type NormalizedChallengeStatus = 'active' | 'completed' | 'left';
@@ -19,6 +20,53 @@ export const STATE_COLOR: Record<ChallengeCardState, string> = {
   won: colors.neutral,
   left: colors.neutral,
 };
+
+const VALID_ACTIVITY_TYPES = new Set<ActivityType>([
+  'strength',
+  'cardioIntense',
+  'cardioLow',
+  'flexibility',
+  'mindBody',
+  'functional',
+]);
+
+/** Validated read of `ChallengeContract.dominant_activity_category` — the
+ * field is typed already, but `ChallengeContract`'s `[key: string]: unknown`
+ * catch-all means a malformed/missing value can still reach here at
+ * runtime, so it's checked against the real enum rather than trusted blind. */
+export function pickDominantActivityCategory(challenge: ChallengeContract): ActivityType | null {
+  const value = challenge.dominant_activity_category;
+  return typeof value === 'string' && VALID_ACTIVITY_TYPES.has(value as ActivityType)
+    ? (value as ActivityType)
+    : null;
+}
+
+/**
+ * Resolves a challenge's own accent color from its dominant activity
+ * category (Activity Color System v2, see the design system skill) —
+ * falls back to `colors.primary` (white, the neutral chrome accent) when
+ * there's no dominant category yet (e.g. zero exercises). This only ever
+ * substitutes for the 'active' state's color, never rest/completed/won/left
+ * — see `getChallengeCardColor` below.
+ */
+export function getChallengeAccentColor(dominantActivityCategory: ActivityType | null | undefined): string {
+  return dominantActivityCategory ? activityColors[dominantActivityCategory] : colors.primary;
+}
+
+/**
+ * Card background color for a given `ChallengeCardState`. Same `STATE_COLOR`
+ * mapping for rest/completed/won/left — those carry their own meaning,
+ * untouched by the activity color system — but `active` now resolves to
+ * the challenge's own dominant-activity accent instead of the flat
+ * primary/white, per the confirmed-in-scope elements in the design
+ * system skill's Activity Color System v2 section.
+ */
+export function getChallengeCardColor(
+  state: ChallengeCardState,
+  dominantActivityCategory: ActivityType | null | undefined,
+): string {
+  return state === 'active' ? getChallengeAccentColor(dominantActivityCategory) : STATE_COLOR[state];
+}
 
 /**
  * challenge_user_map.status, normalized. `completed`/`left` are explicit

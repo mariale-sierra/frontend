@@ -4,7 +4,7 @@ import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
-import { STATE_COLOR } from '../../../services/adapters/challengeState';
+import { getChallengeCardColor } from '../../../services/adapters/challengeState';
 import type { ChallengeMineCardViewModel } from '../../../services/adapters/challengeListAdapter';
 
 interface ChallengeStatusCardProps {
@@ -14,14 +14,18 @@ interface ChallengeStatusCardProps {
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
 
-// State → card background: shared STATE_COLOR from challengeState.ts (also
-// used by Home's hero card and the progress-ring eyebrow, so a palette tweak
-// can't drift between screens). Every state uses the SAME ink pill chrome
-// (see Components → Hero card) — only the card's own background and the
-// pill's icon/label change. `won` and `left` intentionally share one
-// background (`neutral`) — this one card variant covers every "this
-// challenge is no longer in progress" case rather than growing a new color
-// per reason. The wireframe's rest-day pill uses a slightly lightened
+// State → card background: shared getChallengeCardColor() from
+// challengeState.ts (also used by Home's hero card and the progress-ring
+// eyebrow, so a palette tweak can't drift between screens). Every state uses
+// the SAME ink pill chrome (see Components → Hero card) — only the card's
+// own background and the pill's icon/label change. `rest`/`completed`/`won`/
+// `left` keep their own fixed meaning (purple/green/neutral) unchanged;
+// only `active` now resolves to the challenge's own dominant-activity color
+// (Activity Color System v2), falling back to `colors.primary` (white) when
+// the challenge has no dominant category yet. `won` and `left` intentionally
+// share one background (`neutral`) — this one card variant covers every
+// "this challenge is no longer in progress" case rather than growing a new
+// color per reason. The wireframe's rest-day pill uses a slightly lightened
 // one-off purple (#C4B0FF) instead of the `rest` token — normalized to
 // `colors.rest` for token consistency with the other states, which all match
 // their token exactly.
@@ -35,7 +39,7 @@ const STATE_ICON: Record<ChallengeMineCardViewModel['state'], IconName> = {
 
 export function ChallengeStatusCard({ challenge, onPress }: ChallengeStatusCardProps) {
   const { t } = useTranslation();
-  const accentColor = STATE_COLOR[challenge.state];
+  const accentColor = getChallengeCardColor(challenge.state, challenge.dominantActivityCategory);
   const progress = challenge.totalDays > 0 ? Math.min(challenge.currentDay / challenge.totalDays, 1) : 0;
   // Only the in-progress, no-photo-yet-today case gets the "Add photo" CTA —
   // every other state shows the latest real photo if one exists, or a

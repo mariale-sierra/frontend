@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Row } from '../../components/layout/row';
@@ -18,16 +18,31 @@ import { getChallenges, getMyProgressPhotos } from '../../services/challenge/cha
 import { getMyChallenges } from '../../services/user/user.service';
 import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../../services/adapters';
 import { groupLatestPhotoByChallengeId } from '../../services/adapters/challengeState';
+import { useChallengeCompletion } from '../../hooks/useConfirmationPopup';
 
 export default function Challenges() {
   const router = useRouter();
   const { t } = useTranslation();
+  // Lets a caller land directly on the Explore segment (e.g. the Log
+  // Metrics picker's "no challenges yet" empty state, which used to push a
+  // separate app/challenge/explore-all.tsx screen — now retired in favor of
+  // this same tab, deep-linked straight into its Explore view).
+  const { view: requestedView } = useLocalSearchParams<{ view?: ChallengesView }>();
 
-  const [view, setView] = useState<ChallengesView>('mine');
+  const [view, setView] = useState<ChallengesView>(requestedView === 'explore' ? 'explore' : 'mine');
   const [mineChallenges, setMineChallenges] = useState<ChallengeMineCardViewModel[]>([]);
   const [exploreChallenges, setExploreChallenges] = useState<ExploreChallengeViewModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Celebration popup for a challenge that just flipped to `won` (the whole
+  // challenge finished — see challengeState.ts's deriveChallengeCardState),
+  // NOT the per-day `completed` state. Tracks which challengeIds have
+  // already shown it this session so revisiting this tab (or switching to
+  // Explore and back) doesn't re-trigger it for the same challenge.
+  const completion = useChallengeCompletion();
+  const { show: showCompletion } = completion;
+  const shownCompletions = useRef(new Set<string>());
 
   // Refetches on focus (not just on mount) so joining/leaving/completing a
   // challenge elsewhere and coming back here shows the current state.
@@ -40,7 +55,19 @@ export default function Challenges() {
           if (!active) return;
           const enrolled = enrolledRaw ?? [];
           const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(myPhotos ?? []);
-          setMineChallenges(toChallengeMineViewModels(enrolled, latestPhotoByChallengeId));
+          const mineViewModels = toChallengeMineViewModels(enrolled, latestPhotoByChallengeId);
+          setMineChallenges(mineViewModels);
+
+          for (const challenge of mineViewModels) {
+            if (challenge.state === 'won' && !shownCompletions.current.has(challenge.challengeId)) {
+              shownCompletions.current.add(challenge.challengeId);
+              showCompletion({
+                challengeId: challenge.challengeId,
+                challengeName: challenge.title,
+                totalDays: challenge.totalDays,
+              });
+            }
+          }
 
           // GET /challenges (getChallenges) returns every challenge, joined
           // or not — Explore is meant to be "what you could join," so any
@@ -63,7 +90,7 @@ export default function Challenges() {
       return () => {
         active = false;
       };
-    }, [t]),
+    }, [t, showCompletion]),
   );
 
   const handleCreateChallenge = () => router.push('/challenge/create');
@@ -108,6 +135,7 @@ export default function Challenges() {
         <View style={styles.skeletonWrap}>
           <ChallengesContentSkeleton />
         </View>
+        <completion.Component />
       </ScreenBackground>
     );
   }
@@ -119,6 +147,7 @@ export default function Challenges() {
         <View style={styles.center}>
           <Text tone="secondary">{error}</Text>
         </View>
+        <completion.Component />
       </ScreenBackground>
     );
   }
@@ -168,6 +197,8 @@ export default function Challenges() {
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      <completion.Component />
     </ScreenBackground>
   );
 }

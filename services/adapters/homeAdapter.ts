@@ -1,7 +1,8 @@
 import { asString, asNumber, asBoolean } from './adapterUtils';
-import { pickChallengeStatus, deriveChallengeCardState } from './challengeState';
+import { pickChallengeStatus, deriveChallengeCardState, pickDominantActivityCategory } from './challengeState';
 import type { ChallengeCardState } from './challengeState';
 import { isRestDay as isRestDayForCycle } from '../../utils/challengeCycle';
+import type { ActivityType } from '../../types/activity';
 import type { ChallengeContract, ChallengePhoto, ChallengeProgressContract } from '../../types/challenge';
 
 /**
@@ -20,6 +21,10 @@ export interface HomeActiveChallengeViewModel {
   totalDays: number;
   state: Extract<ChallengeCardState, 'active' | 'rest' | 'completed'>;
   streakCount: number;
+  /** Activity Color System v2 — see `ChallengeMineCardViewModel`'s matching
+   * field in `challengeListAdapter.ts` for the full doc. Resolve via
+   * `challengeState.ts`'s `getChallengeCardColor()`. */
+  dominantActivityCategory: ActivityType | null;
 }
 
 export function pickCurrentDay(challenge: ChallengeContract): number {
@@ -111,6 +116,7 @@ function toHomeActiveChallengeViewModel(
     totalDays: asNumber(challenge.duration_days) ?? 1,
     state,
     streakCount: pickStreakCount(challenge),
+    dominantActivityCategory: pickDominantActivityCategory(challenge),
   };
 }
 
@@ -174,5 +180,10 @@ export function progressToHomeActiveChallengeViewModel(
     // whole extra fetch for.
     state: progress.completedToday ? 'completed' : isRestDay ? 'rest' : 'active',
     streakCount: pickStreakCount(progress as unknown as ChallengeContract),
+    // GET /challenges/progress (this contract's source) is a different
+    // endpoint from the three Activity Color System v2 actually extended —
+    // no dominant category available here. Same "not consumed by any
+    // current caller" situation as the photo-lookup gap noted above.
+    dominantActivityCategory: null,
   };
 }

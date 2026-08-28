@@ -13,12 +13,23 @@
 // Nothing should import from that file.
 // ============================================================================
 
+import type { ActivityType } from '../types/activity';
+
 // ---------------------------------------------------------------------------
 // Colors
 // ---------------------------------------------------------------------------
 
 export const colors = {
-  primary: '#EEFF5C', // neon lime — main brand color. Spotlight, not a surface.
+  // Pure white — deliberately distinct from `paper` (#F3F2E2, warm off-white)
+  // even though they read as nearly identical at a glance. `primary` was
+  // lime (#EEFF5C) until the Activity Color System v2 pass retired that in
+  // favor of per-challenge activity colors (see `activityColors` below) —
+  // white is now the neutral chrome accent for anything with NO challenge
+  // association (nav FAB, active tab, streak badges, "See all" links,
+  // generic buttons/CTAs outside a challenge's own scoped UI). See
+  // havit-design-system-SKILL.md → Activity Color System v2 for the full
+  // rationale and migration status before touching challenge-scoped colors.
+  primary: '#FFFFFF',
   secondary: '#FF5C1A', // orange — secondary buttons, in-progress indicators
   accent: '#EF3B66', // pink — social/community moments only, never a status color
   // Screen background. The wireframes literally specify `#0E0F0B` (matched
@@ -33,12 +44,36 @@ export const colors = {
   success: '#37E0A4',
   warning: '#F2A93B', // no confirmed use case yet — see Open Items Tracker
   error: '#DE2B2B',
-  rest: '#B49BFF', // rest/recovery states — positive/neutral, not a problem
+  rest: '#B49BFF', // rest/recovery states, day-level only — "no activity today". Never a whole challenge's identity color, even for a mostly-rest-day challenge.
   neutral: '#8A8C82', // paused/inactive states — positive/neutral, not a problem
 } as const;
 
 export type Colors = typeof colors;
 export type ColorToken = keyof Colors;
+
+/**
+ * Per-challenge activity accent colors (Activity Color System v2). Each
+ * challenge has exactly one dominant activity category — computed
+ * backend-side, live, from its exercise composition (see
+ * `dominant_activity_category` on `ChallengeContract`) — and that color
+ * becomes the challenge's own identity accent within its own scoped UI
+ * (its card, its detail/progress screens), substituting for the static
+ * `primary` token there. `primary` (white) itself stays for anything with
+ * no challenge association. A challenge with no determinable dominant
+ * category (e.g. zero exercises yet) falls back to `primary`, not one of
+ * these — there is no "neutral" entry in this map on purpose.
+ *
+ * Each color pairs with `ink` text only — never `paper`/white — per the
+ * confirmed 6:1+ contrast pairing.
+ */
+export const activityColors: Record<ActivityType, string> = {
+  strength: '#F2653A',
+  cardioIntense: '#F0B429',
+  cardioLow: '#5CD97A',
+  flexibility: '#3DDBEE',
+  mindBody: '#F17FE0',
+  functional: '#D8EE3C',
+} as const;
 
 /**
  * Text opacity scale — applies to `paper` text on dark surfaces.

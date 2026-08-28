@@ -68,7 +68,10 @@ export default function LogChallengePicker() {
   }
 
   function handleExplore() {
-    router.replace('/challenge/explore-all');
+    // app/challenge/explore-all.tsx (the old dedicated screen) is retired —
+    // the Challenges tab shows the same Explore list directly now, deep-linked
+    // straight into that segment instead of defaulting to Mine.
+    router.replace('/(tabs)/challenges?view=explore');
   }
 
   return (

@@ -10,6 +10,7 @@ function buildChallenge(overrides: Partial<HomeActiveChallengeViewModel> = {}): 
     totalDays: 75,
     state: 'active',
     streakCount: 0,
+    dominantActivityCategory: null,
     ...overrides,
   };
 }

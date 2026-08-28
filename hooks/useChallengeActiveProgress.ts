@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useChallengeProgress } from './useChallengeProgress';
 import { useChallengeParticipants } from './useChallengeParticipants';
 import { getChallenge, getMyProgressPhotos } from '../services/challenge/challenge.service';
-import { deriveChallengeCardState, pickChallengeStatus } from '../services/adapters/challengeState';
+import { deriveChallengeCardState, pickChallengeStatus, pickDominantActivityCategory, getChallengeAccentColor } from '../services/adapters/challengeState';
 import type { ChallengeCardState } from '../services/adapters/challengeState';
 import { buildRingTicks, computeConsistencyPercents, dayInCycle, findCycleDayFor, isRestDay } from '../utils/challengeCycle';
 import { colors } from '../constants/theme';
@@ -35,6 +35,13 @@ export interface ChallengeActiveProgressData {
   /** Real routine name for today (from the challenge's cycle_days), or null on a rest day. */
   todayRoutineName: string | null;
   isTodayRestDay: boolean;
+  /** Activity Color System v2 — this challenge's own accent color, resolved
+   * from its dominant activity category (falls back to `colors.primary`,
+   * white, when there's no dominant category yet). Confirmed in scope for
+   * this screen: the ring, the Today's-routine banner, the eyebrow, the
+   * active segmented-toggle segment, and the "today" calendar-day marker —
+   * see havit-design-system-SKILL.md → Activity Color System v2. */
+  accentColor: string;
   /** Today's 1-indexed position within the challenge's cycle — the routine-detail
    * route (app/challenge/[id]/routine/[day].tsx) is keyed by this, not the absolute challenge day. */
   currentDayInCycle: number;
@@ -137,17 +144,22 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
     [totalDays, cycleLengthDays, cycleDays, photoDaySet],
   );
 
+  const accentColor = useMemo(
+    () => getChallengeAccentColor(fullChallenge ? pickDominantActivityCategory(fullChallenge) : null),
+    [fullChallenge],
+  );
+
   const ticks = useMemo(
     () =>
       buildRingTicks({
         segmentCount: RING_SEGMENT_COUNT,
         photoPercent,
         restPercent,
-        photoColor: colors.primary,
+        photoColor: accentColor,
         restColor: colors.rest,
         trackColor: RING_TRACK_COLOR,
       }),
-    [photoPercent, restPercent],
+    [photoPercent, restPercent, accentColor],
   );
 
   const todayCycleDay = fullChallenge ? findCycleDayFor(currentDay, cycleLengthDays, cycleDays) : null;
@@ -181,6 +193,7 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
     isTodayRestDay,
     currentDayInCycle,
     isDayRestDay,
+    accentColor,
   };
 }
 

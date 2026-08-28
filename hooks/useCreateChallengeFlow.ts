@@ -237,7 +237,11 @@ export function useCreateChallengeFlow() {
       if (created?.id) {
         router.replace(`/challenge/${created.id}`);
       } else {
-        router.replace('/challenge/active-all');
+        // Fallback for the rare case the create response has no id — the
+        // Challenges tab's Mine view (its default) is where a just-created
+        // challenge shows up anyway, now that app/challenge/active-all.tsx
+        // (the old dedicated screen) is retired.
+        router.replace('/(tabs)/challenges');
       }
     } catch (err: unknown) {
       type AxiosLike = {
