@@ -11,7 +11,8 @@ import { SearchBar } from '../../../components/ui/searchBar';
 import { CreateFlowPrimaryButton } from '../../../components/challenge/create';
 import { FilterToggleButton, ExerciseListItem } from '../../../components/routine';
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
-import { colors, spacing } from '../../../constants/theme';
+import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
+import { colors, spacing, activityColors } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import type { ExerciseCandidate } from '../../../hooks/useFilteredExercises';
 import { getExercises } from '../../../services/exercises/exercises.service';
@@ -48,6 +49,7 @@ export default function ExercisesScreen() {
   const insets = useSafeAreaInsets();
   const { day } = useLocalSearchParams<{ day: string }>();
   const addExercise = useRoutineBuilder((state) => state.addExercise);
+  const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
 
   const [allExercises, setAllExercises] = useState<ExerciseCandidate[]>([]);
   const [categoryByExerciseId, setCategoryByExerciseId] = useState<Record<string, string>>({});
@@ -92,6 +94,14 @@ export default function ExercisesScreen() {
     };
   }, [t]);
 
+  // Restrict to the activity categories chosen in the challenge's own
+  // Activity & Location step — that's the whole point of that step existing
+  // (previously had zero effect here, real bug: every catalog exercise was
+  // offered regardless of what the challenge creator selected). Empty
+  // `selectedCategories` (shouldn't happen — that step requires at least
+  // one) falls back to allowing everything rather than showing nothing.
+  const allowedCategories = useMemo(() => new Set(selectedCategories), [selectedCategories]);
+
   // Real category names present in the catalog (e.g. "Strength", "Cardio
   // Intense") — not the wireframe's literal "Legs & glutes"/"Push" pills,
   // which don't correspond to any category or muscle-group taxonomy the
@@ -99,19 +109,24 @@ export default function ExercisesScreen() {
   // Strength/Cardio Intense/Cardio Low/Flexibility/Mind-Body/Functional).
   // Real data instead of fabricated category names, same substitution
   // pattern already used for the Create-Challenge flow's day-row meta line.
-  const categories = useMemo(
-    () => Array.from(new Set(Object.values(categoryByExerciseId))).sort(),
-    [categoryByExerciseId],
-  );
+  // Further narrowed to the challenge's own selected categories, same rule
+  // as `filtered` below.
+  const categories = useMemo(() => {
+    const present = Array.from(new Set(Object.values(categoryByExerciseId)));
+    const scoped = allowedCategories.size === 0 ? present : present.filter((c) => allowedCategories.has(c));
+    return scoped.sort();
+  }, [categoryByExerciseId, allowedCategories]);
 
   const filtered = useMemo(() => {
     const queryValue = query.trim().toLowerCase();
     return allExercises.filter((exercise) => {
+      const exerciseCategory = categoryByExerciseId[exercise.id];
       const matchesQuery = exercise.name.toLowerCase().includes(queryValue);
-      const matchesCategory = !activeCategory || categoryByExerciseId[exercise.id] === activeCategory;
-      return matchesQuery && matchesCategory;
+      const matchesCategory = !activeCategory || exerciseCategory === activeCategory;
+      const matchesAllowed = allowedCategories.size === 0 || allowedCategories.has(exerciseCategory);
+      return matchesQuery && matchesCategory && matchesAllowed;
     });
-  }, [allExercises, query, activeCategory, categoryByExerciseId]);
+  }, [allExercises, query, activeCategory, categoryByExerciseId, allowedCategories]);
 
   function toggleSelected(id: string) {
     setSelectedIds((current) => {
@@ -161,14 +176,18 @@ export default function ExercisesScreen() {
           isActive={activeCategory === null}
           onPress={() => setActiveCategory(null)}
         />
-        {categories.map((category) => (
-          <FilterToggleButton
-            key={category}
-            label={category}
-            isActive={activeCategory === category}
-            onPress={() => setActiveCategory(category)}
-          />
-        ))}
+        {categories.map((category) => {
+          const activityType = CATEGORY_TO_ACTIVITY[category];
+          return (
+            <FilterToggleButton
+              key={category}
+              label={category}
+              isActive={activeCategory === category}
+              onPress={() => setActiveCategory(category)}
+              activeColor={activityType ? activityColors[activityType] : undefined}
+            />
+          );
+        })}
       </ScrollView>
 
       <Row justify="space-between" align="center" style={styles.countRow}>

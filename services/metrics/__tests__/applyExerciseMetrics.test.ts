@@ -42,7 +42,7 @@ describe('applyExerciseMetrics', () => {
     expect(matched).toBe(2);
   });
 
-  it('submits duration as-is — it is tracked in seconds end to end, matching metric_types.duration', async () => {
+  it('submits duration as-is — it is tracked in seconds end to end, matching metric_types.time', async () => {
     mockedAddMetric.mockResolvedValue({});
     const block = strengthBlock({
       activityType: 'cardioIntense',
@@ -51,8 +51,8 @@ describe('applyExerciseMetrics', () => {
 
     await applyExerciseMetrics(workoutWithExercise(42), [block]);
 
-    expect(mockedAddMetric).toHaveBeenCalledWith(100, 'duration', 300);
-    expect(mockedAddMetric).toHaveBeenCalledWith(100, 'distanceKm', 2);
+    expect(mockedAddMetric).toHaveBeenCalledWith(100, 'time', 300);
+    expect(mockedAddMetric).toHaveBeenCalledWith(100, 'distance', 2);
   });
 
   it('skips a block with no matching WorkoutLogExercise instead of throwing', async () => {

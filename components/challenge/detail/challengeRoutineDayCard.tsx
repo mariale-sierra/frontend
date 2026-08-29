@@ -12,6 +12,9 @@ interface ChallengeRoutineDayCardProps {
   routineName: string;
   /** Already-formatted "{{n}} exercises · {{location}}" — unused for a rest day. */
   subtitle: string;
+  /** Activity Color System v2 — this challenge's own resolved accent color,
+   * used for the workout-day badge. The rest-day case stays fixed `colors.rest`. */
+  accentColor: string;
   onPress?: () => void;
 }
 
@@ -20,9 +23,9 @@ interface ChallengeRoutineDayCardProps {
  * icon. Rest days share the same row shape but read as non-interactive: no
  * chevron, `rest`-colored title, muted "no photo needed" subtitle, since
  * there's no routine to view. */
-export default function ChallengeRoutineDayCard({ day, isRestDay, routineName, subtitle, onPress }: ChallengeRoutineDayCardProps) {
+export default function ChallengeRoutineDayCard({ day, isRestDay, routineName, subtitle, accentColor, onPress }: ChallengeRoutineDayCardProps) {
   const { t } = useTranslation();
-  const badgeColor = isRestDay ? colors.rest : colors.primary;
+  const badgeColor = isRestDay ? colors.rest : accentColor;
 
   const content = (
     <Row align="center" gap="md" style={styles.row}>

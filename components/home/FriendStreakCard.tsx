@@ -11,9 +11,9 @@ interface FriendStreakCardProps {
 const AVATAR_SIZE = 58;
 
 export function FriendStreakCard({ friend }: FriendStreakCardProps) {
-  // Confirmed rule (see havit-design-system-SKILL.md Open Items): lime badge
-  // when this friend logged a workout today, dark `surface` otherwise.
-  const badgeColor = friend.loggedToday ? colors.primary : colors.surface;
+  // Confirmed rule (see havit-design-system-SKILL.md Open Items): `success`
+  // badge when this friend logged a workout today, dark `surface` otherwise.
+  const badgeColor = friend.loggedToday ? colors.success : colors.surface;
 
   return (
     <View style={styles.card}>

@@ -17,15 +17,25 @@ interface OptionPillGridProps<TOption extends SelectablePillOption> {
   selectedValues: string[];
   onToggle: (value: string) => void;
   renderIcon: (option: TOption, selected: boolean) => ReactNode;
+  /** Selected-pill fill color, per option — defaults to `colors.primary`.
+   * Pass this for an activity-category grid (Activity Color System v2:
+   * `(option) => activityColors[option.type]`) so each pill fills with its
+   * OWN known category color on selection, not a computed dominant color —
+   * unlike a challenge/routine's card accent, a category picker pill IS its
+   * category, no "which one wins" question to answer. Leave unset for a
+   * grid with no per-option color (e.g. the Location grid). */
+  getSelectedFill?: (option: TOption) => string;
 }
 
-/** Flex-wrap pill selector — icon + label, selected = primary fill / ink text, unselected = surface / paper text. No per-category color (see design system → Explicitly Rejected Patterns). */
+/** Flex-wrap pill selector — icon + label, selected = fill / ink text (see
+ * `getSelectedFill`, defaults to `primary`), unselected = surface / paper text. */
 export function OptionPillGrid<TOption extends SelectablePillOption>({
   label,
   options,
   selectedValues,
   onToggle,
   renderIcon,
+  getSelectedFill,
 }: OptionPillGridProps<TOption>) {
   const { t } = useTranslation();
 
@@ -41,11 +51,12 @@ export function OptionPillGrid<TOption extends SelectablePillOption>({
       <View style={styles.wrap}>
         {options.map((option) => {
           const selected = selectedValues.includes(option.value);
+          const fill = getSelectedFill?.(option) ?? colors.primary;
           return (
             <Pressable
               key={option.value}
               onPress={() => onToggle(option.value)}
-              style={({ pressed }) => [styles.pill, selected && styles.pillSelected, pressed && styles.pressed]}
+              style={({ pressed }) => [styles.pill, selected && { backgroundColor: fill }, pressed && styles.pressed]}
             >
               {renderIcon(option, selected)}
               <Text variant="label" tone={selected ? 'inverse' : 'primary'} weight={selected ? 'bold' : 'medium'}>
@@ -73,9 +84,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radius.big,
     backgroundColor: colors.surface,
-  },
-  pillSelected: {
-    backgroundColor: colors.primary,
   },
   pressed: {
     opacity: 0.85,

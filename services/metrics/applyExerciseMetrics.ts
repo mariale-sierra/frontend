@@ -5,11 +5,17 @@ import type { WorkoutLogContract, WorkoutMetricCode } from '../../types/workout-
 
 // 'rounds' has no matching backend metric_type yet, so it's intentionally
 // left unmapped — those rows are skipped rather than sent under a wrong code.
+// Real backend metric_type codes are 'time'/'distance', not the assumed
+// 'duration'/'distanceKm' from the old seed file — same bug as
+// metricsAdapter.ts's activityTypeFromMetricCodes(), fixed 2026-08-28 (see
+// havit-design-system-SKILL.md). Under the old codes, every logged
+// distance/duration value was silently sent to the backend under a code it
+// doesn't recognize.
 const FIELD_TO_METRIC_CODE: Partial<Record<MetricField, WorkoutMetricCode>> = {
   reps: 'reps',
   lbs: 'weight',
-  duration: 'duration',
-  distance: 'distanceKm',
+  duration: 'time',
+  distance: 'distance',
 };
 
 /**

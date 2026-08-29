@@ -144,6 +144,7 @@ function toExploreCard(challenge: ChallengeContract, labels: ChallengeListLabels
     locationsLabel: pickLocationsLabel(challenge, labels.locationFallbackLabel),
     categoriesLabel: pickCategoriesLabel(challenge, labels.categoryFallbackLabel),
     membersCount: pickMembersCount(challenge),
+    dominantActivityCategory: pickDominantActivityCategory(challenge),
   };
 }
 

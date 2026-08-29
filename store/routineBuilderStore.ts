@@ -57,13 +57,22 @@ const defaultSet = (): SetRow => ({
   restSec: 0,
 });
 
-// Local template used while designing offline. Backend will eventually provide this.
+// Local template used while designing offline. `applyBackendMetricTemplate`
+// exists to swap this for a real backend-provided template but is never
+// actually called from any screen, so this mock is what genuinely gets
+// submitted for every schema-kind exercise added via the real Add-Exercises
+// screen — not just an offline placeholder. Field keys must match the real
+// backend metric_type codes ('distance'/'time', not 'distanceKm'/'duration')
+// since createChallengePayloadAdapter.ts sends these keys verbatim as this
+// exercise's metric values on POST /challenges. Fixed 2026-08-28 — same code
+// mismatch as metricsAdapter.ts/applyExerciseMetrics.ts, see
+// havit-design-system-SKILL.md.
 const MOCK_SCHEMA_TEMPLATE: MetricTemplate = {
   id: 'mock-cardio-template',
   title: 'Exercise metrics',
   fields: [
-    { key: 'distanceKm', label: 'Distance', type: 'number', defaultValue: 5, unit: 'km', min: 0 },
-    { key: 'duration', label: 'Duration', type: 'duration', defaultMinutes: 20, defaultSeconds: 0 },
+    { key: 'distance', label: 'Distance', type: 'number', defaultValue: 5, unit: 'km', min: 0 },
+    { key: 'time', label: 'Duration', type: 'duration', defaultMinutes: 20, defaultSeconds: 0 },
   ],
 };
 

@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
-import { colors, spacing } from '../../../constants/theme';
+import { spacing } from '../../../constants/theme';
 
 interface ChallengeAboutSectionProps {
   description: string;
+  /** Activity Color System v2 — this challenge's own resolved accent color,
+   * used for the "Read more"/"Show less" toggle text. */
+  accentColor: string;
 }
 
 const COLLAPSED_LINES = 4;
@@ -14,7 +17,7 @@ const COLLAPSED_LINES = 4;
  * toggle, same interaction the old ChallengeHeader already had, just
  * restyled (left-aligned, not centered) and given real i18n copy (was
  * hardcoded English before). */
-export default function ChallengeAboutSection({ description }: ChallengeAboutSectionProps) {
+export default function ChallengeAboutSection({ description, accentColor }: ChallengeAboutSectionProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
@@ -27,7 +30,7 @@ export default function ChallengeAboutSection({ description }: ChallengeAboutSec
         {description}
       </Text>
       <Pressable onPress={() => setExpanded((current) => !current)} accessibilityRole="button">
-        <Text variant="label" weight="bold" style={styles.toggle}>
+        <Text variant="label" weight="bold" style={[styles.toggle, { color: accentColor }]}>
           {expanded ? t('challengeInfo.showLess') : t('challengeInfo.readMore')}
         </Text>
       </Pressable>
@@ -44,7 +47,6 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   toggle: {
-    color: colors.primary,
     opacity: 1,
   },
 });

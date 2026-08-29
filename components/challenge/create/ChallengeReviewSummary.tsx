@@ -18,6 +18,10 @@ interface ChallengeReviewSummaryProps {
   selectedLocations: string[];
   getDayStatus: (dayNumber: number) => CycleDayStatus;
   getDayRoutineLabel: (dayNumber: number) => string | undefined;
+  /** Activity Color System v2 — the challenge's own computed dominant
+   * activity color (client-computed, no challenge exists server-side yet at
+   * this step). Falls back to `colors.primary` when nothing's configured. */
+  accentColor: string;
   onEditSetup: () => void;
   onEditCycle: () => void;
 }
@@ -44,6 +48,7 @@ export function ChallengeReviewSummary({
   selectedLocations,
   getDayStatus,
   getDayRoutineLabel,
+  accentColor,
   onEditSetup,
   onEditCycle,
 }: ChallengeReviewSummaryProps) {
@@ -63,7 +68,7 @@ export function ChallengeReviewSummary({
 
   return (
     <View style={styles.container}>
-      <View style={styles.hero}>
+      <View style={[styles.hero, { backgroundColor: accentColor }]}>
         <Row justify="flex-start" align="flex-end" gap="sm">
           <Text variant="title" tone="inverse" style={styles.heroDays}>{durationDays}</Text>
           <Text variant="subheader" tone="inverse" style={styles.heroDaysUnit}>
@@ -135,7 +140,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   hero: {
-    backgroundColor: colors.primary,
+    // backgroundColor set inline — this challenge's own accent color, see accentColor prop.
     borderRadius: radius.big,
     padding: spacing.lg,
     gap: spacing.md,

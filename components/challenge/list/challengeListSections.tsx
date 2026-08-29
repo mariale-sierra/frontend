@@ -10,6 +10,8 @@
 // `homeAdapter.ts` that Home actually uses). `ExploreChallengeViewModel`
 // below is still real and shared with the Challenges tab.
 
+import type { ActivityType } from '../../../types/activity';
+
 export interface ExploreChallengeViewModel {
   challengeId: string;
   title: string;
@@ -19,4 +21,8 @@ export interface ExploreChallengeViewModel {
   locationsLabel: string;
   categoriesLabel: string;
   membersCount: number;
+  /** Activity Color System v2 — this challenge's dominant activity category
+   * (`null` if it has no exercises yet). Resolve the card's accent color via
+   * `challengeState.ts`'s `getChallengeAccentColor()`. */
+  dominantActivityCategory: ActivityType | null;
 }

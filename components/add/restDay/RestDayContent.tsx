@@ -1,7 +1,8 @@
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
 import { Button } from '../../ui/button';
-import { RestDayIconExperimental } from '../../icons/restDayIconExperimental';
+import { RestDayIcon } from '../../icons/restDayIcon';
 import { colors, spacing } from '../../../constants/theme';
 
 interface RestDayContentProps {
@@ -17,15 +18,17 @@ export function RestDayContent({
   loading = false,
   error,
 }: RestDayContentProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.body}>
-        <RestDayIconExperimental />
+        <RestDayIcon />
 
         <View style={styles.textGroup}>
-          <Text variant="title" align="center">{'Rest days\nmatter too.'}</Text>
+          <Text variant="title" align="center">{t('restDay.title')}</Text>
           <Text variant="body" tone="secondary" align="center" style={styles.subtitle}>
-            Do you want to take today off, or schedule more rest days?
+            {t('restDay.subtitle')}
           </Text>
         </View>
       </View>
@@ -37,10 +40,16 @@ export function RestDayContent({
           </Text>
         ) : null}
         <Button variant="primary" size="md" onPress={onJustToday} loading={loading} style={styles.actionButton}>
-          Just today
+          {t('restDay.justTodayButton')}
         </Button>
-        <Button variant="outline" size="md" onPress={onPlanRestDays} disabled={loading} style={styles.actionButton}>
-          Plan rest days
+        <Button
+          variant="primary"
+          size="md"
+          onPress={onPlanRestDays}
+          disabled={loading}
+          style={[styles.actionButton, styles.planButton]}
+        >
+          {t('restDay.planButton')}
         </Button>
       </View>
     </View>
@@ -73,6 +82,12 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     width: 220,
+  },
+  // `primary` variant base (solid bg, `ink` text) with the fill overridden
+  // to `rest` — no separate "solid rest button" variant exists on the
+  // shared Button component for what's currently a single-flow use case.
+  planButton: {
+    backgroundColor: colors.rest,
   },
   errorText: {
     color: colors.error,

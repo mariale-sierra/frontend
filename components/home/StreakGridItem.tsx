@@ -13,9 +13,9 @@ interface StreakGridItemProps {
 const AVATAR_SIZE = 64;
 
 export function StreakGridItem({ username, avatarUrl, streakDays, loggedToday }: StreakGridItemProps) {
-  // Same rule as FriendStreakCard: lime badge when logged today, dark
+  // Same rule as FriendStreakCard: `success` badge when logged today, dark
   // `surface` otherwise.
-  const badgeColor = loggedToday ? colors.primary : colors.surface;
+  const badgeColor = loggedToday ? colors.success : colors.surface;
 
   return (
     <View style={styles.item}>

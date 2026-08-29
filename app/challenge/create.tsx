@@ -16,7 +16,7 @@ import {
 import { ActivityIcon } from '../../components/icons/activityIcon';
 import { LocationIcon } from '../../components/icons/locationIcon';
 import { Text } from '../../components/ui/text';
-import { colors, spacing } from '../../constants/theme';
+import { colors, spacing, activityColors } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { CATEGORY_OPTIONS, LOCATION_OPTIONS } from '../../constants/challengeCreateOptions';
 import { useCreateChallengeFlow } from '../../hooks/useCreateChallengeFlow';
@@ -49,6 +49,8 @@ export default function CreateChallenge() {
     getDayStatus,
     getDayRoutineLabel,
     getDayRoutineMeta,
+    getDayRoutineColor,
+    challengeAccentColor,
     handleBack,
     handleNext,
     handleActionPress,
@@ -84,6 +86,7 @@ export default function CreateChallenge() {
               renderIcon={(option, selected) => (
                 <ActivityIcon type={option.type} size="sm" variant="plain" color={selected ? colors.ink : colors.paper} />
               )}
+              getSelectedFill={(option) => activityColors[option.type]}
             />
 
             <OptionPillGrid
@@ -105,6 +108,7 @@ export default function CreateChallenge() {
             getDayStatus={getDayStatus}
             getDayRoutineLabel={getDayRoutineLabel}
             getDayRoutineMeta={getDayRoutineMeta}
+            getDayRoutineColor={getDayRoutineColor}
             onPressDay={openDayRoutineSelector}
             onRemoveDay={removeCycleDay}
             onAddDay={addCycleDay}
@@ -139,6 +143,7 @@ export default function CreateChallenge() {
             selectedLocations={selectedLocations}
             getDayStatus={getDayStatus}
             getDayRoutineLabel={getDayRoutineLabel}
+            accentColor={challengeAccentColor}
             onEditSetup={() => setCurrentStep(1)}
             onEditCycle={() => setCurrentStep(2)}
           />

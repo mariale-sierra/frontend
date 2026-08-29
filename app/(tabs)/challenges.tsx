@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,14 @@ import { getMyChallenges } from '../../services/user/user.service';
 import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../../services/adapters';
 import { groupLatestPhotoByChallengeId } from '../../services/adapters/challengeState';
 import { useChallengeCompletion } from '../../hooks/useConfirmationPopup';
+import { storage } from '../../utils/storage';
+
+// Persisted (not just in-memory) so a challenge that already showed its
+// completion celebration doesn't show it again on every fresh app launch —
+// a real bug: the old in-memory-only `useRef` Set reset on every cold start,
+// so the SAME "you finished it!" popup re-appeared every day the user
+// reopened the app, for every already-won challenge, forever. Fixed 2026-08-28.
+const SHOWN_COMPLETIONS_KEY = 'shown_challenge_completions';
 
 export default function Challenges() {
   const router = useRouter();
@@ -38,11 +46,38 @@ export default function Challenges() {
   // Celebration popup for a challenge that just flipped to `won` (the whole
   // challenge finished — see challengeState.ts's deriveChallengeCardState),
   // NOT the per-day `completed` state. Tracks which challengeIds have
-  // already shown it this session so revisiting this tab (or switching to
-  // Explore and back) doesn't re-trigger it for the same challenge.
+  // already shown it — persisted to storage (SHOWN_COMPLETIONS_KEY above),
+  // not just an in-memory Set, so it doesn't re-trigger on every fresh app
+  // launch, only genuinely once per challenge ever.
   const completion = useChallengeCompletion();
   const { show: showCompletion } = completion;
   const shownCompletions = useRef(new Set<string>());
+  const [shownCompletionsLoaded, setShownCompletionsLoaded] = useState(false);
+
+  // Load the persisted "already shown" set once on mount, before the focus
+  // effect below is allowed to show anything — otherwise the first focus
+  // could show a popup for a challenge that was already celebrated in a
+  // previous session, in the brief window before this resolves.
+  useEffect(() => {
+    let active = true;
+    storage
+      .getItem(SHOWN_COMPLETIONS_KEY)
+      .then((raw) => {
+        if (!active || !raw) return;
+        try {
+          const ids = JSON.parse(raw);
+          if (Array.isArray(ids)) shownCompletions.current = new Set(ids);
+        } catch {
+          // Corrupt/old value — treat as empty, not fatal.
+        }
+      })
+      .finally(() => {
+        if (active) setShownCompletionsLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Refetches on focus (not just on mount) so joining/leaving/completing a
   // challenge elsewhere and coming back here shows the current state.
@@ -58,14 +93,17 @@ export default function Challenges() {
           const mineViewModels = toChallengeMineViewModels(enrolled, latestPhotoByChallengeId);
           setMineChallenges(mineViewModels);
 
-          for (const challenge of mineViewModels) {
-            if (challenge.state === 'won' && !shownCompletions.current.has(challenge.challengeId)) {
-              shownCompletions.current.add(challenge.challengeId);
-              showCompletion({
-                challengeId: challenge.challengeId,
-                challengeName: challenge.title,
-                totalDays: challenge.totalDays,
-              });
+          if (shownCompletionsLoaded) {
+            for (const challenge of mineViewModels) {
+              if (challenge.state === 'won' && !shownCompletions.current.has(challenge.challengeId)) {
+                shownCompletions.current.add(challenge.challengeId);
+                storage.setItem(SHOWN_COMPLETIONS_KEY, JSON.stringify(Array.from(shownCompletions.current)));
+                showCompletion({
+                  challengeId: challenge.challengeId,
+                  challengeName: challenge.title,
+                  totalDays: challenge.totalDays,
+                });
+              }
             }
           }
 
@@ -90,7 +128,7 @@ export default function Challenges() {
       return () => {
         active = false;
       };
-    }, [t, showCompletion]),
+    }, [t, showCompletion, shownCompletionsLoaded]),
   );
 
   const handleCreateChallenge = () => router.push('/challenge/create');

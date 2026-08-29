@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../ui/text';
-import { colors, spacing } from '../../../constants/theme';
+import { colors, spacing, textOpacity } from '../../../constants/theme';
+import { withAlpha } from '../../../utils/color';
 import { buildChallengeCalendar } from '../../../utils/challengeCalendar';
 
 const DAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
@@ -42,14 +43,14 @@ export function RestDayCalendar({ startDate, totalDays, selectedDates, onToggleD
       <View style={styles.dayHeader}>
         {DAY_LABELS.map((label) => (
           <View key={label} style={styles.dayHeaderCell}>
-            <Text variant="label" style={styles.dayLabel}>{label}</Text>
+            <Text variant="label" tone="secondary" style={styles.dayLabel}>{label}</Text>
           </View>
         ))}
       </View>
 
       {months.map(({ year, month, label, weeks }) => (
         <View key={`${year}-${month}`} style={styles.monthBlock}>
-          <Text style={styles.monthName}>{label}</Text>
+          <Text variant="header" tone="secondary" style={styles.monthName}>{label}</Text>
 
           {weeks.map((week, weekIndex) => (
             <View key={`week-${weekIndex}`}>
@@ -83,7 +84,6 @@ export function RestDayCalendar({ startDate, totalDays, selectedDates, onToggleD
                         variant="body"
                         align="center"
                         style={[
-                          styles.dayNumber,
                           !isSelectable && styles.dayNumberPast,
                           isSelected && styles.dayNumberSelected,
                         ]}
@@ -118,19 +118,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayLabel: {
-    color: colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   monthBlock: {
     marginBottom: spacing.xl,
   },
   monthName: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 2,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
     marginBottom: spacing.sm,
   },
   weekRow: {
@@ -138,7 +131,7 @@ const styles = StyleSheet.create({
   },
   weekDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: withAlpha(colors.paper, 0.06),
   },
   dayCell: {
     flex: 1,
@@ -162,17 +155,14 @@ const styles = StyleSheet.create({
   },
   dotToday: {
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.65)',
+    borderColor: withAlpha(colors.paper, 0.65),
     backgroundColor: 'transparent',
   },
-  dayNumber: {
-    fontSize: 15,
-    lineHeight: 18,
-  },
   dayNumberPast: {
-    color: colors.textMuted,
+    opacity: textOpacity.tertiary,
   },
   dayNumberSelected: {
     color: colors.primary,
+    opacity: 1,
   },
 });

@@ -4,6 +4,7 @@ import { Text } from '../ui/text';
 import { Icon } from '../ui/icon';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
+import { getChallengeAccentColor } from '../../services/adapters/challengeState';
 import type { LogChallengeQuickPick } from '../../services/adapters/metricsAdapter';
 
 interface ChallengeQuickPickRowProps {
@@ -11,35 +12,44 @@ interface ChallengeQuickPickRowProps {
   onPress: () => void;
 }
 
-/** One row in the "Log today's progress" bottom sheet. Sits on the sheet's
- * own `surface` background using `ink` instead — the same inverted-layer
- * "recessed slot" treatment pills already use on colored cards elsewhere. */
+// Local named size constant, same convention as AVATAR_SIZE elsewhere
+// (ProfileHeader/StreakGridItem/FriendStreakCard) — not a shared token since
+// thumbnail dimensions are inherently per-component, but still a single
+// named value rather than a bare number sprinkled through the styles below.
+const THUMB_SIZE = 56;
+
+/** One row in the "Log today's progress" bottom sheet. Background is this
+ * challenge's own activity accent color (was flat `ink`) — name/day-label
+ * text and the placeholder thumb use `ink` for contrast against it. */
 export function ChallengeQuickPickRow({ challenge, onPress }: ChallengeQuickPickRowProps) {
   const { t } = useTranslation();
   const dayLabel = t('logMetrics.pickChallenge.dayLabel', { day: challenge.currentDay });
+  // Activity Color System v2 — falls back to colors.primary (white) when
+  // this challenge has no dominant category yet.
+  const accentColor = getChallengeAccentColor(challenge.dominantActivityCategory);
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, { backgroundColor: accentColor }, pressed && styles.pressed]}
       accessibilityRole="button"
     >
       {challenge.photoUrl ? (
         <Image source={{ uri: challenge.photoUrl }} style={styles.thumb} resizeMode="cover" />
       ) : (
         <View style={[styles.thumb, styles.thumbPlaceholder]}>
-          <Icon name="image-outline" size={18} color={withAlpha(colors.paper, textOpacity.tertiary)} />
+          <Icon name="image-outline" size={26} color={withAlpha(colors.ink, textOpacity.tertiary)} />
         </View>
       )}
 
       <View style={styles.textColumn}>
-        <Text variant="body" weight="bold" numberOfLines={1}>{challenge.name}</Text>
-        <Text variant="caption" weight="medium" style={styles.dayLabel} numberOfLines={1}>
+        <Text variant="body" size="lg" weight="bold" numberOfLines={1} style={styles.title}>{challenge.name}</Text>
+        <Text variant="label" weight="medium" style={styles.dayLabel} numberOfLines={1}>
           {dayLabel}
         </Text>
       </View>
 
-      <Icon name="chevron-forward-outline" size={18} color={withAlpha(colors.paper, textOpacity.secondary)} />
+      <Icon name="chevron-forward-outline" size={18} color={withAlpha(colors.ink, textOpacity.secondary)} />
     </Pressable>
   );
 }
@@ -50,21 +60,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     borderRadius: radius.medium,
-    backgroundColor: colors.ink,
+    // backgroundColor set inline — this challenge's own accent color, see accentColor above.
     padding: spacing.base,
   },
   thumb: {
-    width: 40,
-    height: 40,
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    // Always radius.small for photo/image tiles, regardless of size — see
+    // constants/theme.ts's radius token comment.
     borderRadius: radius.small,
     flexShrink: 0,
   },
   thumbPlaceholder: {
-    // `paper`@20% — same neutral placeholder fill UserAvatar uses, not the
-    // `ink`@18% ChallengeStatusCard uses for its photo panel: this row's own
-    // background is already `ink`, so an `ink`-based placeholder would be
-    // nearly invisible against it.
-    backgroundColor: withAlpha(colors.paper, 0.2),
+    // `ink`@18% — same treatment ChallengeStatusCard uses for its photo
+    // panel on a colored background. Was `paper`@20% back when this row's
+    // own background was flat `ink`; switched once the row itself became
+    // activity-colored, since a light `paper` fill would wash out against it.
+    backgroundColor: withAlpha(colors.ink, 0.18),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -73,8 +85,12 @@ const styles = StyleSheet.create({
     minWidth: 0,
     gap: 2,
   },
+  title: {
+    color: colors.ink,
+    opacity: 1,
+  },
   dayLabel: {
-    color: colors.primary,
+    color: colors.ink,
     opacity: 1,
   },
   pressed: {

@@ -7,6 +7,7 @@ import type { ChallengeCardState } from '../services/adapters/challengeState';
 import { buildRingTicks, computeConsistencyPercents, dayInCycle, findCycleDayFor, isRestDay } from '../utils/challengeCycle';
 import { colors } from '../constants/theme';
 import { withAlpha } from '../utils/color';
+import type { ActivityType } from '../types/activity';
 import type { ChallengeContract, ChallengePhoto } from '../types/challenge';
 
 interface Participant {
@@ -35,13 +36,17 @@ export interface ChallengeActiveProgressData {
   /** Real routine name for today (from the challenge's cycle_days), or null on a rest day. */
   todayRoutineName: string | null;
   isTodayRestDay: boolean;
-  /** Activity Color System v2 — this challenge's own accent color, resolved
-   * from its dominant activity category (falls back to `colors.primary`,
-   * white, when there's no dominant category yet). Confirmed in scope for
-   * this screen: the ring, the Today's-routine banner, the eyebrow, the
-   * active segmented-toggle segment, and the "today" calendar-day marker —
-   * see havit-design-system-SKILL.md → Activity Color System v2. */
-  accentColor: string;
+  /** Activity Color System v2 — this challenge's own dominant activity
+   * category (`null` if it has none yet). Consumers resolve the actual
+   * color they need via `challengeState.ts`'s `getChallengeAccentColor()`
+   * (the eyebrow, Today's-routine banner, segmented-toggle active state) or
+   * `getChallengeCardColor()` (anything state-gated). NOT used for the
+   * ring's photo-arc/legend or the calendar's "photo in" marker — those use
+   * the fixed `success` color instead (a per-day photo-logged indicator
+   * needs to stay meaningful even when this is null/white, not fade into
+   * "looks unstyled"). See havit-design-system-SKILL.md → Activity Color
+   * System v2. */
+  dominantActivityCategory: ActivityType | null;
   /** Today's 1-indexed position within the challenge's cycle — the routine-detail
    * route (app/challenge/[id]/routine/[day].tsx) is keyed by this, not the absolute challenge day. */
   currentDayInCycle: number;
@@ -144,8 +149,8 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
     [totalDays, cycleLengthDays, cycleDays, photoDaySet],
   );
 
-  const accentColor = useMemo(
-    () => getChallengeAccentColor(fullChallenge ? pickDominantActivityCategory(fullChallenge) : null),
+  const dominantActivityCategory = useMemo(
+    () => (fullChallenge ? pickDominantActivityCategory(fullChallenge) : null),
     [fullChallenge],
   );
 
@@ -155,11 +160,15 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
         segmentCount: RING_SEGMENT_COUNT,
         photoPercent,
         restPercent,
-        photoColor: accentColor,
+        // The ring's "Photo days" arc IS the activity color — distinct from
+        // the calendar's "Photo in" dots, which stay fixed `success` (see
+        // ChallengeWorkoutCalendar.tsx). Per explicit correction: these are
+        // two different indicators, not the same rule applied twice.
+        photoColor: getChallengeAccentColor(dominantActivityCategory),
         restColor: colors.rest,
         trackColor: RING_TRACK_COLOR,
       }),
-    [photoPercent, restPercent, accentColor],
+    [photoPercent, restPercent, dominantActivityCategory],
   );
 
   const todayCycleDay = fullChallenge ? findCycleDayFor(currentDay, cycleLengthDays, cycleDays) : null;
@@ -191,9 +200,9 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
     ticks,
     todayRoutineName,
     isTodayRestDay,
+    dominantActivityCategory,
     currentDayInCycle,
     isDayRestDay,
-    accentColor,
   };
 }
 

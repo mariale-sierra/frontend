@@ -11,6 +11,9 @@ interface ChallengeRoutineListProps {
   days: ChallengeDaySummary[];
   cycleLengthDays: number;
   durationDays: number;
+  /** Activity Color System v2 — this challenge's own resolved accent color,
+   * passed through to each workout day's numbered badge. */
+  accentColor: string;
   onPressDay?: (day: number) => void;
 }
 
@@ -21,7 +24,7 @@ interface ChallengeRoutineListProps {
  * which doesn't apply to a cycle-based model (a cycle repeats as a whole,
  * it isn't paged through).
  */
-export default function ChallengeRoutineList({ days, cycleLengthDays, durationDays, onPressDay }: ChallengeRoutineListProps) {
+export default function ChallengeRoutineList({ days, cycleLengthDays, durationDays, accentColor, onPressDay }: ChallengeRoutineListProps) {
   const { t } = useTranslation();
 
   return (
@@ -49,6 +52,7 @@ export default function ChallengeRoutineList({ days, cycleLengthDays, durationDa
               exercises: t('challengeInfo.exerciseCount', { count: item.exerciseCount }),
               location: item.location,
             })}
+            accentColor={accentColor}
             onPress={() => onPressDay?.(item.day)}
           />
         ))}

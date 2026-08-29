@@ -22,6 +22,7 @@ import { submitWorkoutProgress } from '../../services/workout-log/workout-log.se
 import { applyExerciseMetrics } from '../../services/metrics/applyExerciseMetrics';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
+import { useUploadSuccessStore } from '../../store/uploadSuccessStore';
 
 function VisibilityToggle({
   visibility,
@@ -158,7 +159,13 @@ export default function Camera() {
         }
       }
       invalidateChallengeProgressCache();
-      router.replace('/(add)/preview');
+      // Dismisses the whole (add) modal stack (metrics -> camera) back to
+      // whatever screen the user actually started this flow from, instead
+      // of routing through a dedicated (and previously content-less)
+      // "preview" screen — the success popup itself is global (mounted at
+      // app root), so it shows on top of wherever this lands.
+      useUploadSuccessStore.getState().show();
+      router.dismissAll();
     } catch (e: unknown) {
       type AxiosLike = { response?: { status?: number; data?: { message?: string } }; message?: string };
       const err = e as AxiosLike;

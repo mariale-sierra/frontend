@@ -15,7 +15,7 @@ interface SetTargetStepperProps {
 /** One steppable set-target row (Log-Metrics "Target Stepper" wireframe) —
  * visually distinct from the Routine Creator's `ValueStepper`
  * (components/routine/builder/valueStepper.tsx): here the whole pill IS the
- * value's own recessed track (`ink` bg, border lights up `primary` once this
+ * value's own recessed track (`ink` bg, border lights up `success` once this
  * set has been adjusted away from its plan), the minus button blends into
  * that same background (`ghost`, no fill of its own) instead of getting a
  * `surface` fill, and only the plus button carries the lime accent. */
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     paddingRight: spacing.sm,
   },
   pillAdjusted: {
-    borderColor: colors.primary,
+    borderColor: colors.success,
   },
   stepButtonDisabled: {
     opacity: 0.4,

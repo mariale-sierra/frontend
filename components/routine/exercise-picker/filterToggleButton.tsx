@@ -6,17 +6,25 @@ interface FilterToggleButtonProps {
   label: string;
   isActive: boolean;
   onPress: () => void;
+  /** Active-pill fill — defaults to `colors.primary`. Pass a category's own
+   * known activity color (Activity Color System v2: `activityColors[type]`,
+   * via `CATEGORY_TO_ACTIVITY`) for a per-category filter pill — each pill
+   * IS its category, no "which one wins" question to answer, unlike a
+   * challenge/routine's computed dominant color. Leave unset for the "All"
+   * pill, which isn't tied to one category. */
+  activeColor?: string;
 }
 
-/** Category filter pill (Add-Exercises screen) — `big` radius, `primary`/`ink`
- * bold when active, `surface`/`paper` medium when inactive. */
-export function FilterToggleButton({ label, isActive, onPress }: FilterToggleButtonProps) {
+/** Category filter pill (Add-Exercises screen) — `big` radius, filled/`ink`
+ * bold when active (`primary` by default, see `activeColor`), `surface`/`paper`
+ * medium when inactive. */
+export function FilterToggleButton({ label, isActive, onPress, activeColor = colors.primary }: FilterToggleButtonProps) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [
         styles.button,
-        isActive && styles.buttonActive,
+        isActive && { backgroundColor: activeColor },
         pressed && styles.pressed,
       ]}
     >
@@ -33,9 +41,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: radius.big,
     backgroundColor: colors.surface,
-  },
-  buttonActive: {
-    backgroundColor: colors.primary,
   },
   pressed: {
     opacity: 0.85,

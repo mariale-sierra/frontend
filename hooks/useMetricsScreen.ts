@@ -146,6 +146,10 @@ export function useMetricsScreen() {
     router.push('/(add)/camera');
   }, []);
 
+  const goToRestDay = useCallback(() => {
+    router.push('/(add)/rest-day');
+  }, []);
+
   const goBack = useCallback(() => {
     router.back();
   }, []);
@@ -160,6 +164,7 @@ export function useMetricsScreen() {
     routineName,
     updateMetricValue,
     goToCamera,
+    goToRestDay,
     goBack,
   };
 }

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
 import { Row } from '../../layout/row';
 import { Icon } from '../../ui/icon';
-import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
+import { colors, radius, spacing, textOpacity, activityColors } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { useRoutineBuilder, getTotalRestSeconds } from '../../../store/routineBuilderStore';
 import type { ExerciseEntry } from '../../../types/routine';
@@ -61,8 +61,8 @@ export function ExerciseHeader({
   return (
     <Pressable onPress={collapsed ? onToggleCollapsed : undefined} style={styles.headerSection}>
       <Row justify="space-between" align="center" gap="md">
-        <View style={styles.badge}>
-          <Text variant="caption" weight="bold">{index + 1}</Text>
+        <View style={[styles.badge, { backgroundColor: activityColors[exercise.activityType] }]}>
+          <Text variant="caption" weight="bold" style={styles.badgeNumber}>{index + 1}</Text>
         </View>
 
         <View style={styles.textColumn}>
@@ -111,10 +111,14 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: radius.big,
-    backgroundColor: withAlpha(colors.paper, 0.12),
+    // backgroundColor set inline — this exercise's own activity category color.
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+  },
+  badgeNumber: {
+    color: colors.ink,
+    opacity: 1,
   },
   textColumn: {
     flex: 1,

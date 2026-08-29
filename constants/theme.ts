@@ -20,16 +20,16 @@ import type { ActivityType } from '../types/activity';
 // ---------------------------------------------------------------------------
 
 export const colors = {
-  // Pure white — deliberately distinct from `paper` (#F3F2E2, warm off-white)
-  // even though they read as nearly identical at a glance. `primary` was
-  // lime (#EEFF5C) until the Activity Color System v2 pass retired that in
-  // favor of per-challenge activity colors (see `activityColors` below) —
-  // white is now the neutral chrome accent for anything with NO challenge
-  // association (nav FAB, active tab, streak badges, "See all" links,
-  // generic buttons/CTAs outside a challenge's own scoped UI). See
-  // havit-design-system-SKILL.md → Activity Color System v2 for the full
-  // rationale and migration status before touching challenge-scoped colors.
-  primary: '#FFFFFF',
+  // Warm off-white — swapped values with `paper` on explicit request (was
+  // pure #FFFFFF, `paper` was #F3F2E2). `primary` was lime (#EEFF5C) until
+  // the Activity Color System v2 pass retired that in favor of per-challenge
+  // activity colors (see `activityColors` below) — this is now the neutral
+  // chrome accent for anything with NO challenge association (nav FAB,
+  // active tab, streak badges, "See all" links, generic buttons/CTAs outside
+  // a challenge's own scoped UI). See havit-design-system-SKILL.md →
+  // Activity Color System v2 for the full rationale and migration status
+  // before touching challenge-scoped colors.
+  primary: '#F3F2E2',
   secondary: '#FF5C1A', // orange — secondary buttons, in-progress indicators
   accent: '#EF3B66', // pink — social/community moments only, never a status color
   // Screen background. The wireframes literally specify `#0E0F0B` (matched
@@ -40,11 +40,11 @@ export const colors = {
   // lightness was the complaint.
   ink: '#080906',
   surface: '#191A13', // elevated surface (cards, nav, tab tracks) — confirmed correct as-is, don't touch
-  paper: '#F3F2E2', // primary text on dark backgrounds / light-theme background
-  success: '#37E0A4',
-  warning: '#F2A93B', // no confirmed use case yet — see Open Items Tracker
-  error: '#DE2B2B',
-  rest: '#B49BFF', // rest/recovery states, day-level only — "no activity today". Never a whole challenge's identity color, even for a mostly-rest-day challenge.
+  paper: '#FFFFFF', // primary text on dark backgrounds / light-theme background — swapped with `primary`, see note above
+  success: '#76EAA0', // test tweak — was #37E0A4 → #1E9E70 → #4ADE80 → current, a brighter teal-green originally
+  warning: '#F9B176', // test tweak — was #F2A93B amber → #C9540F → #FB923C → current. Still no confirmed use case — see Open Items Tracker
+  error: '#F67575', // test tweak — was #DE2B2B → #A31E1E → #EF4444 → current
+  rest: '#C9B6FF', // test tweak — was #B49BFF → #B399FF → current. Rest/recovery states, day-level only — "no activity today". Never a whole challenge's identity color, even for a mostly-rest-day challenge.
   neutral: '#8A8C82', // paused/inactive states — positive/neutral, not a problem
 } as const;
 
@@ -67,12 +67,12 @@ export type ColorToken = keyof Colors;
  * confirmed 6:1+ contrast pairing.
  */
 export const activityColors: Record<ActivityType, string> = {
-  strength: '#F2653A',
-  cardioIntense: '#F0B429',
-  cardioLow: '#5CD97A',
-  flexibility: '#3DDBEE',
-  mindBody: '#F17FE0',
-  functional: '#D8EE3C',
+  strength: '#E9EB54', // lime-yellow
+  cardioIntense: '#F7CF64', // golden-orange
+  cardioLow: '#43EDD7', // aqua-turquoise
+  flexibility: '#88ADF6', // electric blue
+  mindBody: '#F688E4', // magenta-pink
+  functional: '#63CFF3', // sky blue
 } as const;
 
 /**

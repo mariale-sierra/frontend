@@ -10,8 +10,7 @@ import { Text } from '../../components/ui/text';
 import { RestDayCalendar } from '../../components/add/restDay/RestDayCalendar';
 import { getChallengeProgress } from '../../services/challenge/challenge.service';
 import { colors, spacing } from '../../constants/theme';
-
-const BOTTOM_BAR_BG = 'rgba(0,0,0,0.88)';
+import { withAlpha } from '../../utils/color';
 
 export default function PlanRestDays() {
   const router = useRouter();
@@ -69,7 +68,7 @@ export default function PlanRestDays() {
       <View style={styles.screen}>
         <View style={styles.header}>
           <IconButton
-            name="chevron-back"
+            name="chevron-back-outline"
             onPress={() => router.back()}
             size={28}
             iconSize={18}
@@ -81,7 +80,7 @@ export default function PlanRestDays() {
 
         <View style={styles.titleBlock}>
           <Text variant="title" align="center">{t('planRestDays.title')}</Text>
-          <Text variant="body" align="center" style={styles.subtitle}>
+          <Text variant="body" tone="secondary" align="center">
             {t('planRestDays.subtitle')}
           </Text>
         </View>
@@ -138,9 +137,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     alignItems: 'center',
   },
-  subtitle: {
-    color: colors.primary,
-  },
   scroll: {
     flex: 1,
   },
@@ -151,9 +147,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    backgroundColor: BOTTOM_BAR_BG,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: withAlpha(colors.ink, 0.88),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: withAlpha(colors.paper, 0.08),
     alignItems: 'center',
   },
   actionButton: {

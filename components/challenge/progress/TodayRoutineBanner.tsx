@@ -8,6 +8,10 @@ interface TodayRoutineBannerProps {
   /** Null on a rest day (no routine to show) — see the rest-day branch below. */
   routineName: string | null;
   isRestDay: boolean;
+  /** Activity Color System v2 — this challenge's own resolved accent color,
+   * used as the train-day banner's background. The rest-day branch stays a
+   * fixed `colors.rest`, unrelated to activity color. */
+  accentColor: string;
   onPress?: () => void;
 }
 
@@ -17,15 +21,16 @@ interface TodayRoutineBannerProps {
  * existing Routine-Detail route. Background is state-driven, same pairing
  * ChallengeStatusCard already established (its rest-state card background
  * is `colors.rest` with `inverse`/ink-colored title text on top — confirmed
- * contrast pairing, reused here rather than re-deriving one): `primary`
- * (lime) on a train day, `rest` (purple) on a rest day — the "signature
- * purple" rest-state color used everywhere else in the app, not a one-off.
- * Purposefully minimal for the rest-day state (no press, no chevron) — a
- * dedicated wireframe for this component's own states is coming separately
- * per the user; this covers only what the two Challenge-Detail wireframes
- * actually specify.
+ * contrast pairing, reused here rather than re-deriving one): the
+ * challenge's own activity accent color on a train day (Activity Color
+ * System v2 — was flat `primary`/lime), `rest` (purple) on a rest day — the
+ * "signature purple" rest-state color used everywhere else in the app, not
+ * a one-off. Purposefully minimal for the rest-day state (no press, no
+ * chevron) — a dedicated wireframe for this component's own states is
+ * coming separately per the user; this covers only what the two
+ * Challenge-Detail wireframes actually specify.
  */
-export function TodayRoutineBanner({ routineName, isRestDay, onPress }: TodayRoutineBannerProps) {
+export function TodayRoutineBanner({ routineName, isRestDay, accentColor, onPress }: TodayRoutineBannerProps) {
   const { t } = useTranslation();
 
   if (isRestDay || !routineName) {
@@ -42,7 +47,7 @@ export function TodayRoutineBanner({ routineName, isRestDay, onPress }: TodayRou
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.banner, { backgroundColor: colors.primary }, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.banner, { backgroundColor: accentColor }, pressed && styles.pressed]}
       accessibilityRole="button"
     >
       <Text variant="label" weight="bold" style={styles.label}>

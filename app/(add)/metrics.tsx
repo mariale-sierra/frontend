@@ -8,7 +8,7 @@ import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
 import { LogMetricsExerciseCard } from '../../components/add/logMetricsExerciseCard';
 import { CreateFlowPrimaryButton } from '../../components/challenge/create';
-import { colors, spacing, textOpacity } from '../../constants/theme';
+import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { useMetricsScreen } from '../../hooks/useMetricsScreen';
 import { countAdjustedSets } from '../../services/adapters/index';
@@ -26,6 +26,7 @@ export default function Metrics() {
     routineName,
     updateMetricValue,
     goToCamera,
+    goToRestDay,
     goBack,
   } = useMetricsScreen();
 
@@ -91,7 +92,17 @@ export default function Metrics() {
           <Pressable onPress={goBack} hitSlop={12} style={styles.iconButton}>
             <Icon name="chevron-back-outline" size={24} color={colors.paper} />
           </Pressable>
-          <View style={styles.iconButton} />
+          <Pressable
+            onPress={goToRestDay}
+            style={({ pressed }) => [styles.restDayButton, pressed && styles.restDayButtonPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={t('challenges.restDay')}
+          >
+            <Icon name="moon-outline" size={16} color={colors.ink} />
+            <Text variant="label" weight="bold" style={styles.restDayButtonText}>
+              {t('challenges.restDay')}
+            </Text>
+          </Pressable>
         </Row>
 
         <View style={styles.titleBlock}>
@@ -136,6 +147,22 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  restDayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.big,
+    backgroundColor: colors.rest,
+  },
+  restDayButtonPressed: {
+    opacity: 0.85,
+  },
+  restDayButtonText: {
+    color: colors.ink,
+    opacity: 1,
   },
   titleBlock: {
     gap: spacing.xs,

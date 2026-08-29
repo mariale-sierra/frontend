@@ -6,6 +6,7 @@ import { BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
 import { AuthProvider } from '../context/authContext';
 import { ThemeProvider } from '../context/themeContext';
 import { useAuth } from '../hooks/useAuth';
+import { UploadSuccessPopup } from '../components/ui/UploadSuccessPopup';
 import '../i18n';
 
 function RootNavigator() {
@@ -85,6 +86,7 @@ export default function RootLayout() {
     <ThemeProvider>
       <AuthProvider>
         <RootNavigator />
+        <UploadSuccessPopup />
       </AuthProvider>
     </ThemeProvider>
   );

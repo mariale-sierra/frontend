@@ -16,6 +16,7 @@ import { withAlpha } from '../../../utils/color';
 import { getChallenge, joinChallenge } from '../../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../../services/user/user.service';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
+import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
 import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
 import type { ChallengeContract } from '../../../types/challenge';
 
@@ -116,11 +117,15 @@ export default function ChallengeDetail() {
   }
 
   const view = result.value;
+  // Activity Color System v2 — this challenge's own resolved accent color,
+  // used for the title, the "Lasts" row's calendar icon, the "Read more"
+  // toggle, and each workout day's numbered badge below.
+  const accentColor = getChallengeAccentColor(challenge ? pickDominantActivityCategory(challenge) : null);
 
   const infoRows: ChallengeInfoRow[] = [
     {
       icon: 'calendar-outline',
-      iconColor: colors.secondary,
+      iconColor: accentColor,
       label: t('challengeInfo.lastsLabel'),
       value: `${t('challenges.durationDaysLabel', { count: view.durationDays })} · ${
         view.restDaysPerCycleCount > 0
@@ -163,11 +168,11 @@ export default function ChallengeDetail() {
         </Row>
 
         <View style={styles.section}>
-          <ChallengeHeader title={view.title} rows={infoRows} />
+          <ChallengeHeader title={view.title} rows={infoRows} accentColor={accentColor} />
         </View>
 
         <View style={styles.section}>
-          <ChallengeAboutSection description={view.description} />
+          <ChallengeAboutSection description={view.description} accentColor={accentColor} />
         </View>
 
         <View style={styles.section}>
@@ -175,6 +180,7 @@ export default function ChallengeDetail() {
             days={view.days}
             cycleLengthDays={view.cycleLengthDays}
             durationDays={view.durationDays}
+            accentColor={accentColor}
             onPressDay={(day) => router.push(`/challenge/${id}/routine/${day}`)}
           />
         </View>

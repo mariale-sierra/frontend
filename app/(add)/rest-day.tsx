@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { IconButton } from '../../components/ui/iconButton';
 import { RestDayContent } from '../../components/add/restDay/RestDayContent';
 import { RestDayAlreadyLogged } from '../../components/add/restDay/RestDayAlreadyLogged';
-import { colors, spacing } from '../../constants/theme';
+import { colors, spacing, textOpacity } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import { getChallengeProgress } from '../../services/challenge/challenge.service';
 import { submitWorkoutProgress } from '../../services/workout-log/workout-log.service';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
+import { useUploadSuccessStore } from '../../store/uploadSuccessStore';
 
 export default function RestDay() {
   const router = useRouter();
+  const { t } = useTranslation();
   const selectedChallengeId = useMetricsEntryStore((state) => state.selectedChallengeId);
 
   const [loading, setLoading] = useState(true);
@@ -38,9 +42,13 @@ export default function RestDay() {
         visibility: 'private',
       });
       invalidateChallengeProgressCache();
-      router.push('/(add)/preview');
+      // See camera.tsx's handleConfirm for why this dismisses the whole
+      // modal stack + shows the global success popup instead of routing to
+      // a dedicated "preview" screen.
+      useUploadSuccessStore.getState().show();
+      router.dismissAll();
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? 'Could not save your rest day.');
+      setError(e?.response?.data?.message ?? t('restDay.saveFailedMessage'));
     } finally {
       setSubmitting(false);
     }
@@ -55,19 +63,19 @@ export default function RestDay() {
       <View style={styles.screen}>
         <View style={styles.header}>
           <IconButton
-            name="chevron-back"
+            name="chevron-back-outline"
             onPress={() => router.back()}
             size={28}
             iconSize={18}
             variant="ghost"
             accessibilityRole="button"
-            accessibilityLabel="Go back"
+            accessibilityLabel={t('metrics.accessibilityBack')}
           />
         </View>
 
         {loading ? (
           <View style={styles.loadingWrap}>
-            <ActivityIndicator color={colors.textSecondary} />
+            <ActivityIndicator color={withAlpha(colors.paper, textOpacity.secondary)} />
           </View>
         ) : completedToday ? (
           <RestDayAlreadyLogged

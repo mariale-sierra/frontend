@@ -13,8 +13,8 @@ interface ChallengesViewToggleProps {
 
 // Segmented control, per design system → Components → Segmented control —
 // same track/padding/radius as Profile's posts/photos toggle, but text
-// segments that fill the available width instead of fixed-size icon slots,
-// and `paper` (not `primary`) for the active segment background.
+// segments that fill the available width instead of fixed-size icon slots.
+// Active segment background is `primary`.
 export function ChallengesViewToggle({ view, onViewChange, mineLabel, exploreLabel }: ChallengesViewToggleProps) {
   return (
     <View style={styles.track}>
@@ -54,6 +54,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   segmentActive: {
-    backgroundColor: colors.paper,
+    backgroundColor: colors.primary,
   },
 });

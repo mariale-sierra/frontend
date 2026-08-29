@@ -10,15 +10,26 @@ import { Text } from './text';
 
 /**
  * ButtonVariant defines the available button styles:
- * - primary: `primary` (lime) background, `ink` text, for the one main action on a screen
- * - outline: `ink` background, `paper`-bordered, for secondary actions
- * - danger: `ink` background, `error`-bordered, for destructive actions
+ * - primary: `primary` background, `ink` text, for the one main action on a screen
+ * - outline: `ink` background, `paper`-bordered, for secondary actions — NOT
+ *   for use in popups/modals (see `neutral` below); still fine for in-page
+ *   secondary actions like a "Retry" button in an error state.
+ * - danger: solid `error` background, `ink` text, for destructive actions
+ * - neutral: solid `primary` background, `ink` text — the solid, non-bordered
+ *   secondary/neutral action. Added for `ConfirmationPopup` specifically:
+ *   popups never use `outline` (no outline/bordered buttons in a popup,
+ *   confirmed design rule) — this is what a popup's "Cancel"/"Back"/"Stay"
+ *   button should use instead. Was solid `ink`/`paper` (a dark button) until
+ *   switched to match `primary`'s light treatment on explicit request
+ *   (2026-08-28) — visually identical to `primary` now by design; the two
+ *   variant names stay distinct in code for semantic clarity (which one is
+ *   "the main action" vs. "cancel/back") even though they render the same.
  *
  * `activity` (background color driven by workout category) is retired — see
  * design system → Explicitly Rejected Patterns. It now renders identically
  * to `primary`; the variant name is kept so existing call sites compile.
  */
-type ButtonVariant = 'primary' | 'activity' | 'outline' | 'danger';
+type ButtonVariant = 'primary' | 'activity' | 'outline' | 'danger' | 'neutral';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends Omit<PressableProps, 'children'> {
@@ -48,7 +59,9 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const textColor =
-    variant === 'primary' || variant === 'activity' ? colors.ink : variant === 'danger' ? colors.error : colors.paper;
+    variant === 'primary' || variant === 'activity' || variant === 'danger' || variant === 'neutral'
+      ? colors.ink
+      : colors.paper;
 
   const loaderColor = textColor;
 
@@ -115,9 +128,11 @@ const styles = StyleSheet.create({
   },
 
   danger: {
-    backgroundColor: colors.ink,
-    borderWidth: 1,
-    borderColor: colors.error,
+    backgroundColor: colors.error,
+  },
+
+  neutral: {
+    backgroundColor: colors.primary,
   },
 
   // SIZES

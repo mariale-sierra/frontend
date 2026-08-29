@@ -17,6 +17,9 @@ export interface ChallengeInfoRow {
 interface ChallengeHeaderProps {
   title: string;
   rows: ChallengeInfoRow[];
+  /** Activity Color System v2 — this challenge's own resolved accent color,
+   * used for the title text. */
+  accentColor: string;
 }
 
 /** Title + info-rows block at the top of Challenge-Info — left-aligned Bebas
@@ -24,10 +27,10 @@ interface ChallengeHeaderProps {
  * including the last, per the wireframe). Replaces the old centered
  * giant-day-count/location-icon-grid/activity-badge-chip layout, which
  * doesn't appear in this wireframe at all. */
-export default function ChallengeHeader({ title, rows }: ChallengeHeaderProps) {
+export default function ChallengeHeader({ title, rows, accentColor }: ChallengeHeaderProps) {
   return (
     <View>
-      <Text variant="title" style={styles.title}>{title}</Text>
+      <Text variant="title" style={[styles.title, { color: accentColor, opacity: 1 }]}>{title}</Text>
 
       <View style={styles.rows}>
         {rows.map((row, index) => (

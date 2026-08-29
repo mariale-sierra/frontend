@@ -18,28 +18,41 @@ interface Props {
   isRestDayFn: (challengeDay: number) => boolean;
   selectedDay: number | null;
   onPressDay: (challengeDay: number) => void;
+  /** Activity Color System v2 — this challenge's own accent color, used for
+   * the "today" dot/legend swatch (was fixed `secondary`). Falls back to
+   * `colors.primary` when the challenge has no dominant category yet, same
+   * as everywhere else this resolves — pass `getChallengeAccentColor()`'s
+   * result, not the raw category. */
+  accentColor: string;
 }
 
 interface DayCellProps {
   cell: CalendarCell | null;
   isSelected: boolean;
   onPress: (challengeDay: number) => void;
+  accentColor: string;
 }
 
-const STATUS_DOT_COLOR: Record<'photo' | 'rest' | 'missed' | 'today', string> = {
-  photo: colors.primary,
+// `photo`/`rest`/`missed` are fixed — a "you logged a photo" marker needs to
+// stay meaningful even for a challenge with no dominant category yet (white
+// would just look unstyled/lost), same reasoning as the progress ring's tick
+// colors and legend. `today` is NOT in this map — it resolves to the
+// challenge's own activity accent color instead (was fixed `secondary`),
+// passed in via the `accentColor` prop.
+const STATUS_DOT_COLOR: Record<'photo' | 'rest' | 'missed', string> = {
+  photo: colors.success,
   rest: colors.rest,
   missed: colors.error,
-  today: colors.secondary,
 };
 
-function DayCell({ cell, isSelected, onPress }: DayCellProps) {
+function DayCell({ cell, isSelected, onPress, accentColor }: DayCellProps) {
   if (!cell || cell.challengeDay === null || !cell.status) {
     return <View style={styles.dayCell} />;
   }
 
   const { status, challengeDay } = cell;
   const canPress = status === 'photo';
+  const dotColor = status === 'today' ? accentColor : STATUS_DOT_COLOR[status as keyof typeof STATUS_DOT_COLOR];
 
   return (
     <Pressable
@@ -49,7 +62,7 @@ function DayCell({ cell, isSelected, onPress }: DayCellProps) {
     >
       <View style={styles.markerWrap}>
         {status !== 'future' && (
-          <View style={[styles.dot, { backgroundColor: STATUS_DOT_COLOR[status as keyof typeof STATUS_DOT_COLOR] }]} />
+          <View style={[styles.dot, { backgroundColor: dotColor }]} />
         )}
         {isSelected && <View style={styles.selectedRing} />}
       </View>
@@ -74,6 +87,7 @@ export function ChallengeWorkoutCalendar({
   isRestDayFn,
   selectedDay,
   onPressDay,
+  accentColor,
 }: Props) {
   const { t } = useTranslation();
   const months = useChallengeCalendar(startDate, totalDays, currentDay, photoDays, isRestDayFn);
@@ -135,6 +149,7 @@ export function ChallengeWorkoutCalendar({
               cell={cell}
               isSelected={cell?.challengeDay === selectedDay && selectedDay !== null}
               onPress={onPressDay}
+              accentColor={accentColor}
             />
           ))}
         </View>
@@ -142,7 +157,7 @@ export function ChallengeWorkoutCalendar({
 
       <View style={styles.legendRow}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+          <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
           <Text variant="caption" tone="secondary">{t('challengeProgress.consistency.legendPhotoIn')}</Text>
         </View>
         <View style={styles.legendItem}>
@@ -154,7 +169,7 @@ export function ChallengeWorkoutCalendar({
           <Text variant="caption" tone="secondary">{t('challengeProgress.consistency.legendMissed')}</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.secondary }]} />
+          <View style={[styles.legendDot, { backgroundColor: accentColor }]} />
           <Text variant="caption" tone="secondary">{t('challengeProgress.consistency.legendToday')}</Text>
         </View>
       </View>

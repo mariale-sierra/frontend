@@ -432,20 +432,16 @@ const es = {
     emptyMessage: 'Aún no hay rachas de amigos',
     errorMessage: 'No se pudieron cargar las rachas',
   },
-  addMenu: {
-    title: 'Acciones rápidas',
-    subtitle: 'Usa esta pantalla para probar el flujo nuevo de métricas, descanso y progreso.',
-    metrics: {
-      title: 'Registrar métricas',
-      description: 'Abre el flujo de entrenamiento conectado al backend.',
-    },
-    restDay: {
-      title: 'Registrar descanso',
-      description: 'Envía progreso al endpoint nuevo sin imagen, ideal para validar la API.',
-    },
-    camera: {
-      title: 'Ir a cámara',
-      description: 'Atajo al flujo visual de captura y preview.',
+  restDay: {
+    title: 'El descanso\ntambién importa.',
+    subtitle: '¿Quieres descansar hoy, o programar más días de descanso?',
+    justTodayButton: 'Solo hoy',
+    planButton: 'Planear descansos',
+    saveFailedMessage: 'No se pudo guardar tu día de descanso. Intenta de nuevo.',
+    alreadyLogged: {
+      title: 'Hoy ya\nestá registrado.',
+      subtitle: 'Tu entrenamiento de hoy ya está registrado. Los días de descanso no se pueden aplicar retroactivamente, pero puedes planear los próximos.',
+      backLink: 'Volver',
     },
   },
   planRestDays: {
@@ -470,6 +466,9 @@ const es = {
     permissionMessage: 'Se requiere permiso de cámara para tomar la evidencia.',
     grantPermission: 'Conceder permiso',
     goBack: '← Volver',
+    uploadSuccessTitle: '¡Registrado!',
+    uploadSuccessMessage: '¡Buen trabajo! El progreso de hoy se guardó.',
+    uploadSuccessCta: 'Listo',
   },
   invites: {
     screenTitle: 'Invitaciones',

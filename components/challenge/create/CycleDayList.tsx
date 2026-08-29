@@ -15,6 +15,11 @@ interface CycleDayListProps {
   getDayStatus: (dayNumber: number) => CycleDayStatus;
   getDayRoutineLabel: (dayNumber: number) => string | undefined;
   getDayRoutineMeta: (dayNumber: number) => string | undefined;
+  /** Activity Color System v2 — the assigned routine's own dominant activity
+   * color for a configured workout day (falls back to `colors.primary` when
+   * that routine has no exercises yet). Unused for `empty`/`rest` days,
+   * which keep their own fixed treatment. */
+  getDayRoutineColor: (dayNumber: number) => string;
   onPressDay: (dayNumber: number) => void;
   onRemoveDay: (dayNumber: number) => void;
   onAddDay: () => void;
@@ -32,6 +37,7 @@ export function CycleDayList({
   getDayStatus,
   getDayRoutineLabel,
   getDayRoutineMeta,
+  getDayRoutineColor,
   onPressDay,
   onRemoveDay,
   onAddDay,
@@ -63,7 +69,7 @@ export function CycleDayList({
         {days.map((day) => {
           const status = getDayStatus(day);
           const isRest = status === 'rest';
-          const badgeColor = status === 'empty' ? withAlpha(colors.paper, 0.12) : isRest ? colors.rest : colors.primary;
+          const badgeColor = status === 'empty' ? withAlpha(colors.paper, 0.12) : isRest ? colors.rest : getDayRoutineColor(day);
           const routineLabel = getDayRoutineLabel(day);
           const meta = getDayRoutineMeta(day);
 

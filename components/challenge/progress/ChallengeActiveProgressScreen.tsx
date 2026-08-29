@@ -7,6 +7,7 @@ import { spacing } from '../../../constants/theme';
 import { Text } from '../../ui/text';
 import { SegmentedIconToggle } from '../../ui/segmentedIconToggle';
 import { useChallengeActiveProgress } from '../../../hooks/useChallengeActiveProgress';
+import { getChallengeAccentColor } from '../../../services/adapters/challengeState';
 import ScreenBackground from '../../layout/screenBackground';
 import { ChallengeProgressHeader } from './ChallengeProgressHeader';
 import { ChallengePhotoGalleryModal } from './ChallengePhotoGalleryModal';
@@ -91,6 +92,7 @@ export function ChallengeActiveProgressScreen() {
           ticks={data.ticks}
           todayRoutineName={data.todayRoutineName}
           isTodayRestDay={data.isTodayRestDay}
+          dominantActivityCategory={data.dominantActivityCategory}
           onPressRoutine={handlePressRoutine}
           onPressMembers={handlePressMembers}
           onPressInfo={handlePressInfo}
@@ -101,6 +103,7 @@ export function ChallengeActiveProgressScreen() {
           <SegmentedIconToggle
             value={view}
             onChange={setView}
+            activeColor={getChallengeAccentColor(data.dominantActivityCategory)}
             options={[
               { value: 'grid', icon: 'grid-outline', accessibilityLabel: t('challengeProgress.consistency.gridViewA11y') },
               { value: 'calendar', icon: 'calendar-outline', accessibilityLabel: t('challengeProgress.consistency.calendarViewA11y') },
@@ -124,6 +127,7 @@ export function ChallengeActiveProgressScreen() {
             isRestDayFn={data.isDayRestDay}
             selectedDay={selectedDay}
             onPressDay={openDayGallery}
+            accentColor={getChallengeAccentColor(data.dominantActivityCategory)}
           />
         )}
       </ScrollView>

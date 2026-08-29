@@ -5,8 +5,9 @@ import { Text } from '../../ui/text';
 import { BackButton } from '../../ui/backButton';
 import { IconButton } from '../../ui/iconButton';
 import { colors, spacing } from '../../../constants/theme';
-import { STATE_COLOR } from '../../../services/adapters/challengeState';
+import { getChallengeAccentColor, getChallengeCardColor } from '../../../services/adapters/challengeState';
 import type { ChallengeCardState } from '../../../services/adapters/challengeState';
+import type { ActivityType } from '../../../types/activity';
 import { ChallengeProgressRing } from './ChallengeProgressRing';
 import { TodayRoutineBanner } from './TodayRoutineBanner';
 
@@ -18,6 +19,10 @@ interface ChallengeProgressHeaderProps {
   ticks: string[];
   todayRoutineName: string | null;
   isTodayRestDay: boolean;
+  /** Activity Color System v2 — resolved to the eyebrow color (state-gated,
+   * only `active` uses it — see `getChallengeCardColor`) and the Today's-
+   * routine banner's accent (unconditional — see `getChallengeAccentColor`). */
+  dominantActivityCategory: ActivityType | null;
   onPressRoutine: () => void;
   onPressMembers: () => void;
   onPressInfo: () => void;
@@ -45,12 +50,14 @@ export function ChallengeProgressHeader({
   ticks,
   todayRoutineName,
   isTodayRestDay,
+  dominantActivityCategory,
   onPressRoutine,
   onPressMembers,
   onPressInfo,
 }: ChallengeProgressHeaderProps) {
   const { t } = useTranslation();
-  const stateColor = STATE_COLOR[state];
+  const stateColor = getChallengeCardColor(state, dominantActivityCategory);
+  const accentColor = getChallengeAccentColor(dominantActivityCategory);
 
   return (
     <View>
@@ -97,7 +104,12 @@ export function ChallengeProgressHeader({
 
         <Row gap="base" justify="center">
           <Row gap="xs" align="center">
-            <View style={[styles.legendDot, { backgroundColor: colors.primary }]} />
+            {/* The ring's own "Photo days" — this IS the activity color,
+                matching the ring's `ticks` (useChallengeActiveProgress.ts).
+                Distinct from the calendar's "Photo in" dots, which stay
+                fixed `success` — two different indicators, not the same
+                rule applied twice. */}
+            <View style={[styles.legendDot, { backgroundColor: accentColor }]} />
             <Text variant="caption" tone="secondary">{t('challengeProgress.consistency.legendPhotoDays')}</Text>
           </Row>
           <Row gap="xs" align="center">
@@ -111,6 +123,7 @@ export function ChallengeProgressHeader({
         <TodayRoutineBanner
           routineName={todayRoutineName}
           isRestDay={isTodayRestDay}
+          accentColor={accentColor}
           onPress={onPressRoutine}
         />
       </View>

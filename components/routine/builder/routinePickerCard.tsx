@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'rea
 import { Row } from '../../layout/row';
 import { Text } from '../../ui/text';
 import { Icon } from '../../ui/icon';
-import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
+import { colors, radius, spacing, textOpacity, activityColors } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { getRoutineLocationSummary } from '../../../store/routineBuilderStore';
 import type { RoutineSummary } from '../../../types/routine';
@@ -36,14 +36,21 @@ function CardShell({
 
 // List-row card, per design system → Components → Card variants: `surface`
 // bg, `medium` radius, `base` horizontal / `md` vertical padding. Selection
-// is a `primary` border (not a fill — `primary` is a spotlight, not a
-// surface) plus a filled radio dot, matching the wireframe exactly.
+// is a border (not a fill — a spotlight color is never a surface) plus a
+// filled radio dot, matching the wireframe exactly.
 export function RoutinePickerCard({ routine, selected, onSelect, onOpen }: RoutinePickerCardProps) {
   const { t } = useTranslation();
   const metaText = `${t('routineSelect.card.exercisesCount', { count: routine.exercises.length })} · ${getRoutineLocationSummary(routine.exercises)}`;
+  // Activity Color System v2 — this routine's own dominant activity category
+  // (routineBuilderStore.ts's getPrimaryActivityType(), the exact same
+  // "count exercises by category, most frequent wins" computation the
+  // backend does for a challenge, just client-side for a not-yet-submitted
+  // routine). Falls back to `colors.primary` (white) when the routine has
+  // no exercises yet to determine one from.
+  const selectionColor = routine.primaryActivity ? activityColors[routine.primaryActivity] : colors.primary;
 
   return (
-    <CardShell onPress={onSelect} style={[styles.card, selected && styles.cardSelected]}>
+    <CardShell onPress={onSelect} style={[styles.card, selected && { borderColor: selectionColor }]}>
       <Row align="center" gap="md">
         <View style={styles.textColumn}>
           <Text variant="body" weight="bold" numberOfLines={1}>{routine.name}</Text>
@@ -63,7 +70,7 @@ export function RoutinePickerCard({ routine, selected, onSelect, onOpen }: Routi
           <Icon name="chevron-forward-outline" size={16} color={withAlpha(colors.paper, textOpacity.tertiary)} />
         </Pressable>
 
-        <View style={[styles.radio, selected && styles.radioSelected]} />
+        <View style={[styles.radio, selected && { borderWidth: 0, backgroundColor: selectionColor }]} />
       </Row>
     </CardShell>
   );
@@ -78,9 +85,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
-  },
-  cardSelected: {
-    borderColor: colors.primary,
   },
   textColumn: {
     flex: 1,
@@ -99,10 +103,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.big,
     borderWidth: 1.5,
     borderColor: withAlpha(colors.paper, textOpacity.tertiary),
-  },
-  radioSelected: {
-    borderWidth: 0,
-    backgroundColor: colors.primary,
   },
   pressed: {
     opacity: 0.84,

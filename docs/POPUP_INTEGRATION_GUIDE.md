@@ -1,6 +1,16 @@
 /**
  * COMPLETE INTEGRATION GUIDE - Challenge Popups
  *
+ * ⚠️ STALE (2026-08-28): written before this session's dead-route cleanup and
+ * popup retokenize. `app/challenge/active-all.tsx` referenced below was
+ * deleted — completion now fires from `app/(tabs)/challenges.tsx`. The
+ * popup itself no longer uses `Card variant="basicGlass"` or bordered
+ * `outline` buttons (solid `neutral`/`danger`/`primary` only now) — see
+ * havit-design-system-SKILL.md's Components section for the current,
+ * accurate integration points instead of this file. Kept for its still-valid
+ * usage-pattern examples (the hook API itself didn't change), not as a
+ * source of truth for current wiring.
+ *
  * This guide shows where the popups have been integrated and how to add
  * additional instances (e.g., leave button, additional detail screens).
  */

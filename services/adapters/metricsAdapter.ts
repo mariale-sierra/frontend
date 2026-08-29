@@ -14,9 +14,9 @@ import type {
 import { ACTIVITY_METRIC_CONFIG } from '../../types/metrics';
 import type { LocationType } from '../../components/icons/locationIcon';
 import type { ChallengeContract, ChallengePhoto, TodayRoutineContract } from '../../types/challenge';
-import type { ActivityType } from '../../constants/theme';
+import type { ActivityType } from '../../types/activity';
 import { asString } from './adapterUtils';
-import { pickChallengeStatus } from './challengeState';
+import { pickChallengeStatus, pickDominantActivityCategory } from './challengeState';
 import { pickCurrentDay, pickIsRestDay } from './homeAdapter';
 
 const ALLOWED_ACTIVITY_CATEGORIES = new Set<ActivityCategory>(
@@ -48,6 +48,10 @@ export interface LogChallengeQuickPick {
    * user's own latest photo for the challenge, or null if they haven't
    * posted one yet. */
   photoUrl: string | null;
+  /** Activity Color System v2 — this challenge's own dominant activity
+   * category (`null` if it has none yet). Resolve via `challengeState.ts`'s
+   * `getChallengeAccentColor()` for the row's "Day N" label. */
+  dominantActivityCategory: ActivityType | null;
 }
 
 /** Real day number (already attached server-side to `GET /users/me/challenges`,
@@ -80,6 +84,7 @@ export function getLogChallengeQuickPicks(
       name: asString(challenge.name) || 'Challenge',
       currentDay: pickCurrentDay(challenge),
       photoUrl: latestPhotoByChallengeId.get(String(challenge.id))?.imageUrl ?? null,
+      dominantActivityCategory: pickDominantActivityCategory(challenge),
     }));
 }
 
@@ -136,9 +141,13 @@ function toNum(value: unknown): number | null {
  * exercise shows a duration field instead of reps/lbs. */
 function activityTypeFromMetricCodes(codes: string[]): ActivityType {
   const set = new Set(codes);
-  if (set.has('distanceKm')) return 'cardioIntense'; // duration + distance
+  // Real backend metric_type codes are 'distance'/'time', not the assumed
+  // 'distanceKm'/'duration' from the old seed file — those never matched
+  // anything, so every cardio/flexibility exercise silently fell through to
+  // the 'strength' default below. Fixed 2026-08-28, see havit-design-system-SKILL.md.
+  if (set.has('distance')) return 'cardioIntense'; // time + distance
   if (set.has('reps') || set.has('weight')) return 'strength'; // reps + lbs
-  if (set.has('duration')) return 'flexibility'; // duration only
+  if (set.has('time')) return 'flexibility'; // time only
   return 'strength';
 }
 
@@ -149,8 +158,8 @@ function activityTypeFromMetricCodes(codes: string[]): ActivityType {
 const METRIC_CODE_TO_FIELD: Record<string, MetricField> = {
   reps: 'reps',
   weight: 'lbs',
-  distanceKm: 'distance',
-  duration: 'duration',
+  distance: 'distance',
+  time: 'duration',
 };
 
 interface TodayRoutineTarget {
@@ -178,8 +187,8 @@ function extractTargetValue(target: TodayRoutineTarget): number | null {
   const code = target.metricType?.code;
   if (!code) return null;
   if (code === 'reps') return toNum(target.target_value_int);
-  if (code === 'weight' || code === 'distanceKm') return toNum(target.target_value_decimal);
-  if (code === 'duration') return toNum(target.target_value_seconds);
+  if (code === 'weight' || code === 'distance') return toNum(target.target_value_decimal);
+  if (code === 'time') return toNum(target.target_value_seconds);
   return null;
 }
 

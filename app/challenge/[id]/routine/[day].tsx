@@ -15,6 +15,7 @@ import { toTitleCase } from '../../../../utils/format';
 import { toChallengeDetailViewModel } from '../../../../services/adapters/index';
 import { getChallenge, joinChallenge } from '../../../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../../../services/user/user.service';
+import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../../services/adapters/challengeState';
 import { useConfirmationPopup } from '../../../../hooks/useConfirmationPopup';
 import type { ChallengeContract, ChallengeCycleDayContract } from '../../../../types/challenge';
 
@@ -131,6 +132,15 @@ export default function RoutineDayDetail() {
     : undefined;
   const exercises = useMemo(() => buildExerciseRows(rawCycleDay), [rawCycleDay]);
 
+  // Activity Color System v2 — everything on this screen that was flat
+  // `colors.primary` now resolves to this challenge's own accent instead
+  // (hero card, "next in cycle" workout-day badge, exercise set counts,
+  // Join button). Falls back to `colors.primary` itself (white) when the
+  // challenge has no dominant category yet — see getChallengeAccentColor.
+  // NOT applied to the loading-state spinner above: no challenge data
+  // exists yet at that point, so there's nothing to resolve a color from.
+  const accentColor = getChallengeAccentColor(challenge ? pickDominantActivityCategory(challenge) : null);
+
   const nextDay = view && view.cycleLengthDays > 0 ? (requestedDay % view.cycleLengthDays) + 1 : null;
   const nextDaySummary = nextDay != null ? view?.days.find((item) => item.day === nextDay) ?? null : null;
 
@@ -187,7 +197,7 @@ export default function RoutineDayDetail() {
         </Row>
 
         <View style={styles.heroWrap}>
-          <View style={styles.hero}>
+          <View style={[styles.hero, { backgroundColor: accentColor }]}>
             <Text variant="caption" weight="bold" inverse tone="secondary" style={styles.heroEyebrow}>
               {t('challengeRoutineDay.routineOfLabel', { current: requestedDay, total: view.cycleLengthDays })}
             </Text>
@@ -217,7 +227,7 @@ export default function RoutineDayDetail() {
               style={[styles.exerciseRow, index < exercises.length - 1 && styles.exerciseRowDivider]}
             >
               <Text variant="body" weight="regular" numberOfLines={1} style={styles.exerciseName}>{exercise.name}</Text>
-              <Text variant="body" weight="bold" style={styles.exerciseSets}>{exercise.setsLabel}</Text>
+              <Text variant="body" weight="bold" style={[styles.exerciseSets, { color: accentColor }]}>{exercise.setsLabel}</Text>
               <Text variant="label" weight="medium" style={styles.tableHeaderRest}>{exercise.restLabel}</Text>
             </Row>
           ))}
@@ -239,7 +249,7 @@ export default function RoutineDayDetail() {
               style={({ pressed }) => [styles.nextCard, pressed && styles.pressed]}
               accessibilityRole="button"
             >
-              <View style={[styles.nextBadge, { backgroundColor: nextDaySummary.isRestDay ? colors.rest : colors.primary }]}>
+              <View style={[styles.nextBadge, { backgroundColor: nextDaySummary.isRestDay ? colors.rest : accentColor }]}>
                 <Text variant="label" weight="bold" style={styles.nextBadgeText}>{nextDaySummary.day}</Text>
               </View>
               <View style={styles.nextTextColumn}>
@@ -263,7 +273,7 @@ export default function RoutineDayDetail() {
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
           <Pressable
             onPress={joinPopup.show}
-            style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}
+            style={({ pressed }) => [styles.joinButton, { backgroundColor: accentColor }, pressed && styles.pressed]}
             accessibilityRole="button"
             accessibilityLabel={t('challenges.joinButtonA11y')}
           >
@@ -313,7 +323,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   hero: {
-    backgroundColor: colors.primary,
+    // backgroundColor set inline — this challenge's own accent color, see accentColor above.
     borderRadius: radius.big,
     padding: spacing.lg,
     gap: spacing.xs,
@@ -352,7 +362,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   exerciseSets: {
-    color: colors.primary,
+    // color set inline — this challenge's own accent color, see accentColor above.
     opacity: 1,
   },
   notesSection: {
@@ -410,7 +420,7 @@ const styles = StyleSheet.create({
   joinButton: {
     height: 52,
     borderRadius: radius.big,
-    backgroundColor: colors.primary,
+    // backgroundColor set inline — this challenge's own accent color, see accentColor above.
     alignItems: 'center',
     justifyContent: 'center',
   },

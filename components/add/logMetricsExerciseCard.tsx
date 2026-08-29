@@ -115,8 +115,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   indicatorDone: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
+    borderColor: colors.success,
+    backgroundColor: colors.success,
   },
   name: {
     flex: 1,

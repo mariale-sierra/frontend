@@ -70,7 +70,7 @@ export function useConfirmationPopup({
           secondaryButton: {
             label: 'Cancel',
             onPress: hide,
-            variant: 'outline' as const,
+            variant: 'neutral' as const,
             disabled: loading,
           } as ConfirmationButtonConfig,
         };

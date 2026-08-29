@@ -6,6 +6,9 @@ import { createChallenge } from '../services/challenge/challenge.service';
 import type { ChallengeVisibility } from '../types/challenge';
 import { useChallengeBuilder } from '../store/challengeBuilderStore';
 import { getRoutineLocationSummary, useRoutineBuilder } from '../store/routineBuilderStore';
+import { colors, activityColors } from '../constants/theme';
+import { CATEGORY_TO_ACTIVITY } from '../constants/challengeFilters';
+import type { ActivityType } from '../types/activity';
 import { useTranslation } from 'react-i18next';
 
 export type CreateStep =
@@ -322,6 +325,54 @@ export function useCreateChallengeFlow() {
     return location ? t('challengeInfo.exerciseSummary', { exercises: exercisesLabel, location }) : exercisesLabel;
   }
 
+  // Activity Color System v2 — the assigned routine's own dominant activity
+  // color (routineBuilderStore.ts's getPrimaryActivityType(), computed
+  // client-side the moment exercises are added, same "count by category,
+  // most frequent wins" logic the backend uses for a submitted challenge).
+  // Falls back to `colors.primary` (white) for a rest day, an empty day, or
+  // a routine with no exercises yet.
+  function getDayRoutineColor(dayNumber: number) {
+    const routine = routinesByDay[dayNumber];
+    if (!routine || routine.isRestDay || !routine.primaryActivity) {
+      return colors.primary;
+    }
+    return activityColors[routine.primaryActivity];
+  }
+
+  // Activity Color System v2 — the whole challenge's own dominant activity
+  // color, computed client-side for the Review step (no challenge exists
+  // server-side yet to read `dominant_activity_category` from). Mirrors the
+  // backend's decided algorithm: tally every exercise across every assigned
+  // cycle day, once per day slot (a routine repeated on multiple days counts
+  // multiple times, matching the backend's non-dedup decision), highest
+  // count wins. Ties break by the order categories were selected in the
+  // Activity & Location step (`selectedCategories`), same tie-break rule the
+  // backend uses (`challenge_category_map.order_index`). Falls back to
+  // `colors.primary` until at least one non-rest day has exercises.
+  const challengeAccentColor = useMemo(() => {
+    const counts: Partial<Record<ActivityType, number>> = {};
+    for (let day = 1; day <= cycleLengthDays; day += 1) {
+      const routine = routinesByDay[day];
+      if (!routine || routine.isRestDay) continue;
+      for (const exercise of routine.exercises) {
+        counts[exercise.activityType] = (counts[exercise.activityType] ?? 0) + 1;
+      }
+    }
+
+    const entries = Object.entries(counts) as [ActivityType, number][];
+    if (entries.length === 0) return colors.primary;
+
+    const tieBreakOrder = selectedCategories
+      .map((category) => CATEGORY_TO_ACTIVITY[category])
+      .filter((type): type is ActivityType => Boolean(type));
+
+    entries.sort((a, b) => (
+      b[1] !== a[1] ? b[1] - a[1] : tieBreakOrder.indexOf(a[0]) - tieBreakOrder.indexOf(b[0])
+    ));
+
+    return activityColors[entries[0][0]];
+  }, [cycleLengthDays, routinesByDay, selectedCategories]);
+
   return {
     title,
     description,
@@ -352,6 +403,8 @@ export function useCreateChallengeFlow() {
     getDayStatus,
     getDayRoutineLabel,
     getDayRoutineMeta,
+    getDayRoutineColor,
+    challengeAccentColor,
     handleBack,
     handleNext,
     handleActionPress,

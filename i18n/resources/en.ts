@@ -435,20 +435,16 @@ const en = {
     emptyMessage: 'No friend streaks yet',
     errorMessage: 'Could not load streaks',
   },
-  addMenu: {
-    title: 'Quick actions',
-    subtitle: 'Use this screen to test the new metrics, rest, and progress flow.',
-    metrics: {
-      title: 'Log metrics',
-      description: 'Opens the workout flow connected to the backend.',
-    },
-    restDay: {
-      title: 'Log rest day',
-      description: 'Sends progress to the new endpoint without an image, ideal for validating the API.',
-    },
-    camera: {
-      title: 'Go to camera',
-      description: 'Shortcut to the visual capture and preview flow.',
+  restDay: {
+    title: 'Rest days\nmatter too.',
+    subtitle: 'Do you want to take today off, or schedule more rest days?',
+    justTodayButton: 'Just today',
+    planButton: 'Plan rest days',
+    saveFailedMessage: 'Could not save your rest day. Please try again.',
+    alreadyLogged: {
+      title: "Today's\nalready done.",
+      subtitle: "Your workout is logged for today. Rest days can't be applied retroactively — but you can plan ahead.",
+      backLink: 'Go back',
     },
   },
   planRestDays: {
@@ -473,6 +469,9 @@ const en = {
     permissionMessage: 'Camera permission is required to take proof.',
     grantPermission: 'Grant Permission',
     goBack: '← Go Back',
+    uploadSuccessTitle: 'Logged!',
+    uploadSuccessMessage: "Nice work! Today's progress is saved.",
+    uploadSuccessCta: 'Done',
   },
   invites: {
     screenTitle: 'Invitations',

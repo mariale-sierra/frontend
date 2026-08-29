@@ -95,7 +95,7 @@ export function ProfileHeader({
           <Text variant="title" align="center">
             {displayName}
           </Text>
-          <Text variant="label" weight="medium" style={styles.handle}>
+          <Text variant="label" weight="medium">
             @{username}
           </Text>
         </View>
@@ -154,10 +154,6 @@ const styles = StyleSheet.create({
   nameBlock: {
     alignItems: 'center',
     gap: 2,
-  },
-  handle: {
-    color: colors.primary,
-    opacity: 1,
   },
   statsRow: {
     flexDirection: 'row',
