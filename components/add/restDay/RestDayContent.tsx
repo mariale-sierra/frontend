@@ -1,7 +1,8 @@
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
+import { RestDayPrimaryButton } from './RestDayPrimaryButton';
 import { colors, radius, spacing } from '../../../constants/theme';
 
 interface RestDayContentProps {
@@ -48,19 +49,11 @@ export function RestDayContent({
           </Text>
         ) : null}
 
-        <Pressable
+        <RestDayPrimaryButton
+          label={t('restDay.justTodayButton')}
           onPress={onJustToday}
-          disabled={loading}
-          style={({ pressed }) => [styles.justTodayButton, pressed && styles.pressed]}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.rest} />
-          ) : (
-            <Text variant="label" weight="bold" style={styles.justTodayText}>
-              {t('restDay.justTodayButton')}
-            </Text>
-          )}
-        </Pressable>
+          loading={loading}
+        />
 
         <Pressable
           onPress={onPlanRestDays}
@@ -98,17 +91,6 @@ const styles = StyleSheet.create({
   },
   actions: {
     gap: spacing.sm,
-  },
-  justTodayButton: {
-    paddingVertical: spacing.md,
-    borderRadius: radius.big,
-    backgroundColor: colors.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  justTodayText: {
-    color: colors.rest,
-    opacity: 1,
   },
   planButton: {
     paddingVertical: spacing.md,

@@ -1,14 +1,17 @@
 import { useMemo, useState } from 'react';
-import { Image, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CreateFlowPrimaryButton } from '../../../components/challenge/create';
 import ScreenBackground from '../../../components/layout/screenBackground';
+import { RestDayScreenBackground } from '../../../components/layout/restDayScreenBackground';
 import { Row } from '../../../components/layout/row';
 import { Stack } from '../../../components/layout/stack';
 import { BackButton } from '../../../components/ui/backButton';
 import { Text } from '../../../components/ui/text';
 import { RoutinePickerCard, RoutineModeToggle } from '../../../components/routine';
+import { RestDayPrimaryButton } from '../../../components/add/restDay/RestDayPrimaryButton';
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
@@ -58,11 +61,13 @@ export default function SelectRoutineScreen() {
     router.back();
   }
 
-  return (
-    <ScreenBackground variant="top">
+  const isRestMode = mode === 'rest';
+
+  const content = (
+    <>
       <Row justify="space-between" align="center" style={styles.topBar}>
-        <BackButton style={styles.backButton} onPress={() => router.back()} />
-        <Text variant="title" align="center" style={styles.headerTitle}>
+        <BackButton style={styles.backButton} iconColor={isRestMode ? colors.ink : undefined} onPress={() => router.back()} />
+        <Text variant="title" align="center" inverse={isRestMode} style={styles.headerTitle}>
           {t('routineSelect.dayTitle', { day: dayNumber })}
         </Text>
         <View style={styles.trailingSpacer} />
@@ -108,17 +113,17 @@ export default function SelectRoutineScreen() {
               )}
             </Stack>
           ) : (
+            // Rest-Or-Plan-28C wireframe content — same shape as
+            // RestDayContent.tsx's choice screen, reused verbatim ("so they
+            // match") rather than kept as this screen's own illustration +
+            // separate copy.
             <View style={styles.restModeContent}>
-              <Image
-                source={require('../../../assets/images/RestDay.png')}
-                style={styles.restIllustration}
-                resizeMode="contain"
-              />
+              <Ionicons name="moon-outline" size={72} color={colors.ink} />
               <Stack gap="xs" align="center">
-                <Text variant="body" weight="bold" size="xl" style={styles.restModeTitle}>
-                  {t('routineSelect.restDay.title')}
+                <Text variant="body" size="2xl" weight="bold" align="center" inverse>
+                  {t('restDay.title')}
                 </Text>
-                <Text variant="body" tone="primary" size="sm" align="center" style={styles.restModeSubtitle}>
+                <Text variant="body" tone="secondary" align="center" inverse style={styles.restModeSubtitle}>
                   {t('routineSelect.restDay.description')}
                 </Text>
               </Stack>
@@ -127,15 +132,31 @@ export default function SelectRoutineScreen() {
         </Stack>
       </ScrollView>
 
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
-        <CreateFlowPrimaryButton
-          tone={mode === 'workout' ? 'primary' : 'rest'}
-          onPress={mode === 'workout' ? handleConfirmWorkout : handleConfirmRestDay}
-          disabled={mode === 'workout' && !selectedRoutineId}
-          label={mode === 'workout' ? t('routineSelect.confirmRoutine') : t('routineSelect.confirmRestDay')}
-        />
+      <View
+        style={[
+          styles.bottomBar,
+          isRestMode && styles.bottomBarRest,
+          { paddingBottom: Math.max(insets.bottom, spacing.lg) },
+        ]}
+      >
+        {isRestMode ? (
+          <RestDayPrimaryButton label={t('routineSelect.confirmRestDay')} onPress={handleConfirmRestDay} />
+        ) : (
+          <CreateFlowPrimaryButton
+            tone="primary"
+            onPress={handleConfirmWorkout}
+            disabled={!selectedRoutineId}
+            label={t('routineSelect.confirmRoutine')}
+          />
+        )}
       </View>
-    </ScreenBackground>
+    </>
+  );
+
+  return isRestMode ? (
+    <RestDayScreenBackground>{content}</RestDayScreenBackground>
+  ) : (
+    <ScreenBackground variant="top">{content}</ScreenBackground>
   );
 }
 
@@ -177,19 +198,11 @@ const styles = StyleSheet.create({
     minHeight: 400,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.lg,
+    gap: spacing.xl,
     paddingVertical: spacing['2xl'],
   },
-  restIllustration: {
-    width: 200,
-    height: 200,
-  },
-  restModeTitle: {
-    color: colors.rest,
-    opacity: 1,
-  },
   restModeSubtitle: {
-    maxWidth: 240,
+    maxWidth: 280,
   },
   bottomBar: {
     paddingHorizontal: spacing.lg,
@@ -197,5 +210,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: withAlpha(colors.paper, 0.08),
+  },
+  // Rest-Or-Plan-28C wireframe has no separate bar behind the button — it
+  // sits directly on the gradient. Drops the dark `surface` fill/hairline
+  // rather than keeping a dark bar over a now-light-purple screen.
+  bottomBarRest: {
+    backgroundColor: 'transparent',
+    borderTopWidth: 0,
   },
 });
