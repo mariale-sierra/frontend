@@ -3,25 +3,27 @@ import { Alert, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AuthScreenShell } from '../../components/auth/auth-screen-shell';
 import { AuthSwitchRow } from '../../components/auth/auth-switch-row';
+import { AuthInput } from '../../components/auth/auth-input';
 import { Stack } from '../../components/layout/stack';
 import { Button } from '../../components/ui/button';
 import { Icon } from '../../components/ui/icon';
-import { Input } from '../../components/ui/input';
 import { Loader } from '../../components/ui/loader';
 import { Text } from '../../components/ui/text';
 import { useAuth } from '../../hooks/useAuth';
-import { useTheme } from '../../hooks/useTheme';
+import { colors, textOpacity } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import { useTranslation } from 'react-i18next';
+
+const iconColor = withAlpha(colors.paper, textOpacity.secondary);
 
 export default function Login() {
   const router = useRouter();
   const { login } = useAuth();
-  const { colors } = useTheme();
   const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // Loading state
+  const [isLoading, setIsLoading] = useState(false);
 
   return (
     <AuthScreenShell
@@ -36,14 +38,14 @@ export default function Login() {
           />
 
           <Pressable onPress={() => router.replace('/(tabs)')}>
-            <Text variant="caption" style={[styles.guestLinkText, { color: colors.textSecondary }]}>
+            <Text variant="caption" tone="secondary" style={styles.guestLinkText}>
               {t('common.actions.continueAsGuest')}
             </Text>
           </Pressable>
         </Stack>
       }
     >
-      <Input
+      <AuthInput
         placeholder={t('common.fields.email')}
         value={email}
         onChangeText={setEmail}
@@ -51,11 +53,10 @@ export default function Login() {
         autoCorrect={false}
         keyboardType="email-address"
         textContentType="emailAddress"
-        variant="filled"
-        leftIcon={<Icon name="mail-outline" size={18} color={colors.textSecondary} />}
+        leftIcon={<Icon name="mail-outline" size={18} color={iconColor} />}
       />
 
-      <Input
+      <AuthInput
         placeholder={t('common.fields.password')}
         value={password}
         onChangeText={setPassword}
@@ -63,8 +64,7 @@ export default function Login() {
         autoCapitalize="none"
         autoCorrect={false}
         textContentType="password"
-        variant="filled"
-        leftIcon={<Icon name="lock-closed-outline" size={18} color={colors.textSecondary} />}
+        leftIcon={<Icon name="lock-closed-outline" size={18} color={iconColor} />}
       />
       <Button size="md" onPress={async () => {
         setIsLoading(true);
@@ -92,4 +92,3 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 });
-

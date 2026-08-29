@@ -11,7 +11,7 @@ import {
 import { useState } from 'react';
 import { Text } from './text';
 import { Row } from '../layout/row';
-import { spacing, radius, colors, textOpacity } from '../../constants/theme';
+import { spacing, radius, colors, textOpacity, fontSize } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
 /**
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     color: colors.paper,
-    fontSize: 16,
+    fontSize: fontSize.base,
     paddingVertical: 0,
     includeFontPadding: false,
   },

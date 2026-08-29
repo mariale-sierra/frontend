@@ -3,10 +3,6 @@
 // and circle (icon inside a color-filled circle).
 export * from './activityIcon';
 
-// AvatarIcon: Circular user avatar placeholder displayed as an icon button with a person silhouette.
-// Available in three sizes: sm, md, and lg.
-export * from './avatarIcon';
-
 // LocationIcon: Maps location types (home, outdoor, gym, studio, anywhere) to Ionicons
 // displayed inside color-coded circles, matching the app's activity color palette.
 export * from './locationIcon';

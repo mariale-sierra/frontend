@@ -3,18 +3,20 @@ import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AuthScreenShell } from '../../components/auth/auth-screen-shell';
 import { AuthSwitchRow } from '../../components/auth/auth-switch-row';
+import { AuthInput } from '../../components/auth/auth-input';
 import { Button } from '../../components/ui/button';
 import { Icon } from '../../components/ui/icon';
-import { Input } from '../../components/ui/input';
 import { Loader } from '../../components/ui/loader';
 import { useAuth } from '../../hooks/useAuth';
-import { useTheme } from '../../hooks/useTheme';
+import { colors, textOpacity } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import { useTranslation } from 'react-i18next';
+
+const iconColor = withAlpha(colors.paper, textOpacity.secondary);
 
 export default function Register() {
   const router = useRouter();
   const { register } = useAuth();
-  const { colors } = useTheme();
   const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
@@ -34,7 +36,7 @@ export default function Register() {
         />
       }
     >
-      <Input
+      <AuthInput
         placeholder={t('common.fields.email')}
         value={email}
         onChangeText={setEmail}
@@ -42,22 +44,20 @@ export default function Register() {
         autoCorrect={false}
         keyboardType="email-address"
         textContentType="emailAddress"
-        variant="filled"
-        leftIcon={<Icon name="mail-outline" size={18} color={colors.textSecondary} />}
+        leftIcon={<Icon name="mail-outline" size={18} color={iconColor} />}
       />
 
-      <Input
+      <AuthInput
         placeholder={t('common.fields.username')}
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
         autoCorrect={false}
         textContentType="username"
-        variant="filled"
-        leftIcon={<Icon name="person-outline" size={18} color={colors.textSecondary} />}
+        leftIcon={<Icon name="person-outline" size={18} color={iconColor} />}
       />
 
-      <Input
+      <AuthInput
         placeholder={t('common.fields.password')}
         value={password}
         onChangeText={setPassword}
@@ -65,8 +65,7 @@ export default function Register() {
         autoCapitalize="none"
         autoCorrect={false}
         textContentType="newPassword"
-        variant="filled"
-        leftIcon={<Icon name="lock-closed-outline" size={18} color={colors.textSecondary} />}
+        leftIcon={<Icon name="lock-closed-outline" size={18} color={iconColor} />}
       />
 
       <Button size="md" onPress={async () => {

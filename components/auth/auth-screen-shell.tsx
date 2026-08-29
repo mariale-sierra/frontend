@@ -1,10 +1,11 @@
 import { ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
-import ActivityBackground from '../layout/activityBackground';
-import { GradientBox } from '../layout/gradient-box';
+import { AuthScreenBackground } from '../layout/authScreenBackground';
 import { Stack } from '../layout/stack';
+import { Card } from '../ui/card';
 import { Text } from '../ui/text';
-import { useTheme } from '../../hooks/useTheme';
+import { colors, shadows, spacing } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 
 type AuthScreenShellProps = {
   title: string;
@@ -13,12 +14,15 @@ type AuthScreenShellProps = {
   footer?: ReactNode;
 };
 
+/** Shared shell for login/register — the illustrated background sits behind
+ * a solid `surface` card with a hairline border + `shadows.lg` for real
+ * definition against a busy image (the same "surface + paper@8% border"
+ * combo used for other elevated containers, e.g. Routine Select's empty
+ * state) — a flat, borderless, shadowless card was reading as un-elevated
+ * content rather than an actual component. */
 export function AuthScreenShell({ title, subtitle, children, footer }: AuthScreenShellProps) {
-  const { colors, radius, spacing } = useTheme();
-  const styles = createStyles(colors, radius, spacing);
-
   return (
-    <ActivityBackground>
+    <AuthScreenBackground>
       <Stack align="center" justify="center" gap="xl" style={styles.content}>
         <Stack align="center" gap="sm">
           <Text variant="title" align="center">
@@ -29,48 +33,29 @@ export function AuthScreenShell({ title, subtitle, children, footer }: AuthScree
           </Text>
         </Stack>
 
-        <GradientBox
-          colors={[colors.surfaceHighlight, colors.surface]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.card}
-        >
-          <Stack gap="md" style={styles.cardContent}>
+        <Card variant="basic" radius="big" padding="lg" style={styles.card}>
+          <Stack gap="base">
             {children}
           </Stack>
-        </GradientBox>
+        </Card>
 
         {footer}
       </Stack>
-    </ActivityBackground>
+    </AuthScreenBackground>
   );
 }
 
-function createStyles(
-  colors: ReturnType<typeof useTheme>['colors'],
-  radius: ReturnType<typeof useTheme>['radius'],
-  spacing: ReturnType<typeof useTheme>['spacing'],
-) {
-  return StyleSheet.create({
-    content: {
-      flex: 1,
-      paddingHorizontal: spacing.lg,
-      width: '100%',
-    },
-    card: {
-      width: '100%',
-      maxWidth: 420,
-      borderRadius: radius['2xl'],
-      borderWidth: 1,
-      borderColor: colors.border,
-      shadowColor: colors.surfaceHighlight,
-      shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: 0.25,
-      shadowRadius: 20,
-      elevation: 10,
-    },
-    cardContent: {
-      padding: spacing.lg,
-    },
-  });
-}
+const styles = StyleSheet.create({
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+    width: '100%',
+  },
+  card: {
+    width: '100%',
+    maxWidth: 420,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.paper, 0.08),
+    ...shadows.lg,
+  },
+});
