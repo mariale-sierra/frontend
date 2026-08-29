@@ -1,7 +1,6 @@
 // builder — components used in the routine creation / editing flow
 export * from './builder/exerciseBlock';
 export * from './builder/exerciseHeader';
-export * from './builder/exerciseNoteField';
 export * from './builder/restDayOptionCard';
 export * from './builder/routinePickerCard';
 export * from './builder/routineModeToggle';

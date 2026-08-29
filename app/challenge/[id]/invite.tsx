@@ -127,7 +127,7 @@ export default function InviteUsers() {
             renderItem={({ item }) => {
               const alreadySent = sentIds.has(item.id);
               return (
-                <Card variant="basicGlass" radius="xl" padding="md">
+                <Card variant="basicGlass" radius="big" padding="md">
                   <Row align="center" gap="md">
                     <UserAvatar
                       username={item.username}

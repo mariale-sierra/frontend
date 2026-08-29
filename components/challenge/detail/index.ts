@@ -19,10 +19,3 @@ export { default as ChallengeRoutineDayCard } from './challengeRoutineDayCard';
 // ChallengeInfoContentSkeleton: title + info-rows + About + cycle-list
 // Skeleton placeholder, shown while the one getChallenge() fetch is loading.
 export * from './challengeInfoContentSkeleton';
-
-// ChallengeParticipantsList: Horizontal avatar row of challenge members.
-// Tapping a member opens their public profile (with the Follow button).
-// Not used by Challenge-Info anymore (its member-count pill now links to
-// /challenge/:id/members instead) — left in place, unused, in case a future
-// wireframe wants this specific horizontal-strip treatment.
-export { default as ChallengeParticipantsList } from './challengeParticipantsList';

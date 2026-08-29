@@ -1,7 +1,3 @@
-// ActivityBadge: Compact badge showing an activity type's icon and label inside a rounded container.
-// Used to tag challenges, routines, and exercises with their activity category.
-export * from './activityBadge';
-
 // BackButton: Reusable chevron back button that calls router.back(). Accepts optional color and size.
 export * from './backButton';
 
@@ -12,10 +8,6 @@ export * from './button';
 // Card: General-purpose container with surface variants (basic, basicGlass, activityOutline,
 // activityOutlineGlow), optional press handling, and configurable padding and border radius.
 export * from './card';
-
-// Container: Flexible content container with named background variants (background, surface,
-// surfaceElevated, surfaceHighlight), configurable padding, and a centering option.
-export * from './container';
 
 // Divider: Thin horizontal separator line with default and section variants
 // and configurable top/bottom margins.

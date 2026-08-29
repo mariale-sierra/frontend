@@ -1,4 +1,4 @@
-import { ActivityType } from '../constants/theme';
+import { ActivityType } from '../types/activity';
 import type { LocationType } from '../components/icons/locationIcon';
 
 export const PREDEFINED_ACTIVITY_CATEGORIES = [
