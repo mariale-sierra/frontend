@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
+import { RestDayScreenBackground } from '../../components/layout/restDayScreenBackground';
 import { IconButton } from '../../components/ui/iconButton';
 import { RestDayContent } from '../../components/add/restDay/RestDayContent';
 import { RestDayAlreadyLogged } from '../../components/add/restDay/RestDayAlreadyLogged';
@@ -58,40 +59,77 @@ export default function RestDay() {
     router.push('/(add)/plan-rest-days');
   }
 
-  return (
-    <ScreenBackground variant="top">
-      <View style={styles.screen}>
-        <View style={styles.header}>
-          <IconButton
-            name="chevron-back-outline"
-            onPress={() => router.back()}
-            size={28}
-            iconSize={18}
-            variant="ghost"
-            accessibilityRole="button"
-            accessibilityLabel={t('metrics.accessibilityBack')}
-          />
-        </View>
-
-        {loading ? (
+  if (loading) {
+    return (
+      <ScreenBackground variant="top">
+        <View style={styles.screen}>
+          <View style={styles.header}>
+            <IconButton
+              name="chevron-back-outline"
+              onPress={() => router.back()}
+              size={28}
+              iconSize={18}
+              variant="ghost"
+              accessibilityRole="button"
+              accessibilityLabel={t('metrics.accessibilityBack')}
+            />
+          </View>
           <View style={styles.loadingWrap}>
             <ActivityIndicator color={withAlpha(colors.paper, textOpacity.secondary)} />
           </View>
-        ) : completedToday ? (
+        </View>
+      </ScreenBackground>
+    );
+  }
+
+  if (completedToday) {
+    return (
+      <ScreenBackground variant="top">
+        <View style={styles.screen}>
+          <View style={styles.header}>
+            <IconButton
+              name="chevron-back-outline"
+              onPress={() => router.back()}
+              size={28}
+              iconSize={18}
+              variant="ghost"
+              accessibilityRole="button"
+              accessibilityLabel={t('metrics.accessibilityBack')}
+            />
+          </View>
           <RestDayAlreadyLogged
             onBack={() => router.back()}
             onPlanRestDays={handlePlanRestDays}
           />
-        ) : (
-          <RestDayContent
-            onJustToday={handleJustToday}
-            onPlanRestDays={handlePlanRestDays}
-            loading={submitting}
-            error={error}
+        </View>
+      </ScreenBackground>
+    );
+  }
+
+  return (
+    <RestDayScreenBackground>
+      <View style={styles.screen}>
+        <View style={styles.restChoiceHeader}>
+          <IconButton
+            name="close-outline"
+            onPress={() => router.back()}
+            size={44}
+            iconSize={24}
+            variant="ghost"
+            iconColor={colors.ink}
+            style={styles.restChoiceIconButton}
+            accessibilityRole="button"
+            accessibilityLabel={t('metrics.accessibilityBack')}
           />
-        )}
+        </View>
+        <RestDayContent
+          onJustToday={handleJustToday}
+          onPlanRestDays={handlePlanRestDays}
+          loading={submitting}
+          error={error}
+        />
       </View>
-    </ScreenBackground>
+    </RestDayScreenBackground>
   );
 }
 
@@ -103,6 +141,16 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
+  },
+  // Rest-Or-Plan-28C wireframe's own tighter header spacing — different from
+  // the other two branches above (unchanged, no wireframe for those states).
+  restChoiceHeader: {
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.base,
+  },
+  restChoiceIconButton: {
+    marginLeft: -spacing.sm,
   },
   loadingWrap: {
     flex: 1,

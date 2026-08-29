@@ -10,7 +10,6 @@ export * from './builder/valueStepper';
 // exercise-picker — browsing and selecting exercises to add to a routine
 export * from './exercise-picker/exerciseListItem';
 export * from './exercise-picker/filterToggleButton';
-export * from './exercise-picker/MuscleGroupPickerModal';
 
 // metrics — exercise performance data entry (sets, reps, weights, rest times)
 export * from './metrics/exerciseMetricsEditor';

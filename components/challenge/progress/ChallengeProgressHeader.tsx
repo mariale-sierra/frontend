@@ -26,6 +26,7 @@ interface ChallengeProgressHeaderProps {
   onPressRoutine: () => void;
   onPressMembers: () => void;
   onPressInfo: () => void;
+  onPressLeave: () => void;
 }
 
 // challenges.trainDay/restDay/finished/left — the exact same eyebrow copy
@@ -54,6 +55,7 @@ export function ChallengeProgressHeader({
   onPressRoutine,
   onPressMembers,
   onPressInfo,
+  onPressLeave,
 }: ChallengeProgressHeaderProps) {
   const { t } = useTranslation();
   const stateColor = getChallengeCardColor(state, dominantActivityCategory);
@@ -74,6 +76,13 @@ export function ChallengeProgressHeader({
             onPress={onPressInfo}
             accessibilityLabel={t('challengeProgress.infoA11y')}
           />
+          {state !== 'left' && (
+            <IconButton
+              name="log-out-outline"
+              onPress={onPressLeave}
+              accessibilityLabel={t('challengeProgress.leaveA11y')}
+            />
+          )}
         </Row>
       </Row>
 

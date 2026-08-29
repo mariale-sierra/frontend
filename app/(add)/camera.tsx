@@ -209,7 +209,7 @@ export default function Camera() {
       <View style={[styles.fill, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, spacing.xl) }]}>
         <View style={styles.header}>
           <IconButton
-            name="arrow-back"
+            name="arrow-back-outline"
             onPress={handleRetry}
             size={40}
             iconSize={22}
@@ -237,7 +237,7 @@ export default function Camera() {
             {uploadingImage || submittingProgress ? (
               <ActivityIndicator color={colors.ink} size="large" />
             ) : (
-              <Icon name="checkmark" size={38} color={colors.ink} />
+              <Icon name="checkmark-outline" size={38} color={colors.ink} />
             )}
           </Pressable>
         </View>
@@ -249,7 +249,7 @@ export default function Camera() {
     <View style={[styles.fill, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, spacing.xl) }]}>
       <View style={styles.header}>
         <IconButton
-          name="arrow-back"
+          name="arrow-back-outline"
           onPress={() => router.back()}
           size={40}
           iconSize={22}

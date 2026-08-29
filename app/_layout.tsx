@@ -7,6 +7,7 @@ import { AuthProvider } from '../context/authContext';
 import { ThemeProvider } from '../context/themeContext';
 import { useAuth } from '../hooks/useAuth';
 import { UploadSuccessPopup } from '../components/ui/UploadSuccessPopup';
+import { ErrorNotificationProvider } from '../components/ui/ErrorNotificationProvider';
 import '../i18n';
 
 function RootNavigator() {
@@ -85,8 +86,10 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <RootNavigator />
-        <UploadSuccessPopup />
+        <ErrorNotificationProvider>
+          <RootNavigator />
+          <UploadSuccessPopup />
+        </ErrorNotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

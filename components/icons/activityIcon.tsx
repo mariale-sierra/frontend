@@ -15,12 +15,12 @@ const iconSize = { xs: 12, sm: 18, md: 22, lg: 26 };
 const dotSize = { xs: 6, sm: 8, md: 10, lg: 12 };
 
 const iconMap: Record<ActivityType, keyof typeof Ionicons.glyphMap> = {
-  strength: 'barbell',
-  cardioIntense: 'flash',
-  flexibility: 'flower',
-  cardioLow: 'leaf',
-  mindBody: 'body',
-  functional: 'musical-notes',
+  strength: 'barbell-outline',
+  cardioIntense: 'flash-outline',
+  flexibility: 'flower-outline',
+  cardioLow: 'leaf-outline',
+  mindBody: 'body-outline',
+  functional: 'musical-notes-outline',
 };
 
 // Category is icon + name only now — no per-category color (see design

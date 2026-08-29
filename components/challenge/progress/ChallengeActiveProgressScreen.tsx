@@ -7,7 +7,9 @@ import { spacing } from '../../../constants/theme';
 import { Text } from '../../ui/text';
 import { SegmentedIconToggle } from '../../ui/segmentedIconToggle';
 import { useChallengeActiveProgress } from '../../../hooks/useChallengeActiveProgress';
+import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
 import { getChallengeAccentColor } from '../../../services/adapters/challengeState';
+import { leaveChallenge } from '../../../services/challenge/challenge.service';
 import ScreenBackground from '../../layout/screenBackground';
 import { ChallengeProgressHeader } from './ChallengeProgressHeader';
 import { ChallengePhotoGalleryModal } from './ChallengePhotoGalleryModal';
@@ -31,6 +33,16 @@ export function ChallengeActiveProgressScreen() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   const galleryVisible = selectedPhotoId != null || selectedDay != null;
+
+  const leavePopup = useConfirmationPopup({
+    type: 'leave',
+    challengeName: data.title,
+    onConfirm: async () => {
+      if (!data.challengeId) return;
+      await leaveChallenge(data.challengeId);
+      router.replace('/(tabs)/challenges');
+    },
+  });
 
   function handlePressInfo() {
     if (data.challengeId) {
@@ -96,6 +108,7 @@ export function ChallengeActiveProgressScreen() {
           onPressRoutine={handlePressRoutine}
           onPressMembers={handlePressMembers}
           onPressInfo={handlePressInfo}
+          onPressLeave={leavePopup.show}
         />
 
         <View style={styles.consistencyHeader}>
@@ -139,6 +152,8 @@ export function ChallengeActiveProgressScreen() {
         selectedDay={selectedDay}
         onClose={closeGallery}
       />
+
+      <leavePopup.Component />
     </ScreenBackground>
   );
 }

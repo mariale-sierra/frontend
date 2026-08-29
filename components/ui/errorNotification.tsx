@@ -3,7 +3,7 @@ import { Animated, View, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, spacing } from '../../constants/theme';
 import { Text } from './text';
-import { MaterialIcons } from '@expo/vector-icons';
+import { Icon } from './icon';
 
 export type NotificationVariant = 'error' | 'success';
 
@@ -108,7 +108,7 @@ export function ErrorNotification({
               onPress={onDismiss}
               hitSlop={spacing.sm}
             >
-              <MaterialIcons name="close" size={20} color={colors.primary} />
+              <Icon name="close-outline" size={20} color={colors.primary} />
             </Pressable>
           </View>
         </View>
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   },
   content: {
     backgroundColor: colors.error,
-    borderRadius: radius.md,
+    borderRadius: radius.medium,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     flexDirection: 'row',
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
   actionButton: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
+    borderRadius: radius.small,
   },
   actionButtonPressed: {
     opacity: 0.7,

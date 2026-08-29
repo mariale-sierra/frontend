@@ -39,6 +39,7 @@ export function useConfirmationPopup({
   challengeName,
   onConfirm,
 }: UseConfirmationPopupOptions): UseConfirmationPopupReturn {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -59,16 +60,16 @@ export function useConfirmationPopup({
     switch (type) {
       case 'join':
         return {
-          title: 'Join?',
-          description: `Will you join "${challengeName}"?`,
+          title: t('challenges.joinConfirm.title'),
+          description: t('challenges.joinConfirm.description', { name: challengeName }),
           primaryButton: {
-            label: 'Join',
+            label: t('challenges.joinConfirm.confirm'),
             onPress: handleConfirm,
             variant: 'primary' as const,
             loading,
           } as ConfirmationButtonConfig,
           secondaryButton: {
-            label: 'Cancel',
+            label: t('challenges.joinConfirm.cancel'),
             onPress: hide,
             variant: 'neutral' as const,
             disabled: loading,
@@ -77,16 +78,16 @@ export function useConfirmationPopup({
 
       case 'leave':
         return {
-          title: 'Leave Challenge?',
-          description: `Are you sure you want to leave "${challengeName}"? Your progress will be saved.`,
+          title: t('challenges.leaveConfirm.title'),
+          description: t('challenges.leaveConfirm.description', { name: challengeName }),
           primaryButton: {
-            label: 'Leave',
+            label: t('challenges.leaveConfirm.confirm'),
             onPress: handleConfirm,
             variant: 'danger' as const,
             loading,
           } as ConfirmationButtonConfig,
           secondaryButton: {
-            label: 'Stay',
+            label: t('challenges.leaveConfirm.stay'),
             onPress: hide,
             variant: 'primary' as const,
             disabled: loading,

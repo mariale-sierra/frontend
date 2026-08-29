@@ -43,14 +43,14 @@ export function RestDayCalendar({ startDate, totalDays, selectedDates, onToggleD
       <View style={styles.dayHeader}>
         {DAY_LABELS.map((label) => (
           <View key={label} style={styles.dayHeaderCell}>
-            <Text variant="label" tone="secondary" style={styles.dayLabel}>{label}</Text>
+            <Text variant="label" tone="secondary" inverse style={styles.dayLabel}>{label}</Text>
           </View>
         ))}
       </View>
 
       {months.map(({ year, month, label, weeks }) => (
         <View key={`${year}-${month}`} style={styles.monthBlock}>
-          <Text variant="header" tone="secondary" style={styles.monthName}>{label}</Text>
+          <Text variant="header" tone="secondary" inverse style={styles.monthName}>{label}</Text>
 
           {weeks.map((week, weekIndex) => (
             <View key={`week-${weekIndex}`}>
@@ -83,6 +83,7 @@ export function RestDayCalendar({ startDate, totalDays, selectedDates, onToggleD
                       <Text
                         variant="body"
                         align="center"
+                        inverse
                         style={[
                           !isSelectable && styles.dayNumberPast,
                           isSelected && styles.dayNumberSelected,
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
   },
   weekDivider: {
     height: 1,
-    backgroundColor: withAlpha(colors.paper, 0.06),
+    backgroundColor: withAlpha(colors.ink, 0.06),
   },
   dayCell: {
     flex: 1,
@@ -151,18 +152,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   dotSelected: {
-    backgroundColor: colors.primary,
+    // `ink`, not `primary` — `primary`'s current value (a warm off-white)
+    // has poor contrast against this screen's own light `rest`-purple
+    // background, unlike on the app's usual dark `ink` screens.
+    backgroundColor: colors.ink,
   },
   dotToday: {
     borderWidth: 1.5,
-    borderColor: withAlpha(colors.paper, 0.65),
+    borderColor: withAlpha(colors.ink, 0.65),
     backgroundColor: 'transparent',
   },
   dayNumberPast: {
     opacity: textOpacity.tertiary,
   },
   dayNumberSelected: {
-    color: colors.primary,
+    color: colors.ink,
     opacity: 1,
   },
 });

@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import ScreenBackground from '../../components/layout/screenBackground';
+import { RestDayScreenBackground } from '../../components/layout/restDayScreenBackground';
 import { IconButton } from '../../components/ui/iconButton';
-import { Button } from '../../components/ui/button';
 import { Text } from '../../components/ui/text';
 import { RestDayCalendar } from '../../components/add/restDay/RestDayCalendar';
 import { getChallengeProgress } from '../../services/challenge/challenge.service';
-import { colors, spacing } from '../../constants/theme';
+import { colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
 export default function PlanRestDays() {
@@ -62,25 +61,28 @@ export default function PlanRestDays() {
   }
 
   const bottomBarHeight = Math.max(insets.bottom, spacing.lg) + spacing.md + 44;
+  const setButtonDisabled = saving || selectedDates.size === 0;
 
   return (
-    <ScreenBackground variant="top">
+    <RestDayScreenBackground>
       <View style={styles.screen}>
         <View style={styles.header}>
           <IconButton
-            name="chevron-back-outline"
+            name="close-outline"
             onPress={() => router.back()}
-            size={28}
-            iconSize={18}
+            size={44}
+            iconSize={24}
             variant="ghost"
+            iconColor={colors.ink}
+            style={styles.iconButton}
             accessibilityRole="button"
             accessibilityLabel={t('metrics.accessibilityBack')}
           />
         </View>
 
         <View style={styles.titleBlock}>
-          <Text variant="title" align="center">{t('planRestDays.title')}</Text>
-          <Text variant="body" tone="secondary" align="center">
+          <Text variant="title" align="center" inverse>{t('planRestDays.title')}</Text>
+          <Text variant="body" tone="secondary" align="center" inverse>
             {t('planRestDays.subtitle')}
           </Text>
         </View>
@@ -106,19 +108,26 @@ export default function PlanRestDays() {
             { paddingBottom: Math.max(insets.bottom, spacing.lg) },
           ]}
         >
-          <Button
-            variant="primary"
-            size="md"
+          <Pressable
             onPress={handleSetRestDays}
-            loading={saving}
-            disabled={selectedDates.size === 0}
-            style={styles.actionButton}
+            disabled={setButtonDisabled}
+            style={({ pressed }) => [
+              styles.setButton,
+              pressed && !setButtonDisabled && styles.pressed,
+              setButtonDisabled && styles.disabled,
+            ]}
           >
-            {t('planRestDays.setButton')}
-          </Button>
+            {saving ? (
+              <ActivityIndicator color={colors.rest} />
+            ) : (
+              <Text variant="label" weight="bold" style={styles.setButtonText}>
+                {t('planRestDays.setButton')}
+              </Text>
+            )}
+          </Pressable>
         </View>
       </View>
-    </ScreenBackground>
+    </RestDayScreenBackground>
   );
 }
 
@@ -127,9 +136,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.base,
+  },
+  iconButton: {
+    marginLeft: -spacing.sm,
   },
   titleBlock: {
     paddingHorizontal: spacing.lg,
@@ -147,12 +159,27 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    backgroundColor: withAlpha(colors.ink, 0.88),
+    backgroundColor: colors.rest,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: withAlpha(colors.paper, 0.08),
+    borderTopColor: withAlpha(colors.ink, 0.15),
     alignItems: 'center',
   },
-  actionButton: {
+  setButton: {
     width: 220,
+    paddingVertical: spacing.md,
+    borderRadius: radius.big,
+    backgroundColor: colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setButtonText: {
+    color: colors.rest,
+    opacity: 1,
+  },
+  pressed: {
+    opacity: 0.85,
+  },
+  disabled: {
+    opacity: 0.5,
   },
 });
