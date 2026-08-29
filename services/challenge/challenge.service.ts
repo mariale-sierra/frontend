@@ -77,7 +77,11 @@ export async function joinChallenge(id: string) {
 }
 
 export async function leaveChallenge(id: string) {
-  const response = await api.post(`/challenges/${id}/leave`);
+  // Backend route is @Patch(':id/leave') (challenges.controller.ts) — this
+  // was calling api.post() against it, which NestJS's method-specific
+  // routing guarantees a 404 for. Confirmed root cause of the "leave
+  // challenge doesn't work" bug report, 2026-08-29 — not a backend issue.
+  const response = await api.patch(`/challenges/${id}/leave`);
   return response.data;
 }
 

@@ -57,16 +57,21 @@ const defaultSet = (): SetRow => ({
   restSec: 0,
 });
 
-// Local template used while designing offline. `applyBackendMetricTemplate`
-// exists to swap this for a real backend-provided template but is never
-// actually called from any screen, so this mock is what genuinely gets
-// submitted for every schema-kind exercise added via the real Add-Exercises
-// screen — not just an offline placeholder. Field keys must match the real
-// backend metric_type codes ('distance'/'time', not 'distanceKm'/'duration')
-// since createChallengePayloadAdapter.ts sends these keys verbatim as this
+// Fallback template for a schema-kind exercise, used only until (or unless)
+// its real per-exercise metric config loads. `applyBackendMetricTemplate`
+// exists precisely to replace this with a real backend-provided template —
+// as of 2026-08-29, app/challenge/routine/exercises.tsx's handleAddSelected
+// now actually calls it (GET /exercises/:id/full) right after addExercise()
+// for every 'schema'-type exercise, so this mock is only what's briefly
+// applied before that resolves, or what's kept if the fetch fails. Before
+// that wiring landed, this WAS what genuinely got submitted for every
+// schema-kind exercise regardless of its real activity — a confirmed bug
+// (e.g. a pure-breathwork exercise showed distance+duration fields), see
+// havit-design-system-SKILL.md. Field keys must match the real backend
+// metric_type codes ('distance'/'time', not 'distanceKm'/'duration') since
+// createChallengePayloadAdapter.ts sends these keys verbatim as this
 // exercise's metric values on POST /challenges. Fixed 2026-08-28 — same code
-// mismatch as metricsAdapter.ts/applyExerciseMetrics.ts, see
-// havit-design-system-SKILL.md.
+// mismatch as metricsAdapter.ts/applyExerciseMetrics.ts.
 const MOCK_SCHEMA_TEMPLATE: MetricTemplate = {
   id: 'mock-cardio-template',
   title: 'Exercise metrics',

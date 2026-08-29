@@ -15,7 +15,8 @@ import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
 import { colors, spacing, activityColors } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import type { ExerciseCandidate } from '../../../hooks/useFilteredExercises';
-import { getExercises } from '../../../services/exercises/exercises.service';
+import { getExercises, getExerciseFull } from '../../../services/exercises/exercises.service';
+import type { ExerciseMetricConfig } from '../../../services/exercises/exercises.service';
 import type { ActivityType } from '../../../types/activity';
 import { CATEGORY_TO_ACTIVITY } from '../../../constants/challengeFilters';
 
@@ -44,11 +45,49 @@ function mapBackendExerciseToCandidate(exercise: BackendExercise, defaultLocatio
   };
 }
 
+/** Converts GET /exercises/:id/full's real per-exercise `metrics[]` into the
+ * raw shape `routineBuilderStore`'s `applyBackendMetricTemplate` already
+ * validates and consumes — that hook existed but was never actually called
+ * anywhere, so every non-'sets' exercise (cardio, flexibility, mind-body,
+ * "single"-mode exercises like Guided Breathwork) got a hardcoded
+ * distance+duration template regardless of what it actually tracks (real bug,
+ * confirmed 2026-08-29: a pure-breathwork exercise showed distance/duration
+ * fields). Only 'int'/'decimal' (-> a `number` field) and 'seconds' (-> a
+ * `duration` field) map to anything the schema template UI can render today;
+ * 'text'/'boolean' metrics are skipped rather than guessed. Returns null when
+ * no metric maps to a renderable field, so the caller can fall back to the
+ * existing mock rather than apply an empty template. */
+function buildMetricTemplateFromExerciseMetrics(exerciseId: number, metrics: ExerciseMetricConfig[]): unknown | null {
+  const fields = metrics
+    .map((metric) => {
+      if (metric.valueType === 'seconds') {
+        return { key: metric.code, label: metric.name, type: 'duration' as const, defaultMinutes: 10, defaultSeconds: 0 };
+      }
+      if (metric.valueType === 'int' || metric.valueType === 'decimal') {
+        return {
+          key: metric.code,
+          label: metric.name,
+          type: 'number' as const,
+          defaultValue: 10,
+          unit: metric.defaultUnit ?? undefined,
+          min: 0,
+        };
+      }
+      return null;
+    })
+    .filter((field): field is NonNullable<typeof field> => field !== null);
+
+  if (fields.length === 0) return null;
+
+  return { id: `exercise-${exerciseId}-metrics`, title: 'Exercise metrics', fields };
+}
+
 export default function ExercisesScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { day } = useLocalSearchParams<{ day: string }>();
   const addExercise = useRoutineBuilder((state) => state.addExercise);
+  const applyBackendMetricTemplate = useRoutineBuilder((state) => state.applyBackendMetricTemplate);
   const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
 
   const [allExercises, setAllExercises] = useState<ExerciseCandidate[]>([]);
@@ -140,12 +179,33 @@ export default function ExercisesScreen() {
     });
   }
 
-  function handleAddSelected() {
+  async function handleAddSelected() {
     if (selectedIds.size === 0) return;
 
-    for (const exercise of allExercises) {
-      if (!selectedIds.has(exercise.id)) continue;
-      addExercise(exercise, backendIdByLocalId[exercise.id]);
+    const toAdd = allExercises.filter((exercise) => selectedIds.has(exercise.id));
+
+    for (const exercise of toAdd) {
+      const backendId = backendIdByLocalId[exercise.id];
+      addExercise(exercise, backendId);
+
+      // 'strength' exercises already get a correct sets/reps editor from
+      // addExercise() itself — only 'schema' ones need real metric data to
+      // replace the hardcoded distance+duration mock (see
+      // buildMetricTemplateFromExerciseMetrics's doc comment above).
+      if (exercise.metricType !== 'schema' || backendId == null) continue;
+
+      try {
+        const full = await getExerciseFull(backendId);
+        const template = buildMetricTemplateFromExerciseMetrics(backendId, full.metrics);
+        if (template) {
+          applyBackendMetricTemplate(exercise.id, template);
+        }
+      } catch (error: any) {
+        // Falls back to whatever addExercise() already applied (the mock
+        // template) rather than blocking the whole add flow over one
+        // exercise's metric lookup failing.
+        console.error('[Exercises] Failed to load real metric config for', exercise.name, error?.response?.data ?? error?.message);
+      }
     }
 
     router.back();
