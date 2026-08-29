@@ -145,8 +145,8 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
   }, [fullChallenge, myPhotos, isDayRestDay, currentDay]);
 
   const { photoPercent, restPercent } = useMemo(
-    () => computeConsistencyPercents({ totalDays, cycleLengthDays, cycleDays, photoDays: photoDaySet }),
-    [totalDays, cycleLengthDays, cycleDays, photoDaySet],
+    () => computeConsistencyPercents({ totalDays, currentDay, cycleLengthDays, cycleDays, photoDays: photoDaySet }),
+    [totalDays, currentDay, cycleLengthDays, cycleDays, photoDaySet],
   );
 
   const dominantActivityCategory = useMemo(

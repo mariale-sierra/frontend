@@ -41,10 +41,10 @@ export const colors = {
   ink: '#080906',
   surface: '#191A13', // elevated surface (cards, nav, tab tracks) — confirmed correct as-is, don't touch
   paper: '#FFFFFF', // primary text on dark backgrounds / light-theme background — swapped with `primary`, see note above
-  success: '#76EAA0', // test tweak — was #37E0A4 → #1E9E70 → #4ADE80 → current, a brighter teal-green originally
-  warning: '#F9B176', // test tweak — was #F2A93B amber → #C9540F → #FB923C → current. Still no confirmed use case — see Open Items Tracker
-  error: '#F67575', // test tweak — was #DE2B2B → #A31E1E → #EF4444 → current
-  rest: '#C9B6FF', // test tweak — was #B49BFF → #B399FF → current. Rest/recovery states, day-level only — "no activity today". Never a whole challenge's identity color, even for a mostly-rest-day challenge.
+  success: '#4ADE80', // test tweak — was #37E0A4 → #1E9E70 → #4ADE80 → #76EAA0 → back to #4ADE80 (current), a brighter teal-green originally
+  warning: '#FB923C', // test tweak — was #F2A93B amber → #C9540F → #FB923C → #F9B176 → back to #FB923C (current). Still no confirmed use case — see Open Items Tracker
+  error: '#EF4444', // test tweak — was #DE2B2B → #A31E1E → #EF4444 → #F67575 → back to #EF4444 (current)
+  rest: '#B399FF', // test tweak — was #B49BFF → #B399FF → #C9B6FF → back to #B399FF (current), per explicit request each time. Rest/recovery states, day-level only — "no activity today". Never a whole challenge's identity color, even for a mostly-rest-day challenge.
   neutral: '#8A8C82', // paused/inactive states — positive/neutral, not a problem
 } as const;
 
@@ -67,12 +67,12 @@ export type ColorToken = keyof Colors;
  * confirmed 6:1+ contrast pairing.
  */
 export const activityColors: Record<ActivityType, string> = {
-  strength: '#E9EB54', // lime-yellow
-  cardioIntense: '#F7CF64', // golden-orange
-  cardioLow: '#43EDD7', // aqua-turquoise
-  flexibility: '#88ADF6', // electric blue
-  mindBody: '#F688E4', // magenta-pink
-  functional: '#63CFF3', // sky blue
+  strength: '#DEE027', // true lime, slightly more yellow (power/alertness) — was #F2653A → #DEE027 → #E9EB54 → back to #DEE027 (current)
+  cardioIntense: '#F0BC33', // golden-orange (fast/electric energy) — was #F0B429 → #F0BC33 → #F7CF64 → back to #F0BC33 (current)
+  cardioLow: '#1BDCC4', // aqua-turquoise (steady/calm endurance) — was #5CD97A → #9ADB4F → #1BDCC4 → #43EDD7 → back to #1BDCC4 (current)
+  flexibility: '#588AEE', // electric blue (open/breath) — was #3DDBEE → #588AEE → #88ADF6 → back to #588AEE (current)
+  mindBody: '#EE58D5', // magenta-pink (calm/balance) — was #F17FE0 → #EE58D5 → #F688E4 → back to #EE58D5 (current)
+  functional: '#33BDEB', // sky blue (versatile/utility) — was #D8EE3C → #33BDEB → #63CFF3 → back to #33BDEB (current)
 } as const;
 
 /**

@@ -19,6 +19,7 @@ import { colors, spacing, radius } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
 import { submitWorkoutProgress } from '../../services/workout-log/workout-log.service';
+import type { WorkoutLogContract } from '../../types/workout-log';
 import { applyExerciseMetrics } from '../../services/metrics/applyExerciseMetrics';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
@@ -143,29 +144,9 @@ export default function Camera() {
     };
 
     setSubmittingProgress(true);
+    let workout: WorkoutLogContract;
     try {
-      const workout = await submitWorkoutProgress(progressPayload);
-      // The routine copy inside POST /workout-logs/progress only creates
-      // target (goal) rows for each exercise — the values actually entered
-      // on the metrics screen still need to be saved against them here.
-      if (exerciseMetrics.length > 0) {
-        try {
-          await applyExerciseMetrics(workout, exerciseMetrics);
-        } catch (metricsError) {
-          // The workout + photo already saved successfully — a metrics
-          // save failure shouldn't block the flow or look like data loss,
-          // just log it for now.
-          console.error('[Camera] applyExerciseMetrics failed:', metricsError);
-        }
-      }
-      invalidateChallengeProgressCache();
-      // Dismisses the whole (add) modal stack (metrics -> camera) back to
-      // whatever screen the user actually started this flow from, instead
-      // of routing through a dedicated (and previously content-less)
-      // "preview" screen — the success popup itself is global (mounted at
-      // app root), so it shows on top of wherever this lands.
-      useUploadSuccessStore.getState().show();
-      router.dismissAll();
+      workout = await submitWorkoutProgress(progressPayload);
     } catch (e: unknown) {
       type AxiosLike = { response?: { status?: number; data?: { message?: string } }; message?: string };
       const err = e as AxiosLike;
@@ -173,8 +154,44 @@ export default function Camera() {
       const msg = err?.response?.data?.message ?? t('camera.saveProgressError');
       setError(msg);
       Alert.alert(t('common.errors.genericTitle'), msg);
-    } finally {
       setSubmittingProgress(false);
+      return;
+    }
+
+    // The workout + photo are already saved server-side at this point —
+    // nothing below is allowed to surface as a "failed to save progress"
+    // error, since that would misreport a successful save as a failure
+    // (confirmed bug: a post-save hiccup here, e.g. router.dismissAll()
+    // finding nothing left to dismiss, was being caught by the same
+    // try/catch as the actual submission and shown as an upload error even
+    // though the photo had already been persisted).
+
+    // The routine copy inside POST /workout-logs/progress only creates
+    // target (goal) rows for each exercise — the values actually entered
+    // on the metrics screen still need to be saved against them here.
+    if (exerciseMetrics.length > 0) {
+      try {
+        await applyExerciseMetrics(workout, exerciseMetrics);
+      } catch (metricsError) {
+        // The workout + photo already saved successfully — a metrics
+        // save failure shouldn't block the flow or look like data loss,
+        // just log it for now.
+        console.error('[Camera] applyExerciseMetrics failed:', metricsError);
+      }
+    }
+    invalidateChallengeProgressCache();
+    // The success popup itself is global (mounted at app root), so it shows
+    // on top of wherever dismissAll() below lands.
+    useUploadSuccessStore.getState().show();
+    setSubmittingProgress(false);
+    try {
+      // Dismisses the whole (add) modal stack (metrics -> camera) back to
+      // whatever screen the user actually started this flow from, instead
+      // of routing through a dedicated (and previously content-less)
+      // "preview" screen.
+      router.dismissAll();
+    } catch (navError) {
+      console.error('[Camera] dismissAll failed after a successful save:', navError);
     }
   }
 

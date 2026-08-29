@@ -11,6 +11,7 @@ import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
 import { getChallengeAccentColor } from '../../../services/adapters/challengeState';
 import { leaveChallenge } from '../../../services/challenge/challenge.service';
 import ScreenBackground from '../../layout/screenBackground';
+import { ChallengeAccentGlow } from '../challengeAccentGlow';
 import { ChallengeProgressHeader } from './ChallengeProgressHeader';
 import { ChallengePhotoGalleryModal } from './ChallengePhotoGalleryModal';
 import { ChallengePhotoMosaicSkeleton } from './ChallengePhotoMosaicSkeleton';
@@ -33,6 +34,7 @@ export function ChallengeActiveProgressScreen() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   const galleryVisible = selectedPhotoId != null || selectedDay != null;
+  const accentColor = getChallengeAccentColor(data.dominantActivityCategory);
 
   const leavePopup = useConfirmationPopup({
     type: 'leave',
@@ -88,6 +90,8 @@ export function ChallengeActiveProgressScreen() {
 
   return (
     <ScreenBackground variant="challenges" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
+      <ChallengeAccentGlow color={accentColor} />
+
       {/* The whole screen scrolls as one — the grid/calendar below are plain
           content Views, not their own independently-scrolling pager pages,
           so the ring/header don't trap the rest of the screen behind a fixed
@@ -116,7 +120,7 @@ export function ChallengeActiveProgressScreen() {
           <SegmentedIconToggle
             value={view}
             onChange={setView}
-            activeColor={getChallengeAccentColor(data.dominantActivityCategory)}
+            activeColor={accentColor}
             options={[
               { value: 'grid', icon: 'grid-outline', accessibilityLabel: t('challengeProgress.consistency.gridViewA11y') },
               { value: 'calendar', icon: 'calendar-outline', accessibilityLabel: t('challengeProgress.consistency.calendarViewA11y') },
@@ -140,7 +144,7 @@ export function ChallengeActiveProgressScreen() {
             isRestDayFn={data.isDayRestDay}
             selectedDay={selectedDay}
             onPressDay={openDayGallery}
-            accentColor={getChallengeAccentColor(data.dominantActivityCategory)}
+            accentColor={accentColor}
           />
         )}
       </ScrollView>

@@ -38,9 +38,13 @@ export function isRestDay(
  * disagree about the same day:
  * 1. `photo` — the user has a photo logged for this day (wins even on a
  *    rest day — logging anyway is a positive signal, not a status conflict).
- * 2. `rest` — a rest day per the cycle, no photo needed.
- * 3. `today` — the current day, not yet resolved either way.
- * 4. `future` — hasn't happened yet.
+ * 2. `future` — hasn't happened yet, checked before `rest` (a day being a
+ *    rest day per the cycle is a fact independent of elapsed time, so
+ *    without this a not-yet-reached rest day was showing as already
+ *    "ticked off" — fixed 2026-08-29, per explicit bug report: rest days
+ *    should only read as rest once actually reached, not from day 1).
+ * 3. `rest` — a rest day per the cycle that has already been reached, no photo needed.
+ * 4. `today` — the current day, not a rest day, not yet resolved either way.
  * 5. `missed` — elapsed, not a rest day, no photo.
  */
 export type DayStatus = 'photo' | 'rest' | 'today' | 'future' | 'missed';
@@ -53,18 +57,25 @@ export function classifyDay(params: {
 }): DayStatus {
   const { challengeDay, currentDay, isRestDay: restDay, hasPhoto } = params;
   if (hasPhoto) return 'photo';
+  if (challengeDay > currentDay) return 'future';
   if (restDay) return 'rest';
   if (challengeDay === currentDay) return 'today';
-  if (challengeDay > currentDay) return 'future';
   return 'missed';
 }
 
 /**
- * Consistency-ring segment percentages (0–1) over the WHOLE challenge span
- * (1..totalDays), not just days elapsed so far — the ring reflects real
- * logged/rest days out of the full challenge. `photoPercent` takes priority
- * over `restPercent` for a given day (matches `classifyDay`'s priority —
- * logging on a rest day counts as a photo day, not a rest day).
+ * Consistency-ring segment percentages (0–1) — denominator is the WHOLE
+ * challenge span (1..totalDays), so the ring always reads as real progress
+ * out of the full challenge, not just days elapsed. `photoPercent` takes
+ * priority over `restPercent` for a given day (matches `classifyDay`'s
+ * priority — logging on a rest day counts as a photo day, not a rest day).
+ *
+ * `restCount` only counts rest days already reached (`day <= currentDay`) —
+ * a future rest day hasn't happened yet and shouldn't already read as
+ * "ticked off" on day 1 (fixed 2026-08-29, matches `classifyDay`'s own
+ * `future`-before-`rest` priority so the ring and the calendar agree).
+ * `photoCount` needs no such guard — `photoDays` can only ever contain days
+ * the user has actually logged, which can't be in the future.
  *
  * Deliberately percentage-based, not "one tick per day" — a fixed number of
  * ring ticks (see ChallengeProgressRing) rendered from these two percents
@@ -73,11 +84,12 @@ export function classifyDay(params: {
  */
 export function computeConsistencyPercents(params: {
   totalDays: number;
+  currentDay: number;
   cycleLengthDays: number;
   cycleDays: ChallengeCycleDayContract[];
   photoDays: Set<number>;
 }): { photoPercent: number; restPercent: number } {
-  const { totalDays, cycleLengthDays, cycleDays, photoDays } = params;
+  const { totalDays, currentDay, cycleLengthDays, cycleDays, photoDays } = params;
   if (totalDays <= 0) return { photoPercent: 0, restPercent: 0 };
 
   let photoCount = 0;
@@ -86,7 +98,7 @@ export function computeConsistencyPercents(params: {
   for (let day = 1; day <= totalDays; day += 1) {
     if (photoDays.has(day)) {
       photoCount += 1;
-    } else if (isRestDay(day, cycleLengthDays, cycleDays)) {
+    } else if (day <= currentDay && isRestDay(day, cycleLengthDays, cycleDays)) {
       restCount += 1;
     }
   }
