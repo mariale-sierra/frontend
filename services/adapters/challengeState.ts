@@ -30,15 +30,21 @@ const VALID_ACTIVITY_TYPES = new Set<ActivityType>([
   'functional',
 ]);
 
-/** Validated read of `ChallengeContract.dominant_activity_category` — the
- * field is typed already, but `ChallengeContract`'s `[key: string]: unknown`
- * catch-all means a malformed/missing value can still reach here at
- * runtime, so it's checked against the real enum rather than trusted blind. */
-export function pickDominantActivityCategory(challenge: ChallengeContract): ActivityType | null {
-  const value = challenge.dominant_activity_category;
+/** Validates any raw value against the real `ActivityType` enum — shared by
+ * `pickDominantActivityCategory` below (reading a `ChallengeContract`, whose
+ * `[key: string]: unknown` catch-all means a malformed/missing value can
+ * reach it at runtime) and by any screen that receives a dominant category
+ * as a plain route param string (e.g. `useLocalSearchParams`), which is
+ * just as untrusted. */
+export function parseActivityType(value: unknown): ActivityType | null {
   return typeof value === 'string' && VALID_ACTIVITY_TYPES.has(value as ActivityType)
     ? (value as ActivityType)
     : null;
+}
+
+/** Validated read of `ChallengeContract.dominant_activity_category`. */
+export function pickDominantActivityCategory(challenge: ChallengeContract): ActivityType | null {
+  return parseActivityType(challenge.dominant_activity_category);
 }
 
 /**

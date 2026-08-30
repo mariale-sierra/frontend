@@ -54,7 +54,14 @@ export function ChallengeActiveProgressScreen() {
 
   function handlePressMembers() {
     if (data.challengeId) {
-      router.push(`/challenge/${data.challengeId}/members`);
+      // `dominantActivityCategory` passed through as a route param
+      // (2026-08-30, same fix as Challenge-Info's own members link) — this
+      // screen already resolved it (`accentColor` above), so Members can
+      // paint its accent glow on first render instead of waiting out its
+      // own `getChallenge()` round trip.
+      router.push(
+        `/challenge/${data.challengeId}/members?dominantActivityCategory=${data.dominantActivityCategory ?? ''}`,
+      );
     }
   }
 

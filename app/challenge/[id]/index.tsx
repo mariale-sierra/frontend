@@ -121,7 +121,8 @@ export default function ChallengeDetail() {
   // Activity Color System v2 — this challenge's own resolved accent color,
   // used for the title, the "Lasts" row's calendar icon, the "Read more"
   // toggle, and each workout day's numbered badge below.
-  const accentColor = getChallengeAccentColor(challenge ? pickDominantActivityCategory(challenge) : null);
+  const dominantActivityCategory = challenge ? pickDominantActivityCategory(challenge) : null;
+  const accentColor = getChallengeAccentColor(dominantActivityCategory);
 
   const infoRows: ChallengeInfoRow[] = [
     {
@@ -151,7 +152,20 @@ export default function ChallengeDetail() {
           <BackButton style={styles.backButton} />
           <Row gap="xs" align="center">
             <Pressable
-              onPress={() => router.push(`/challenge/${id}/members`)}
+              // `dominantActivityCategory` passed through as a route param
+              // (2026-08-30) — Members already resolved it here, so the
+              // destination screen can paint its own accent glow on its
+              // very first render instead of waiting out its own
+              // `getChallenge()` round trip first (was a real ~1s "no
+              // gradient, then it pops in" gap the user flagged on-device).
+              // See `services/adapters/challengeState.ts`'s `parseActivityType`
+              // for how the destination screen re-validates this untrusted
+              // string before trusting it.
+              onPress={() =>
+                router.push(
+                  `/challenge/${id}/members?dominantActivityCategory=${dominantActivityCategory ?? ''}`,
+                )
+              }
               style={({ pressed }) => [styles.membersPill, pressed && styles.pressed]}
               hitSlop={8}
               accessibilityRole="button"

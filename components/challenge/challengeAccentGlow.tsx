@@ -9,11 +9,14 @@ interface ChallengeAccentGlowProps {
  * Subtle top-to-bottom glow behind a challenge-scoped screen's content, in
  * that challenge's own activity accent color, fading into the screen's
  * `ink` base. Confirmed scope, per explicit request: Challenge-Info
- * (`app/challenge/[id]/index.tsx`) and the Consistency/progress screen
- * (`ChallengeActiveProgressScreen.tsx`) — not a shared background treatment
+ * (`app/challenge/[id]/index.tsx`), the Consistency/progress screen
+ * (`ChallengeActiveProgressScreen.tsx`), and — added 2026-08-30, same
+ * request that also brought the accent color into the Members/Invite
+ * wireframes' own CTAs/icons — `app/challenge/[id]/members.tsx` and
+ * `app/challenge/[id]/invite.tsx`. Still not a shared background treatment
  * for every challenge-scoped screen automatically (see design system →
  * Explicitly Rejected Patterns' gradient exceptions list before adding it
- * anywhere else).
+ * anywhere else) — each addition has been a specific, named request.
  *
  * Same `react-native-svg` `RadialGradient` mechanism `ScreenBackground`'s own
  * glows already use, centered (`cx="50%"`) and anchored at the very top

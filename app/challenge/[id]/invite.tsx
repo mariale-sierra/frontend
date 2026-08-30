@@ -5,32 +5,47 @@ import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../../components/layout/screenBackground';
 import { BackButton } from '../../../components/ui/backButton';
 import { Text } from '../../../components/ui/text';
+import { Icon } from '../../../components/ui/icon';
 import { Button } from '../../../components/ui/button';
 import { SearchBar } from '../../../components/ui/searchBar';
 import { UserAvatar } from '../../../components/ui/userAvatar';
 import { ConfirmationPopup } from '../../../components/ui/confirmationPopup';
 import { Row } from '../../../components/layout/row';
+import { ChallengeAccentGlow } from '../../../components/challenge/challengeAccentGlow';
 import { searchUsers } from '../../../services/user/user.service';
 import { createInvite } from '../../../services/invites/invite.service';
 import { getChallenge } from '../../../services/challenge/challenge.service';
+import { getChallengeAccentColor, parseActivityType, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
 import { useErrorNotificationStore } from '../../../store/errorNotificationStore';
 import { colors, radius, spacing } from '../../../constants/theme';
 import type { PublicProfileContract } from '../../../types/user';
+import type { ChallengeContract } from '../../../types/challenge';
 
 /**
- * Invite-users flow, reached from the challenge detail screen. Search by
- * username, confirm before sending, per-user sent state so the same user
- * can't be invited twice from this screen.
+ * Invite-users flow, reached from the members screen's invite icon. Search
+ * by username, confirm before sending, per-user sent state so the same
+ * user can't be invited twice from this screen.
+ *
+ * Refactored 2026-08-30 to match the Invite-44B wireframe: the old
+ * back-chevron + "Invite Users" title header row is gone, replaced by the
+ * wireframe's icon + headline + subtitle hero ("Bring your people in..."),
+ * and a "Results" eyebrow now sits above the list (previously the list
+ * started right under the search bar). Background and the "Invite" button
+ * now use this challenge's own Activity Color System v2 accent
+ * (`ChallengeAccentGlow`, the same reusable top glow Challenge-Info and the
+ * Consistency screen already use, plus the same accent-fill CTA pattern
+ * Routine-Detail's Join button uses) — the wireframe's flat yellow is that
+ * system's placeholder, not a literal color to hardcode; see
+ * havit-design-system-SKILL.md's Activity Color System v2 section.
  */
 export default function InviteUsers() {
   const { t } = useTranslation();
-  const { id: challengeId } = useLocalSearchParams<{ id: string }>();
+  const { id: challengeId, dominantActivityCategory: categoryParam } = useLocalSearchParams<{
+    id: string;
+    dominantActivityCategory?: string;
+  }>();
 
-  // No longer rendered directly on screen (removed 2026-08-29, per explicit
-  // "remove the little challenge name label" request) — still fetched and
-  // kept, since the confirm-send popup's description below still names the
-  // challenge in its copy.
-  const [challengeName, setChallengeName] = useState('');
+  const [challenge, setChallenge] = useState<ChallengeContract | null>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<PublicProfileContract[]>([]);
   const [searching, setSearching] = useState(false);
@@ -42,8 +57,8 @@ export default function InviteUsers() {
   useEffect(() => {
     if (!challengeId) return;
     getChallenge(challengeId)
-      .then((challenge) => setChallengeName(challenge?.name ?? ''))
-      .catch(() => setChallengeName(''));
+      .then(setChallenge)
+      .catch(() => setChallenge(null));
   }, [challengeId]);
 
   // Debounced username search against GET /users/search.
@@ -63,6 +78,24 @@ export default function InviteUsers() {
     }, 350);
     return () => clearTimeout(timeout);
   }, [query]);
+
+  // Members already resolved this challenge's own dominant activity
+  // category before linking here — passed through as a route param so the
+  // accent glow/CTA below can paint on this screen's very first render
+  // instead of waiting out its own `getChallenge()` round trip (the ~1s
+  // "no gradient, then it pops in" gap flagged on-device). See
+  // `members.tsx`'s own matching comment for why `hasCategoryParam` (not
+  // just `parseActivityType(categoryParam)`) is what distinguishes "caller
+  // told us" from "direct/deep link, truly unknown yet."
+  const hasCategoryParam = typeof categoryParam === 'string';
+  const dominantActivityCategory = challenge
+    ? pickDominantActivityCategory(challenge)
+    : hasCategoryParam
+      ? parseActivityType(categoryParam)
+      : undefined;
+  const accentColorKnown = challenge !== null || hasCategoryParam;
+  const accentColor = getChallengeAccentColor(dominantActivityCategory ?? null);
+  const challengeName = challenge?.name ?? '';
 
   const handleSendConfirmed = async () => {
     const user = confirmUser;
@@ -89,6 +122,10 @@ export default function InviteUsers() {
 
   return (
     <ScreenBackground variant="default">
+      {/* Gated on `accentColorKnown` (2026-08-30) — see the matching
+          comment above and in members.tsx for why. */}
+      {accentColorKnown && <ChallengeAccentGlow color={accentColor} />}
+
       {/* `paddingTop: spacing.lg` — fixed 2026-08-29, real bug: this used to
           be `insets.top + spacing.sm`, double-counting the safe-area inset
           `ScreenBackground`'s own default `applyTopInset` already applies
@@ -102,10 +139,18 @@ export default function InviteUsers() {
           generous token (`lg`, 24) as deliberate breathing room on top of
           the ONE real inset `ScreenBackground` already provides. */}
       <View style={[styles.container, { paddingTop: spacing.lg }]}>
-        <View style={styles.header}>
-          <BackButton />
-          <Text variant="title">{t('invites.inviteUsers')}</Text>
-          <View style={styles.headerSpacer} />
+        <BackButton style={styles.backButton} />
+
+        {/* Hero (2026-08-30, new — Invite-44B wireframe): replaces the old
+            back-chevron + "Invite Users" title row entirely. The headline
+            is `title` (Bebas Neue, capped at `3xl`/30px) — close enough to
+            the wireframe's own 32px that no size-cap compromise shows. */}
+        <View style={styles.hero}>
+          <Icon name="mail-outline" size={52} color={colors.paper} />
+          <Text variant="title" align="center">{t('invites.heroTitle')}</Text>
+          <Text variant="body" size="sm" tone="secondary" align="center">
+            {t('invites.heroSubtitle', { challenge: challengeName })}
+          </Text>
         </View>
 
         <SearchBar
@@ -113,6 +158,10 @@ export default function InviteUsers() {
           onChangeText={setQuery}
           placeholder={t('invites.searchPlaceholder')}
         />
+
+        <Text variant="header" tone="secondary" style={styles.resultsLabel}>
+          {t('invites.resultsLabel')}
+        </Text>
 
         {searching ? (
           <View style={styles.center}>
@@ -156,6 +205,14 @@ export default function InviteUsers() {
                     // (translucent fill, no border) than a bordered/hollow
                     // pill. See Button's own doc comment for the variant.
                     variant={alreadySent ? 'subtle' : 'primary'}
+                    // Activity-color fill (2026-08-30) on the active "Invite"
+                    // state only — `Button`'s own `style` prop is merged
+                    // last over its variant style (see Button's own array
+                    // merge), so this cleanly overrides just the background,
+                    // keeping `primary`'s `ink` text. The already-sent
+                    // `subtle` state is untouched — that's a fixed neutral
+                    // "done" look, not this challenge's own color.
+                    style={!alreadySent ? { backgroundColor: accentColor } : undefined}
                     size="sm"
                     disabled={alreadySent || sendingId !== null}
                     loading={sendingId === item.id}
@@ -197,13 +254,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  backButton: {
+    marginLeft: -spacing.sm,
   },
-  headerSpacer: {
-    width: 40,
+  hero: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingBottom: spacing.sm,
+  },
+  resultsLabel: {
+    paddingTop: spacing.xs,
   },
   list: {
     gap: spacing.sm,
