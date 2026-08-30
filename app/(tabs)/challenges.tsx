@@ -38,6 +38,20 @@ export default function Challenges() {
   const { view: requestedView } = useLocalSearchParams<{ view?: ChallengesView }>();
 
   const [view, setView] = useState<ChallengesView>(requestedView === 'explore' ? 'explore' : 'mine');
+
+  // The `useState` initializer above only runs on this screen's very first
+  // mount — a caller linking back here with an explicit `view` param (e.g.
+  // Challenge-Info after a successful join, landing the user on Mine to see
+  // their new challenge) needs this to also take effect when the tab screen
+  // was ALREADY mounted underneath the screen that navigated away, which is
+  // the normal case for a tab covered by a pushed stack screen. Only syncs
+  // for an explicit `view` value — no param means "leave whatever the user
+  // already had selected alone," same as before this existed.
+  useEffect(() => {
+    if (requestedView === 'mine' || requestedView === 'explore') {
+      setView(requestedView);
+    }
+  }, [requestedView]);
   const [mineChallenges, setMineChallenges] = useState<ChallengeMineCardViewModel[]>([]);
   const [exploreChallenges, setExploreChallenges] = useState<ExploreChallengeViewModel[]>([]);
   const [loading, setLoading] = useState(true);

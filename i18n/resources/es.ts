@@ -97,6 +97,7 @@ const es = {
       description: '¿Quieres unirte a "{{name}}"?',
       confirm: 'Unirme',
       cancel: 'Cancelar',
+      success: '¡Te uniste a "{{name}}"!',
     },
     leaveConfirm: {
       title: '¿Salir del reto?',
@@ -506,6 +507,8 @@ const es = {
     seeLess: 'Ver menos',
     loadError: 'No se pudieron cargar las invitaciones.',
     unknownChallenge: 'Reto',
+    challengeWithDuration: '{{name}} · {{duration}}',
+    viewChallengeA11y: 'Ver detalles de {{name}}',
     from: 'De @{{username}}',
     to: 'Para @{{username}}',
     status: {

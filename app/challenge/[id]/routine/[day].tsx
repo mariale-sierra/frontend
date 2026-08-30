@@ -23,6 +23,7 @@ import {
 } from '../../../../services/adapters/metricsAdapter';
 import { ACTIVITY_METRIC_CONFIG } from '../../../../types/metrics';
 import { useConfirmationPopup } from '../../../../hooks/useConfirmationPopup';
+import { useErrorNotificationStore } from '../../../../store/errorNotificationStore';
 import type { ChallengeContract, ChallengeCycleDayContract, ChallengeExerciseSetContract, ChallengeExerciseTargetContract } from '../../../../types/challenge';
 import type { TFunction } from 'i18next';
 
@@ -134,6 +135,7 @@ export default function RoutineDayDetail() {
   const [loading, setLoading] = useState(true);
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('none');
   const [membershipLoading, setMembershipLoading] = useState(true);
+  const { showSuccess } = useErrorNotificationStore();
 
   const joinPopup = useConfirmationPopup({
     type: 'join',
@@ -144,6 +146,13 @@ export default function RoutineDayDetail() {
       try {
         await joinChallenge(challengeId);
         setMembershipStatus('joined');
+        // Same fix as app/challenge/[id]/index.tsx's own join flow, per
+        // explicit follow-up — this screen has its own separate Join
+        // button/popup (reachable from Explore without passing through
+        // Challenge-Info first), so it needed the identical success
+        // toast + redirect-to-Mine treatment, not just the other screen.
+        showSuccess({ message: t('challenges.joinConfirm.success', { name: challenge?.name ?? t('challenges.fallbackName') }) });
+        router.replace('/(tabs)/challenges?view=mine');
       } catch {
         // Confirmation popup surfaces its own error state.
       }

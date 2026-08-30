@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConfirmationPopup, ConfirmationButtonConfig } from '../components/ui/confirmationPopup';
+import { colors } from '../constants/theme';
 
 export type ConfirmationPopupType = 'join' | 'leave';
 
@@ -62,6 +63,7 @@ export function useConfirmationPopup({
         return {
           title: t('challenges.joinConfirm.title'),
           description: t('challenges.joinConfirm.description', { name: challengeName }),
+          icon: 'person-add-outline' as const,
           primaryButton: {
             label: t('challenges.joinConfirm.confirm'),
             onPress: handleConfirm,
@@ -80,6 +82,8 @@ export function useConfirmationPopup({
         return {
           title: t('challenges.leaveConfirm.title'),
           description: t('challenges.leaveConfirm.description', { name: challengeName }),
+          icon: 'log-out-outline' as const,
+          iconColor: colors.error,
           primaryButton: {
             label: t('challenges.leaveConfirm.confirm'),
             onPress: handleConfirm,

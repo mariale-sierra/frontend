@@ -19,6 +19,7 @@ export function UploadSuccessPopup() {
     <ConfirmationPopup
       visible={visible}
       tone="success"
+      icon="checkmark-circle-outline"
       title={t('camera.uploadSuccessTitle')}
       description={t('camera.uploadSuccessMessage')}
       primaryButton={{ label: t('camera.uploadSuccessCta'), onPress: hide }}

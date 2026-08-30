@@ -19,6 +19,7 @@ import { getMyChallenges } from '../../../services/user/user.service';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
 import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
+import { useErrorNotificationStore } from '../../../store/errorNotificationStore';
 import type { ChallengeContract } from '../../../types/challenge';
 
 type MembershipStatus = 'creator' | 'joined' | 'none';
@@ -41,6 +42,7 @@ export default function ChallengeDetail() {
   const [error, setError] = useState(false);
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('none');
   const [membershipLoading, setMembershipLoading] = useState(true);
+  const { showSuccess } = useErrorNotificationStore();
 
   const joinPopup = useConfirmationPopup({
     type: 'join',
@@ -51,6 +53,17 @@ export default function ChallengeDetail() {
       try {
         await joinChallenge(challengeId);
         setMembershipStatus('joined');
+        // Per explicit report: joining silently worked with no feedback and
+        // no way to see the new challenge without manually finding it —
+        // confirm it worked, then land on the exact list it now appears in
+        // (Mine, not wherever the user happened to be browsing from, e.g.
+        // Explore). `view=mine` forces the Challenges tab's own local
+        // `view` state to sync even if that screen is still mounted
+        // underneath this one (its `useState` initializer alone wouldn't
+        // re-run on an already-mounted screen) — see its own matching
+        // `useEffect` for the other half of this.
+        showSuccess({ message: t('challenges.joinConfirm.success', { name: challenge?.name ?? t('challenges.fallbackName') }) });
+        router.replace('/(tabs)/challenges?view=mine');
       } catch {
         // The confirmation popup itself surfaces failure via its own error state; nothing else to do here.
       }

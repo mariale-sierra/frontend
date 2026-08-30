@@ -243,6 +243,17 @@ export const radius = {
   small: 8, // tags/badges, image/photo tiles — ALWAYS this for photo grid tiles, regardless of context
   medium: 16, // list-row cards, small icon buttons
   big: 28, // hero cards, primary buttons, nav bar, FAB, segmented control track
+  // Added 2026-08-30, per explicit "too square" request on the popup/toast
+  // redesign — `big` (28) was already the scale's top tier and the standard
+  // "hero card" radius everywhere else (nav bar, primary buttons, hero
+  // cards), so bumping it directly would have re-rounded every one of those
+  // too, not just the two components that got the complaint. A real new
+  // tier for the small set of "showcase" surfaces that want to read as
+  // noticeably rounder than even a hero card — currently only
+  // ConfirmationPopup's card and the toast notification. Don't reach for
+  // this as a default; `big` stays the standard "very rounded" token for
+  // everything else.
+  xl: 40, // ConfirmationPopup's card, the toast notification
 } as const;
 
 export type RadiusToken = keyof typeof radius;

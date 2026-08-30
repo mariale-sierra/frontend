@@ -97,6 +97,7 @@ const en = {
       description: 'Will you join "{{name}}"?',
       confirm: 'Join',
       cancel: 'Cancel',
+      success: 'You joined "{{name}}"!',
     },
     leaveConfirm: {
       title: 'Leave challenge?',
@@ -509,6 +510,8 @@ const en = {
     seeLess: 'See less',
     loadError: 'Could not load invitations.',
     unknownChallenge: 'Challenge',
+    challengeWithDuration: '{{name}} · {{duration}}',
+    viewChallengeA11y: 'View {{name}} details',
     from: 'From @{{username}}',
     to: 'To @{{username}}',
     status: {

@@ -31,6 +31,18 @@ api.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Real day-boundary bug, not just unintuitive UX: every "is today done"
+  // check (current day, streaks, today_completed) is computed backend-side
+  // against a fixed UTC calendar day, with no idea what timezone the user
+  // is actually in — so for anyone ahead of UTC, there's a real window
+  // right after local midnight where a challenge still reads as "completed
+  // today" from yesterday's photo, because the server's UTC day hasn't
+  // rolled over yet. Sent fresh on every request (not cached/stored) so it
+  // stays correct across DST changes and travel without any extra
+  // client-side bookkeeping — the backend is expected to fall back to UTC
+  // if this header is ever missing (older app builds, etc.), matching
+  // today's existing behavior exactly.
+  config.headers['X-Timezone'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return config;
 });
 
