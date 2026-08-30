@@ -1,12 +1,13 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { colors, radius } from '../../constants/theme';
+import { colors, fillOpacity, radius } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
 // Neutral placeholder fill (paper @ 20% over the ink screen background) — the
-// value the wireframes use for avatar/photo placeholder circles. Not yet a
-// formal design-system token; see havit-design-system-SKILL.md Open Items
-// Tracker → "neutral fill-wash opacities".
-const AVATAR_PLACEHOLDER_FILL = withAlpha(colors.paper, 0.2);
+// value the wireframes use for avatar/photo placeholder circles. Now a real
+// formal design-system token (`fillOpacity.placeholder`) — see
+// havit-design-system-SKILL.md Open Items Tracker → "neutral fill-wash
+// opacities".
+const AVATAR_PLACEHOLDER_FILL = withAlpha(colors.paper, fillOpacity.placeholder);
 
 interface UserAvatarProps {
   username: string;

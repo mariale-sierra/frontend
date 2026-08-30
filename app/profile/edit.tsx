@@ -21,7 +21,7 @@ import {
 } from '../../services/user/user.service';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import type { MyProfileContract, UpdateProfilePayload } from '../../types/user';
 import i18n, { PREFERRED_LANGUAGE_KEY } from '../../i18n';
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     // not size/2 — see userAvatar.tsx) so the loading dim doesn't bleed past
     // the avatar's actual squircle shape.
     borderRadius: radius.big,
-    backgroundColor: withAlpha(colors.ink, 0.5),
+    backgroundColor: withAlpha(colors.ink, fillOpacity.dim),
     alignItems: 'center',
     justifyContent: 'center',
   },

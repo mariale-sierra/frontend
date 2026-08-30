@@ -9,43 +9,107 @@ import { Row } from '../../../../components/layout/row';
 import { BackButton } from '../../../../components/ui/backButton';
 import { Icon } from '../../../../components/ui/icon';
 import { Text } from '../../../../components/ui/text';
-import { colors, radius, spacing } from '../../../../constants/theme';
+import { colors, radius, spacing, textOpacity } from '../../../../constants/theme';
 import { withAlpha } from '../../../../utils/color';
 import { toTitleCase } from '../../../../utils/format';
 import { toChallengeDetailViewModel } from '../../../../services/adapters/index';
 import { getChallenge, joinChallenge } from '../../../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../../../services/user/user.service';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../../services/adapters/challengeState';
+import {
+  activityTypeFromMetricCodes,
+  targetsToFieldMap,
+  toNum,
+} from '../../../../services/adapters/metricsAdapter';
+import { ACTIVITY_METRIC_CONFIG } from '../../../../types/metrics';
 import { useConfirmationPopup } from '../../../../hooks/useConfirmationPopup';
-import type { ChallengeContract, ChallengeCycleDayContract } from '../../../../types/challenge';
+import type { ChallengeContract, ChallengeCycleDayContract, ChallengeExerciseSetContract, ChallengeExerciseTargetContract } from '../../../../types/challenge';
+import type { TFunction } from 'i18next';
 
 type MembershipStatus = 'creator' | 'joined' | 'none';
 
 interface ExerciseRow {
   name: string;
-  /** "4 × 12" / "3 × 45s" style — placeholder data (see the doc comment on PLACEHOLDER_METRICS below). */
+  /** "4 × 12" / "3 × 45s" style. */
   setsLabel: string;
   restLabel: string;
+  /** Catalog exercise description — undefined until `getCycleDaySummaries()`
+   * returns it (see `ChallengeExerciseContract.description`'s own doc
+   * comment) or for the rare exercise with a genuinely blank one. Presence
+   * of this field, not any separate flag, is what shows the row's
+   * expand/collapse chevron below — no description, no toggle. */
+  description?: string;
+}
+
+/** "45" → "45s", "90" → "1m 30s" — the terse table-cell form. Distinct from
+ * `metricsAdapter.ts`'s own `restLabel()`, which spells out "Rest 1m 30s"
+ * for the Log-Metrics stepper screen's different, spoken-word context. */
+function formatSeconds(totalSeconds: number): string {
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+}
+
+/** MetricField → its short table-cell unit suffix. Reps/rounds read fine
+ * bare ("12"); the others need a unit to not read as a bare, ambiguous number. */
+function formatFieldValue(field: 'reps' | 'lbs' | 'duration' | 'distance' | 'rounds', value: number): string {
+  switch (field) {
+    case 'lbs':
+      return `${value} lbs`;
+    case 'duration':
+      return formatSeconds(value);
+    case 'distance':
+      return `${value} km`;
+    default:
+      return `${value}`;
+  }
 }
 
 /**
- * Cycle-day exercises don't carry real set/rep/rest data in the current
- * backend response (`ChallengesService.getCycleDaySummaries()` only selects
- * `name`/`activity_type` — no sets/targets/metrics, unlike
- * `RoutineService.getTodayRoutine()`, which DOES join that data but for a
- * different endpoint). Flat placeholder numbers for every exercise until
- * that's wired up — see the skill's Open Items Tracker. Not varied per
- * exercise/category on purpose: inventing *specific*-looking numbers per
- * exercise would misrepresent them as real programmed data, which they
- * aren't.
+ * Real per-set data, wired 2026-08-30 once `ChallengesService.getCycleDaySummaries()`
+ * was extended to join it (backend commit shipped the same day) — was flat
+ * placeholder numbers for every exercise before this (see git history / the
+ * design system skill's Open Items Tracker for that gap's own writeup).
+ * Reuses `metricsAdapter.ts`'s target-extraction helpers rather than a
+ * second parallel implementation — the response shape is deliberately the
+ * same one `RoutineService.getTodayRoutine()` already returns.
  */
-const PLACEHOLDER_SETS_LABEL = '3 × 10';
-const PLACEHOLDER_REST_LABEL = '45s';
-
-function buildExerciseRows(cycleDay: ChallengeCycleDayContract | undefined): ExerciseRow[] {
+function buildExerciseRows(cycleDay: ChallengeCycleDayContract | undefined, t: TFunction): ExerciseRow[] {
   const exercises = Array.isArray(cycleDay?.exercises) ? cycleDay.exercises : [];
   return exercises.map((exercise, index) => {
     const rawName = typeof exercise.name === 'string' && exercise.name.trim() ? exercise.name.trim() : `Exercise ${index + 1}`;
+    const sets: ChallengeExerciseSetContract[] = Array.isArray(exercise.sets) ? exercise.sets : [];
+    const exerciseTargets: ChallengeExerciseTargetContract[] = Array.isArray(exercise.targets) ? exercise.targets : [];
+
+    const metricCodes = [
+      ...sets.flatMap((set) => (set.targets ?? []).map((target) => target.metricType?.code)),
+      ...exerciseTargets.map((target) => target.metricType?.code),
+    ].filter((code): code is string => Boolean(code));
+    const activityType = activityTypeFromMetricCodes(metricCodes);
+    const primaryField = ACTIVITY_METRIC_CONFIG[activityType]?.columns[0]?.key ?? ACTIVITY_METRIC_CONFIG.strength.columns[0].key;
+
+    const exerciseFieldMap = targetsToFieldMap(exerciseTargets);
+    const firstSetFieldMap = sets.length > 0 ? targetsToFieldMap(sets[0].targets) : {};
+    const primaryValue = firstSetFieldMap[primaryField] ?? exerciseFieldMap[primaryField];
+
+    let setsLabel: string;
+    if (primaryValue != null) {
+      const formatted = formatFieldValue(primaryField, primaryValue);
+      setsLabel = sets.length > 0 ? `${sets.length} × ${formatted}` : formatted;
+    } else if (sets.length > 0) {
+      setsLabel = t('challengeRoutineDay.setsCountLabel', { count: sets.length });
+    } else {
+      setsLabel = '—';
+    }
+
+    // Same "first set's own rest value represents the exercise" convention
+    // `metricsAdapter.ts`'s `adaptTodayRoutineExercises` already uses.
+    const restSeconds = toNum(sets[0]?.rest_seconds_after ?? null);
+    const restLabel = restSeconds != null ? formatSeconds(restSeconds) : '—';
+
+    const description = typeof exercise.description === 'string' && exercise.description.trim() ? exercise.description.trim() : undefined;
+
     return {
       // The shared exercise-library catalog stores names in all caps
       // ("HIP THRUST") — toTitleCase() normalizes that for display without
@@ -54,8 +118,9 @@ function buildExerciseRows(cycleDay: ChallengeCycleDayContract | undefined): Exe
       // first: shouty-uppercase text read as "unstyled" against the
       // wireframe's plain-case design, not an actual missing-font issue.
       name: toTitleCase(rawName),
-      setsLabel: PLACEHOLDER_SETS_LABEL,
-      restLabel: PLACEHOLDER_REST_LABEL,
+      setsLabel,
+      restLabel,
+      description,
     };
   });
 }
@@ -130,7 +195,29 @@ export default function RoutineDayDetail() {
   const rawCycleDay = Array.isArray(challenge?.cycle_days)
     ? challenge.cycle_days.find((item) => Number(item.day_number) === requestedDay)
     : undefined;
-  const exercises = useMemo(() => buildExerciseRows(rawCycleDay), [rawCycleDay]);
+  const exercises = useMemo(() => buildExerciseRows(rawCycleDay, t), [rawCycleDay, t]);
+
+  // Per-row description expand/collapse (2026-08-30, new). Keyed by list
+  // index rather than exercise id since these rows have no stable id of
+  // their own. Reset on day change (via "Next in the cycle") so an
+  // expanded row on today's list doesn't carry over onto tomorrow's,
+  // which reuses this same mounted screen instance for a new `day` param.
+  const [expandedExerciseIndexes, setExpandedExerciseIndexes] = useState<Set<number>>(new Set());
+  useEffect(() => {
+    setExpandedExerciseIndexes(new Set());
+  }, [requestedDay]);
+
+  function toggleExerciseDescription(index: number) {
+    setExpandedExerciseIndexes((current) => {
+      const next = new Set(current);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  }
 
   // Activity Color System v2 — everything on this screen that was flat
   // `colors.primary` now resolves to this challenge's own accent instead
@@ -219,18 +306,49 @@ export default function RoutineDayDetail() {
             </Text>
           </Row>
 
-          {exercises.map((exercise, index) => (
-            <Row
-              key={`${exercise.name}-${index}`}
-              justify="space-between"
-              align="center"
-              style={[styles.exerciseRow, index < exercises.length - 1 && styles.exerciseRowDivider]}
-            >
-              <Text variant="body" weight="regular" numberOfLines={1} style={styles.exerciseName}>{exercise.name}</Text>
-              <Text variant="body" weight="bold" style={[styles.exerciseSets, { color: accentColor }]}>{exercise.setsLabel}</Text>
-              <Text variant="label" weight="medium" style={styles.tableHeaderRest}>{exercise.restLabel}</Text>
-            </Row>
-          ))}
+          {exercises.map((exercise, index) => {
+            const hasDescription = exercise.description != null;
+            const isExpanded = hasDescription && expandedExerciseIndexes.has(index);
+
+            return (
+              <View
+                key={`${exercise.name}-${index}`}
+                style={[styles.exerciseUnit, index < exercises.length - 1 && styles.exerciseRowDivider]}
+              >
+                <Pressable
+                  disabled={!hasDescription}
+                  onPress={() => toggleExerciseDescription(index)}
+                  accessibilityRole={hasDescription ? 'button' : undefined}
+                  accessibilityLabel={
+                    hasDescription ? t('challengeRoutineDay.exerciseDescriptionA11y', { name: exercise.name }) : undefined
+                  }
+                >
+                  <Row justify="space-between" align="center" style={styles.exerciseRow}>
+                    <Row align="center" gap="xs" style={styles.exerciseName}>
+                      <Text variant="body" weight="regular" numberOfLines={1} style={styles.exerciseNameText}>
+                        {exercise.name}
+                      </Text>
+                      {hasDescription && (
+                        <Icon
+                          name={isExpanded ? 'chevron-up-outline' : 'chevron-down-outline'}
+                          size={14}
+                          color={withAlpha(colors.paper, textOpacity.tertiary)}
+                        />
+                      )}
+                    </Row>
+                    <Text variant="body" weight="bold" style={[styles.exerciseSets, { color: accentColor }]}>{exercise.setsLabel}</Text>
+                    <Text variant="label" weight="medium" style={styles.tableHeaderRest}>{exercise.restLabel}</Text>
+                  </Row>
+                </Pressable>
+
+                {isExpanded && (
+                  <Text variant="body" tone="secondary" size="sm" style={styles.exerciseDescription}>
+                    {exercise.description}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
         </View>
 
         <View style={styles.notesSection}>
@@ -349,6 +467,11 @@ const styles = StyleSheet.create({
     width: 56,
     textAlign: 'right',
   },
+  // Wraps one exercise's row + its (optional) expanded description — the
+  // divider now lives here, on the whole unit, not just the row, so it
+  // still sits directly above the NEXT exercise regardless of whether this
+  // one is expanded.
+  exerciseUnit: {},
   exerciseRow: {
     paddingVertical: spacing.md,
     gap: spacing.md,
@@ -357,13 +480,27 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: withAlpha(colors.paper, 0.08),
   },
+  // Wraps the name Text + its expand/collapse chevron (only rendered for an
+  // exercise with a real description — see `hasDescription` in the JSX).
   exerciseName: {
     flex: 1,
     minWidth: 0,
   },
+  exerciseNameText: {
+    flexShrink: 1,
+  },
   exerciseSets: {
     // color set inline — this challenge's own accent color, see accentColor above.
     opacity: 1,
+  },
+  // Description toggle (2026-08-30, new) — no horizontal padding of its own
+  // since it already lines up with the exercise name above it (both start
+  // at `tableSection`'s own left edge); `paddingBottom` matches `exerciseRow`'s
+  // own vertical rhythm so the divider below sits the same distance away
+  // whether this exercise is expanded or not.
+  exerciseDescription: {
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.md,
   },
   notesSection: {
     paddingHorizontal: spacing.base,

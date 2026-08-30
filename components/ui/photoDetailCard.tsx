@@ -4,7 +4,7 @@ import { Icon } from './icon';
 import { Text } from './text';
 import { UserAvatar } from './userAvatar';
 import { Row } from '../layout/row';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import type { ChallengePhoto } from '../../types/challenge';
 
@@ -49,7 +49,7 @@ export function PhotoDetailCard({ photo }: PhotoDetailCardProps) {
         {photo.imageUrl ? (
           <Image source={{ uri: photo.imageUrl }} style={styles.image} resizeMode="cover" />
         ) : (
-          <Icon name="image-outline" size={42} color={withAlpha(colors.paper, 0.3)} />
+          <Icon name="image-outline" size={42} color={withAlpha(colors.paper, textOpacity.tertiary)} />
         )}
       </View>
 

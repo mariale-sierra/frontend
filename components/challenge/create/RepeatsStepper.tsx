@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { colors, fillOpacity, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 
 interface RepeatsStepperProps {
@@ -70,8 +70,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Was `withAlpha(colors.paper, 0.1)` — a one-off value close to, but not
+  // quite, the shared "chip/secondary-control" fill (0.14) other round
+  // controls elsewhere already use. Converged onto the real shared token —
+  // see `fillOpacity`.
   circleButtonNeutral: {
-    backgroundColor: withAlpha(colors.paper, 0.1),
+    backgroundColor: withAlpha(colors.paper, fillOpacity.chip),
   },
   circleButtonPrimary: {
     backgroundColor: colors.primary,

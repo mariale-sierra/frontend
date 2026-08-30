@@ -2,7 +2,7 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../ui/text';
 import { Icon } from '../ui/icon';
-import { colors, radius, spacing, textOpacity } from '../../constants/theme';
+import { colors, fillOpacity, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { getChallengeAccentColor } from '../../services/adapters/challengeState';
 import type { LogChallengeQuickPick } from '../../services/adapters/metricsAdapter';
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     // panel on a colored background. Was `paper`@20% back when this row's
     // own background was flat `ink`; switched once the row itself became
     // activity-colored, since a light `paper` fill would wash out against it.
-    backgroundColor: withAlpha(colors.ink, 0.18),
+    backgroundColor: withAlpha(colors.ink, fillOpacity.washOnAccent),
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -142,12 +142,23 @@ export default function InviteUsers() {
         <BackButton style={styles.backButton} />
 
         {/* Hero (2026-08-30, new — Invite-44B wireframe): replaces the old
-            back-chevron + "Invite Users" title row entirely. The headline
-            is `title` (Bebas Neue, capped at `3xl`/30px) — close enough to
-            the wireframe's own 32px that no size-cap compromise shows. */}
+            back-chevron + "Invite Users" title row entirely. Headline
+            switched from `title` (Bebas Neue) to `body`+`2xl`+`bold` (DM
+            Sans) per explicit follow-up — same "big centered DM Sans
+            headline" shape `RestDayContent`'s icon+title+subtitle hero
+            already establishes, not a one-off size pick. Icon dropped
+            52→40 (a bit smaller, per explicit request) — matches this same
+            screen's own `UserAvatar size={40}` below, a real reference
+            point rather than an arbitrary number; icon `size` isn't on the
+            `spacing` scale (layout tokens, not icon dimensions) — every
+            icon size in this app, including `RestDayContent`'s 72px, is
+            its own literal per the same "photo/icon dimensions are
+            inherently per-component" convention as `THUMB_SIZE` elsewhere. */}
         <View style={styles.hero}>
-          <Icon name="mail-outline" size={52} color={colors.paper} />
-          <Text variant="title" align="center">{t('invites.heroTitle')}</Text>
+          <Icon name="mail-outline" size={40} color={colors.paper} />
+          <Text variant="body" size="2xl" weight="bold" align="center">
+            {t('invites.heroTitle')}
+          </Text>
           <Text variant="body" size="sm" tone="secondary" align="center">
             {t('invites.heroSubtitle', { challenge: challengeName })}
           </Text>
@@ -260,7 +271,10 @@ const styles = StyleSheet.create({
   hero: {
     alignItems: 'center',
     gap: spacing.sm,
-    paddingBottom: spacing.sm,
+    // `paddingBottom` bumped `sm`(8)→`lg`(24) per explicit "bigger gap
+    // before the search bar" follow-up — still a real token off the scale,
+    // stacking with `container`'s own `gap: spacing.md` between them.
+    paddingBottom: spacing.lg,
   },
   resultsLabel: {
     paddingTop: spacing.xs,

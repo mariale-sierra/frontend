@@ -45,10 +45,45 @@ export interface CreateChallengePayload {
   }>;
 }
 
+/** Same target shape `TodayRoutineTarget` (services/adapters/metricsAdapter.ts)
+ * already reads — `ChallengesService.getCycleDaySummaries()`'s `mapRoutineTargets()`
+ * deliberately mirrors `RoutineService.getTodayRoutine()`'s own field names, so
+ * the same extraction helpers (`extractTargetValue`/`targetsToFieldMap`) work
+ * against either response without a second parallel implementation. */
+export interface ChallengeExerciseTargetContract {
+  metric_type_id?: number;
+  metricType?: { code?: string } | null;
+  target_value_int?: number | null;
+  target_value_decimal?: number | null;
+  target_value_seconds?: number | null;
+}
+
+export interface ChallengeExerciseSetContract {
+  id?: string;
+  set_number?: number;
+  rest_seconds_after?: number | null;
+  targets?: ChallengeExerciseTargetContract[];
+}
+
 export interface ChallengeExerciseContract {
   name?: string;
   location?: string;
   activity_type?: ActivityType;
+  /** Real per-set data, added 2026-08-30 once `getCycleDaySummaries()` was
+   * extended to join it (was name/activity_type only before — see
+   * havit-design-system-SKILL.md's Open Items Tracker). Empty for an
+   * exercise whose routine has no `RoutineExerciseSet` rows — falls back to
+   * `targets` below, same two-tier shape `getTodayRoutine` already used. */
+  sets?: ChallengeExerciseSetContract[];
+  /** Exercise-level target fallback for an exercise with no per-set rows. */
+  targets?: ChallengeExerciseTargetContract[];
+  /** Catalog exercise description (`exercises.description`) — not yet
+   * returned by `getCycleDaySummaries()` as of 2026-08-30 (a trivial
+   * addition to that endpoint's existing exercise mapping, not shipped
+   * yet). Optional/nullable on purpose so Routine-Detail's description
+   * toggle degrades gracefully (no chevron shown) until it lands, rather
+   * than requiring a frontend change once it does. */
+  description?: string | null;
   [key: string]: unknown;
 }
 

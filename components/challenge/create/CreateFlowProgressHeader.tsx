@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { BackButton } from '../../ui/backButton';
 import { Text } from '../../ui/text';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { colors, fillOpacity, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 
 interface CreateFlowProgressHeaderProps {
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 4,
     borderRadius: radius.small,
-    backgroundColor: withAlpha(colors.paper, 0.14),
+    backgroundColor: withAlpha(colors.paper, fillOpacity.chip),
   },
   segmentFilled: {
     backgroundColor: colors.primary,

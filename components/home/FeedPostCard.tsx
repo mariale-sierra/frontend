@@ -5,7 +5,7 @@ import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 import { Row } from '../layout/row';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
 
@@ -38,7 +38,7 @@ export function FeedPostCard({ post }: FeedPostCardProps) {
         {post.imageUrl ? (
           <Image source={{ uri: post.imageUrl }} style={styles.image} resizeMode="cover" />
         ) : (
-          <Icon name="image-outline" size={42} color={withAlpha(colors.paper, 0.3)} />
+          <Icon name="image-outline" size={42} color={withAlpha(colors.paper, textOpacity.tertiary)} />
         )}
       </View>
 

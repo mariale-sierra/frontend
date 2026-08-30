@@ -2,7 +2,7 @@ import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { colors, fillOpacity, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { getChallengeCardColor } from '../../../services/adapters/challengeState';
 import type { ChallengeMineCardViewModel } from '../../../services/adapters/challengeListAdapter';
@@ -108,7 +108,7 @@ export function ChallengeStatusCard({ challenge, onPress, onPressAddPhoto }: Cha
         ) : challenge.latestPhotoUrl ? (
           <Image source={{ uri: challenge.latestPhotoUrl }} style={styles.sidePanel} resizeMode="cover" />
         ) : (
-          <View style={[styles.sidePanel, { backgroundColor: withAlpha(colors.ink, 0.18) }]}>
+          <View style={[styles.sidePanel, { backgroundColor: withAlpha(colors.ink, fillOpacity.washOnAccent) }]}>
             <Icon name="image-outline" size={26} color={withAlpha(colors.ink, 0.4)} />
           </View>
         )}
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 6,
     borderRadius: radius.small,
-    backgroundColor: withAlpha(colors.ink, 0.18),
+    backgroundColor: withAlpha(colors.ink, fillOpacity.washOnAccent),
     overflow: 'hidden',
   },
   progressFill: {

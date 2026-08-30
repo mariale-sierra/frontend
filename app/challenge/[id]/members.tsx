@@ -28,9 +28,14 @@ const HEADER_SIDE_SIZE = 44;
  *
  * Refactored 2026-08-30 to match the Members-44A wireframe: centered header
  * title (was left-hugging next to a `people-outline` icon the wireframe
- * doesn't show), a member-count hero + local username search + "All
- * members" eyebrow above the list (all new — this screen previously jumped
- * straight from the header into the list). Background and the header's
+ * doesn't show; also switched from `title` (Bebas Neue) to `body`+`bold`
+ * (DM Sans) per explicit follow-up — the wireframe's own header text is
+ * DM Sans, not the display face) and a member-count hero + local username
+ * search above the list (all new — this screen previously jumped straight
+ * from the header into the list). The wireframe's own "All members" eyebrow
+ * between the search bar and the list was tried and then explicitly
+ * dropped the same day — not part of this screen anymore. Background and
+ * the header's
  * invite icon now use this challenge's own Activity Color System v2 accent
  * (`ChallengeAccentGlow`, the same reusable top glow Challenge-Info and the
  * Consistency screen already use) — the wireframe's flat yellow is that
@@ -122,7 +127,7 @@ export default function ChallengeMembers() {
 
       <View style={[styles.header, { paddingTop: spacing.lg }]}>
         <BackButton style={styles.headerSideButton} />
-        <Text variant="title" align="center" style={styles.headerTitle}>
+        <Text variant="body" weight="bold" align="center" style={styles.headerTitle}>
           {t('challengeProgress.membersScreenTitle')}
         </Text>
         {isMember ? (
@@ -163,10 +168,6 @@ export default function ChallengeMembers() {
           onChangeText={setQuery}
           placeholder={t('challengeProgress.membersSearchPlaceholder')}
         />
-      </View>
-
-      <View style={styles.sectionLabelWrap}>
-        <Text variant="header" tone="secondary">{t('challengeProgress.allMembersLabel')}</Text>
       </View>
 
       {loading ? (
@@ -235,21 +236,20 @@ const styles = StyleSheet.create({
   // instead, same "no size above `3xl`, redesign the layout instead" rule
   // already applied elsewhere (see havit-design-system-SKILL.md's
   // Typography section and the Consistency-ring number's own precedent).
+  // `paddingBottom` bumped `lg`(24)→`xl`(32) per explicit "bigger gap
+  // before the search bar" follow-up — still one token off the scale, the
+  // next step up, not a one-off pixel value.
   hero: {
     alignItems: 'center',
     gap: spacing.xs,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.xl,
     minHeight: 64,
     justifyContent: 'center',
   },
   searchWrap: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
-  },
-  sectionLabelWrap: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
   },
   list: {
     paddingHorizontal: spacing.lg,

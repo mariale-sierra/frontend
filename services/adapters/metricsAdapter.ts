@@ -131,8 +131,10 @@ function restLabel(restSeconds: number | null): string {
 /** Parses ids that the backend sends as strings (Postgres BIGINT is serialized
  * as a string) as well as plain numbers. asNumber() only accepts `number`, so
  * it silently dropped every routine exercise (id came as "1") — that was why
- * the metrics screen showed "No exercises for today's routine". */
-function toNum(value: unknown): number | null {
+ * the metrics screen showed "No exercises for today's routine". Exported —
+ * also used by `app/challenge/[id]/routine/[day].tsx`'s Routine-Detail table,
+ * which reads the same target-value shape from a different endpoint. */
+export function toNum(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string' && value.trim() !== '') {
     const n = Number(value);
@@ -146,7 +148,7 @@ function toNum(value: unknown): number | null {
  * the exercise actually tracks. Map those codes onto the activity type whose
  * ACTIVITY_METRIC_CONFIG surfaces the matching columns, so e.g. a duration-only
  * exercise shows a duration field instead of reps/lbs. */
-function activityTypeFromMetricCodes(codes: string[]): ActivityType {
+export function activityTypeFromMetricCodes(codes: string[]): ActivityType {
   const set = new Set(codes);
   // Real backend metric_type codes are 'distance'/'time', not the assumed
   // 'distanceKm'/'duration' from the old seed file — those never matched
@@ -169,13 +171,13 @@ const METRIC_CODE_TO_FIELD: Record<string, MetricField> = {
   time: 'duration',
 };
 
-interface TodayRoutineTarget {
+export interface TodayRoutineTarget {
   metricType?: { code?: string } | null;
   target_value_int?: number | string | null;
   target_value_decimal?: number | string | null;
   target_value_seconds?: number | string | null;
 }
-interface TodayRoutineSet {
+export interface TodayRoutineSet {
   rest_seconds_after?: number | null;
   targets?: TodayRoutineTarget[] | null;
 }
@@ -190,7 +192,7 @@ interface TodayRoutineExerciseRow {
 /** Reads the one target-value column that actually applies for this target's
  * metric type — reps is a plain int, weight/distance are decimals, duration
  * is stored in whole seconds (metric_types.duration has value_type='seconds'). */
-function extractTargetValue(target: TodayRoutineTarget): number | null {
+export function extractTargetValue(target: TodayRoutineTarget): number | null {
   const code = target.metricType?.code;
   if (!code) return null;
   if (code === 'reps') return toNum(target.target_value_int);
@@ -201,7 +203,7 @@ function extractTargetValue(target: TodayRoutineTarget): number | null {
 
 /** Reads every target on a list (a set's own targets, or an exercise-level
  * fallback target) into a {field: value} map, keyed by MetricField. */
-function targetsToFieldMap(targets: TodayRoutineTarget[] | null | undefined): Partial<Record<MetricField, number>> {
+export function targetsToFieldMap(targets: TodayRoutineTarget[] | null | undefined): Partial<Record<MetricField, number>> {
   const result: Partial<Record<MetricField, number>> = {};
   for (const target of targets ?? []) {
     const code = target.metricType?.code;

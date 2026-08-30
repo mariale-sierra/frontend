@@ -4,7 +4,7 @@ import { Text } from '../ui/text';
 import { Row } from '../layout/row';
 import { FriendStreakCard } from './FriendStreakCard';
 import type { FriendStreakViewModel } from '../../services/adapters/followAdapter';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
 interface FriendsStreakSectionProps {
@@ -80,11 +80,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.md,
   },
+  // Was `withAlpha(colors.paper, 0.1)` — a one-off value close to, but not
+  // quite, the shared Skeleton primitive's own `subtle` fill (0.08),
+  // purely because this predates that primitive and typed its own number.
+  // Converged onto the real shared token — see `fillOpacity`.
   skeletonCard: {
     width: 58,
     height: 58 + spacing.xl,
     borderRadius: radius.big,
-    backgroundColor: withAlpha(colors.paper, 0.1),
+    backgroundColor: withAlpha(colors.paper, fillOpacity.subtle),
   },
   message: {
     paddingVertical: spacing.sm,

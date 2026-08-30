@@ -206,6 +206,14 @@ export function toChallengeMineViewModels(
     .sort((a, b) => MINE_STATE_PRIORITY[a.state] - MINE_STATE_PRIORITY[b.state]);
 }
 
+/**
+ * Explore tab — every challenge the user could join. Sorted most-joined
+ * first (`membersCount` descending), per explicit request — same "sort
+ * happens once here, not left to callers" shape as `toChallengeMineViewModels`'s
+ * own state-priority sort above. `pickMembersCount` already falls back to
+ * `0` for a challenge with no member-count field at all, so a brand-new
+ * challenge sorts to the bottom rather than throwing/`NaN`-ing the sort.
+ */
 export function toExploreChallengeViewModels(
   challenges: ChallengeContract[],
 ): ExploreChallengeViewModel[] {
@@ -213,5 +221,7 @@ export function toExploreChallengeViewModels(
     locationFallbackLabel: 'Any location',
     categoryFallbackLabel: 'General',
   };
-  return challenges.map((c) => toExploreCard(c, labels));
+  return challenges
+    .map((c) => toExploreCard(c, labels))
+    .sort((a, b) => b.membersCount - a.membersCount);
 }

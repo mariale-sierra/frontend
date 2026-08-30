@@ -5,7 +5,7 @@ import { Row } from '../../layout/row';
 import { Icon } from '../../ui/icon';
 import { IconButton } from '../../ui/iconButton';
 import { Text } from '../../ui/text';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { colors, fillOpacity, radius, spacing, textOpacity } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 
 export type CycleDayStatus = 'empty' | 'configured' | 'rest';
@@ -25,7 +25,7 @@ interface CycleDayListProps {
   onAddDay: () => void;
 }
 
-const REMOVE_ICON_COLOR = withAlpha(colors.paper, 0.3);
+const REMOVE_ICON_COLOR = withAlpha(colors.paper, textOpacity.tertiary);
 
 /** "Build the cycle" day list — a numbered-badge row per day, adapted from the
  * same badge/card tokens as Challenge-Info's `ChallengeRoutineDayCard` (30×30
@@ -69,7 +69,7 @@ export function CycleDayList({
         {days.map((day) => {
           const status = getDayStatus(day);
           const isRest = status === 'rest';
-          const badgeColor = status === 'empty' ? withAlpha(colors.paper, 0.12) : isRest ? colors.rest : getDayRoutineColor(day);
+          const badgeColor = status === 'empty' ? withAlpha(colors.paper, fillOpacity.strong) : isRest ? colors.rest : getDayRoutineColor(day);
           const routineLabel = getDayRoutineLabel(day);
           const meta = getDayRoutineMeta(day);
 
@@ -115,7 +115,7 @@ export function CycleDayList({
                   </Text>
                 </View>
               ) : (
-                <Icon name="pencil-outline" size={18} color={withAlpha(colors.paper, 0.55)} />
+                <Icon name="pencil-outline" size={18} color={withAlpha(colors.paper, textOpacity.secondary)} />
               )}
 
               <IconButton

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, spacing } from '../../constants/theme';
+import { colors, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { Text } from '../ui/text';
 import { Button } from '../ui/button';
@@ -12,7 +12,7 @@ import { formatRelativeTime } from '../../utils/time';
 import type { ChallengeInviteContract, InviteStatus } from '../../types/invite';
 import type { InviteAction } from '../../hooks/useInvites';
 
-const MUTED = withAlpha(colors.paper, 0.3);
+const MUTED = withAlpha(colors.paper, textOpacity.tertiary);
 
 const STATUS_COLOR: Record<InviteStatus, string> = {
   pending: colors.primary,

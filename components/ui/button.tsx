@@ -5,7 +5,7 @@ import {
   ActivityIndicator,
   View,
 } from 'react-native';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { Text } from './text';
 
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
 
   subtle: {
-    backgroundColor: withAlpha(colors.paper, 0.14),
+    backgroundColor: withAlpha(colors.paper, fillOpacity.chip),
   },
 
   // SIZES

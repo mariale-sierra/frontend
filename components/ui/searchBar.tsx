@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, type TextInputProps } from 'react-native';
 import { Input } from './input';
 import { Icon } from './icon';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
 interface SearchBarProps extends Pick<TextInputProps, 'value' | 'onChangeText' | 'placeholder'> {}
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: radius.big,
-    backgroundColor: withAlpha(colors.paper, 0.14),
+    backgroundColor: withAlpha(colors.paper, fillOpacity.chip),
     alignItems: 'center',
     justifyContent: 'center',
   },

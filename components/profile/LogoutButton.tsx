@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors } from '../../constants/theme';
+import { colors, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { Card } from '../ui/card';
 import { Icon } from '../ui/icon';
@@ -37,7 +37,7 @@ export function LogoutButton() {
               {t('profile.logoutButton')}
             </Text>
           </Row>
-          <Icon name="chevron-forward-outline" size={18} color={withAlpha(colors.paper, 0.3)} />
+          <Icon name="chevron-forward-outline" size={18} color={withAlpha(colors.paper, textOpacity.tertiary)} />
         </Row>
       </Card>
 

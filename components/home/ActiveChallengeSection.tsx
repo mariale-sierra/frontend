@@ -3,7 +3,7 @@ import { Dimensions, FlatList, NativeScrollEvent, NativeSyntheticEvent, StyleShe
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { getChallengeCardColor } from '../../services/adapters/challengeState';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
@@ -170,7 +170,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 6,
     borderRadius: radius.small,
-    backgroundColor: withAlpha(colors.ink, 0.18),
+    backgroundColor: withAlpha(colors.ink, fillOpacity.washOnAccent),
     overflow: 'hidden',
   },
   progressFill: {

@@ -87,6 +87,31 @@ export const textOpacity = {
 
 export type TextOpacityToken = keyof typeof textOpacity;
 
+/**
+ * Neutral fill-wash opacity scale — `paper`/`ink` at a flat alpha, used for
+ * placeholder/track/chip BACKGROUNDS (not text — see `textOpacity` above for
+ * that, and don't reuse this scale for a border/divider color; those already
+ * have their own working hairline convention — `withAlpha(colors.paper,
+ * 0.08)` everywhere a border is called for — untouched by this scale).
+ *
+ * Formalized 2026-08-30 from values already independently in real use, not
+ * invented fresh — several components had landed on slightly different
+ * literals (0.1 vs 0.14, 0.18 vs 0.2) for what was really the same visual
+ * role, purely because each was typed ad hoc in its own file. See
+ * havit-design-system-SKILL.md's Open Items Tracker → "Neutral fill-wash
+ * opacities."
+ */
+export const fillOpacity = {
+  subtle: 0.08, // barely-there wash — the shared Skeleton primitive's own base fill, calendar/panel track backgrounds
+  strong: 0.12, // one step up from `subtle` — the shared Skeleton primitive's "strong" fill, an empty/unconfigured-state chip
+  chip: 0.14, // a pill/chip/round secondary-control fill sitting on `ink`/`surface` (search bar's clear button, Button's `subtle` variant, the Create-flow step progress track, a neutral round stepper button)
+  placeholder: 0.2, // `paper`-based "no photo yet" placeholder, sitting on `ink`/`surface`
+  washOnAccent: 0.18, // `ink`-based wash sitting on a colored/accent card instead — a `paper` fill would wash out there. Same visual role as `placeholder`/`chip` (a photo placeholder panel, a progress track), just recolored for a light card background rather than `ink`/`surface`
+  dim: 0.5, // `ink`-based loading-state overlay, dimming whatever's behind it while a spinner shows on top (the shared `Loader` component, an avatar mid-upload)
+} as const;
+
+export type FillOpacityToken = keyof typeof fillOpacity;
+
 // ---------------------------------------------------------------------------
 // Typography
 // ---------------------------------------------------------------------------

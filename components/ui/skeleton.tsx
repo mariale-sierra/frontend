@@ -1,5 +1,5 @@
 import { View, type DimensionValue, type StyleProp, type ViewStyle } from 'react-native';
-import { colors, radius } from '../../constants/theme';
+import { colors, fillOpacity, radius } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
 interface SkeletonProps {
@@ -36,5 +36,5 @@ export function Skeleton({ width = '100%', height, radius: cornerRadius = radius
   );
 }
 
-const SHIMMER = withAlpha(colors.paper, 0.08);
-const SHIMMER_STRONG = withAlpha(colors.paper, 0.12);
+const SHIMMER = withAlpha(colors.paper, fillOpacity.subtle);
+const SHIMMER_STRONG = withAlpha(colors.paper, fillOpacity.strong);

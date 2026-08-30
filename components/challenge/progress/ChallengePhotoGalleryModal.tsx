@@ -6,7 +6,7 @@ import { Icon } from '../../ui/icon';
 import { BackButton } from '../../ui/backButton';
 import { Text } from '../../ui/text';
 import { PhotoDetailCard } from '../../ui/photoDetailCard';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import type { ChallengePhoto } from '../../../types/challenge';
 
@@ -77,7 +77,7 @@ export function ChallengePhotoGalleryModal({
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           ListEmptyComponent={
             <View style={styles.emptyCard}>
-              <Icon name="images-outline" size={34} color={withAlpha(colors.paper, 0.3)} />
+              <Icon name="images-outline" size={34} color={withAlpha(colors.paper, textOpacity.tertiary)} />
               <Text variant="body" tone="secondary" align="center">
                 {t('challengeProgress.gallery.emptyMessage')}
               </Text>

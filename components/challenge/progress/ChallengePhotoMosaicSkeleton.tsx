@@ -1,5 +1,5 @@
 import { Image, Pressable, StyleSheet, View } from 'react-native';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { colors, fillOpacity, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { Icon } from '../../ui/icon';
 import type { ChallengePhoto } from '../../../types/challenge';
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     height: '44%',
-    backgroundColor: withAlpha(colors.paper, 0.08),
+    backgroundColor: withAlpha(colors.paper, fillOpacity.subtle),
   },
   visibilityBadge: {
     position: 'absolute',

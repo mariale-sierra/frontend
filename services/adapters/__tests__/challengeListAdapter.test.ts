@@ -1,4 +1,4 @@
-import { toChallengeMineViewModels } from '../challengeListAdapter';
+import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../challengeListAdapter';
 import type { ChallengeContract, ChallengePhoto } from '../../../types/challenge';
 
 function buildChallenge(overrides: Partial<ChallengeContract> & { id: string }): ChallengeContract {
@@ -57,5 +57,20 @@ describe('toChallengeMineViewModels', () => {
     const [viewModel] = toChallengeMineViewModels([challenge], NO_PHOTOS);
 
     expect(viewModel.state).toBe('rest');
+  });
+});
+
+describe('toExploreChallengeViewModels', () => {
+  it('sorts most-joined first', () => {
+    const challenges = [
+      buildChallenge({ id: 'few', members_count: 3 }),
+      buildChallenge({ id: 'most', members_count: 248 }),
+      buildChallenge({ id: 'none' }), // no members_count field at all
+      buildChallenge({ id: 'some', members_count: 40 }),
+    ];
+
+    const viewModels = toExploreChallengeViewModels(challenges);
+
+    expect(viewModels.map((v) => v.challengeId)).toEqual(['most', 'some', 'few', 'none']);
   });
 });

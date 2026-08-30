@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +18,12 @@ import { colors, spacing } from '../../constants/theme';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
+// Capped, per explicit request: an unbounded challenge-results list pushed
+// the People section endlessly far down the screen for a broad query. Same
+// "preview + See more/See less" pattern app/invitations.tsx already
+// established for its own capped request list (`REQUESTS_PREVIEW_COUNT`).
+const CHALLENGE_RESULTS_PREVIEW_COUNT = 3;
+
 export default function Search() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -25,6 +31,7 @@ export default function Search() {
 
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [challengesExpanded, setChallengesExpanded] = useState(false);
 
   // Full challenge catalog, fetched once — matching is a client-side title
   // filter, same as before this pass. There's no backend full-text search
@@ -90,6 +97,15 @@ export default function Search() {
     return availableChallenges.filter((c) => c.title.toLowerCase().includes(lower));
   }, [availableChallenges, debouncedQuery]);
 
+  // A new query shouldn't inherit the previous one's expanded state.
+  useEffect(() => {
+    setChallengesExpanded(false);
+  }, [debouncedQuery]);
+
+  const visibleChallenges = challengesExpanded
+    ? matchedChallenges
+    : matchedChallenges.slice(0, CHALLENGE_RESULTS_PREVIEW_COUNT);
+
   const hasQuery = debouncedQuery.length > 0;
   const isSearching = catalogLoading || peopleLoading;
   const hasNoResults = hasQuery && !isSearching && matchedChallenges.length === 0 && people.length === 0;
@@ -128,7 +144,7 @@ export default function Search() {
                   </Text>
                 </Row>
                 <View style={styles.challengeList}>
-                  {matchedChallenges.map((challenge) => (
+                  {visibleChallenges.map((challenge) => (
                     <ExploreChallengeCard
                       key={challenge.challengeId}
                       challenge={challenge}
@@ -136,6 +152,18 @@ export default function Search() {
                     />
                   ))}
                 </View>
+
+                {matchedChallenges.length > CHALLENGE_RESULTS_PREVIEW_COUNT && (
+                  <Pressable
+                    onPress={() => setChallengesExpanded((v) => !v)}
+                    hitSlop={8}
+                    style={styles.seeMore}
+                  >
+                    <Text variant="body" tone="secondary">
+                      {challengesExpanded ? t('search.seeLessChallenges') : t('search.seeMoreChallenges')}
+                    </Text>
+                  </Pressable>
+                )}
               </View>
             )}
 
@@ -199,6 +227,10 @@ const styles = StyleSheet.create({
   challengeList: {
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
+  },
+  seeMore: {
+    alignSelf: 'center',
+    paddingTop: spacing.md,
   },
   peopleList: {
     paddingHorizontal: spacing.lg,

@@ -1,6 +1,6 @@
 import { ActivityIndicator, StyleSheet, View, ViewStyle } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
-import { colors } from '../../constants/theme';
+import { colors, fillOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
 type LoaderProps = {
@@ -25,7 +25,7 @@ export function Loader({ visible, overlayStyle }: LoaderProps) {
 const styles = StyleSheet.create({
 	overlay: {
 		...StyleSheet.absoluteFillObject,
-		backgroundColor: withAlpha(colors.ink, 0.5),
+		backgroundColor: withAlpha(colors.ink, fillOpacity.dim),
 		justifyContent: 'center',
 		alignItems: 'center',
 	},
