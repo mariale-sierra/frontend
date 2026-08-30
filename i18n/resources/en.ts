@@ -181,6 +181,7 @@ const en = {
     membersScreenTitle: 'Members',
     membersEmpty: 'No members yet.',
     membersLoadError: 'Could not load members.',
+    inviteMembersA11y: 'Invite people',
   },
   search: {
     screenTitle: 'Search',

@@ -178,6 +178,7 @@ const es = {
     membersScreenTitle: 'Miembros',
     membersEmpty: 'Aún no hay miembros.',
     membersLoadError: 'No se pudieron cargar los miembros.',
+    inviteMembersA11y: 'Invitar personas',
   },
   search: {
     screenTitle: 'Buscar',

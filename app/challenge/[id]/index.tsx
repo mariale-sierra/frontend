@@ -153,6 +153,7 @@ export default function ChallengeDetail() {
             <Pressable
               onPress={() => router.push(`/challenge/${id}/members`)}
               style={({ pressed }) => [styles.membersPill, pressed && styles.pressed]}
+              hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={t('challengeInfo.membersA11y')}
             >
@@ -237,14 +238,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: -spacing.sm,
   },
+  // Fixed 2026-08-29, per explicit "remove the dark pill-shaped element
+  // behind it" request — was a `surface`-bg, `radius.big` pill (padding
+  // included). Now just the icon+count, no background chrome, matching the
+  // plain-icon look of its sibling `iconButton` (the share button) right
+  // next to it. `hitSlop` on the Pressable itself (see JSX) keeps a
+  // reasonable touch target now that padding isn't providing one.
   membersPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.big,
-    backgroundColor: colors.surface,
   },
   pressed: {
     opacity: 0.85,
