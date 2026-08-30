@@ -26,11 +26,23 @@ export default function RestDay() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getChallengeProgress()
+    // Real bug, fixed 2026-08-29, per explicit report ("it made other
+    // challenges access a weird none approved rest days screen that says I
+    // cant log in"): this called getChallengeProgress() with NO challengeId
+    // at all, even though `selectedChallengeId` was already sitting right
+    // above — the backend's own fallback for "no id passed" is "the user's
+    // most recently joined active challenge" (ChallengesService.getProgress),
+    // not the challenge the user actually opened this screen for. So this
+    // screen was checking whether TODAY was already logged for some
+    // unrelated challenge, and would incorrectly show the "already logged"
+    // screen for a challenge that hadn't been touched today at all, purely
+    // because a DIFFERENT (often older/legacy) challenge happened to be the
+    // most-recently-joined one and already had today's progress logged.
+    getChallengeProgress(selectedChallengeId ?? undefined)
       .then((progress) => setCompletedToday(progress?.completedToday ?? false))
       .catch(() => setCompletedToday(false))
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectedChallengeId]);
 
   async function handleJustToday() {
     if (!selectedChallengeId || submitting) return;

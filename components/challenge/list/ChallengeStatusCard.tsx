@@ -10,6 +10,14 @@ import type { ChallengeMineCardViewModel } from '../../../services/adapters/chal
 interface ChallengeStatusCardProps {
   challenge: ChallengeMineCardViewModel;
   onPress?: () => void;
+  /** Called when the "Add photo" dark camera square is tapped specifically
+   * (only rendered in the `active`, i.e. not-yet-completed-today, state) —
+   * a distinct action from tapping the rest of the card, added 2026-08-29
+   * per explicit request so this shortcuts straight to logging THIS
+   * challenge's progress instead of just opening its progress screen like
+   * the rest of the card does. Optional so existing callers that don't need
+   * this shortcut don't have to pass anything. */
+  onPressAddPhoto?: () => void;
 }
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
@@ -37,7 +45,7 @@ const STATE_ICON: Record<ChallengeMineCardViewModel['state'], IconName> = {
   left: 'log-out-outline',
 };
 
-export function ChallengeStatusCard({ challenge, onPress }: ChallengeStatusCardProps) {
+export function ChallengeStatusCard({ challenge, onPress, onPressAddPhoto }: ChallengeStatusCardProps) {
   const { t } = useTranslation();
   const accentColor = getChallengeCardColor(challenge.state, challenge.dominantActivityCategory);
   const progress = challenge.totalDays > 0 ? Math.min(challenge.currentDay / challenge.totalDays, 1) : 0;
@@ -85,12 +93,18 @@ export function ChallengeStatusCard({ challenge, onPress }: ChallengeStatusCardP
         </View>
 
         {showAddPhoto ? (
-          <View style={[styles.sidePanel, { backgroundColor: colors.ink }]}>
+          <Pressable
+            onPress={onPressAddPhoto}
+            hitSlop={4}
+            style={({ pressed }) => [styles.sidePanel, { backgroundColor: colors.ink }, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel={t('challenges.addPhoto')}
+          >
             <Icon name="camera-outline" size={26} color={accentColor} />
             <Text variant="caption" weight="bold" style={[styles.addPhotoText, { color: accentColor }]}>
               {t('challenges.addPhoto')}
             </Text>
-          </View>
+          </Pressable>
         ) : challenge.latestPhotoUrl ? (
           <Image source={{ uri: challenge.latestPhotoUrl }} style={styles.sidePanel} resizeMode="cover" />
         ) : (

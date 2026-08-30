@@ -72,7 +72,7 @@ const RING_SEGMENT_COUNT = 60;
  *   photos, not the challenge-wide gallery (see the doc comment above).
  */
 export function useChallengeActiveProgress(routeChallengeId: string | null): ChallengeActiveProgressData {
-  const { challenge: backendChallenge, loading: progressLoading } = useChallengeProgress(routeChallengeId);
+  const { challenge: backendChallenge, progress, loading: progressLoading } = useChallengeProgress(routeChallengeId);
   const challengeId = routeChallengeId ?? backendChallenge?.challengeId ?? null;
 
   const { participants: members, loading: participantsLoading } = useChallengeParticipants(challengeId);
@@ -128,9 +128,26 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
   const photoDays = useMemo(() => Array.from(new Set(myPhotos.map((photo) => photo.day))), [myPhotos]);
   const photoDaySet = useMemo(() => new Set(photoDays), [photoDays]);
 
+  // Server-computed "today already has a workout_log" (rest or not, photo or
+  // not — GET /challenges/progress's `completedToday`). Real bug, fixed
+  // 2026-08-29: this was already being fetched (`progress`, from
+  // useChallengeProgress) but never read — submitting a rest day via the
+  // Log-Metrics screen's "Rest day" button never showed as done anywhere,
+  // since every check here only ever looked for a PHOTO.
+  const completedToday = progress?.completedToday === true;
+
   const isDayRestDay = useMemo(
-    () => (challengeDay: number) => isRestDay(challengeDay, cycleLengthDays, cycleDays),
-    [cycleLengthDays, cycleDays],
+    () => (challengeDay: number) => {
+      if (isRestDay(challengeDay, cycleLengthDays, cycleDays)) return true;
+      // An ad-hoc rest day actually submitted for TODAY specifically — the
+      // cycle schedule doesn't know about it, but a completed day with no
+      // photo can only mean a logged rest (submitting progress requires
+      // either isRestDay or an image, see workout-log.service.ts's own
+      // validation on the backend).
+      if (challengeDay === currentDay && completedToday && !photoDaySet.has(challengeDay)) return true;
+      return false;
+    },
+    [cycleLengthDays, cycleDays, currentDay, completedToday, photoDaySet],
   );
 
   const state = useMemo<ChallengeCardState>(() => {
@@ -141,8 +158,9 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
       isRestDay: isDayRestDay(currentDay),
       currentDay,
       latestPhotoDay,
+      completedToday,
     });
-  }, [fullChallenge, myPhotos, isDayRestDay, currentDay]);
+  }, [fullChallenge, myPhotos, isDayRestDay, currentDay, completedToday]);
 
   const { photoPercent, restPercent } = useMemo(
     () => computeConsistencyPercents({ totalDays, currentDay, cycleLengthDays, cycleDays, photoDays: photoDaySet }),

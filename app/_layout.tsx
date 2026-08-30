@@ -8,7 +8,9 @@ import { ThemeProvider } from '../context/themeContext';
 import { useAuth } from '../hooks/useAuth';
 import { UploadSuccessPopup } from '../components/ui/UploadSuccessPopup';
 import { ErrorNotificationProvider } from '../components/ui/ErrorNotificationProvider';
-import { applyPersistedLanguage } from '../i18n';
+import i18n, { PREFERRED_LANGUAGE_KEY } from '../i18n';
+import type { SupportedLanguage } from '../i18n';
+import { storage } from '../utils/storage';
 
 function RootNavigator() {
   const router = useRouter();
@@ -92,9 +94,22 @@ export default function RootLayout() {
   // i18n itself initializes synchronously at import time using only the
   // device locale (see i18n/index.ts) — a real user-persisted language
   // choice lives in AsyncStorage and can only be applied once, here, after
-  // the app has actually mounted.
+  // the app has actually mounted. A plain top-level `storage` import (not a
+  // lazy one) — a first attempt used `await import()` inside a helper in
+  // i18n/index.ts itself and the toggle stayed completely non-functional at
+  // runtime even after that "fix" (still fixed 2026-08-29, see that file's
+  // own doc comment for the full history).
   useEffect(() => {
-    applyPersistedLanguage();
+    storage
+      .getItem(PREFERRED_LANGUAGE_KEY)
+      .then((saved) => {
+        if ((saved === 'en' || saved === 'es') && saved !== i18n.language) {
+          return i18n.changeLanguage(saved as SupportedLanguage);
+        }
+      })
+      .catch((error) => {
+        console.error('[i18n] failed to apply persisted language', error);
+      });
   }, []);
 
   return (

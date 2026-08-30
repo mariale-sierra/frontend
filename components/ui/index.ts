@@ -13,10 +13,6 @@ export * from './card';
 // and configurable top/bottom margins.
 export * from './divider';
 
-// Dropdown: Multi-select dropdown with labeled options, optional icons per option,
-// a maximum selection limit, and a customizable header label.
-export * from './dropdown';
-
 // Icon: Thin wrapper around Ionicons with size and color props.
 // Defaults to the theme's primary text color when no color is provided.
 export * from './icon';

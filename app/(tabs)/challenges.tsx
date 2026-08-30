@@ -134,6 +134,14 @@ export default function Challenges() {
   const handleCreateChallenge = () => router.push('/challenge/create');
   const handleOpenMineChallenge = (id: string) => router.push(`/challenge/${id}/progress`);
   const handleOpenExploreChallenge = (id: string) => router.push(`/challenge/${id}`);
+  // Added 2026-08-29, per explicit request: the card's own "Add photo"
+  // square shortcuts straight into logging THIS challenge's progress today,
+  // instead of just opening its progress screen like the rest of the card.
+  // useMetricsScreen.ts already reads `challengeId` off the route params
+  // directly (the same way log.tsx's challenge-picker flow lands here), so
+  // this is a normal push, not something that needs to go through that
+  // picker first.
+  const handleAddPhoto = (id: string) => router.push(`/(add)/metrics?challengeId=${id}`);
 
   const listHeader = (
     <View style={styles.listHeader}>
@@ -198,7 +206,11 @@ export default function Challenges() {
           keyExtractor={(item) => item.challengeId}
           renderItem={({ item }) => (
             <View style={styles.itemWrap}>
-              <ChallengeStatusCard challenge={item} onPress={() => handleOpenMineChallenge(item.challengeId)} />
+              <ChallengeStatusCard
+                challenge={item}
+                onPress={() => handleOpenMineChallenge(item.challengeId)}
+                onPressAddPhoto={() => handleAddPhoto(item.challengeId)}
+              />
             </View>
           )}
           ListHeaderComponent={listHeader}

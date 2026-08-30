@@ -8,6 +8,7 @@ import { IconButton } from '../../components/ui/iconButton';
 import { Text } from '../../components/ui/text';
 import { RestDayCalendar } from '../../components/add/restDay/RestDayCalendar';
 import { getChallengeProgress } from '../../services/challenge/challenge.service';
+import { useMetricsEntryStore } from '../../store/metricsEntryStore';
 import { colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
@@ -15,12 +16,18 @@ export default function PlanRestDays() {
   const router = useRouter();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const selectedChallengeId = useMetricsEntryStore((state) => state.selectedChallengeId);
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [challengeBounds, setChallengeBounds] = useState<{ startDate: Date; totalDays: number } | null>(null);
 
   useEffect(() => {
-    getChallengeProgress().then((progress) => {
+    // Same bug/fix as rest-day.tsx (see its own doc comment): calling
+    // getChallengeProgress() with no id checks the backend's fallback "most
+    // recently joined active challenge," not the one actually selected —
+    // this screen's calendar bounds (startDate/totalDays) would silently be
+    // for the wrong challenge entirely.
+    getChallengeProgress(selectedChallengeId ?? undefined).then((progress) => {
       if (!progress) return;
       const currentDay = progress.currentDay ?? 1;
       const today = new Date();
@@ -29,7 +36,7 @@ export default function PlanRestDays() {
       startDate.setDate(today.getDate() - (currentDay - 1));
       setChallengeBounds({ startDate, totalDays: progress.totalDays });
     }).catch(() => {});
-  }, []);
+  }, [selectedChallengeId]);
 
   const handleToggleDate = useCallback((dateKey: string) => {
     setSelectedDates((prev) => {

@@ -9,7 +9,6 @@ import { Text } from '../../components/ui/text';
 import { Button } from '../../components/ui/button';
 import { Icon } from '../../components/ui/icon';
 import { FormField } from '../../components/ui/formField';
-import { Dropdown } from '../../components/ui/dropdown';
 import { UserAvatar } from '../../components/ui/userAvatar';
 import { Divider } from '../../components/ui/divider';
 import { Row } from '../../components/layout/row';
@@ -25,8 +24,9 @@ import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import type { MyProfileContract, UpdateProfilePayload } from '../../types/user';
-import { setAppLanguage } from '../../i18n';
+import i18n, { PREFERRED_LANGUAGE_KEY } from '../../i18n';
 import type { SupportedLanguage } from '../../i18n';
+import { storage } from '../../utils/storage';
 
 const DISPLAY_NAME_MAX = 150;
 const BIO_MAX = 1000;
@@ -230,30 +230,52 @@ export default function EditProfile() {
         <Stack gap="lg">
           <View style={{ gap: spacing.xs }}>
             <Text variant="subheader">{t('profileEdit.language')}</Text>
-            <Dropdown
-              options={[
-                { value: 'en', label: t('profileEdit.languageEn') },
-                { value: 'es', label: t('profileEdit.languageEs') },
-              ]}
-              selectedValues={[language]}
-              onChange={(values) => {
-                const next = values[values.length - 1];
-                if (!next) return;
-                setLanguage(next);
-                // Real bug, fixed 2026-08-29 ("the language toggle doesn't
-                // work at all"): this used to only stage `language` into the
-                // PATCH payload below, applied on Save — nothing anywhere
-                // ever called i18n.changeLanguage(), so the app's actual
-                // displayed language never changed no matter what was
-                // picked here. A language toggle needs an immediate, visible
-                // effect, not one gated behind the rest of the profile form
-                // being saved.
-                setAppLanguage(next as SupportedLanguage);
-              }}
-              maxSelections={1}
-              showValueInline
-              rightIcon={<Icon name="chevron-down-outline" size={18} color={withAlpha(colors.paper, 0.55)} />}
-            />
+            {/* Fixed 2026-08-29: was a `Dropdown` (components/ui/dropdown.tsx)
+                — that component turns out to be used NOWHERE ELSE in the
+                whole app (checked), so there was no "other working dropdown"
+                to compare against when it kept not working across three
+                separate fix attempts (a real `maxSelections` bug was found
+                and fixed in it along the way, but the toggle stayed broken
+                even after that). Replaced entirely with a plain two-option
+                segmented toggle, the exact same proven structure
+                `RoutineModeToggle` (components/routine/builder/routineModeToggle.tsx)
+                already uses successfully elsewhere — single string value,
+                one Pressable per option, no array-based multi-select
+                machinery at all. */}
+            <View style={styles.languageToggle}>
+              {(['en', 'es'] as const).map((code) => {
+                const active = language === code;
+                return (
+                  <Pressable
+                    key={code}
+                    onPress={() => {
+                      if (active) return;
+                      setLanguage(code);
+                      i18n.changeLanguage(code as SupportedLanguage);
+                      storage.setItem(PREFERRED_LANGUAGE_KEY, code).catch((error) => {
+                        console.error('[EditProfile] failed to persist language choice', error);
+                      });
+                    }}
+                    style={({ pressed }) => [
+                      styles.languageOption,
+                      active && styles.languageOptionActive,
+                      pressed && styles.languageOptionPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text
+                      variant="label"
+                      weight={active ? 'bold' : 'medium'}
+                      inverse={active}
+                      tone={active ? 'primary' : 'secondary'}
+                    >
+                      {code === 'en' ? t('profileEdit.languageEn') : t('profileEdit.languageEs')}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
           <Row align="center" justify="space-between">
@@ -304,6 +326,28 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
+  },
+  // Same chrome as RoutineModeToggle's proven segmented-toggle pattern:
+  // `surface` track, `big` radius, `xs` internal padding/gap.
+  languageToggle: {
+    flexDirection: 'row',
+    borderRadius: radius.big,
+    backgroundColor: colors.surface,
+    padding: spacing.xs,
+    gap: spacing.xs,
+  },
+  languageOption: {
+    flex: 1,
+    height: 48,
+    borderRadius: radius.big,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  languageOptionActive: {
+    backgroundColor: colors.primary,
+  },
+  languageOptionPressed: {
+    opacity: 0.85,
   },
   photoSection: {
     alignItems: 'center',

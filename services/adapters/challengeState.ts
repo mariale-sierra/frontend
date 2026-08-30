@@ -98,6 +98,14 @@ export interface DeriveChallengeStateInput {
   currentDay: number;
   /** The `day` of the user's own latest photo for this challenge, or null if they haven't posted one. */
   latestPhotoDay: number | null;
+  /** Server-computed "today already has a workout_log" (rest day or not,
+   * photo or not — see homeAdapter.ts's `pickTodayCompleted`). Added
+   * 2026-08-29: `latestPhotoDay` alone can't detect a submitted rest day
+   * (no photo, no post at all), which was the real cause of "the Rest day
+   * button doesn't actually mark today as done anywhere." Optional so
+   * existing callers that haven't been updated yet degrade to the old
+   * photo-only behavior instead of breaking. */
+  completedToday?: boolean;
 }
 
 /**
@@ -107,9 +115,10 @@ export interface DeriveChallengeStateInput {
  * 2. `left` — the user abandoned it. Same card treatment as `won` (one
  *    "no longer in progress" variant covering both reasons), different
  *    pill icon/copy.
- * 3. `completed` — TODAY specifically has a logged photo. NOT the same as
- *    `won` — this is per-day, not per-challenge.
- * 4. `rest` — today is a rest day with no photo yet.
+ * 3. `completed` — TODAY specifically has a logged photo OR a submitted
+ *    rest day (`completedToday`). NOT the same as `won` — this is per-day,
+ *    not per-challenge.
+ * 4. `rest` — today is a cycle-scheduled rest day with nothing logged yet.
  * 5. `active` (fallback) — still needs today's photo.
  */
 export function deriveChallengeCardState({
@@ -117,10 +126,12 @@ export function deriveChallengeCardState({
   isRestDay,
   currentDay,
   latestPhotoDay,
+  completedToday,
 }: DeriveChallengeStateInput): ChallengeCardState {
   if (status === 'completed') return 'won';
   if (status === 'left') return 'left';
   if (latestPhotoDay != null && latestPhotoDay === currentDay) return 'completed';
+  if (completedToday) return 'completed';
   if (isRestDay) return 'rest';
   return 'active';
 }

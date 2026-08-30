@@ -16,7 +16,7 @@ import { useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
 import { CATEGORY_TO_ACTIVITY } from '../../../constants/challengeFilters';
 import type { ActivityType } from '../../../types/activity';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { colors, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { useTranslation } from 'react-i18next';
 
@@ -127,9 +127,18 @@ export default function SelectRoutineScreen() {
                   ))}
                 </Stack>
               ) : (
-                <View style={styles.emptyState}>
-                  <Text variant="body" tone="secondary">{t('routineSelect.emptyState')}</Text>
-                </View>
+                // Fixed 2026-08-29, per explicit "I just want the plain
+                // label not a card" report — was a bordered `surface`-bg box
+                // (see the deleted `emptyState` style below), which read as
+                // its own component rather than a plain empty-state message.
+                // Also now shows more often than before, now that
+                // `workoutRoutines` is correctly filtered by the challenge's
+                // allowed categories (see that filter's own doc comment
+                // above) — a challenge whose categories don't match any
+                // saved routine (e.g. the seed mock, always Strength) hits
+                // this state legitimately, not just on a genuinely fresh
+                // challenge.
+                <Text variant="body" tone="secondary">{t('routineSelect.emptyState')}</Text>
               )}
             </Stack>
           ) : (
@@ -204,15 +213,6 @@ const styles = StyleSheet.create({
   newWorkoutLink: {
     color: colors.primary,
     opacity: 1,
-  },
-  emptyState: {
-    borderRadius: radius.medium,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.paper, 0.08),
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   restModeContent: {
     minHeight: 400,

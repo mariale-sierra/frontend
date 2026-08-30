@@ -17,7 +17,7 @@ import type { ChallengeContract, ChallengePhoto, TodayRoutineContract } from '..
 import type { ActivityType } from '../../types/activity';
 import { asString } from './adapterUtils';
 import { pickChallengeStatus, pickDominantActivityCategory } from './challengeState';
-import { pickCurrentDay, pickIsRestDay } from './homeAdapter';
+import { pickCurrentDay, pickIsRestDay, pickTodayCompleted } from './homeAdapter';
 
 const ALLOWED_ACTIVITY_CATEGORIES = new Set<ActivityCategory>(
   PREDEFINED_ACTIVITY_CATEGORIES,
@@ -65,7 +65,13 @@ export interface LogChallengeQuickPick {
  * target at all. Same for a challenge whose TODAY already has a logged
  * photo (this user's own latest photo's `.day` matches today's cycle day,
  * the same "completed" check `deriveChallengeCardState()` uses) — logging
- * again would just be a second entry for a day that's already done. */
+ * again would just be a second entry for a day that's already done.
+ *
+ * Also excludes a challenge whose today is already `completedToday`
+ * server-side (fixed 2026-08-29, real bug) — a submitted ad-hoc rest day
+ * (via the Log-Metrics screen's own "Rest day" button) has no photo and
+ * isn't a cycle-scheduled rest day either, so neither check above caught
+ * it; the challenge kept showing here as if nothing had been logged. */
 export function getLogChallengeQuickPicks(
   challenges: ChallengeContract[],
   latestPhotoByChallengeId: Map<string, ChallengePhoto>,
@@ -74,6 +80,7 @@ export function getLogChallengeQuickPicks(
     .filter((challenge) => {
       if (pickChallengeStatus(challenge) !== 'active') return false;
       if (pickIsRestDay(challenge)) return false;
+      if (pickTodayCompleted(challenge)) return false;
       const currentDay = pickCurrentDay(challenge);
       const latestPhotoDay = latestPhotoByChallengeId.get(String(challenge.id))?.day ?? null;
       if (latestPhotoDay != null && latestPhotoDay === currentDay) return false;

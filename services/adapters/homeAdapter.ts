@@ -65,6 +65,21 @@ export function pickIsRestDay(challenge: ChallengeContract): boolean {
   return false;
 }
 
+/** Has TODAY already got a workout_log for this challenge, rest day or not,
+ * photo or not — server-computed (`UsersService.attachProgress`'s
+ * `today_completed`), same bulk-fetched `GET /users/me/challenges` response
+ * `pickIsRestDay` above already reads from. Added 2026-08-29, real bug:
+ * every "is today done" check in the app only ever looked at whether today
+ * had a PHOTO (`latestPhotoDay === currentDay`), so submitting a rest day
+ * via the Log-Metrics screen's "Rest day" button never reflected as
+ * completed anywhere — not on the Mine card, not on the Consistency
+ * screen's ring/calendar, and the challenge never dropped out of the
+ * Log-Metrics quick-pick list either. See `deriveChallengeCardState`'s new
+ * `completedToday` param (challengeState.ts). */
+export function pickTodayCompleted(challenge: ChallengeContract): boolean {
+  return asBoolean(challenge.today_completed) === true;
+}
+
 function pickStreakCount(challenge: ChallengeContract): number {
   const candidates: Array<unknown> = [
     challenge.streak,
@@ -139,6 +154,7 @@ export function getHomeChallengesSorted(
         isRestDay: pickIsRestDay(challenge),
         currentDay,
         latestPhotoDay: latestPhotoByChallengeId.get(String(challenge.id))?.day ?? null,
+        completedToday: pickTodayCompleted(challenge),
       });
       return { challenge, state };
     })

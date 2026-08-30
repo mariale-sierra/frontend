@@ -95,6 +95,15 @@ export interface ChallengeContract {
    * challenge has no exercises yet to determine one from. See
    * havit-design-system-SKILL.md → Activity Color System v2. */
   dominant_activity_category?: ActivityType | null;
+  /** Has TODAY already got a workout_log for this challenge — rest day or
+   * not, photo or not (`UsersService.attachProgress`'s `today_completed`,
+   * server-computed from `havit.workout_logs`, not just photo posts).
+   * Wasn't typed/read anywhere on the frontend until 2026-08-29, which is
+   * why submitting a rest day via the Log-Metrics screen's "Rest day"
+   * button never reflected as completed anywhere — every state check only
+   * ever looked at whether today had a PHOTO. See `pickTodayCompleted()`
+   * (homeAdapter.ts). */
+  today_completed?: boolean;
   [key: string]: unknown;
 }
 

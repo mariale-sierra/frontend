@@ -66,6 +66,13 @@ function pickIsRestDay(challenge: ChallengeContract): boolean {
   return false;
 }
 
+/** Local mirror of homeAdapter.ts's `pickTodayCompleted` — same duplication
+ * pattern this file already uses for `pickIsRestDay`/`pickCurrentDay` above.
+ * See that file's doc comment for the full "Rest day button" bug story. */
+function pickTodayCompleted(challenge: ChallengeContract): boolean {
+  return asBoolean(challenge.today_completed) === true;
+}
+
 function pickCurrentDay(challenge: ChallengeContract): number {
   const candidates: Array<unknown> = [
     challenge.current_day,
@@ -156,6 +163,7 @@ function toMineCard(challenge: ChallengeContract, latestPhoto: ChallengePhoto | 
     isRestDay: pickIsRestDay(challenge),
     currentDay,
     latestPhotoDay: latestPhoto?.day ?? null,
+    completedToday: pickTodayCompleted(challenge),
   });
 
   return {

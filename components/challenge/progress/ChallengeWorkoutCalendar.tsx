@@ -67,7 +67,11 @@ function DayCell({ cell, isSelected, onPress, accentColor }: DayCellProps) {
         {isSelected && <View style={styles.selectedRing} />}
       </View>
       {status === 'today' ? (
-        <Text variant="label" weight="bold" align="center" style={styles.dayTextToday}>{cell.dayOfMonth}</Text>
+        // Fixed 2026-08-29, per explicit report: was a fixed `colors.secondary`
+        // — now the same per-challenge `accentColor` the "today" dot above
+        // already uses, so the two agree instead of the dot being
+        // activity-colored while the number stayed a fixed color.
+        <Text variant="label" weight="bold" align="center" style={[styles.dayTextToday, { color: accentColor }]}>{cell.dayOfMonth}</Text>
       ) : status === 'missed' ? (
         <Text variant="label" align="center" style={styles.dayTextMissed}>{cell.dayOfMonth}</Text>
       ) : status === 'future' ? (
@@ -241,7 +245,10 @@ const styles = StyleSheet.create({
     borderColor: colors.paper,
   },
   dayTextToday: {
-    color: colors.secondary,
+    // No base `color` here anymore — always overridden inline with the
+    // per-challenge `accentColor` at the call site (was a fixed
+    // `colors.secondary` fallback that never actually applied once the
+    // inline override was added).
     // Text's tone-opacity applies even under a custom `color` override —
     // reset to fully opaque (see components/ui/text.tsx's warning).
     opacity: 1,
