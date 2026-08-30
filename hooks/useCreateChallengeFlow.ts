@@ -80,6 +80,7 @@ export function useCreateChallengeFlow() {
 
   const routinesByDay = useRoutineBuilder((state) => state.routinesByDay);
   const removeDayAndShift = useRoutineBuilder((state) => state.removeDayAndShift);
+  const resetRoutineBuilder = useRoutineBuilder((state) => state.resetBuilder);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -237,6 +238,15 @@ export function useCreateChallengeFlow() {
     try {
       const created = await createChallenge(payload);
       resetChallengeBuilder();
+      // Real bug, fixed 2026-08-29, per user report ("the previous cycle
+      // configured shows set up" on the NEXT challenge creation): this store
+      // holds `routinesByDay` (the "Build the Cycle" step's per-day
+      // assignments) — resetChallengeBuilder() above never touched it, so a
+      // finished challenge's day-1..N routines stayed in the store and
+      // select.tsx's init(dayNumber) (no explicit routine — it falls back to
+      // `routinesByDay[day]`) would silently hydrate the NEXT challenge's
+      // "New workout" flow from the PREVIOUS challenge's leftover data.
+      resetRoutineBuilder();
       if (created?.id) {
         router.replace(`/challenge/${created.id}`);
       } else {

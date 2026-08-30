@@ -231,6 +231,8 @@ const en = {
       location: 'Location',
       selectedCount_one: '{{count}} selected',
       selectedCount_other: '{{count}} selected',
+      exercisesUnlockedCount_one: '{{count}} exercise unlocked',
+      exercisesUnlockedCount_other: '{{count}} exercises unlocked',
       visibility: 'Visibility',
     },
     cycle: {

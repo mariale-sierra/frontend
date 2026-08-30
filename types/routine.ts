@@ -98,6 +98,25 @@ export interface CreateRoutineRequest {
   is_active?: boolean;
 }
 
+/** Mirrors backend AddRoutineExerciseTargetDto — `metric_type_id` is the
+ * numeric metric_types.id (resolve via GET /metrics), not the string code. */
+export interface RoutineExerciseTargetPayload {
+  metric_type_id: number;
+  value: number;
+}
+
+/** Mirrors backend AddRoutineExerciseSetDto. `reps` is a shortcut the
+ * backend expands into a 'reps' target itself — no metric_type_id lookup
+ * needed for it. */
+export interface RoutineExerciseSetPayload {
+  set_number: number;
+  reps?: number;
+  rest_seconds_after?: number;
+  targets?: RoutineExerciseTargetPayload[];
+}
+
 export interface AddExerciseToRoutineRequest {
   exerciseId: number;
+  sets?: RoutineExerciseSetPayload[];
+  targets?: RoutineExerciseTargetPayload[];
 }

@@ -13,6 +13,9 @@ import { Text } from '../../../components/ui/text';
 import { RoutinePickerCard, RoutineModeToggle } from '../../../components/routine';
 import { RestDayPrimaryButton } from '../../../components/add/restDay/RestDayPrimaryButton';
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
+import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
+import { CATEGORY_TO_ACTIVITY } from '../../../constants/challengeFilters';
+import type { ActivityType } from '../../../types/activity';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { useTranslation } from 'react-i18next';
@@ -22,12 +25,29 @@ export default function SelectRoutineScreen() {
   const insets = useSafeAreaInsets();
   const { day } = useLocalSearchParams<{ day: string }>();
   const { init, savedRoutines, assignRoutineToDay, assignRestDayToDay } = useRoutineBuilder();
+  const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
   const [mode, setMode] = useState<'workout' | 'rest'>('workout');
 
   const dayNumber = Number(day ?? '1');
+
+  // Real bug, fixed 2026-08-29, per explicit report: "existing routine" here
+  // showed EVERY routine ever built this session (including the store's own
+  // seed/mock "Leg Day for Glute Growth" — always Strength), with no regard
+  // for the challenge's own selected activity categories. A Cardio-only
+  // challenge could still show and let the user confirm a Strength routine
+  // as that day's workout. A routine only counts as pickable now if every
+  // exercise's activityType falls within what this challenge allows.
+  const allowedActivityTypes = useMemo(
+    () => new Set(selectedCategories.map((category) => CATEGORY_TO_ACTIVITY[category]).filter((type): type is ActivityType => Boolean(type))),
+    [selectedCategories],
+  );
   const workoutRoutines = useMemo(
-    () => savedRoutines.filter((routine) => !routine.isRestDay),
-    [savedRoutines],
+    () => savedRoutines.filter((routine) => {
+      if (routine.isRestDay) return false;
+      if (allowedActivityTypes.size === 0) return true;
+      return routine.activityTypes.every((type) => allowedActivityTypes.has(type));
+    }),
+    [savedRoutines, allowedActivityTypes],
   );
   const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(workoutRoutines[0]?.id ?? null);
 

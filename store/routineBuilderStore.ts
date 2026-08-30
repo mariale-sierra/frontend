@@ -720,11 +720,23 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
       return { routinesByDay: nextRoutinesByDay };
     }),
 
+  // Was missing `routinesByDay`/`savedRoutines`/`backendExerciseIdByLocalId`
+  // entirely (fixed 2026-08-29, real bug per user report) — those are exactly
+  // the fields a finished challenge's "Build the Cycle" assignments live in,
+  // so even once this got wired up to run after a successful challenge
+  // creation (see useCreateChallengeFlow.ts), it wasn't actually clearing
+  // the thing causing the leftover-routine symptom. `savedRoutines` resets
+  // to `[seedRoutine]`, matching this store's own fresh-load initial state,
+  // not `[]` — that mock entry is pre-existing seed data (see CLAUDE.md),
+  // out of scope to remove here.
   resetBuilder: () => set({
     dayIndex: null,
     routineName: '',
     routineDescription: '',
     isRestDay: false,
     exercises: [],
+    savedRoutines: [seedRoutine],
+    routinesByDay: {},
+    backendExerciseIdByLocalId: {},
   }),
 }));

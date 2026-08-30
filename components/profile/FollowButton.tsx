@@ -16,7 +16,11 @@ export function FollowButton({ userId, initialIsFollowing, size = 'md', onChange
 
   return (
     <Button
-      variant={isFollowing ? 'outline' : 'primary'}
+      // Fixed 2026-08-29, per explicit "doesn't match the design system"
+      // report: was 'outline' (bordered), a deliberate-but-flagged deviation
+      // from the wireframe's softer translucent-fill/no-border "Following"
+      // pill — see Button's own `subtle` variant doc comment.
+      variant={isFollowing ? 'subtle' : 'primary'}
       size={size}
       loading={pending}
       onPress={async () => {

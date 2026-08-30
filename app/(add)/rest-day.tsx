@@ -42,16 +42,32 @@ export default function RestDay() {
         isRestDay: true,
         visibility: 'private',
       });
-      invalidateChallengeProgressCache();
-      // See camera.tsx's handleConfirm for why this dismisses the whole
-      // modal stack + shows the global success popup instead of routing to
-      // a dedicated "preview" screen.
-      useUploadSuccessStore.getState().show();
-      router.dismissAll();
     } catch (e: any) {
       setError(e?.response?.data?.message ?? t('restDay.saveFailedMessage'));
-    } finally {
       setSubmitting(false);
+      return;
+    }
+
+    // Saved server-side at this point — nothing below is allowed to
+    // surface as a save failure (same fix as camera.tsx's handleConfirm,
+    // applied here 2026-08-29 for the same latent bug: a post-save nav
+    // hiccup used to be caught by the same try/catch as the actual submit
+    // and misreported as a failed save).
+    invalidateChallengeProgressCache();
+    useUploadSuccessStore.getState().show();
+    setSubmitting(false);
+    try {
+      // NOT router.dismissAll() — see camera.tsx's handleConfirm for the
+      // full explanation (fixed 2026-08-29, same bug: dismissAll()'s
+      // POP_TO_TOP only clears (add)'s own nested stack, landing back on
+      // metrics.tsx instead of actually closing the modal). metrics.tsx
+      // reaches this screen via router.push() too, so it's the same
+      // always-exactly-2-deep case — two back() calls pop rest-day then
+      // metrics, and the second bubbles up to close the (add) modal itself.
+      router.back();
+      router.back();
+    } catch (navError) {
+      console.error('[RestDay] closing the (add) modal failed after a successful save:', navError);
     }
   }
 

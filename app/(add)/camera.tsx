@@ -181,17 +181,33 @@ export default function Camera() {
     }
     invalidateChallengeProgressCache();
     // The success popup itself is global (mounted at app root), so it shows
-    // on top of wherever dismissAll() below lands.
+    // on top of wherever the back() calls below land.
     useUploadSuccessStore.getState().show();
     setSubmittingProgress(false);
     try {
-      // Dismisses the whole (add) modal stack (metrics -> camera) back to
-      // whatever screen the user actually started this flow from, instead
-      // of routing through a dedicated (and previously content-less)
-      // "preview" screen.
-      router.dismissAll();
+      // Closes the whole (add) modal group, back to whatever screen the user
+      // actually started this flow from — NOT router.dismissAll(). Fixed
+      // 2026-08-29, real bug confirmed by user report ("it sends me back to
+      // log metrics... I leave and then I get the success message"):
+      // dismissAll() dispatches POP_TO_TOP, which React Navigation resolves
+      // against the NEAREST Stack navigator — here, (add)'s own nested Stack
+      // (app/(add)/_layout.tsx: metrics -> camera), not the root Stack (add)
+      // itself is presented on (see app/_layout.tsx's `fullScreenModal`
+      // Stack.Screen). So it only ever popped back to metrics.tsx, leaving
+      // the (add) modal still open — the user then had to manually back out,
+      // and only saw the success popup once they did (it was queued the
+      // whole time, just hidden behind the still-open modal).
+      // log.tsx reaches metrics.tsx via router.replace(), never push(), so
+      // the (add) group is always exactly 2 screens deep here (metrics,
+      // camera) in every real flow — two plain back() calls pop camera then
+      // metrics off (add)'s own stack, and since GO_BACK bubbles to the
+      // parent navigator once the current one has nothing left to pop, the
+      // second call correctly continues upward and pops the (add) entry
+      // itself off the root stack too, actually closing the whole modal.
+      router.back();
+      router.back();
     } catch (navError) {
-      console.error('[Camera] dismissAll failed after a successful save:', navError);
+      console.error('[Camera] closing the (add) modal failed after a successful save:', navError);
     }
   }
 

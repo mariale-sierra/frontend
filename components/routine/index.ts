@@ -15,6 +15,3 @@ export * from './metrics/exerciseMetricsEditor';
 export * from './metrics/exerciseSetTable';
 export * from './metrics/exerciseInput';
 export * from './metrics/restTimeInput';
-
-// shared — styles and primitives reused across the above
-export { routineStyles } from './shared/routineStyles';

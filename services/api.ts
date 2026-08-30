@@ -4,6 +4,17 @@ import i18n from '../i18n';
 import { getAccessToken } from './auth/token.service';
 import { useErrorNotificationStore } from '../store/errorNotificationStore';
 
+// Lets a specific call opt out of the global error toast below — for
+// best-effort writes a caller already handles on its own (catches, logs, and
+// deliberately continues rather than failing the whole flow), the shared
+// interceptor firing a scary toast anyway is misleading, not helpful. See
+// applyExerciseMetrics.ts's per-set metric writes for the motivating case.
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    suppressErrorToast?: boolean;
+  }
+}
+
 // Base URL comes from app config (`extra.apiUrl` in app.config.js), which itself reads the
 // EXPO_PUBLIC_API_URL env var — falls back to the known dev IP if config resolution fails.
 // NOTE: intentionally HTTP, not HTTPS. The backend has no TLS certificate yet; forcing HTTPS
@@ -26,6 +37,10 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error?.config?.suppressErrorToast) {
+      return Promise.reject(error);
+    }
+
     const errorStore = useErrorNotificationStore.getState();
 
     // Handle different error types

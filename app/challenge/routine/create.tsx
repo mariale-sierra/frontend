@@ -14,7 +14,8 @@ import { ExerciseBlock } from '../../../components/routine';
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
-import { addExerciseToRoutine, createRoutine } from '../../../services/routine/routine.service';
+import { addExerciseToRoutine, buildRoutineExercisePersistence, createRoutine } from '../../../services/routine/routine.service';
+import { getMetricTypes } from '../../../services/metrics/metrics.service';
 
 const ROUTINE_NAME_MAX = 40;
 
@@ -70,13 +71,20 @@ export default function CreateRoutineScreen() {
         is_active: true,
       });
 
+      // Resolves a schema exercise's field keys ('distance'/'time') to the
+      // numeric metric_type_id POST /routine/:id/exercises's targets[] wants
+      // — one fetch for the whole routine, not per exercise.
+      const metricTypes = await getMetricTypes();
+      const metricCodeToId = Object.fromEntries(metricTypes.map((m) => [m.code, m.id]));
+
       for (const exercise of exercises) {
         const backendId = backendExerciseIdByLocalId[exercise.id];
         if (backendId == null) {
           console.warn(`[CreateRoutine] Skipping "${exercise.name}" — no backend exerciseId`);
           continue;
         }
-        await addExerciseToRoutine(routine.id, backendId);
+        const persistence = buildRoutineExercisePersistence(exercise.metrics, metricCodeToId);
+        await addExerciseToRoutine(routine.id, backendId, persistence);
       }
 
       saveCurrentRoutineToDay();

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +21,7 @@ import { colors, spacing, activityColors } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { CATEGORY_OPTIONS, LOCATION_OPTIONS } from '../../constants/challengeCreateOptions';
 import { useCreateChallengeFlow } from '../../hooks/useCreateChallengeFlow';
+import { getExerciseCount } from '../../services/exercises/exercises.service';
 
 export default function CreateChallenge() {
   const { t } = useTranslation();
@@ -63,6 +65,29 @@ export default function CreateChallenge() {
   const isReviewStep = activeStep.kind === 'review';
   const continueDisabled = isCycleStep && !hasRoutineForEveryDay;
 
+  // Live "N exercises unlocked" count for the Activity & Location step (GET
+  // /exercises/count, backend added 2026-08-29, commit `bfd502f`) — was
+  // entirely unbuilt before that, no endpoint existed to back it.
+  const [matchingExerciseCount, setMatchingExerciseCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (activeStep.kind !== 'activityLocation') return;
+
+    let cancelled = false;
+    getExerciseCount(selectedCategories, selectedLocations)
+      .then((count) => {
+        if (!cancelled) setMatchingExerciseCount(count);
+      })
+      .catch((error: any) => {
+        console.error('[CreateChallenge] Failed to load exercise count:', error?.response?.data ?? error?.message);
+        if (!cancelled) setMatchingExerciseCount(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeStep.kind, selectedCategories, selectedLocations]);
+
   function renderStepContent() {
     switch (activeStep.kind) {
       case 'name':
@@ -98,6 +123,12 @@ export default function CreateChallenge() {
                 <LocationIcon type={option.type} size="sm" variant="plain" color={selected ? colors.ink : colors.paper} />
               )}
             />
+
+            {matchingExerciseCount !== null && (
+              <Text variant="caption" tone="secondary" align="center">
+                {t('challengeCreate.fields.exercisesUnlockedCount', { count: matchingExerciseCount })}
+              </Text>
+            )}
           </Stack>
         );
 

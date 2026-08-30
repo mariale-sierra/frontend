@@ -97,12 +97,30 @@ export function useConfirmationPopup({
     }
   };
 
-  const Component: React.FC = () => (
-    <ConfirmationPopup
-      visible={visible}
-      onDismiss={hide}
-      {...getConfig()}
-    />
+  // Real bug, fixed 2026-08-29, per explicit "the popup blinks" report on
+  // Leave Challenge: memoized for the exact same reason already documented
+  // (and fixed) on useChallengeCompletion's own Component below, just never
+  // applied here too. An unmemoized `Component` is a brand-new function
+  // identity on every render — React treats that as a different component
+  // TYPE, not the same one re-rendering, so it unmounts and remounts the
+  // underlying Modal every time `loading`/`visible` changes (confirming
+  // "Leave" flips `loading` to true immediately, well before the popup
+  // actually closes) — that unmount/remount is the visible blink.
+  const Component: React.FC = useMemo(
+    () => () => (
+      <ConfirmationPopup
+        visible={visible}
+        onDismiss={hide}
+        {...getConfig()}
+      />
+    ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getConfig is
+    // deliberately excluded: it's a plain function recreated every render
+    // (not itself memoized), but every value it actually reads (type,
+    // challengeName, loading, handleConfirm, hide, t) is already listed
+    // below — adding getConfig itself back in would defeat this memo
+    // entirely, recreating Component on every render again.
+    [visible, type, challengeName, loading, handleConfirm, hide, t],
   );
 
   return { Component, show, hide };

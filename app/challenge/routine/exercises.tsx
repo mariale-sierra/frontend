@@ -89,9 +89,11 @@ export default function ExercisesScreen() {
   const addExercise = useRoutineBuilder((state) => state.addExercise);
   const applyBackendMetricTemplate = useRoutineBuilder((state) => state.applyBackendMetricTemplate);
   const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
+  const selectedLocations = useChallengeBuilder((state) => state.selectedLocations);
 
   const [allExercises, setAllExercises] = useState<ExerciseCandidate[]>([]);
   const [categoryByExerciseId, setCategoryByExerciseId] = useState<Record<string, string>>({});
+  const [locationByExerciseId, setLocationByExerciseId] = useState<Record<string, string>>({});
   const [backendIdByLocalId, setBackendIdByLocalId] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -111,14 +113,22 @@ export default function ExercisesScreen() {
         const candidates = data.map((exercise) => mapBackendExerciseToCandidate(exercise, t('routineExercises.anywhere')));
         const idMap: Record<string, number> = {};
         const categoryMap: Record<string, string> = {};
+        // Raw backend location string, untouched by i18n — mirrors
+        // categoryMap's own pattern, needed to filter against
+        // `selectedLocations` (real `exercise_locations.name` values), which
+        // the translated `ExerciseCandidate.location` fallback can't reliably
+        // match (see matchesAllowedLocation's own doc comment below).
+        const locationMap: Record<string, string> = {};
         data.forEach((exercise) => {
           idMap[String(exercise.id)] = exercise.id;
           if (exercise.category) categoryMap[String(exercise.id)] = exercise.category;
+          if (exercise.location) locationMap[String(exercise.id)] = exercise.location;
         });
 
         setAllExercises(candidates);
         setBackendIdByLocalId(idMap);
         setCategoryByExerciseId(categoryMap);
+        setLocationByExerciseId(locationMap);
       } catch (error: any) {
         if (cancelled) return;
         console.error('[Exercises] Failed to load:', error?.response?.data ?? error?.message);
@@ -141,6 +151,33 @@ export default function ExercisesScreen() {
   // one) falls back to allowing everything rather than showing nothing.
   const allowedCategories = useMemo(() => new Set(selectedCategories), [selectedCategories]);
 
+  // Real bug, fixed 2026-08-29, per explicit report: the location pills on
+  // the challenge's own Activity & Location step had zero effect here — only
+  // categories actually filtered the catalog, even though the wireframe
+  // treats both as filters. `exercise.location` can be a single backend
+  // `exercise_locations.name` ("Gym") or, for a custom multi-location
+  // exercise created via ensureExerciseLocation's free-text join, a
+  // " / "-joined combo ("Home / Outdoor") — split and check for ANY overlap
+  // with what the challenge allows, not an exact string match.
+  //
+  // Deliberately NOT special-casing "Anywhere" to always pass — matches
+  // GET /exercises/count's own strict `LOWER(el.name) IN (...)` membership
+  // check (exercises.service.ts's countMatchingExercises) exactly, so the
+  // "N exercises unlocked" count shown on the challenge's own Activity &
+  // Location step can never disagree with what actually shows up here. If
+  // "Anywhere" should count as a wildcard, that needs to change on both ends
+  // together — doing it only here would just trade one count/list mismatch
+  // for another.
+  const allowedLocations = useMemo(() => new Set(selectedLocations), [selectedLocations]);
+
+  function matchesAllowedLocation(exerciseId: string): boolean {
+    if (allowedLocations.size === 0) return true;
+    const raw = locationByExerciseId[exerciseId];
+    if (!raw) return true;
+    const parts = raw.split('/').map((part) => part.trim()).filter(Boolean);
+    return parts.some((part) => allowedLocations.has(part));
+  }
+
   // Real category names present in the catalog (e.g. "Strength", "Cardio
   // Intense") — not the wireframe's literal "Legs & glutes"/"Push" pills,
   // which don't correspond to any category or muscle-group taxonomy the
@@ -162,10 +199,10 @@ export default function ExercisesScreen() {
       const exerciseCategory = categoryByExerciseId[exercise.id];
       const matchesQuery = exercise.name.toLowerCase().includes(queryValue);
       const matchesCategory = !activeCategory || exerciseCategory === activeCategory;
-      const matchesAllowed = allowedCategories.size === 0 || allowedCategories.has(exerciseCategory);
-      return matchesQuery && matchesCategory && matchesAllowed;
+      const matchesAllowedCategory = allowedCategories.size === 0 || allowedCategories.has(exerciseCategory);
+      return matchesQuery && matchesCategory && matchesAllowedCategory && matchesAllowedLocation(exercise.id);
     });
-  }, [allExercises, query, activeCategory, categoryByExerciseId, allowedCategories]);
+  }, [allExercises, query, activeCategory, categoryByExerciseId, allowedCategories, allowedLocations, locationByExerciseId]);
 
   function toggleSelected(id: string) {
     setSelectedIds((current) => {

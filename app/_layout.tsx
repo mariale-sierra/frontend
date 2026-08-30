@@ -8,7 +8,7 @@ import { ThemeProvider } from '../context/themeContext';
 import { useAuth } from '../hooks/useAuth';
 import { UploadSuccessPopup } from '../components/ui/UploadSuccessPopup';
 import { ErrorNotificationProvider } from '../components/ui/ErrorNotificationProvider';
-import '../i18n';
+import { applyPersistedLanguage } from '../i18n';
 
 function RootNavigator() {
   const router = useRouter();
@@ -41,6 +41,12 @@ function RootNavigator() {
       <Stack.Screen name="invitations" options={{ headerShown: false }} />
       <Stack.Screen name="home/streaks" options={{ headerShown: false }} />
       <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
+      {/* Real bug, fixed 2026-08-29, per explicit report: this route had no
+          entry here at all, so it fell back to Expo Router's default native
+          header — the "expo top white bar" the user saw sitting on top of
+          this screen's own BackButton/header. Every other custom-header
+          screen in this app is registered the same way. */}
+      <Stack.Screen name="profile/[userId]" options={{ headerShown: false }} />
       {/* Top-level on purpose, not nested inside "(add)" — that group is
           itself a `fullScreenModal` (opaque), so a transparentModal screen
           nested inside it only reveals that opaque modal's own backdrop, not
@@ -82,6 +88,14 @@ export default function RootLayout() {
     DMSans_700Bold,
     BebasNeue_400Regular,
   });
+
+  // i18n itself initializes synchronously at import time using only the
+  // device locale (see i18n/index.ts) — a real user-persisted language
+  // choice lives in AsyncStorage and can only be applied once, here, after
+  // the app has actually mounted.
+  useEffect(() => {
+    applyPersistedLanguage();
+  }, []);
 
   return (
     <ThemeProvider>

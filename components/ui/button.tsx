@@ -6,6 +6,7 @@ import {
   View,
 } from 'react-native';
 import { colors, radius, spacing } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import { Text } from './text';
 
 /**
@@ -28,8 +29,15 @@ import { Text } from './text';
  * `activity` (background color driven by workout category) is retired — see
  * design system → Explicitly Rejected Patterns. It now renders identically
  * to `primary`; the variant name is kept so existing call sites compile.
+ * - subtle: translucent `paper`@14% fill, no border, `paper` text — added
+ *   2026-08-29 for `FollowButton`'s "Following" state, which had been left on
+ *   `outline` (bordered) as a deliberate, explicitly-flagged deviation from
+ *   its own wireframe's softer translucent-fill/no-border pill (see
+ *   havit-design-system-SKILL.md's Search section) until confirmed to read
+ *   wrong. Same shape any other "already active/toggled" secondary state can
+ *   reuse, not a one-off.
  */
-type ButtonVariant = 'primary' | 'activity' | 'outline' | 'danger' | 'neutral';
+type ButtonVariant = 'primary' | 'activity' | 'outline' | 'danger' | 'neutral' | 'subtle';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends Omit<PressableProps, 'children'> {
@@ -133,6 +141,10 @@ const styles = StyleSheet.create({
 
   neutral: {
     backgroundColor: colors.primary,
+  },
+
+  subtle: {
+    backgroundColor: withAlpha(colors.paper, 0.14),
   },
 
   // SIZES

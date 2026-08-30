@@ -228,6 +228,8 @@ const es = {
       location: 'Ubicación',
       selectedCount_one: '{{count}} seleccionada',
       selectedCount_other: '{{count}} seleccionadas',
+      exercisesUnlockedCount_one: '{{count}} ejercicio desbloqueado',
+      exercisesUnlockedCount_other: '{{count}} ejercicios desbloqueados',
       visibility: 'Visibilidad',
     },
     cycle: {

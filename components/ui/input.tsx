@@ -16,9 +16,9 @@ import { withAlpha } from '../../utils/color';
 
 /**
  * InputVariant defines the available input field styles:
- * - default: Minimal style with rounded corners (radius.lg), transparent background, 
+ * - default: Minimal style with rounded corners (radius.medium), transparent background,
  *   used for subtle inputs that blend with the background
- * - filled: Background-filled style with rounded corners (radius.lg) and dark surface color,
+ * - filled: Background-filled style with rounded corners (radius.medium) and dark surface color,
  *   provides visual emphasis and clear input field boundary
  */
 type InputVariant = 'default' | 'filled';

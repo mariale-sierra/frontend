@@ -25,6 +25,8 @@ import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import type { MyProfileContract, UpdateProfilePayload } from '../../types/user';
+import { setAppLanguage } from '../../i18n';
+import type { SupportedLanguage } from '../../i18n';
 
 const DISPLAY_NAME_MAX = 150;
 const BIO_MAX = 1000;
@@ -236,7 +238,17 @@ export default function EditProfile() {
               selectedValues={[language]}
               onChange={(values) => {
                 const next = values[values.length - 1];
-                if (next) setLanguage(next);
+                if (!next) return;
+                setLanguage(next);
+                // Real bug, fixed 2026-08-29 ("the language toggle doesn't
+                // work at all"): this used to only stage `language` into the
+                // PATCH payload below, applied on Save — nothing anywhere
+                // ever called i18n.changeLanguage(), so the app's actual
+                // displayed language never changed no matter what was
+                // picked here. A language toggle needs an immediate, visible
+                // effect, not one gated behind the rest of the profile form
+                // being saved.
+                setAppLanguage(next as SupportedLanguage);
               }}
               maxSelections={1}
               showValueInline

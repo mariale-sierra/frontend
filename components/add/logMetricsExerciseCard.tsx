@@ -65,11 +65,19 @@ export function LogMetricsExerciseCard({ exercise, onChangeValue }: LogMetricsEx
           const visibleColumns = config.columns.filter((col) => row.targets?.[col.key] !== undefined);
           const columns = visibleColumns.length > 0 ? visibleColumns : [primaryColumn];
 
+          // Real bug, fixed 2026-08-29, per explicit report: "Set 1" read as
+          // confusing on a single-row schema exercise like Brisk Walk —
+          // there's no real concept of "sets" for a duration/distance
+          // session, just one continuous target. `config.showSetColumn`
+          // already exists precisely to distinguish this (true only for
+          // strength/functional) but wasn't actually wired up here.
           return (
             <Row key={row.set} gap="sm" align="center">
-              <Text variant="label" weight="medium" tone="secondary" style={styles.setLabel}>
-                {t('logMetrics.entry.setLabel', { number: row.set })}
-              </Text>
+              {config.showSetColumn && (
+                <Text variant="label" weight="medium" tone="secondary" style={styles.setLabel}>
+                  {t('logMetrics.entry.setLabel', { number: row.set })}
+                </Text>
+              )}
 
               <Stack gap="xs" style={styles.steppers}>
                 {columns.map((col) => {
