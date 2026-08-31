@@ -46,7 +46,18 @@ export default function EditProfile() {
 
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
-  const [language, setLanguage] = useState('en');
+  // Real bug, fixed 2026-08-30, per explicit "toggle shows Spanish even
+  // though the app is actually in English" report: this used to default to
+  // a hardcoded 'en', then get silently overwritten by the profile fetch
+  // below (`data.preferred_language`) — a backend field that's never kept
+  // in sync with the real active language (only PATCHed on save, never
+  // read back into i18next). That's the exact "disconnected mechanism" bug
+  // i18n/index.ts's own doc comment already describes as supposedly fixed
+  // 2026-08-29 — this one leftover read undid it. `i18n.language` (backed
+  // by PREFERRED_LANGUAGE_KEY, restored on boot in app/_layout.tsx) is the
+  // only real source of truth for what's actually active; read it directly
+  // instead of the backend field.
+  const [language, setLanguage] = useState<SupportedLanguage>(i18n.language === 'es' ? 'es' : 'en');
   const [isPrivate, setIsPrivate] = useState(false);
   const [displayNameError, setDisplayNameError] = useState<string | null>(null);
 
@@ -62,7 +73,9 @@ export default function EditProfile() {
         setProfile(data);
         setDisplayName(data.display_name);
         setBio(data.bio ?? '');
-        setLanguage(data.preferred_language || 'en');
+        // NOT `setLanguage(data.preferred_language)` — see the state's own
+        // doc comment above for why that field must never drive this
+        // toggle's displayed value.
         setIsPrivate(data.is_private);
       })
       .catch(() => setLoadError(true))
