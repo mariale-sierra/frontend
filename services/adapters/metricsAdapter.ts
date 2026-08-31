@@ -9,12 +9,15 @@ import type {
   ChallengeOption,
   ExerciseMetricsBlock,
   ExerciseMetricsRow,
+  MetricField,
 } from '../../types/metrics';
 import { ACTIVITY_METRIC_CONFIG } from '../../types/metrics';
 import type { LocationType } from '../../components/icons/locationIcon';
-import type { ChallengeContract, TodayRoutineContract } from '../../types/challenge';
-import type { ActivityType } from '../../constants/theme';
+import type { ChallengeContract, ChallengePhoto, TodayRoutineContract } from '../../types/challenge';
+import type { ActivityType } from '../../types/activity';
 import { asString } from './adapterUtils';
+import { pickChallengeStatus, pickDominantActivityCategory } from './challengeState';
+import { pickCurrentDay, pickIsRestDay, pickTodayCompleted } from './homeAdapter';
 
 const ALLOWED_ACTIVITY_CATEGORIES = new Set<ActivityCategory>(
   PREDEFINED_ACTIVITY_CATEGORIES,
@@ -31,6 +34,65 @@ function sanitizeLocations(locations: unknown[]): LocationType[] {
   return (locations as string[]).filter((value): value is LocationType =>
     ALLOWED_LOCATIONS.has(value as LocationType),
   );
+}
+
+/** Log-today's-progress bottom sheet — one row per active challenge that
+ * can actually receive a log today (rest days and already-logged-today
+ * challenges excluded, see below). */
+export interface LogChallengeQuickPick {
+  id: string;
+  name: string;
+  currentDay: number;
+  /** From the same `GET /workout-posts/mine` grouping the challenge cards
+   * already use (challengeState.ts's groupLatestPhotoByChallengeId) — this
+   * user's own latest photo for the challenge, or null if they haven't
+   * posted one yet. */
+  photoUrl: string | null;
+  /** Activity Color System v2 — this challenge's own dominant activity
+   * category (`null` if it has none yet). Resolve via `challengeState.ts`'s
+   * `getChallengeAccentColor()` for the row's "Day N" label. */
+  dominantActivityCategory: ActivityType | null;
+}
+
+/** Real day number (already attached server-side to `GET /users/me/challenges`,
+ * see homeAdapter.ts) — deliberately NOT a routine name, which that endpoint
+ * doesn't return per challenge (only `GET /routine/today/:challengeId`,
+ * per-challenge, would — an N+1 fetch this list can't afford). See the
+ * design system skill's Open Items Tracker for the backend gap.
+ *
+ * Rest-day challenges are excluded entirely, not just visually de-emphasized
+ * — there's nothing to log on a rest day, so it's not a valid quick-pick
+ * target at all. Same for a challenge whose TODAY already has a logged
+ * photo (this user's own latest photo's `.day` matches today's cycle day,
+ * the same "completed" check `deriveChallengeCardState()` uses) — logging
+ * again would just be a second entry for a day that's already done.
+ *
+ * Also excludes a challenge whose today is already `completedToday`
+ * server-side (fixed 2026-08-29, real bug) — a submitted ad-hoc rest day
+ * (via the Log-Metrics screen's own "Rest day" button) has no photo and
+ * isn't a cycle-scheduled rest day either, so neither check above caught
+ * it; the challenge kept showing here as if nothing had been logged. */
+export function getLogChallengeQuickPicks(
+  challenges: ChallengeContract[],
+  latestPhotoByChallengeId: Map<string, ChallengePhoto>,
+): LogChallengeQuickPick[] {
+  return challenges
+    .filter((challenge) => {
+      if (pickChallengeStatus(challenge) !== 'active') return false;
+      if (pickIsRestDay(challenge)) return false;
+      if (pickTodayCompleted(challenge)) return false;
+      const currentDay = pickCurrentDay(challenge);
+      const latestPhotoDay = latestPhotoByChallengeId.get(String(challenge.id))?.day ?? null;
+      if (latestPhotoDay != null && latestPhotoDay === currentDay) return false;
+      return true;
+    })
+    .map((challenge) => ({
+      id: String(challenge.id),
+      name: asString(challenge.name) || 'Challenge',
+      currentDay: pickCurrentDay(challenge),
+      photoUrl: latestPhotoByChallengeId.get(String(challenge.id))?.imageUrl ?? null,
+      dominantActivityCategory: pickDominantActivityCategory(challenge),
+    }));
 }
 
 export function sanitizeChallengeOptions(challenges: ChallengeOption[]): ChallengeOption[] {
@@ -69,8 +131,10 @@ function restLabel(restSeconds: number | null): string {
 /** Parses ids that the backend sends as strings (Postgres BIGINT is serialized
  * as a string) as well as plain numbers. asNumber() only accepts `number`, so
  * it silently dropped every routine exercise (id came as "1") — that was why
- * the metrics screen showed "No exercises for today's routine". */
-function toNum(value: unknown): number | null {
+ * the metrics screen showed "No exercises for today's routine". Exported —
+ * also used by `app/challenge/[id]/routine/[day].tsx`'s Routine-Detail table,
+ * which reads the same target-value shape from a different endpoint. */
+export function toNum(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string' && value.trim() !== '') {
     const n = Number(value);
@@ -84,18 +148,36 @@ function toNum(value: unknown): number | null {
  * the exercise actually tracks. Map those codes onto the activity type whose
  * ACTIVITY_METRIC_CONFIG surfaces the matching columns, so e.g. a duration-only
  * exercise shows a duration field instead of reps/lbs. */
-function activityTypeFromMetricCodes(codes: string[]): ActivityType {
+export function activityTypeFromMetricCodes(codes: string[]): ActivityType {
   const set = new Set(codes);
-  if (set.has('distanceKm')) return 'cardioIntense'; // duration + distance
+  // Real backend metric_type codes are 'distance'/'time', not the assumed
+  // 'distanceKm'/'duration' from the old seed file — those never matched
+  // anything, so every cardio/flexibility exercise silently fell through to
+  // the 'strength' default below. Fixed 2026-08-28, see havit-design-system-SKILL.md.
+  if (set.has('distance')) return 'cardioIntense'; // time + distance
   if (set.has('reps') || set.has('weight')) return 'strength'; // reps + lbs
-  if (set.has('duration')) return 'flexibility'; // duration only
+  if (set.has('time')) return 'flexibility'; // time only
   return 'strength';
 }
 
-interface TodayRoutineTarget {
+// Maps a routine_exercise_(set_)target's metric_type code onto the
+// MetricField the Log-Metrics stepper screen edits. 'rounds' has no matching
+// backend metric_type (see applyExerciseMetrics.ts), so it never gets a real
+// target and always falls back to an empty/synthetic row.
+const METRIC_CODE_TO_FIELD: Record<string, MetricField> = {
+  reps: 'reps',
+  weight: 'lbs',
+  distance: 'distance',
+  time: 'duration',
+};
+
+export interface TodayRoutineTarget {
   metricType?: { code?: string } | null;
+  target_value_int?: number | string | null;
+  target_value_decimal?: number | string | null;
+  target_value_seconds?: number | string | null;
 }
-interface TodayRoutineSet {
+export interface TodayRoutineSet {
   rest_seconds_after?: number | null;
   targets?: TodayRoutineTarget[] | null;
 }
@@ -105,6 +187,32 @@ interface TodayRoutineExerciseRow {
   exercise?: { id?: number | string; name?: string } | null;
   sets?: TodayRoutineSet[] | null;
   targets?: TodayRoutineTarget[] | null;
+}
+
+/** Reads the one target-value column that actually applies for this target's
+ * metric type — reps is a plain int, weight/distance are decimals, duration
+ * is stored in whole seconds (metric_types.duration has value_type='seconds'). */
+export function extractTargetValue(target: TodayRoutineTarget): number | null {
+  const code = target.metricType?.code;
+  if (!code) return null;
+  if (code === 'reps') return toNum(target.target_value_int);
+  if (code === 'weight' || code === 'distance') return toNum(target.target_value_decimal);
+  if (code === 'time') return toNum(target.target_value_seconds);
+  return null;
+}
+
+/** Reads every target on a list (a set's own targets, or an exercise-level
+ * fallback target) into a {field: value} map, keyed by MetricField. */
+export function targetsToFieldMap(targets: TodayRoutineTarget[] | null | undefined): Partial<Record<MetricField, number>> {
+  const result: Partial<Record<MetricField, number>> = {};
+  for (const target of targets ?? []) {
+    const code = target.metricType?.code;
+    const field = code ? METRIC_CODE_TO_FIELD[code] : undefined;
+    if (!field) continue;
+    const value = extractTargetValue(target);
+    if (value !== null) result[field] = value;
+  }
+  return result;
 }
 
 export function adaptTodayRoutineExercises(
@@ -144,7 +252,33 @@ export function adaptTodayRoutineExercises(
       const firstRest = toNum(sets[0]?.rest_seconds_after ?? null);
 
       const config: ActivityMetricConfig = ACTIVITY_METRIC_CONFIG[activityType] ?? ACTIVITY_METRIC_CONFIG.strength;
-      const rowCount = config.showSetColumn && sets.length > 0 ? sets.length : config.defaultRows;
+      // Exercise-level targets (re.targets) are the fallback for a column a
+      // set doesn't carry its own target for — some exercises only ever get
+      // a target at the exercise level, not per set.
+      const exerciseTargets = targetsToFieldMap(ex.targets);
+
+      // Real per-set rows when the routine actually has RoutineExerciseSet
+      // rows (the normal case for anything built via the Routine Creator);
+      // otherwise fall back to synthetic empty rows, same as before.
+      const rows: ExerciseMetricsRow[] =
+        sets.length > 0
+          ? sets.map((set, i) => {
+              const setTargets = { ...exerciseTargets, ...targetsToFieldMap(set.targets) };
+              const row: ExerciseMetricsRow = { set: i + 1, targets: setTargets };
+              for (const col of config.columns) {
+                const target = setTargets[col.key];
+                row[col.key] = target !== undefined ? String(target) : '';
+              }
+              return row;
+            })
+          : Array.from({ length: config.defaultRows }, (_, i) => {
+              const row: ExerciseMetricsRow = { set: i + 1, targets: exerciseTargets };
+              for (const col of config.columns) {
+                const target = exerciseTargets[col.key];
+                row[col.key] = target !== undefined ? String(target) : '';
+              }
+              return row;
+            });
 
       return {
         id: String(ex.id ?? exerciseId),
@@ -154,13 +288,7 @@ export function adaptTodayRoutineExercises(
         location,
         notes: asString(ex.notes),
         restTimeLabel: restLabel(firstRest) ?? 'Rest 60 sec',
-        rows: Array.from({ length: rowCount }, (_, i) => {
-          const row: ExerciseMetricsRow = { set: i + 1 };
-          for (const col of config.columns) {
-            row[col.key] = '';
-          }
-          return row;
-        }),
+        rows,
       } satisfies ExerciseMetricsBlock;
     })
     .filter((block): block is ExerciseMetricsBlock => block !== null);
@@ -180,6 +308,21 @@ export function sanitizeHydratedExercises(
       notes: exercise.notes ?? '',
       restTimeLabel: exercise.restTimeLabel ?? 'Rest 60 sec',
     }));
+}
+
+/** How many of an exercise's sets have at least one field pushed away from
+ * its plan target — shared by the Log-Metrics exercise card (per-exercise
+ * "N/total" meta + completion indicator) and the screen's own footer count
+ * (summed across every exercise), so the two can't drift apart. */
+export function countAdjustedSets(exercise: ExerciseMetricsBlock): number {
+  const config = ACTIVITY_METRIC_CONFIG[exercise.activityType] ?? ACTIVITY_METRIC_CONFIG.strength;
+  return exercise.rows.filter((row) =>
+    config.columns.some((col) => {
+      const target = row.targets?.[col.key];
+      if (target === undefined) return false;
+      return Number(row[col.key] ?? target) !== target;
+    }),
+  ).length;
 }
 
 export function getDefaultMetricsSeed() {

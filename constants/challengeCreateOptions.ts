@@ -1,6 +1,6 @@
 // MOCK ONLY: category and location option lists should come from backend/database.
 // Backend team: send these as reference data so challenge setup is fully server-driven.
-import type { ActivityType } from './theme';
+import type { ActivityType } from '../types/activity';
 import type { LocationType } from '../components/icons/locationIcon';
 
 export interface ChallengeCategoryOption {
@@ -19,10 +19,10 @@ export interface ChallengeLocationOption {
 
 export const CATEGORY_OPTIONS: ChallengeCategoryOption[] = [
   { label: 'Strength', value: 'Strength', type: 'strength', description: 'Load-based training focused on force, power, and muscular growth.' },
-  { label: 'Cardio Intense', value: 'Cardio Intense', type: 'cardioIntense', description: 'High-effort endurance work that elevates heart rate fast.' },
-  { label: 'Cardio Low', value: 'Cardio Low', type: 'cardioLow', description: 'Lower-impact aerobic work built for consistency and recovery.' },
+  { label: 'Cardio intense', value: 'Cardio Intense', type: 'cardioIntense', description: 'High-effort endurance work that elevates heart rate fast.' },
+  { label: 'Cardio low', value: 'Cardio Low', type: 'cardioLow', description: 'Lower-impact aerobic work built for consistency and recovery.' },
   { label: 'Flexibility', value: 'Flexibility', type: 'flexibility', description: 'Mobility and range-of-motion sessions to improve movement quality.' },
-  { label: 'Mind-Body', value: 'Mind-Body', type: 'mindBody', description: 'Practices that blend control, breath, and awareness with training.' },
+  { label: 'Mind body', value: 'Mind-Body', type: 'mindBody', description: 'Practices that blend control, breath, and awareness with training.' },
   { label: 'Functional', value: 'Functional', type: 'functional', description: 'Full-body patterns that transfer to everyday movement and sport.' },
 ];
 

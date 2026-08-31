@@ -9,7 +9,6 @@ import { Text } from '../../components/ui/text';
 import { Button } from '../../components/ui/button';
 import { Icon } from '../../components/ui/icon';
 import { FormField } from '../../components/ui/formField';
-import { Dropdown } from '../../components/ui/dropdown';
 import { UserAvatar } from '../../components/ui/userAvatar';
 import { Divider } from '../../components/ui/divider';
 import { Row } from '../../components/layout/row';
@@ -22,8 +21,12 @@ import {
 } from '../../services/user/user.service';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
-import { colors, spacing } from '../../constants/theme';
+import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import type { MyProfileContract, UpdateProfilePayload } from '../../types/user';
+import i18n, { PREFERRED_LANGUAGE_KEY } from '../../i18n';
+import type { SupportedLanguage } from '../../i18n';
+import { storage } from '../../utils/storage';
 
 const DISPLAY_NAME_MAX = 150;
 const BIO_MAX = 1000;
@@ -43,7 +46,18 @@ export default function EditProfile() {
 
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
-  const [language, setLanguage] = useState('en');
+  // Real bug, fixed 2026-08-30, per explicit "toggle shows Spanish even
+  // though the app is actually in English" report: this used to default to
+  // a hardcoded 'en', then get silently overwritten by the profile fetch
+  // below (`data.preferred_language`) — a backend field that's never kept
+  // in sync with the real active language (only PATCHed on save, never
+  // read back into i18next). That's the exact "disconnected mechanism" bug
+  // i18n/index.ts's own doc comment already describes as supposedly fixed
+  // 2026-08-29 — this one leftover read undid it. `i18n.language` (backed
+  // by PREFERRED_LANGUAGE_KEY, restored on boot in app/_layout.tsx) is the
+  // only real source of truth for what's actually active; read it directly
+  // instead of the backend field.
+  const [language, setLanguage] = useState<SupportedLanguage>(i18n.language === 'es' ? 'es' : 'en');
   const [isPrivate, setIsPrivate] = useState(false);
   const [displayNameError, setDisplayNameError] = useState<string | null>(null);
 
@@ -59,7 +73,9 @@ export default function EditProfile() {
         setProfile(data);
         setDisplayName(data.display_name);
         setBio(data.bio ?? '');
-        setLanguage(data.preferred_language || 'en');
+        // NOT `setLanguage(data.preferred_language)` — see the state's own
+        // doc comment above for why that field must never drive this
+        // toggle's displayed value.
         setIsPrivate(data.is_private);
       })
       .catch(() => setLoadError(true))
@@ -172,7 +188,13 @@ export default function EditProfile() {
         </View>
 
         <View style={styles.photoSection}>
-          <Pressable onPress={handleChangePhoto} disabled={uploadingPhoto}>
+          <Pressable
+            onPress={handleChangePhoto}
+            disabled={uploadingPhoto}
+            style={styles.avatarWrap}
+            accessibilityRole="button"
+            accessibilityLabel={t('profileEdit.changePhoto')}
+          >
             <UserAvatar
               username={profile.username}
               imageUrl={profile.profile_image_url}
@@ -183,16 +205,10 @@ export default function EditProfile() {
                 <ActivityIndicator color={colors.primary} />
               </View>
             )}
+            <View style={styles.editBadge}>
+              <Icon name="camera-outline" size={16} color={colors.ink} />
+            </View>
           </Pressable>
-          <Button
-            variant="outline"
-            size="sm"
-            onPress={handleChangePhoto}
-            loading={uploadingPhoto}
-            disabled={uploadingPhoto}
-          >
-            {t('profileEdit.changePhoto')}
-          </Button>
         </View>
 
         <Divider variant="section" marginVertical="sm" />
@@ -227,20 +243,52 @@ export default function EditProfile() {
         <Stack gap="lg">
           <View style={{ gap: spacing.xs }}>
             <Text variant="subheader">{t('profileEdit.language')}</Text>
-            <Dropdown
-              options={[
-                { value: 'en', label: t('profileEdit.languageEn') },
-                { value: 'es', label: t('profileEdit.languageEs') },
-              ]}
-              selectedValues={[language]}
-              onChange={(values) => {
-                const next = values[values.length - 1];
-                if (next) setLanguage(next);
-              }}
-              maxSelections={1}
-              showValueInline
-              rightIcon={<Icon name="chevron-down" size={18} color={colors.textSecondary} />}
-            />
+            {/* Fixed 2026-08-29: was a `Dropdown` (components/ui/dropdown.tsx)
+                — that component turns out to be used NOWHERE ELSE in the
+                whole app (checked), so there was no "other working dropdown"
+                to compare against when it kept not working across three
+                separate fix attempts (a real `maxSelections` bug was found
+                and fixed in it along the way, but the toggle stayed broken
+                even after that). Replaced entirely with a plain two-option
+                segmented toggle, the exact same proven structure
+                `RoutineModeToggle` (components/routine/builder/routineModeToggle.tsx)
+                already uses successfully elsewhere — single string value,
+                one Pressable per option, no array-based multi-select
+                machinery at all. */}
+            <View style={styles.languageToggle}>
+              {(['en', 'es'] as const).map((code) => {
+                const active = language === code;
+                return (
+                  <Pressable
+                    key={code}
+                    onPress={() => {
+                      if (active) return;
+                      setLanguage(code);
+                      i18n.changeLanguage(code as SupportedLanguage);
+                      storage.setItem(PREFERRED_LANGUAGE_KEY, code).catch((error) => {
+                        console.error('[EditProfile] failed to persist language choice', error);
+                      });
+                    }}
+                    style={({ pressed }) => [
+                      styles.languageOption,
+                      active && styles.languageOptionActive,
+                      pressed && styles.languageOptionPressed,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text
+                      variant="label"
+                      weight={active ? 'bold' : 'medium'}
+                      inverse={active}
+                      tone={active ? 'primary' : 'secondary'}
+                    >
+                      {code === 'en' ? t('profileEdit.languageEn') : t('profileEdit.languageEs')}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
           <Row align="center" justify="space-between">
@@ -292,14 +340,60 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 40,
   },
+  // Same chrome as RoutineModeToggle's proven segmented-toggle pattern:
+  // `surface` track, `big` radius, `xs` internal padding/gap.
+  languageToggle: {
+    flexDirection: 'row',
+    borderRadius: radius.big,
+    backgroundColor: colors.surface,
+    padding: spacing.xs,
+    gap: spacing.xs,
+  },
+  languageOption: {
+    flex: 1,
+    height: 48,
+    borderRadius: radius.big,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  languageOptionActive: {
+    backgroundColor: colors.primary,
+  },
+  languageOptionPressed: {
+    opacity: 0.85,
+  },
   photoSection: {
     alignItems: 'center',
-    gap: spacing.sm,
+  },
+  avatarWrap: {
+    width: 96,
+    height: 96,
   },
   photoOverlay: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 48,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    // Matches UserAvatar's own corner radius (always the flat `big` token,
+    // not size/2 — see userAvatar.tsx) so the loading dim doesn't bleed past
+    // the avatar's actual squircle shape.
+    borderRadius: radius.big,
+    backgroundColor: withAlpha(colors.ink, fillOpacity.dim),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Camera badge overlapping the avatar's bottom-right corner — the
+  // industry-standard "tap the avatar to change it" affordance, replacing a
+  // separate "Change photo" text button below. Same "cut into" treatment
+  // (ink border) as every other avatar-overlapping badge in the app
+  // (ProfileHeader's streak badge, Home's streak-chip badge).
+  editBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 32,
+    height: 32,
+    borderRadius: radius.big,
+    backgroundColor: colors.primary,
+    borderWidth: 3,
+    borderColor: colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
   },

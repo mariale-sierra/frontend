@@ -5,24 +5,34 @@ import {
   Pressable,
   PressableProps,
 } from 'react-native';
-import { colors, radius, spacing, ActivityType } from '../../constants/theme';
+import { colors, radius, spacing } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 
 /**
  * CardVariant defines the available card styles:
- * - basic: Dark gray background (#1C1C1E), for standard cards
- * - basicGlass: Slightly lighter gray with subtle glassy transparency and soft shadow
- * - activityOutline: Black background with colored border (based on activityType), for streak cards
- * - activityOutlineGlow: Black background with colored border (based on activityType), for activity cards
+ * - basic: `surface` background, for standard cards
+ * - basicGlass: slightly lighter surface with subtle translucency and soft shadow
+ * - outline: `ink` background with a neutral `paper`-hairline border
+ * - outlineGlow: `outline`, plus a soft shadow
+ *
+ * `activityOutline`/`activityOutlineGlow` (bordered/glowing per workout
+ * category color) are retired — see design system → Explicitly Rejected
+ * Patterns. `outline`/`outlineGlow` are their flat, non-color-coded
+ * replacements; the old variant names still resolve to them below so
+ * existing call sites keep compiling during migration.
  */
 type CardVariant =
   | 'basic'
   | 'basicGlass'
+  | 'outline'
+  | 'outlineGlow'
   | 'activityOutline'
   | 'activityOutlineGlow';
 
 interface CardProps extends Omit<ViewProps, 'onPress'> {
   variant?: CardVariant;
-  activityType?: ActivityType;
+  /** @deprecated category is never color-coded now — this prop has no effect. Kept for call-site compatibility. */
+  activityType?: string;
   onPress?: () => void;
   padding?: keyof typeof spacing;
   radius?: keyof typeof radius;
@@ -30,10 +40,10 @@ interface CardProps extends Omit<ViewProps, 'onPress'> {
 
 export function Card({
   variant = 'basic',
-  activityType,
+  activityType: _activityType,
   onPress,
   padding = 'md',
-  radius: radiusSize = 'xl',
+  radius: radiusSize = 'medium',
   style,
   children,
   ...props
@@ -43,7 +53,7 @@ export function Card({
     borderRadius: radius[radiusSize],
   };
 
-  const variantStyle = getVariantStyle(variant, activityType);
+  const variantStyle = getVariantStyle(variant);
 
   const cardStyles = [baseStyle, variantStyle, style];
 
@@ -68,7 +78,7 @@ export function Card({
 
 // VARIANT LOGIC
 
-function getVariantStyle(variant: CardVariant, activityType?: ActivityType) {
+function getVariantStyle(variant: CardVariant) {
   switch (variant) {
     case 'basic':
       return {
@@ -77,40 +87,32 @@ function getVariantStyle(variant: CardVariant, activityType?: ActivityType) {
 
     case 'basicGlass':
       return {
-        backgroundColor: 'rgba(41, 42, 51, 0.42)',
+        backgroundColor: withAlpha(colors.surface, 0.42),
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.14)',
-        borderTopColor: 'rgba(255, 255, 255, 0.22)',
-        borderBottomColor: 'rgba(255, 255, 255, 0.08)',
-        shadowColor: '#070707',
+        borderColor: withAlpha(colors.paper, 0.14),
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.40,
+        shadowOpacity: 0.4,
         shadowRadius: 22,
         elevation: 14,
         overflow: 'visible' as const,
       };
 
+    case 'outline':
     case 'activityOutline':
       return {
-        backgroundColor: colors.background,
+        backgroundColor: colors.ink,
         borderWidth: 1,
-        borderColor: activityType
-          ? colors.activityType[activityType]
-          : colors.border,
+        borderColor: withAlpha(colors.paper, 0.08),
       };
 
+    case 'outlineGlow':
     case 'activityOutlineGlow':
       return {
-        backgroundColor: colors.background,
+        backgroundColor: colors.ink,
         borderWidth: 1,
-        borderColor: activityType
-          ? colors.activityType[activityType]
-          : colors.border,
-
-        // Strong glow effect matching the activity category color
-        shadowColor: activityType
-          ? colors.activityType[activityType]
-          : '#000',
+        borderColor: withAlpha(colors.paper, 0.08),
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 0.6,
         shadowRadius: 12,

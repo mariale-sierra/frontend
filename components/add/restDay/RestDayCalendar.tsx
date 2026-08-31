@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../ui/text';
-import { colors, spacing } from '../../../constants/theme';
+import { colors, spacing, textOpacity } from '../../../constants/theme';
+import { withAlpha } from '../../../utils/color';
 import { buildChallengeCalendar } from '../../../utils/challengeCalendar';
 
 const DAY_LABELS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
@@ -17,10 +18,24 @@ interface RestDayCalendarProps {
   onToggleDate: (dateKey: string) => void;
 }
 
+// No rest-day cycle exists yet at this pre-join planning stage (that's what
+// this screen is collecting) — every real day is either future/selectable
+// or already past, no photo/rest classification applies here.
+const NO_REST_DAYS = () => false;
+
 export function RestDayCalendar({ startDate, totalDays, selectedDates, onToggleDate }: RestDayCalendarProps) {
+  const currentDay = useMemo(() => {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((today.getTime() - start.getTime()) / 86_400_000);
+    return diffDays + 1;
+  }, [startDate]);
+
   const months = useMemo(
-    () => buildChallengeCalendar(startDate, totalDays, [], []),
-    [startDate, totalDays],
+    () => buildChallengeCalendar(startDate, totalDays, currentDay, [], NO_REST_DAYS),
+    [startDate, totalDays, currentDay],
   );
 
   return (
@@ -28,14 +43,14 @@ export function RestDayCalendar({ startDate, totalDays, selectedDates, onToggleD
       <View style={styles.dayHeader}>
         {DAY_LABELS.map((label) => (
           <View key={label} style={styles.dayHeaderCell}>
-            <Text variant="label" style={styles.dayLabel}>{label}</Text>
+            <Text variant="label" tone="secondary" inverse style={styles.dayLabel}>{label}</Text>
           </View>
         ))}
       </View>
 
       {months.map(({ year, month, label, weeks }) => (
         <View key={`${year}-${month}`} style={styles.monthBlock}>
-          <Text style={styles.monthName}>{label}</Text>
+          <Text variant="header" tone="secondary" inverse style={styles.monthName}>{label}</Text>
 
           {weeks.map((week, weekIndex) => (
             <View key={`week-${weekIndex}`}>
@@ -68,8 +83,8 @@ export function RestDayCalendar({ startDate, totalDays, selectedDates, onToggleD
                       <Text
                         variant="body"
                         align="center"
+                        inverse
                         style={[
-                          styles.dayNumber,
                           !isSelectable && styles.dayNumberPast,
                           isSelected && styles.dayNumberSelected,
                         ]}
@@ -104,19 +119,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayLabel: {
-    color: colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   monthBlock: {
     marginBottom: spacing.xl,
   },
   monthName: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 2,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
     marginBottom: spacing.sm,
   },
   weekRow: {
@@ -124,7 +132,7 @@ const styles = StyleSheet.create({
   },
   weekDivider: {
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: withAlpha(colors.ink, 0.06),
   },
   dayCell: {
     flex: 1,
@@ -144,21 +152,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   dotSelected: {
-    backgroundColor: colors.primary,
+    // `ink`, not `primary` — `primary`'s current value (a warm off-white)
+    // has poor contrast against this screen's own light `rest`-purple
+    // background, unlike on the app's usual dark `ink` screens.
+    backgroundColor: colors.ink,
   },
   dotToday: {
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.65)',
+    borderColor: withAlpha(colors.ink, 0.65),
     backgroundColor: 'transparent',
   },
-  dayNumber: {
-    fontSize: 15,
-    lineHeight: 18,
-  },
   dayNumberPast: {
-    color: colors.textMuted,
+    opacity: textOpacity.tertiary,
   },
   dayNumberSelected: {
-    color: colors.primary,
+    color: colors.ink,
+    opacity: 1,
   },
 });

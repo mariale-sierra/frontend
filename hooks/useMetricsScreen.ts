@@ -1,9 +1,10 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useMetricsEntryStore } from '../store/metricsEntryStore';
 import { useAuth } from './useAuth';
 import { getTodayRoutineForChallenge } from '../services/challenge/challenge.service';
+import { getRoutine } from '../services/routine/routine.service';
 import { getMyChallenges } from '../services/user/user.service';
 import {
   adaptChallengesForMetrics,
@@ -14,27 +15,43 @@ import { useTranslation } from 'react-i18next';
 export function useMetricsScreen() {
   const { userId } = useAuth();
   const { t } = useTranslation();
+  // Set when arriving from the "Log today's progress" challenge picker
+  // (app/log.tsx) — preselects that challenge instead of always the first
+  // one. Falls back to the first active challenge when absent/invalid.
+  const { challengeId: requestedChallengeId } = useLocalSearchParams<{ challengeId?: string }>();
 
   const challenges = useMetricsEntryStore((state) => state.challenges);
   const selectedChallengeId = useMetricsEntryStore((state) => state.selectedChallengeId);
-  const isChallengeMenuOpen = useMetricsEntryStore((state) => state.isChallengeMenuOpen);
   const exerciseMetrics = useMetricsEntryStore((state) => state.exerciseMetrics);
   const currentRoutineId = useMetricsEntryStore((state) => state.currentRoutineId);
 
-  const toggleChallengeMenu = useMetricsEntryStore((state) => state.toggleChallengeMenu);
-  const selectChallenge = useMetricsEntryStore((state) => state.selectChallenge);
   const setExerciseMetrics = useMetricsEntryStore((state) => state.setExerciseMetrics);
   const updateMetricValue = useMetricsEntryStore((state) => state.updateMetricValue);
-  const updateExerciseNotes = useMetricsEntryStore((state) => state.updateExerciseNotes);
   const hydrateMetricsData = useMetricsEntryStore((state) => state.hydrateMetricsData);
 
-  const [activeRowKey, setActiveRowKey] = useState<string | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [challengeLoadError, setChallengeLoadError] = useState<string | null>(null);
+  // Cycle-day number + routine name for the header ("Day {{n}} · {{routine}}").
+  // Neither is on the challenge itself — both come from the today-routine
+  // fetch below (routineName needs one extra, non-blocking GET /routine/:id
+  // since getTodayRoutine only returns routine_id, not the routine's name).
+  const [currentDay, setCurrentDay] = useState<number | null>(null);
+  const [routineName, setRoutineName] = useState<string | null>(null);
 
   // Tracks which challengeId we last fetched a routine for, to avoid double-fetching
   // after the init effect sets selectedChallengeId via hydrateMetricsData.
   const lastFetchedChallengeId = useRef<string>('');
+
+  const loadDayAndRoutineName = useCallback((routineData: { currentDayInCycle?: number; currentDay?: number; routine_id?: number | null }) => {
+    setCurrentDay(routineData.currentDayInCycle ?? routineData.currentDay ?? null);
+    if (routineData.routine_id) {
+      getRoutine(routineData.routine_id)
+        .then((routine) => setRoutineName(routine.name))
+        .catch(() => setRoutineName(null));
+    } else {
+      setRoutineName(null);
+    }
+  }, []);
 
   useEffect(() => {
     console.log('[useMetricsScreen] store challenges after set', challenges, '| length:', challenges.length);
@@ -59,21 +76,23 @@ export function useMetricsScreen() {
         }
 
         // Store challenges first so the dropdown is populated even if the routine fetch fails.
-        const firstChallenge = adaptedChallenges[0];
-        lastFetchedChallengeId.current = firstChallenge.id;
+        const initialChallenge =
+          adaptedChallenges.find((c) => c.id === requestedChallengeId) ?? adaptedChallenges[0];
+        lastFetchedChallengeId.current = initialChallenge.id;
         console.log('[useMetricsScreen] challenges before store', adaptedChallenges);
         hydrateMetricsData({
           challenges: adaptedChallenges,
-          selectedChallengeId: firstChallenge.id,
+          selectedChallengeId: initialChallenge.id,
           exerciseMetrics: [],
           routineId: null,
         });
 
         // Then fetch today's routine separately — failure here won't block the dropdown.
         try {
-          const routineData = await getTodayRoutineForChallenge(firstChallenge.id);
-          const exercises = adaptTodayRoutineExercises(routineData, firstChallenge);
+          const routineData = await getTodayRoutineForChallenge(initialChallenge.id);
+          const exercises = adaptTodayRoutineExercises(routineData, initialChallenge);
           setExerciseMetrics(exercises, routineData.routine_id);
+          loadDayAndRoutineName(routineData);
         } catch (routineErr: any) {
           console.warn(
             '[Metrics] Could not load today\'s routine (dropdown still works):',
@@ -111,6 +130,7 @@ export function useMetricsScreen() {
 
         lastFetchedChallengeId.current = selectedChallengeId;
         setExerciseMetrics(exercises, routineData.routine_id);
+        loadDayAndRoutineName(routineData);
       } catch (error: any) {
         console.error('[Metrics] Routine load failed:', error?.response?.data ?? error?.message);
         Alert.alert(t('metrics.alerts.submitErrorTitle'), t('metrics.alerts.submitErrorFallback'));
@@ -120,18 +140,6 @@ export function useMetricsScreen() {
     }
 
     loadRoutine();
-  }, [selectedChallengeId]);
-
-  const onRowFocus = useCallback((rowKey: string) => {
-    setActiveRowKey(rowKey);
-  }, []);
-
-  const onRowBlur = useCallback((rowKey: string) => {
-    setActiveRowKey((current) => (current === rowKey ? null : current));
-  }, []);
-
-  useEffect(() => {
-    setActiveRowKey(null);
   }, [selectedChallengeId]);
 
   const goToCamera = useCallback(() => {
@@ -149,17 +157,12 @@ export function useMetricsScreen() {
   return {
     challenges,
     selectedChallengeId,
-    isChallengeMenuOpen,
     exerciseMetrics,
-    activeRowKey,
     isLoadingData,
     challengeLoadError,
-    toggleChallengeMenu,
-    selectChallenge,
+    currentDay,
+    routineName,
     updateMetricValue,
-    updateExerciseNotes,
-    onRowFocus,
-    onRowBlur,
     goToCamera,
     goToRestDay,
     goBack,

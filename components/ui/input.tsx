@@ -11,13 +11,14 @@ import {
 import { useState } from 'react';
 import { Text } from './text';
 import { Row } from '../layout/row';
-import { spacing, radius, colors } from '../../constants/theme';
+import { spacing, radius, colors, textOpacity, fontSize } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 
 /**
  * InputVariant defines the available input field styles:
- * - default: Minimal style with rounded corners (radius.lg), transparent background, 
+ * - default: Minimal style with rounded corners (radius.medium), transparent background,
  *   used for subtle inputs that blend with the background
- * - filled: Background-filled style with rounded corners (radius.lg) and dark surface color,
+ * - filled: Background-filled style with rounded corners (radius.medium) and dark surface color,
  *   provides visual emphasis and clear input field boundary
  */
 type InputVariant = 'default' | 'filled';
@@ -52,6 +53,8 @@ interface InputProps extends TextInputProps {
 
   multiline?: boolean;
   maxLength?: number;
+  /** Set false to suppress the auto-rendered below-input counter when a caller renders its own (e.g. inline in a label row). Default true. */
+  showCounter?: boolean;
 }
 
 export function Input({
@@ -65,6 +68,7 @@ export function Input({
   variant = 'default',
   multiline = false,
   maxLength,
+  showCounter = true,
   style,
   ...props
 }: InputProps) {
@@ -78,11 +82,11 @@ export function Input({
     }
   }
 
-  // Map placeholder variant to color
+  // Map placeholder variant to color (paper at the matching opacity tier)
   const placeholderColorMap = {
-    body: colors.textPrimary,
-    secondary: colors.textSecondary,
-    caption: colors.textMuted,
+    body: withAlpha(colors.paper, textOpacity.primary),
+    secondary: withAlpha(colors.paper, textOpacity.secondary),
+    caption: withAlpha(colors.paper, textOpacity.tertiary),
   } as const;
 
   return (
@@ -108,6 +112,7 @@ export function Input({
           multiline={multiline}
           maxLength={maxLength}
           onContentSizeChange={handleContentSizeChange}
+          textAlignVertical="center"
           style={[
             styles.input,
             multiline && { height: Math.max(40, height) },
@@ -120,7 +125,7 @@ export function Input({
       </Row>
 
       {/* MAX LENGTH */}
-      {maxLength && (
+      {maxLength && showCounter && (
         <Text variant="caption">
           {props.value?.toString().length ?? 0}/{maxLength}
         </Text>
@@ -131,8 +136,8 @@ export function Input({
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: radius.lg,
-    paddingVertical: spacing.sm + 4,
+    borderRadius: radius.medium,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
   },
 
@@ -142,9 +147,9 @@ const styles = StyleSheet.create({
 
   input: {
     flex: 1,
-    color: colors.textPrimary,
-    fontSize: 15,
-    lineHeight: 20,
+    color: colors.paper,
+    fontSize: fontSize.base,
     paddingVertical: 0,
+    includeFontPadding: false,
   },
 });

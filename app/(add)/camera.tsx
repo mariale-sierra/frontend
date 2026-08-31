@@ -15,12 +15,15 @@ import { useTranslation } from 'react-i18next';
 import { IconButton } from '../../components/ui/iconButton';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
-import { spacing, radius } from '../../constants/theme';
+import { colors, spacing, radius } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
 import { submitWorkoutProgress } from '../../services/workout-log/workout-log.service';
+import type { WorkoutLogContract } from '../../types/workout-log';
 import { applyExerciseMetrics } from '../../services/metrics/applyExerciseMetrics';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
+import { useUploadSuccessStore } from '../../store/uploadSuccessStore';
 
 function VisibilityToggle({
   visibility,
@@ -43,7 +46,7 @@ function VisibilityToggle({
         <Icon
           name={isFollowers ? 'eye-outline' : 'eye-off-outline'}
           size={19}
-          color="#fff"
+          color={colors.paper}
         />
         <Text style={styles.visibilityLabel}>
           {isFollowers ? t('camera.visibilityFollowers') : t('camera.visibilityPrivate')}
@@ -141,23 +144,9 @@ export default function Camera() {
     };
 
     setSubmittingProgress(true);
+    let workout: WorkoutLogContract;
     try {
-      const workout = await submitWorkoutProgress(progressPayload);
-      // The routine copy inside POST /workout-logs/progress only creates
-      // target (goal) rows for each exercise — the values actually entered
-      // on the metrics screen still need to be saved against them here.
-      if (exerciseMetrics.length > 0) {
-        try {
-          await applyExerciseMetrics(workout, exerciseMetrics);
-        } catch (metricsError) {
-          // The workout + photo already saved successfully — a metrics
-          // save failure shouldn't block the flow or look like data loss,
-          // just log it for now.
-          console.error('[Camera] applyExerciseMetrics failed:', metricsError);
-        }
-      }
-      invalidateChallengeProgressCache();
-      router.replace('/(add)/preview');
+      workout = await submitWorkoutProgress(progressPayload);
     } catch (e: unknown) {
       type AxiosLike = { response?: { status?: number; data?: { message?: string } }; message?: string };
       const err = e as AxiosLike;
@@ -165,8 +154,60 @@ export default function Camera() {
       const msg = err?.response?.data?.message ?? t('camera.saveProgressError');
       setError(msg);
       Alert.alert(t('common.errors.genericTitle'), msg);
-    } finally {
       setSubmittingProgress(false);
+      return;
+    }
+
+    // The workout + photo are already saved server-side at this point —
+    // nothing below is allowed to surface as a "failed to save progress"
+    // error, since that would misreport a successful save as a failure
+    // (confirmed bug: a post-save hiccup here, e.g. router.dismissAll()
+    // finding nothing left to dismiss, was being caught by the same
+    // try/catch as the actual submission and shown as an upload error even
+    // though the photo had already been persisted).
+
+    // The routine copy inside POST /workout-logs/progress only creates
+    // target (goal) rows for each exercise — the values actually entered
+    // on the metrics screen still need to be saved against them here.
+    if (exerciseMetrics.length > 0) {
+      try {
+        await applyExerciseMetrics(workout, exerciseMetrics);
+      } catch (metricsError) {
+        // The workout + photo already saved successfully — a metrics
+        // save failure shouldn't block the flow or look like data loss,
+        // just log it for now.
+        console.error('[Camera] applyExerciseMetrics failed:', metricsError);
+      }
+    }
+    invalidateChallengeProgressCache();
+    // The success popup itself is global (mounted at app root), so it shows
+    // on top of wherever the back() calls below land.
+    useUploadSuccessStore.getState().show();
+    setSubmittingProgress(false);
+    try {
+      // Closes the whole (add) modal group, back to whatever screen the user
+      // actually started this flow from — NOT router.dismissAll(). Fixed
+      // 2026-08-29, real bug confirmed by user report ("it sends me back to
+      // log metrics... I leave and then I get the success message"):
+      // dismissAll() dispatches POP_TO_TOP, which React Navigation resolves
+      // against the NEAREST Stack navigator — here, (add)'s own nested Stack
+      // (app/(add)/_layout.tsx: metrics -> camera), not the root Stack (add)
+      // itself is presented on (see app/_layout.tsx's `fullScreenModal`
+      // Stack.Screen). So it only ever popped back to metrics.tsx, leaving
+      // the (add) modal still open — the user then had to manually back out,
+      // and only saw the success popup once they did (it was queued the
+      // whole time, just hidden behind the still-open modal).
+      // log.tsx reaches metrics.tsx via router.replace(), never push(), so
+      // the (add) group is always exactly 2 screens deep here (metrics,
+      // camera) in every real flow — two plain back() calls pop camera then
+      // metrics off (add)'s own stack, and since GO_BACK bubbles to the
+      // parent navigator once the current one has nothing left to pop, the
+      // second call correctly continues upward and pops the (add) entry
+      // itself off the root stack too, actually closing the whole modal.
+      router.back();
+      router.back();
+    } catch (navError) {
+      console.error('[Camera] closing the (add) modal failed after a successful save:', navError);
     }
   }
 
@@ -201,11 +242,11 @@ export default function Camera() {
       <View style={[styles.fill, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, spacing.xl) }]}>
         <View style={styles.header}>
           <IconButton
-            name="arrow-back"
+            name="arrow-back-outline"
             onPress={handleRetry}
             size={40}
             iconSize={22}
-            iconColor="#fff"
+            iconColor={colors.paper}
           />
         </View>
 
@@ -227,9 +268,9 @@ export default function Camera() {
             ]}
           >
             {uploadingImage || submittingProgress ? (
-              <ActivityIndicator color="#000" size="large" />
+              <ActivityIndicator color={colors.ink} size="large" />
             ) : (
-              <Icon name="checkmark" size={38} color="#000" />
+              <Icon name="checkmark-outline" size={38} color={colors.ink} />
             )}
           </Pressable>
         </View>
@@ -241,18 +282,18 @@ export default function Camera() {
     <View style={[styles.fill, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, spacing.xl) }]}>
       <View style={styles.header}>
         <IconButton
-          name="arrow-back"
+          name="arrow-back-outline"
           onPress={() => router.back()}
           size={40}
           iconSize={22}
-          iconColor="#fff"
+          iconColor={colors.paper}
         />
         <IconButton
           name="camera-reverse-outline"
           onPress={flipCamera}
           size={40}
           iconSize={26}
-          iconColor="#fff"
+          iconColor={colors.paper}
         />
       </View>
 
@@ -274,7 +315,7 @@ export default function Camera() {
           ]}
         >
           {isTakingPicture ? (
-            <ActivityIndicator color="#000" size="large" />
+            <ActivityIndicator color={colors.ink} size="large" />
           ) : (
             <View style={styles.captureInner} />
           )}
@@ -287,7 +328,7 @@ export default function Camera() {
 const styles = StyleSheet.create({
   fill: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: colors.ink,
   },
   center: {
     alignItems: 'center',
@@ -304,7 +345,9 @@ const styles = StyleSheet.create({
   cameraContainer: {
     flex: 1,
     marginHorizontal: spacing.sm,
-    borderRadius: radius['2xl'],
+    // Legacy radius['2xl'] (24) — that key no longer exists on the current
+    // scale (none/small/medium/big); `big` (28) is the nearest token.
+    borderRadius: radius.big,
     overflow: 'hidden',
   },
   cameraFill: {
@@ -318,29 +361,32 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
+  // Fixed-diameter true circles (72/52px) — size/2 radius is the documented
+  // exception to "always radius.big for circular elements" (see design
+  // system skill's Numbered circle badge note).
   captureButton: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#fff',
+    backgroundColor: colors.paper,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.4)',
+    borderColor: withAlpha(colors.paper, 0.4),
   },
   captureInner: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: '#fff',
+    backgroundColor: colors.paper,
     borderWidth: 2,
-    borderColor: 'rgba(0,0,0,0.15)',
+    borderColor: withAlpha(colors.ink, 0.15),
   },
   confirmButton: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#fff',
+    backgroundColor: colors.paper,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -355,19 +401,23 @@ const styles = StyleSheet.create({
     gap: 7,
     paddingVertical: 8,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.xl,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    // Legacy radius.xl (18) — nearest current token is `medium` (16).
+    borderRadius: radius.medium,
+    backgroundColor: withAlpha(colors.ink, 0.45),
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: withAlpha(colors.paper, 0.18),
   },
+  // No `opacity: 1` alongside this custom color, unlike the usual rule for
+  // Text custom-color overrides — kept exactly as shipped (already rendering
+  // at the tone's default 85%) per an explicit "don't change this visually" request.
   visibilityLabel: {
-    color: '#fff',
+    color: colors.paper,
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: 0.3,
   },
   errorText: {
-    color: '#FF6B6B',
+    color: colors.error,
     fontSize: 14,
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
@@ -380,14 +430,15 @@ const styles = StyleSheet.create({
   permissionButton: {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xl,
-    borderRadius: radius.xl,
+    // Legacy radius.xl (18) — nearest current token is `medium` (16).
+    borderRadius: radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: withAlpha(colors.paper, 0.3),
+    backgroundColor: withAlpha(colors.paper, 0.1),
     marginTop: spacing.xs,
   },
   permissionButtonLabel: {
-    color: '#fff',
+    color: colors.paper,
     fontWeight: '600',
   },
   backLink: {

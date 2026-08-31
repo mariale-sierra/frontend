@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { colors, spacing } from '../../constants/theme';
+import { colors, spacing, textOpacity } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import { Text } from '../ui/text';
 import { Button } from '../ui/button';
+import { Icon } from '../ui/icon';
 import { UserAvatar } from '../ui/userAvatar';
 import { ConfirmationPopup } from '../ui/confirmationPopup';
 import { Row } from '../layout/row';
@@ -11,12 +14,14 @@ import { formatRelativeTime } from '../../utils/time';
 import type { ChallengeInviteContract, InviteStatus } from '../../types/invite';
 import type { InviteAction } from '../../hooks/useInvites';
 
+const MUTED = withAlpha(colors.paper, textOpacity.tertiary);
+
 const STATUS_COLOR: Record<InviteStatus, string> = {
   pending: colors.primary,
   accepted: colors.success,
   declined: colors.error,
-  cancelled: colors.textMuted,
-  expired: colors.textMuted,
+  cancelled: MUTED,
+  expired: MUTED,
 };
 
 interface InviteCardProps {
@@ -37,11 +42,13 @@ interface InviteCardProps {
  */
 export function InviteCard({ invite, direction, busy, processing, onAction }: InviteCardProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const [confirmCancelVisible, setConfirmCancelVisible] = useState(false);
 
   const otherUser = direction === 'received' ? invite.sender : invite.recipient;
   const isPending = invite.status === 'pending';
   const challengeName = invite.challenge?.name ?? t('invites.unknownChallenge');
+  const challengeId = invite.challenge?.id ?? null;
 
   const handleCancelConfirmed = () => {
     setConfirmCancelVisible(false);
@@ -53,12 +60,35 @@ export function InviteCard({ invite, direction, busy, processing, onAction }: In
       <UserAvatar username={otherUser?.username ?? '?'} size={44} />
 
       <View style={styles.textCol}>
-        <Text variant="body" numberOfLines={1} style={styles.name}>
+        <Text variant="body" weight="bold" numberOfLines={1}>
           @{otherUser?.username ?? '?'}
         </Text>
-        <Text variant="caption" tone="secondary" numberOfLines={1}>
-          {challengeName}
-        </Text>
+        {/* Fixed 2026-08-30, per explicit "at no point can I see what
+            challenge I'm joining, or click to see its info" report — this
+            used to be a plain, non-interactive caption. Same
+            "name + chevron-forward" affordance ExploreChallengeCard's own
+            "View" link already uses elsewhere, not a new interaction
+            language for the app. */}
+        <Pressable
+          onPress={() => challengeId && router.push(`/challenge/${challengeId}`)}
+          disabled={!challengeId}
+          hitSlop={4}
+          accessibilityRole={challengeId ? 'button' : undefined}
+          accessibilityLabel={challengeId ? t('invites.viewChallengeA11y', { name: challengeName }) : undefined}
+          style={styles.challengeLink}
+        >
+          <Text variant="caption" tone="secondary" numberOfLines={1} style={styles.challengeLinkText}>
+            {invite.challenge?.duration_days
+              ? t('invites.challengeWithDuration', {
+                  name: challengeName,
+                  duration: t('challenges.durationDaysLabel', { count: invite.challenge.duration_days }),
+                })
+              : challengeName}
+          </Text>
+          {challengeId && (
+            <Icon name="chevron-forward-outline" size={12} color={withAlpha(colors.paper, textOpacity.tertiary)} />
+          )}
+        </Pressable>
       </View>
 
       {direction === 'received' ? (
@@ -91,7 +121,11 @@ export function InviteCard({ invite, direction, busy, processing, onAction }: In
           hitSlop={8}
           accessibilityRole="button"
         >
-          <Text variant="caption" style={[styles.cancelLabel, busy && styles.cancelLabelDisabled]}>
+          <Text
+            variant="caption"
+            weight="medium"
+            style={[styles.cancelLabel, busy && styles.cancelLabelDisabled]}
+          >
             {t('invites.actions.cancel')}
           </Text>
         </Pressable>
@@ -130,21 +164,30 @@ export function InviteCard({ invite, direction, busy, processing, onAction }: In
 const styles = StyleSheet.create({
   textCol: {
     flex: 1,
-    gap: 2,
-  },
-  name: {
-    fontWeight: '700',
+    // `spacing.xs` (4) — was a hardcoded `2`, not a real token on the
+    // scale (theme.ts's own comment: "DO NOT use a spacing value outside
+    // this scale"). Same fix already applied to invite.tsx's own userInfo
+    // gap this session.
+    gap: spacing.xs,
   },
   actions: {
     flexShrink: 0,
   },
+  challengeLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+  },
+  challengeLinkText: {
+    flexShrink: 1,
+  },
   statusCol: {
     alignItems: 'flex-end',
-    gap: 2,
+    gap: spacing.xs,
   },
   cancelLabel: {
     color: colors.error,
-    fontWeight: '600',
   },
   cancelLabelDisabled: {
     opacity: 0.5,

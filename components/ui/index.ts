@@ -1,7 +1,3 @@
-// ActivityBadge: Compact badge showing an activity type's icon and label inside a rounded container.
-// Used to tag challenges, routines, and exercises with their activity category.
-export * from './activityBadge';
-
 // BackButton: Reusable chevron back button that calls router.back(). Accepts optional color and size.
 export * from './backButton';
 
@@ -13,17 +9,9 @@ export * from './button';
 // activityOutlineGlow), optional press handling, and configurable padding and border radius.
 export * from './card';
 
-// Container: Flexible content container with named background variants (background, surface,
-// surfaceElevated, surfaceHighlight), configurable padding, and a centering option.
-export * from './container';
-
 // Divider: Thin horizontal separator line with default and section variants
 // and configurable top/bottom margins.
 export * from './divider';
-
-// Dropdown: Multi-select dropdown with labeled options, optional icons per option,
-// a maximum selection limit, and a customizable header label.
-export * from './dropdown';
 
 // Icon: Thin wrapper around Ionicons with size and color props.
 // Defaults to the theme's primary text color when no color is provided.
@@ -42,7 +30,8 @@ export * from './input';
 export * from './loader';
 
 // Text: Core typography component with variants (title, subheader, header, body, caption, label, activity),
-// tone options (default, muted, inverted), alignment control, and activity-type color support.
+// tone options (primary, secondary, tertiary, inverse — opacity tiers, not activity-type colors),
+// alignment control, and an `inverse` flag for text on light/lime surfaces.
 export * from './text';
 
 // ErrorNotification: Toast-style error notification that slides in from the top with an auto-dismiss timer,
@@ -53,18 +42,12 @@ export * from './errorNotification';
 // throughout your application. Add this to your root layout (_layout.tsx).
 export * from './ErrorNotificationProvider';
 
-// UserAvatar: Circular avatar showing the user's first initial on a deterministic activity-type color
-// derived from their username. Use getUserAvatarColor(username) to get the color standalone.
+// UserAvatar: Circular avatar showing the user's photo, or their first initial on a neutral
+// (paper @ 20%) placeholder fill when no photo is set.
 export * from './userAvatar';
 
-// PhotoUserOverlay: Absolute-positioned overlay for photo cards showing a UserAvatar and username
-// with a text shadow for legibility. Drop it directly inside any photo frame View.
-export * from './photoUserOverlay';
-
-// PhotoFrame: Reusable portrait photo card (3/4 aspect ratio) with an image/placeholder fallback
-// and a PhotoUserOverlay. Used in FeedPostCard and ChallengePhotoGalleryModal.
-export * from './photoFrame';
-
-// PhotoDetailCard: Photo card with optional description and metrics table below the image.
-// Used in ChallengePhotoGalleryModal and ProfilePhotoModal.
+// PhotoDetailCard: One photo in a vertical detail feed — header row (avatar/
+// username/day), photo, caption, metrics table. Mirrors FeedPostCard's
+// header-row-above-the-photo structure rather than overlaying text on the
+// image. Used in ChallengePhotoGalleryModal and ProfilePhotoModal.
 export * from './photoDetailCard';

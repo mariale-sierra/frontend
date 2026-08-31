@@ -1,8 +1,9 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
-import { Button } from '../../ui/button';
-import { RestDayIconExperimental } from '../../icons/restDayIconExperimental';
-import { colors, spacing } from '../../../constants/theme';
+import { RestDayPrimaryButton } from './RestDayPrimaryButton';
+import { colors, radius, spacing } from '../../../constants/theme';
 
 interface RestDayContentProps {
   onJustToday: () => void;
@@ -11,21 +12,32 @@ interface RestDayContentProps {
   error?: string | null;
 }
 
+/** Rest-Or-Plan-28C wireframe — sits on `RestDayScreenBackground`'s solid
+ * `rest`-purple + white-highlight gradient, so every element here is `ink`
+ * (dark), not the usual `paper` (light-on-dark) default. Neither button
+ * matches an existing `Button` variant (this screen's own color pairing —
+ * solid `ink`/`rest` text, and transparent/`ink`-bordered/`ink` text — isn't
+ * used anywhere else), so both are built as plain `Pressable`s with real
+ * tokens rather than stretching the shared component to fit a one-off. */
 export function RestDayContent({
   onJustToday,
   onPlanRestDays,
   loading = false,
   error,
 }: RestDayContentProps) {
+  const { t } = useTranslation();
+
   return (
     <View style={styles.container}>
       <View style={styles.body}>
-        <RestDayIconExperimental />
+        <Ionicons name="moon-outline" size={72} color={colors.ink} />
 
         <View style={styles.textGroup}>
-          <Text variant="title" align="center">{'Rest days\nmatter too.'}</Text>
-          <Text variant="body" tone="secondary" align="center" style={styles.subtitle}>
-            Do you want to take today off, or schedule more rest days?
+          <Text variant="body" size="2xl" weight="bold" align="center" inverse>
+            {t('restDay.title')}
+          </Text>
+          <Text variant="body" tone="secondary" align="center" inverse style={styles.subtitle}>
+            {t('restDay.subtitle')}
           </Text>
         </View>
       </View>
@@ -36,12 +48,22 @@ export function RestDayContent({
             {error}
           </Text>
         ) : null}
-        <Button variant="primary" size="md" onPress={onJustToday} loading={loading} style={styles.actionButton}>
-          Just today
-        </Button>
-        <Button variant="outline" size="md" onPress={onPlanRestDays} disabled={loading} style={styles.actionButton}>
-          Plan rest days
-        </Button>
+
+        <RestDayPrimaryButton
+          label={t('restDay.justTodayButton')}
+          onPress={onJustToday}
+          loading={loading}
+        />
+
+        <Pressable
+          onPress={onPlanRestDays}
+          disabled={loading}
+          style={({ pressed }) => [styles.planButton, pressed && styles.pressed]}
+        >
+          <Text variant="label" weight="bold" style={styles.planText}>
+            {t('restDay.planButton')}
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -68,11 +90,23 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   actions: {
-    gap: spacing.md,
-    alignItems: 'center',
+    gap: spacing.sm,
   },
-  actionButton: {
-    width: 220,
+  planButton: {
+    paddingVertical: spacing.md,
+    borderRadius: radius.big,
+    borderWidth: 1.5,
+    borderColor: colors.ink,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  planText: {
+    color: colors.ink,
+    opacity: 1,
+  },
+  pressed: {
+    opacity: 0.85,
   },
   errorText: {
     color: colors.error,

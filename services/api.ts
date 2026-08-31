@@ -4,6 +4,17 @@ import i18n from '../i18n';
 import { getAccessToken } from './auth/token.service';
 import { useErrorNotificationStore } from '../store/errorNotificationStore';
 
+// Lets a specific call opt out of the global error toast below — for
+// best-effort writes a caller already handles on its own (catches, logs, and
+// deliberately continues rather than failing the whole flow), the shared
+// interceptor firing a scary toast anyway is misleading, not helpful. See
+// applyExerciseMetrics.ts's per-set metric writes for the motivating case.
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    suppressErrorToast?: boolean;
+  }
+}
+
 // Base URL comes from app config (`extra.apiUrl` in app.config.js), which itself reads the
 // EXPO_PUBLIC_API_URL env var — falls back to the known dev IP if config resolution fails.
 // NOTE: intentionally HTTP, not HTTPS. The backend has no TLS certificate yet; forcing HTTPS
@@ -20,12 +31,28 @@ api.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Real day-boundary bug, not just unintuitive UX: every "is today done"
+  // check (current day, streaks, today_completed) is computed backend-side
+  // against a fixed UTC calendar day, with no idea what timezone the user
+  // is actually in — so for anyone ahead of UTC, there's a real window
+  // right after local midnight where a challenge still reads as "completed
+  // today" from yesterday's photo, because the server's UTC day hasn't
+  // rolled over yet. Sent fresh on every request (not cached/stored) so it
+  // stays correct across DST changes and travel without any extra
+  // client-side bookkeeping — the backend is expected to fall back to UTC
+  // if this header is ever missing (older app builds, etc.), matching
+  // today's existing behavior exactly.
+  config.headers['X-Timezone'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return config;
 });
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error?.config?.suppressErrorToast) {
+      return Promise.reject(error);
+    }
+
     const errorStore = useErrorNotificationStore.getState();
 
     // Handle different error types

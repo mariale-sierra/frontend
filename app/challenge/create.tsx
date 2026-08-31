@@ -1,121 +1,98 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
-import { Row } from '../../components/layout/row';
 import { Stack } from '../../components/layout/stack';
 import {
-  CycleDayVerticalStepper,
+  CreateFlowProgressHeader,
+  ChallengeNameFields,
+  OptionPillGrid,
+  CycleDayList,
+  RepeatsStepper,
+  VisibilityCardGroup,
+  ChallengeReviewSummary,
   CreateFlowPrimaryButton,
-  ChallengeSubmitActions,
-  ChallengeTitleInputs,
-  ChallengeVisibilitySection,
-  CreateChallengeHeader,
-  DurationStepper,
-  OptionSelectionPanel,
-  OptionInfoModal,
-  type OptionInfoModalState,
 } from '../../components/challenge/create';
 import { ActivityIcon } from '../../components/icons/activityIcon';
-import { LocationIcon, type LocationType } from '../../components/icons/locationIcon';
+import { LocationIcon } from '../../components/icons/locationIcon';
 import { Text } from '../../components/ui/text';
-import { colors, radius, spacing, type ActivityType } from '../../constants/theme';
-import { CATEGORY_OPTIONS, LOCATION_OPTIONS, VISIBILITY_OPTIONS } from '../../constants/challengeCreateOptions';
+import { colors, spacing, activityColors } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
+import { CATEGORY_OPTIONS, LOCATION_OPTIONS } from '../../constants/challengeCreateOptions';
 import { useCreateChallengeFlow } from '../../hooks/useCreateChallengeFlow';
-import { useTranslation } from 'react-i18next';
+import { getExerciseCount } from '../../services/exercises/exercises.service';
 
 export default function CreateChallenge() {
   const { t } = useTranslation();
-  const [activeOptionInfo, setActiveOptionInfo] = useState<OptionInfoModalState | null>(null);
-  const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
-  const [weekPickerOpen, setWeekPickerOpen] = useState(false);
+  const insets = useSafeAreaInsets();
   const {
     title,
     description,
-    cycleDuration,
+    cycleLengthDays,
+    cyclesCount,
+    durationDays,
+    endDateLabel,
     visibility,
     selectedCategories,
     selectedLocations,
+    currentStep,
     activeStep,
-    progress,
-    activeStepErrors,
-    effectiveChallengeDuration,
-    configuredDays,
-    selectedDay,
-    selectedDayRoutine,
-    isFormComplete,
+    steps,
     isSubmitting,
+    hasRoutineForEveryDay,
     setTitle,
     setDescription,
-    setCycleDuration,
-    setChallengeDuration,
+    addCycleDay,
+    removeCycleDay,
+    setCyclesCount,
     setVisibility,
     setCurrentStep,
-    setSelectedDay,
     getDayStatus,
     getDayRoutineLabel,
-    getDayRoutineDescription,
+    getDayRoutineMeta,
+    getDayRoutineColor,
+    challengeAccentColor,
     handleBack,
     handleNext,
     handleActionPress,
     toggleCategory,
     toggleLocation,
     openDayRoutineSelector,
-    unassignRoutineFromDay,
   } = useCreateChallengeFlow();
 
-  const weekGroups = useMemo(() => {
-    const totalWeeks = Math.max(1, Math.ceil(cycleDuration / 7));
-    return Array.from({ length: totalWeeks }, (_, index) => {
-      const startDay = index * 7 + 1;
-      const endDay = Math.min(cycleDuration, startDay + 6);
-      return Array.from({ length: Math.max(0, endDay - startDay + 1) }, (_item, offset) => startDay + offset);
-    });
-  }, [cycleDuration]);
-
-  const activeWeekDays = weekGroups[selectedWeekIndex] ?? [];
-  const showWeekGrouping = cycleDuration > 7;
-  const isDaysStep = activeStep.kind === 'days';
+  const isCycleStep = activeStep.kind === 'cycle';
   const isReviewStep = activeStep.kind === 'review';
+  const continueDisabled = isCycleStep && !hasRoutineForEveryDay;
+
+  // Live "N exercises unlocked" count for the Activity & Location step (GET
+  // /exercises/count, backend added 2026-08-29, commit `bfd502f`) — was
+  // entirely unbuilt before that, no endpoint existed to back it.
+  const [matchingExerciseCount, setMatchingExerciseCount] = useState<number | null>(null);
 
   useEffect(() => {
-    const activeIndex = Math.floor((Math.max(1, selectedDay) - 1) / 7);
-    setSelectedWeekIndex(Math.min(activeIndex, Math.max(0, weekGroups.length - 1)));
-  }, [selectedDay, weekGroups.length]);
+    if (activeStep.kind !== 'activityLocation') return;
 
-  function handleSelectWeek(index: number) {
-    setSelectedWeekIndex(index);
-    setWeekPickerOpen(false);
+    let cancelled = false;
+    getExerciseCount(selectedCategories, selectedLocations)
+      .then((count) => {
+        if (!cancelled) setMatchingExerciseCount(count);
+      })
+      .catch((error: any) => {
+        console.error('[CreateChallenge] Failed to load exercise count:', error?.response?.data ?? error?.message);
+        if (!cancelled) setMatchingExerciseCount(null);
+      });
 
-    const days = weekGroups[index] ?? [];
-    if (days.length === 0) {
-      return;
-    }
-
-    if (!days.includes(selectedDay)) {
-      setSelectedDay(days[0]);
-    }
-  }
-
-  function handleDaysContinue() {
-    if (!selectedDayRoutine) {
-      openDayRoutineSelector(selectedDay);
-      return;
-    }
-
-    if (selectedDay < cycleDuration) {
-      setSelectedDay(selectedDay + 1);
-      return;
-    }
-
-    handleNext();
-  }
+    return () => {
+      cancelled = true;
+    };
+  }, [activeStep.kind, selectedCategories, selectedLocations]);
 
   function renderStepContent() {
     switch (activeStep.kind) {
-      case 'identity':
+      case 'name':
         return (
-          <ChallengeTitleInputs
+          <ChallengeNameFields
             title={title}
             description={description}
             onChangeTitle={setTitle}
@@ -123,252 +100,130 @@ export default function CreateChallenge() {
           />
         );
 
-      case 'categories':
+      case 'activityLocation':
         return (
-          <Stack gap="2xl">
-            <OptionSelectionPanel
-              title={t('challengeCreate.categories.exerciseCategoriesTitle')}
-              subtitle={t('challengeCreate.categories.exerciseCategoriesSubtitle')}
+          <Stack gap="xl">
+            <OptionPillGrid
+              label={t('challengeCreate.fields.activity')}
               options={CATEGORY_OPTIONS}
               selectedValues={selectedCategories}
               onToggle={toggleCategory}
-              onPressInfo={(option) => {
-                setActiveOptionInfo({
-                  label: option.label,
-                  description: option.description,
-                  icon: <ActivityIcon type={option.type as ActivityType} size="lg" variant="circle" />,
-                });
-              }}
-              renderIcon={(option, size) => <ActivityIcon type={option.type as ActivityType} size={size} variant="circle" />}
+              renderIcon={(option, selected) => (
+                <ActivityIcon type={option.type} size="sm" variant="plain" color={selected ? colors.ink : colors.paper} />
+              )}
+              getSelectedFill={(option) => activityColors[option.type]}
             />
 
-            <OptionSelectionPanel
-              title={t('challengeCreate.categories.challengeLocationTitle')}
-              subtitle={t('challengeCreate.categories.challengeLocationSubtitle')}
+            <OptionPillGrid
+              label={t('challengeCreate.fields.location')}
               options={LOCATION_OPTIONS}
               selectedValues={selectedLocations}
               onToggle={toggleLocation}
-              onPressInfo={(option) => {
-                setActiveOptionInfo({
-                  label: option.label,
-                  description: option.description,
-                  icon: <LocationIcon type={option.type as LocationType} size="lg" />,
-                });
-              }}
-              renderIcon={(option, size) => <LocationIcon type={option.type as LocationType} size={size} />}
+              renderIcon={(option, selected) => (
+                <LocationIcon type={option.type} size="sm" variant="plain" color={selected ? colors.ink : colors.paper} />
+              )}
             />
+
+            {matchingExerciseCount !== null && (
+              <Text variant="caption" tone="secondary" align="center">
+                {t('challengeCreate.fields.exercisesUnlockedCount', { count: matchingExerciseCount })}
+              </Text>
+            )}
           </Stack>
         );
 
       case 'cycle':
         return (
-          <DurationStepper
-            label={t('challengeCreate.fields.cycleDuration')}
-            value={cycleDuration}
-            unitLabel={t('challengeCreate.fields.cycleDaysUnit')}
-            presetValues={[3, 5, 7, 14]}
-            presetLabels={{ 7: t('challengeCreate.fields.oneWeek'), 14: t('challengeCreate.fields.twoWeeks') }}
-            onIncrement={() => setCycleDuration(cycleDuration + 1)}
-            onDecrement={() => setCycleDuration(Math.max(1, cycleDuration - 1))}
-            onSelectPreset={setCycleDuration}
+          <CycleDayList
+            totalDays={cycleLengthDays}
+            getDayStatus={getDayStatus}
+            getDayRoutineLabel={getDayRoutineLabel}
+            getDayRoutineMeta={getDayRoutineMeta}
+            getDayRoutineColor={getDayRoutineColor}
+            onPressDay={openDayRoutineSelector}
+            onRemoveDay={removeCycleDay}
+            onAddDay={addCycleDay}
           />
         );
 
-      case 'days':
+      case 'durationVisibility':
         return (
-          <Stack gap="lg">
-            <Row justify="space-between" align="center">
-              <View>
-                <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.days.configured')}</Text>
-                <Text variant="subheader">
-                  {t('challengeCreate.days.configuredCount', {
-                    configured: configuredDays.length,
-                    total: cycleDuration,
-                  })}
-                </Text>
-              </View>
-            </Row>
-
-            {showWeekGrouping && (
-              <View style={styles.weekPickerWrap}>
-                <Pressable
-                  onPress={() => setWeekPickerOpen((current) => !current)}
-                  style={({ pressed }) => [styles.weekPickerButton, pressed && styles.pressed]}
-                >
-                  <Text variant="label" style={styles.weekPickerLabel}>{t('challengeCreate.days.weekLabel', { number: selectedWeekIndex + 1 })}</Text>
-                  <Ionicons name={weekPickerOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textPrimary} />
-                </Pressable>
-
-                {weekPickerOpen && (
-                  <View style={styles.weekPickerList}>
-                    {weekGroups.map((_week, index) => {
-                      const active = index === selectedWeekIndex;
-                      return (
-                        <Pressable
-                          key={`week-option-${index}`}
-                          onPress={() => handleSelectWeek(index)}
-                          style={({ pressed }) => [
-                            styles.weekPickerOption,
-                            active && styles.weekPickerOptionActive,
-                            pressed && styles.pressed,
-                          ]}
-                        >
-                          <Text variant="body" style={styles.weekPickerOptionLabel}>{t('challengeCreate.days.weekLabel', { number: index + 1 })}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
-            )}
-
-            <CycleDayVerticalStepper
-              days={showWeekGrouping ? activeWeekDays : Array.from({ length: cycleDuration }, (_item, index) => index + 1)}
-              selectedDay={selectedDay}
-              onSelectDay={setSelectedDay}
-              getDayStatus={getDayStatus}
-              getDayRoutineLabel={getDayRoutineLabel}
-              getDayRoutineDescription={getDayRoutineDescription}
-              onPressAssignRoutine={openDayRoutineSelector}
+          <Stack gap="xl">
+            <RepeatsStepper
+              cycleLengthDays={cycleLengthDays}
+              cyclesCount={cyclesCount}
+              durationDays={durationDays}
+              endDateLabel={endDateLabel}
+              onIncrement={() => setCyclesCount(cyclesCount + 1)}
+              onDecrement={() => setCyclesCount(cyclesCount - 1)}
             />
-          </Stack>
-        );
 
-      case 'settings':
-        return (
-          <ChallengeVisibilitySection
-            baseDuration={cycleDuration}
-            challengeDuration={effectiveChallengeDuration}
-            visibilityOptions={VISIBILITY_OPTIONS}
-            selectedVisibility={visibility}
-            onChangeChallengeDuration={(value) => setChallengeDuration(value > 0 ? value : null)}
-            onChangeVisibility={(value) => {
-              if (value === 'Public' || value === 'Private' || value == null) {
-                setVisibility(value);
-              }
-            }}
-          />
+            <VisibilityCardGroup selectedVisibility={visibility} onChange={setVisibility} />
+          </Stack>
         );
 
       case 'review':
         return (
-          <Stack gap="lg">
-            <View style={styles.summaryContent}>
-              <Stack gap="md">
-                <View>
-                  <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.review.challengeLabel')}</Text>
-                  <Text variant="title" style={styles.summaryTitle}>{title || t('challengeCreate.review.untitledChallenge')}</Text>
-                  {description.trim().length > 0 && (
-                    <Text variant="body" tone="secondary">{description}</Text>
-                  )}
-                </View>
-
-                <View style={styles.summaryDivider} />
-
-                <Row justify="space-between" align="flex-start" style={styles.summaryRow}>
-                  <View style={styles.summaryMetricBlock}>
-                    <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.review.categoriesLabel')}</Text>
-                    <Text variant="body" style={styles.summaryValueText}>{selectedCategories.join(' · ') || t('challengeCreate.review.noneSelected')}</Text>
-                  </View>
-                  <View style={styles.summaryMetricBlock}>
-                    <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.review.locationLabel')}</Text>
-                    <Text variant="body" style={styles.summaryValueText}>{selectedLocations.join(' · ') || t('challengeCreate.review.noneSelected')}</Text>
-                  </View>
-                </Row>
-
-                <View style={styles.summaryDivider} />
-
-                <Row justify="space-between" align="flex-start" style={styles.summaryRow}>
-                  <View style={styles.summaryMetricBlock}>
-                    <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.review.cycleLabel')}</Text>
-                    <Text variant="body" style={styles.summaryValueText}>{t('challengeCreate.review.daysValue', { days: cycleDuration })}</Text>
-                  </View>
-                  <View style={styles.summaryMetricBlock}>
-                    <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.review.challengeDurationLabel')}</Text>
-                    <Text variant="body" style={styles.summaryValueText}>{t('challengeCreate.review.daysValue', { days: effectiveChallengeDuration })}</Text>
-                  </View>
-                </Row>
-
-                <View style={styles.summaryDivider} />
-
-                <View>
-                  <Text variant="caption" style={styles.summaryLabel}>{t('challengeCreate.review.visibilityLabel')}</Text>
-                  <Text variant="body" style={styles.summaryValueText}>{visibility ?? t('challengeCreate.review.notSelectedYet')}</Text>
-                </View>
-              </Stack>
-            </View>
-
-            <View style={styles.actionsBlock}>
-              <ChallengeSubmitActions
-                visibility={visibility ?? 'Public'}
-                loading={isSubmitting}
-                onPrimaryPress={() => handleActionPress(
-                  visibility === 'Private'
-                    ? t('challengeCreate.submit.primaryPrivate')
-                    : t('challengeCreate.submit.primaryPublic'),
-                )}
-                onSendToFriendsPress={() => handleActionPress(t('challengeCreate.actions.sendToFriends'))}
-                onSharePress={() => handleActionPress(t('challengeCreate.actions.share'))}
-              />
-
-              {!isFormComplete && (
-                <Text variant="caption" style={styles.actionsHint}>
-                  {t('challengeCreate.submit.incompleteHint')}
-                </Text>
-              )}
-            </View>
-          </Stack>
+          <ChallengeReviewSummary
+            title={title}
+            cycleLengthDays={cycleLengthDays}
+            cyclesCount={cyclesCount}
+            durationDays={durationDays}
+            visibility={visibility}
+            selectedCategories={selectedCategories}
+            selectedLocations={selectedLocations}
+            getDayStatus={getDayStatus}
+            getDayRoutineLabel={getDayRoutineLabel}
+            accentColor={challengeAccentColor}
+            onEditSetup={() => setCurrentStep(1)}
+            onEditCycle={() => setCurrentStep(2)}
+          />
         );
     }
   }
 
   return (
     <ScreenBackground variant="top">
-      <ScrollView contentContainerStyle={[styles.container, !isReviewStep && styles.containerWithFixedBottom]}>
-        <Stack gap="md">
-          <CreateChallengeHeader author="Cami" />
-
-          <View style={styles.progressHeader}>
-            <Row justify="flex-start" align="center" style={styles.progressNavRow}>
-              <Pressable onPress={handleBack} hitSlop={12} style={({ pressed }) => [styles.navButton, pressed && styles.pressed]}>
-                <Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
-              </Pressable>
-            </Row>
-
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-            </View>
-          </View>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Stack gap="lg">
+          <CreateFlowProgressHeader
+            currentIndex={currentStep}
+            total={steps.length}
+            stepLabel={t('challengeCreate.stepLabel', { current: currentStep + 1, total: steps.length })}
+            onBack={handleBack}
+          />
 
           <Stack gap="sm">
-            <Text variant="label" style={styles.stepEyebrow}>{activeStep.eyebrow}</Text>
-            <Text variant="title" style={styles.stepTitle}>{activeStep.title}</Text>
-            <Text variant="body" tone="secondary" style={styles.stepDescription}>{activeStep.description}</Text>
+            <Text variant="title">{activeStep.title}</Text>
+            <Text variant="body" tone="secondary">{activeStep.description}</Text>
           </Stack>
 
           <View style={styles.stepContent}>
             {renderStepContent()}
           </View>
-
-          <OptionInfoModal
-            info={activeOptionInfo}
-            onClose={() => setActiveOptionInfo(null)}
-          />
-
-
         </Stack>
       </ScrollView>
 
-      {!isReviewStep && (
-        <View style={styles.fixedBottomBar}>
-          <CreateFlowPrimaryButton
-            onPress={isDaysStep ? handleDaysContinue : handleNext}
-            label={activeStep.kind === 'settings'
-              ? t('challengeCreate.actions.reviewChallenge')
-              : t('common.actions.continue')}
-          />
-        </View>
-      )}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+        {isCycleStep && !hasRoutineForEveryDay && (
+          <Text variant="caption" tone="secondary" align="center" style={styles.bottomHint}>
+            {t('challengeCreate.cycle.setAllDaysHint', { count: cycleLengthDays })}
+          </Text>
+        )}
+
+        {isReviewStep && (
+          <Text variant="caption" tone="secondary" align="center" style={styles.bottomHint}>
+            {t('challengeCreate.review.firstMemberHint')}
+          </Text>
+        )}
+
+        <CreateFlowPrimaryButton
+          label={isReviewStep ? t('challengeCreate.submit.startChallenge') : t('common.actions.continue')}
+          loading={isReviewStep ? isSubmitting : false}
+          disabled={continueDisabled}
+          onPress={isReviewStep ? handleActionPress : handleNext}
+        />
+      </View>
     </ScreenBackground>
   );
 }
@@ -376,164 +231,25 @@ export default function CreateChallenge() {
 const styles = StyleSheet.create({
   container: {
     padding: spacing.lg,
-    paddingBottom: spacing['2xl'],
+    paddingBottom: spacing['2xl'] + 132,
     flexGrow: 1,
   },
-  containerWithFixedBottom: {
-    paddingBottom: spacing['2xl'] + 132,
-  },
-  progressHeader: {
-    gap: spacing.lg,
-    marginTop: spacing.lg,
-  },
-  progressNavRow: {
-    width: '100%',
-  },
-  navButton: {
-    minWidth: 28,
-    minHeight: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressTrack: {
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 999,
-    backgroundColor: colors.textPrimary,
-  },
-  stepEyebrow: {
-    color: 'rgba(255,255,255,0.62)',
-  },
-  stepTitle: {
-    maxWidth: '88%',
-  },
-  stepDescription: {
-    maxWidth: '92%',
-  },
   stepContent: {
-    marginTop: spacing.xl + spacing.md,
-  },
-  weekPickerWrap: {
-    zIndex: 10,
-  },
-  weekPickerButton: {
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  weekPickerLabel: {
-    color: colors.textPrimary,
-  },
-  weekPickerList: {
     marginTop: spacing.sm,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-    backgroundColor: colors.surface,
-    overflow: 'hidden',
   },
-  weekPickerOption: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.08)',
-  },
-  weekPickerOptionActive: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  weekPickerOptionLabel: {
-    color: colors.textPrimary,
-  },
-  summaryContent: {
-    paddingHorizontal: spacing.xs,
-  },
-  summaryLabel: {
-    color: 'rgba(255,255,255,0.56)',
-    marginBottom: spacing.xs,
-  },
-  summaryTitle: {
-    marginBottom: spacing.xs,
-  },
-  summaryDivider: {
-    height: 1,
-    width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.14)',
-  },
-  summaryRow: {
-    width: '100%',
-    gap: spacing.md,
-  },
-  summaryMetricBlock: {
-    flex: 1,
-  },
-  summaryValueText: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: '600',
-  },
-  actionsBlock: {
-    gap: spacing.sm,
-    marginTop: spacing.xl,
-  },
-  actionsHint: {
-    textAlign: 'center',
-    color: 'rgba(255,255,255,0.62)',
-  },
-  footerActions: {
-    marginTop: spacing['2xl'] + spacing.lg,
-    gap: spacing.md,
-  },
-  footerButtonRow: {
-    width: '100%',
-  },
-  secondaryNavButton: {
-    flex: 1,
-    borderRadius: radius['2xl'],
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-  primaryNavButton: {
-    flex: 1.4,
-    borderRadius: radius['2xl'],
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    backgroundColor: colors.textPrimary,
-  },
-  secondaryNavLabel: {
-    color: colors.textPrimary,
-  },
-  primaryNavLabel: {
-    color: colors.textInverse,
-  },
-  fixedBottomBar: {
+  bottomBar: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
+    gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.lg,
-    backgroundColor: 'rgba(7,10,16,0.92)',
+    backgroundColor: colors.surface,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.14)',
+    borderTopColor: withAlpha(colors.paper, 0.08),
   },
-  pressed: {
-    opacity: 0.82,
+  bottomHint: {
+    marginTop: spacing.xs,
   },
 });

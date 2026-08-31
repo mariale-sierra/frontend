@@ -45,3 +45,6 @@ docs/ai/
 
 # test coverage output
 coverage/
+
+# design system refactor working doc — local reference only, not published to the repo
+havit-design-system-SKILL.md

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ActivityType } from '../constants/theme';
+import type { ActivityType } from '../types/activity';
 import type {
   ExerciseEntry,
   ExerciseMetricType,
@@ -29,6 +29,10 @@ interface RoutineBuilderState {
   updateStrengthSet: (exerciseId: string, setIndex: number, patch: Partial<SetRow>) => void;
   addStrengthSet: (exerciseId: string) => void;
   removeStrengthSet: (exerciseId: string, setIndex: number) => void;
+  /** Applies the same reps value to every set — the routine builder edits sets uniformly, not per-row. */
+  setUniformReps: (exerciseId: string, reps: number) => void;
+  /** Applies the same total rest (in seconds) to every set. */
+  setUniformRestSeconds: (exerciseId: string, totalSeconds: number) => void;
   // Future backend handoff: call this with a raw API template; store validates at runtime.
   applyBackendMetricTemplate: (exerciseId: string, rawTemplate: unknown) => void;
   updateSchemaMetricNumber: (exerciseId: string, fieldKey: string, value: number) => void;
@@ -42,6 +46,7 @@ interface RoutineBuilderState {
   assignRestDayToDay: (day: number) => void;
   unassignRoutineFromDay: (day: number) => void;
   pruneRoutinesAfterDay: (day: number) => void;
+  removeDayAndShift: (day: number, totalDaysBeforeRemoval: number) => void;
   resetBuilder: () => void;
 }
 
@@ -52,13 +57,27 @@ const defaultSet = (): SetRow => ({
   restSec: 0,
 });
 
-// Local template used while designing offline. Backend will eventually provide this.
+// Fallback template for a schema-kind exercise, used only until (or unless)
+// its real per-exercise metric config loads. `applyBackendMetricTemplate`
+// exists precisely to replace this with a real backend-provided template —
+// as of 2026-08-29, app/challenge/routine/exercises.tsx's handleAddSelected
+// now actually calls it (GET /exercises/:id/full) right after addExercise()
+// for every 'schema'-type exercise, so this mock is only what's briefly
+// applied before that resolves, or what's kept if the fetch fails. Before
+// that wiring landed, this WAS what genuinely got submitted for every
+// schema-kind exercise regardless of its real activity — a confirmed bug
+// (e.g. a pure-breathwork exercise showed distance+duration fields), see
+// havit-design-system-SKILL.md. Field keys must match the real backend
+// metric_type codes ('distance'/'time', not 'distanceKm'/'duration') since
+// createChallengePayloadAdapter.ts sends these keys verbatim as this
+// exercise's metric values on POST /challenges. Fixed 2026-08-28 — same code
+// mismatch as metricsAdapter.ts/applyExerciseMetrics.ts.
 const MOCK_SCHEMA_TEMPLATE: MetricTemplate = {
   id: 'mock-cardio-template',
   title: 'Exercise metrics',
   fields: [
-    { key: 'distanceKm', label: 'Distance', type: 'number', defaultValue: 5, unit: 'km', min: 0 },
-    { key: 'duration', label: 'Duration', type: 'duration', defaultMinutes: 20, defaultSeconds: 0 },
+    { key: 'distance', label: 'Distance', type: 'number', defaultValue: 5, unit: 'km', min: 0 },
+    { key: 'time', label: 'Duration', type: 'duration', defaultMinutes: 20, defaultSeconds: 0 },
   ],
 };
 
@@ -290,6 +309,10 @@ export function getUniqueActivityTypes(exercises: ExerciseEntry[]): ActivityType
   return Array.from(new Set(exercises.map((exercise) => exercise.activityType)));
 }
 
+export function getTotalRestSeconds(row: SetRow): number {
+  return row.restMin * 60 + row.restSec;
+}
+
 export function getRoutineLocationSummary(exercises: ExerciseEntry[]): string {
   const locations = Array.from(
     new Set(
@@ -417,13 +440,19 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
           return exercise;
         }
 
+        // Copies the last row's reps/rest instead of resetting to hardcoded
+        // defaults — the builder edits reps/rest uniformly across all sets
+        // (see setUniformReps/setUniformRestSeconds), so a newly added set
+        // should match what's already dialed in, not jump back to 8/1:00.
+        const lastSet = exercise.metrics.sets[exercise.metrics.sets.length - 1] ?? defaultSet();
+
         return {
           ...exercise,
           metrics: {
             kind: 'strength',
             sets: [
               ...exercise.metrics.sets,
-              { ...defaultSet(), setNumber: exercise.metrics.sets.length + 1 },
+              { ...lastSet, setNumber: exercise.metrics.sets.length + 1 },
             ],
           },
         };
@@ -444,6 +473,44 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
             sets: exercise.metrics.sets
               .filter((_, index) => index !== setIndex)
               .map((row, index) => ({ ...row, setNumber: index + 1 })),
+          },
+        };
+      }),
+    })),
+
+  setUniformReps: (exerciseId, reps) =>
+    set((state) => ({
+      exercises: state.exercises.map((exercise) => {
+        if (exercise.id !== exerciseId || exercise.metrics.kind !== 'strength') {
+          return exercise;
+        }
+
+        return {
+          ...exercise,
+          metrics: {
+            kind: 'strength',
+            sets: exercise.metrics.sets.map((row) => ({ ...row, reps })),
+          },
+        };
+      }),
+    })),
+
+  setUniformRestSeconds: (exerciseId, totalSeconds) =>
+    set((state) => ({
+      exercises: state.exercises.map((exercise) => {
+        if (exercise.id !== exerciseId || exercise.metrics.kind !== 'strength') {
+          return exercise;
+        }
+
+        const clamped = Math.max(0, totalSeconds);
+        const restMin = Math.floor(clamped / 60);
+        const restSec = clamped % 60;
+
+        return {
+          ...exercise,
+          metrics: {
+            kind: 'strength',
+            sets: exercise.metrics.sets.map((row) => ({ ...row, restMin, restSec })),
           },
         };
       }),
@@ -633,11 +700,43 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
       ),
     })),
 
+  // Removes one day slot from the middle of the cycle (the wireframe's per-row
+  // "×") and shifts every later day's routine assignment down by one, so day
+  // numbers stay contiguous 1..(totalDaysBeforeRemoval - 1) afterward.
+  removeDayAndShift: (day, totalDaysBeforeRemoval) =>
+    set((state) => {
+      const nextRoutinesByDay: Record<number, RoutineSummary> = {};
+
+      for (let dayNumber = 1; dayNumber <= totalDaysBeforeRemoval; dayNumber += 1) {
+        if (dayNumber === day) continue;
+
+        const routine = state.routinesByDay[dayNumber];
+        if (!routine) continue;
+
+        const targetDay = dayNumber < day ? dayNumber : dayNumber - 1;
+        nextRoutinesByDay[targetDay] = routine;
+      }
+
+      return { routinesByDay: nextRoutinesByDay };
+    }),
+
+  // Was missing `routinesByDay`/`savedRoutines`/`backendExerciseIdByLocalId`
+  // entirely (fixed 2026-08-29, real bug per user report) — those are exactly
+  // the fields a finished challenge's "Build the Cycle" assignments live in,
+  // so even once this got wired up to run after a successful challenge
+  // creation (see useCreateChallengeFlow.ts), it wasn't actually clearing
+  // the thing causing the leftover-routine symptom. `savedRoutines` resets
+  // to `[seedRoutine]`, matching this store's own fresh-load initial state,
+  // not `[]` — that mock entry is pre-existing seed data (see CLAUDE.md),
+  // out of scope to remove here.
   resetBuilder: () => set({
     dayIndex: null,
     routineName: '',
     routineDescription: '',
     isRestDay: false,
     exercises: [],
+    savedRoutines: [seedRoutine],
+    routinesByDay: {},
+    backendExerciseIdByLocalId: {},
   }),
 }));

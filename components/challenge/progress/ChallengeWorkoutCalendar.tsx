@@ -1,136 +1,203 @@
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
-import { colors, spacing, typography } from '../../../constants/theme';
+import { IconButton } from '../../ui/iconButton';
+import { colors, spacing } from '../../../constants/theme';
+import { withAlpha } from '../../../utils/color';
 import { useChallengeCalendar } from '../../../hooks/useChallengeCalendar';
 import type { CalendarCell } from '../../../utils/challengeCalendar';
 
-const WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+const WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 interface Props {
-  width: number;
   startDate: Date;
   totalDays: number;
-  completedWorkoutDays: number[];
-  selectedDay: number | null;
+  currentDay: number;
   photoDays: number[];
-  bottomInset: number;
+  isRestDayFn: (challengeDay: number) => boolean;
+  selectedDay: number | null;
   onPressDay: (challengeDay: number) => void;
+  /** Activity Color System v2 — this challenge's own accent color, used for
+   * the "today" dot/legend swatch (was fixed `secondary`). Falls back to
+   * `colors.primary` when the challenge has no dominant category yet, same
+   * as everywhere else this resolves — pass `getChallengeAccentColor()`'s
+   * result, not the raw category. */
+  accentColor: string;
 }
 
 interface DayCellProps {
   cell: CalendarCell | null;
   isSelected: boolean;
   onPress: (challengeDay: number) => void;
+  accentColor: string;
 }
 
-function DayCell({ cell, isSelected, onPress }: DayCellProps) {
-  // Padding cell or day outside the challenge range — fully invisible, no structure
-  if (!cell || cell.challengeDay === null) {
+// `photo`/`rest`/`missed` are fixed — a "you logged a photo" marker needs to
+// stay meaningful even for a challenge with no dominant category yet (white
+// would just look unstyled/lost), same reasoning as the progress ring's tick
+// colors and legend. `today` is NOT in this map — it resolves to the
+// challenge's own activity accent color instead (was fixed `secondary`),
+// passed in via the `accentColor` prop.
+const STATUS_DOT_COLOR: Record<'photo' | 'rest' | 'missed', string> = {
+  photo: colors.success,
+  rest: colors.rest,
+  missed: colors.error,
+};
+
+function DayCell({ cell, isSelected, onPress, accentColor }: DayCellProps) {
+  if (!cell || cell.challengeDay === null || !cell.status) {
     return <View style={styles.dayCell} />;
   }
 
-  const canPress = !cell.isFuture && cell.hasPhoto;
-
-  // Text color priority: today/hasPhoto → bright white; completed-no-photo → secondary gray;
-  // anything else past → muted; future → dim
-  const textStyle = [
-    styles.dayText,
-    cell.isToday || cell.hasPhoto
-      ? styles.dayTextBright
-      : cell.isCompleted
-      ? styles.dayTextNoPhoto
-      : cell.isFuture
-      ? styles.dayTextFuture
-      : styles.dayTextMuted,
-  ];
+  const { status, challengeDay } = cell;
+  const canPress = status === 'photo';
+  const dotColor = status === 'today' ? accentColor : STATUS_DOT_COLOR[status as keyof typeof STATUS_DOT_COLOR];
 
   return (
     <Pressable
       disabled={!canPress}
-      onPress={() => {
-        if (cell.challengeDay !== null) onPress(cell.challengeDay);
-      }}
+      onPress={() => onPress(challengeDay)}
       style={({ pressed }) => [styles.dayCell, pressed && canPress && styles.pressed]}
     >
       <View style={styles.markerWrap}>
-        {cell.hasPhoto && <View style={styles.completedDot} />}
+        {status !== 'future' && (
+          <View style={[styles.dot, { backgroundColor: dotColor }]} />
+        )}
         {isSelected && <View style={styles.selectedRing} />}
       </View>
-      <Text style={textStyle}>{cell.dayOfMonth}</Text>
+      {status === 'today' ? (
+        // Fixed 2026-08-29, per explicit report: was a fixed `colors.secondary`
+        // — now the same per-challenge `accentColor` the "today" dot above
+        // already uses, so the two agree instead of the dot being
+        // activity-colored while the number stayed a fixed color.
+        <Text variant="label" weight="bold" align="center" style={[styles.dayTextToday, { color: accentColor }]}>{cell.dayOfMonth}</Text>
+      ) : status === 'missed' ? (
+        <Text variant="label" align="center" style={styles.dayTextMissed}>{cell.dayOfMonth}</Text>
+      ) : status === 'future' ? (
+        <Text variant="label" tone="tertiary" align="center">{cell.dayOfMonth}</Text>
+      ) : (
+        <Text variant="label" align="center">{cell.dayOfMonth}</Text>
+      )}
     </Pressable>
   );
 }
 
 export function ChallengeWorkoutCalendar({
-  width,
   startDate,
   totalDays,
-  completedWorkoutDays,
-  selectedDay,
+  currentDay,
   photoDays,
-  bottomInset,
+  isRestDayFn,
+  selectedDay,
   onPressDay,
+  accentColor,
 }: Props) {
-  const months = useChallengeCalendar(startDate, totalDays, completedWorkoutDays, photoDays);
+  const { t } = useTranslation();
+  const months = useChallengeCalendar(startDate, totalDays, currentDay, photoDays, isRestDayFn);
+
+  // Default to the month containing "today" (i.e. currentDay) rather than the
+  // challenge's first month — for a multi-month challenge, that's the month
+  // the user actually cares about on landing, not day 1.
+  const defaultMonthIndex = useMemo(() => {
+    const todayDate = new Date(startDate);
+    todayDate.setDate(todayDate.getDate() + currentDay - 1);
+    const index = months.findIndex((m) => m.year === todayDate.getFullYear() && m.month === todayDate.getMonth());
+    return index >= 0 ? index : 0;
+  }, [months, startDate, currentDay]);
+
+  const [monthIndex, setMonthIndex] = useState(defaultMonthIndex);
+  const activeMonth = months[Math.min(monthIndex, months.length - 1)] ?? months[0];
+
+  if (!activeMonth) {
+    return <View style={styles.page} />;
+  }
+
+  const canGoPrev = monthIndex > 0;
+  const canGoNext = monthIndex < months.length - 1;
 
   return (
-    <ScrollView
-      style={[styles.page, { width }]}
-      contentContainerStyle={[
-        styles.content,
-        { paddingBottom: bottomInset + spacing['2xl'] },
-      ]}
-      showsVerticalScrollIndicator={false}
-      directionalLockEnabled
-      nestedScrollEnabled
-      bounces
-    >
-      {months.map((calMonth) => (
-        <View key={`${calMonth.year}-${calMonth.month}`} style={styles.monthSection}>
-          <Text style={styles.monthHeader}>{calMonth.label}</Text>
+    <View style={styles.page}>
+      <View style={styles.monthNav}>
+        <IconButton
+          name="chevron-back-outline"
+          variant="surface"
+          size={36}
+          onPress={() => canGoPrev && setMonthIndex((i) => i - 1)}
+          style={!canGoPrev && styles.navDisabled}
+          disabled={!canGoPrev}
+        />
+        <Text variant="subheader">{activeMonth.label}</Text>
+        <IconButton
+          name="chevron-forward-outline"
+          variant="surface"
+          size={36}
+          onPress={() => canGoNext && setMonthIndex((i) => i + 1)}
+          style={!canGoNext && styles.navDisabled}
+          disabled={!canGoNext}
+        />
+      </View>
 
-          <View style={styles.weekdayRow}>
-            {WEEKDAYS.map((wd) => (
-              <Text key={wd} style={styles.weekday}>{wd}</Text>
-            ))}
-          </View>
+      <View style={styles.weekdayRow}>
+        {WEEKDAYS.map((wd, i) => (
+          <Text key={i} variant="label" weight="bold" style={styles.weekday}>{wd}</Text>
+        ))}
+      </View>
+      <View style={styles.weekdayUnderline} />
 
-          <View style={styles.weekdayUnderline} />
-
-          {calMonth.weeks.map((week, wi) => (
-            <View key={wi} style={styles.weekRow}>
-              {week.map((cell, ci) => (
-                <DayCell
-                  key={ci}
-                  cell={cell}
-                  isSelected={cell?.challengeDay === selectedDay && selectedDay !== null}
-                  onPress={onPressDay}
-                />
-              ))}
-            </View>
+      {activeMonth.weeks.map((week, wi) => (
+        <View key={wi} style={styles.weekRow}>
+          {week.map((cell, ci) => (
+            <DayCell
+              key={ci}
+              cell={cell}
+              isSelected={cell?.challengeDay === selectedDay && selectedDay !== null}
+              onPress={onPressDay}
+              accentColor={accentColor}
+            />
           ))}
         </View>
       ))}
-    </ScrollView>
+
+      <View style={styles.legendRow}>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: colors.success }]} />
+          <Text variant="caption" tone="secondary">{t('challengeProgress.consistency.legendPhotoIn')}</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: colors.rest }]} />
+          <Text variant="caption" tone="secondary">{t('challengeProgress.consistency.legendRestDay')}</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: colors.error }]} />
+          <Text variant="caption" tone="secondary">{t('challengeProgress.consistency.legendMissed')}</Text>
+        </View>
+        <View style={styles.legendItem}>
+          <View style={[styles.legendDot, { backgroundColor: accentColor }]} />
+          <Text variant="caption" tone="secondary">{t('challengeProgress.consistency.legendToday')}</Text>
+        </View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // No paddingTop here — the "Consistency" toggle row above (screen-level
+  // consistencyHeader) already contributes its own paddingBottom; adding
+  // one here too was double-counting that gap (see the wireframe: the
+  // toggle row's own `0 16px 12px` is the ONLY vertical space between it
+  // and this view, not stacked with a second one).
   page: {
-    flex: 1,
+    paddingHorizontal: spacing.base,
   },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xl,
-    gap: spacing['2xl'],
+  monthNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: spacing.md,
   },
-  monthSection: {
-    gap: 0,
-  },
-  monthHeader: {
-    ...typography.header,
-    color: colors.textPrimary,
-    marginBottom: spacing.lg,
+  navDisabled: {
+    opacity: 0.35,
   },
   weekdayRow: {
     flexDirection: 'row',
@@ -138,22 +205,17 @@ const styles = StyleSheet.create({
   },
   weekday: {
     flex: 1,
-    fontSize: 13,
-    fontWeight: '400',
-    lineHeight: 18,
     textAlign: 'center',
-    color: colors.textSecondary,
   },
   weekdayUnderline: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    marginBottom: 0,
+    backgroundColor: withAlpha(colors.paper, 0.08),
   },
   weekRow: {
-    minHeight: 62,
+    minHeight: 46,
     flexDirection: 'row',
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderTopColor: withAlpha(colors.paper, 0.08),
   },
   dayCell: {
     flex: 1,
@@ -161,48 +223,55 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
   },
+  pressed: {
+    opacity: 0.7,
+  },
   markerWrap: {
-    height: 14,
+    height: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  completedDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: colors.textPrimary,
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   selectedRing: {
+    position: 'absolute',
     width: 10,
     height: 10,
     borderRadius: 5,
     borderWidth: 1.4,
-    borderColor: colors.textPrimary,
+    borderColor: colors.paper,
   },
-  dayText: {
-    fontSize: 18,
-    lineHeight: 22,
-    textAlign: 'center',
+  dayTextToday: {
+    // No base `color` here anymore — always overridden inline with the
+    // per-challenge `accentColor` at the call site (was a fixed
+    // `colors.secondary` fallback that never actually applied once the
+    // inline override was added).
+    // Text's tone-opacity applies even under a custom `color` override —
+    // reset to fully opaque (see components/ui/text.tsx's warning).
+    opacity: 1,
   },
-  // Has a photo → bright white, clearly tappable
-  dayTextBright: {
-    color: colors.textPrimary,
-    fontWeight: '600',
+  dayTextMissed: {
+    color: colors.error,
+    opacity: 1,
   },
-  // Completed but no photo uploaded yet → secondary gray, not tappable
-  dayTextNoPhoto: {
-    color: colors.textSecondary,
+  legendRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: spacing.md,
+    columnGap: spacing.base,
+    paddingTop: spacing.base,
   },
-  // Past challenge day, not yet completed
-  dayTextMuted: {
-    color: colors.textMuted,
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
-  // Future days not yet reached
-  dayTextFuture: {
-    color: colors.textMuted,
-    opacity: 0.22,
-  },
-  pressed: {
-    opacity: 0.7,
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 });

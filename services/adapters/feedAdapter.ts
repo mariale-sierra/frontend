@@ -1,6 +1,6 @@
 import { normalizeKey } from './adapterUtils';
 import { formatRelativeTime } from '../../utils/time';
-import type { ActivityType } from '../../constants/theme';
+import type { ActivityType } from '../../types/activity';
 import type { FeedPostContract } from '../../types/feed';
 
 export interface FeedPostViewModel {

@@ -1,11 +1,11 @@
 import { FlatList, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { Row } from '../layout/row';
 import { FriendStreakCard } from './FriendStreakCard';
-import type { FriendStreakViewModel } from './FriendStreakCard';
-import { colors, radius, spacing } from '../../constants/theme';
+import type { FriendStreakViewModel } from '../../services/adapters/followAdapter';
+import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 
 interface FriendsStreakSectionProps {
   friends: FriendStreakViewModel[];
@@ -29,14 +29,11 @@ export function FriendsStreakSection({
   return (
     <View>
       <Row justify="space-between" align="center" style={styles.header}>
-        <Row gap="xs">
-          <Icon name="people-outline" size={18} color="rgba(255,255,255,0.7)" />
-          <Text variant="header" tone="secondary">{t('home.streaksTitle')}</Text>
-        </Row>
+        <Text variant="subheader">{t('home.streaksTitle')}</Text>
 
         {onSeeMore && friends.length > 0 && (
-          <Row pressable onPress={onSeeMore} gap="xxs">
-            <Text variant="body" tone="secondary">{t('home.seeMore')}</Text>
+          <Row pressable onPress={onSeeMore} gap="xs">
+            <Text variant="label">{t('home.seeMore')}</Text>
           </Row>
         )}
       </Row>
@@ -71,23 +68,27 @@ export function FriendsStreakSection({
 
 const styles = StyleSheet.create({
   header: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   listContent: {
     paddingRight: spacing.lg,
   },
   separator: {
-    width: spacing.sm,
+    width: spacing.md,
   },
   skeletonRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
+  // Was `withAlpha(colors.paper, 0.1)` — a one-off value close to, but not
+  // quite, the shared Skeleton primitive's own `subtle` fill (0.08),
+  // purely because this predates that primitive and typed its own number.
+  // Converged onto the real shared token — see `fillOpacity`.
   skeletonCard: {
-    width: 180,
-    height: 56,
-    borderRadius: radius.xl,
-    backgroundColor: colors.surfaceElevated,
+    width: 58,
+    height: 58 + spacing.xl,
+    borderRadius: radius.big,
+    backgroundColor: withAlpha(colors.paper, fillOpacity.subtle),
   },
   message: {
     paddingVertical: spacing.sm,

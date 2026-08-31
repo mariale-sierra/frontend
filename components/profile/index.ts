@@ -1,4 +1,5 @@
 export * from './ProfileHeader';
+export * from './ProfileContentSkeleton';
 export * from './PostsViewToggle';
 export * from './PostsGrid';
 export * from './PhotoGrid';

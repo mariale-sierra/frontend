@@ -1,6 +1,5 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-import { colors, spacing } from '../../constants/theme';
-import { Icon } from '../ui/icon';
+import { useTranslation } from 'react-i18next';
+import { SegmentedIconToggle } from '../ui/segmentedIconToggle';
 
 export type PostsView = 'posts' | 'photos';
 
@@ -9,55 +8,18 @@ interface PostsViewToggleProps {
   onViewChange: (view: PostsView) => void;
 }
 
+/** Thin wrapper around the shared SegmentedIconToggle (components/ui) with this screen's icons/copy. */
 export function PostsViewToggle({ view, onViewChange }: PostsViewToggleProps) {
+  const { t } = useTranslation();
+
   return (
-    <View style={styles.wrapper}>
-      <View style={styles.tabs}>
-        <Pressable style={styles.tab} onPress={() => onViewChange('posts')}>
-          <Icon
-            name="eye"
-            size={22}
-            color={view === 'posts' ? colors.textPrimary : colors.textMuted}
-          />
-          {view === 'posts' && <View style={styles.indicator} />}
-        </Pressable>
-        <Pressable style={styles.tab} onPress={() => onViewChange('photos')}>
-          <Icon
-            name="camera"
-            size={22}
-            color={view === 'photos' ? colors.textPrimary : colors.textMuted}
-          />
-          {view === 'photos' && <View style={styles.indicator} />}
-        </Pressable>
-      </View>
-      <View style={styles.divider} />
-    </View>
+    <SegmentedIconToggle
+      value={view}
+      onChange={onViewChange}
+      options={[
+        { value: 'posts', icon: 'eye-outline', accessibilityLabel: t('profile.postsViewA11y') },
+        { value: 'photos', icon: 'camera-outline', accessibilityLabel: t('profile.photosViewA11y') },
+      ]}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: {
-    marginTop: spacing.sm,
-  },
-  tabs: {
-    flexDirection: 'row',
-    gap: spacing.xl,
-    justifyContent: 'center',
-    paddingBottom: spacing.sm,
-  },
-  tab: {
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-  },
-  indicator: {
-    width: 24,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: colors.textPrimary,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.border,
-  },
-});

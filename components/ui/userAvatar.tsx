@@ -1,15 +1,13 @@
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { colors } from '../../constants/theme';
+import { colors, fillOpacity, radius } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 
-export function getUserAvatarColor(username: string): string {
-  const palette = Object.values(colors.activityType) as string[];
-  if (!username) return palette[0];
-  let hash = 0;
-  for (let i = 0; i < username.length; i++) {
-    hash = (hash * 31 + username.charCodeAt(i)) >>> 0;
-  }
-  return palette[hash % palette.length];
-}
+// Neutral placeholder fill (paper @ 20% over the ink screen background) — the
+// value the wireframes use for avatar/photo placeholder circles. Now a real
+// formal design-system token (`fillOpacity.placeholder`) — see
+// havit-design-system-SKILL.md Open Items Tracker → "neutral fill-wash
+// opacities".
+const AVATAR_PLACEHOLDER_FILL = withAlpha(colors.paper, fillOpacity.placeholder);
 
 interface UserAvatarProps {
   username: string;
@@ -19,23 +17,28 @@ interface UserAvatarProps {
 }
 
 export function UserAvatar({ username, size = 40, imageUrl }: UserAvatarProps) {
-  const bgColor = getUserAvatarColor(username);
   const initial = username ? username[0].toUpperCase() : '?';
   const fontSize = Math.round(size * 0.38);
+  // Corner radius is always the flat `big` token, not size/2 — confirmed by
+  // both the Home and Profile wireframes. Small avatars still read as
+  // circles (28px exceeds half their own width/height, so the platform
+  // clamps it into a full circle), while the large profile avatar (88px)
+  // deliberately shows as a rounded square/"squircle" instead of a circle.
+  const cornerRadius = radius.big;
 
   if (imageUrl) {
     return (
       <Image
         source={{ uri: imageUrl }}
-        style={{ width: size, height: size, borderRadius: size / 2 }}
+        style={{ width: size, height: size, borderRadius: cornerRadius }}
         accessibilityLabel={username}
       />
     );
   }
 
   return (
-    <View style={[styles.circle, { width: size, height: size, borderRadius: size / 2, backgroundColor: bgColor }]}>
-      <Text style={{ fontSize, fontWeight: '700', color: '#000', lineHeight: fontSize * 1.3 }}>
+    <View style={[styles.circle, { width: size, height: size, borderRadius: cornerRadius }]}>
+      <Text style={{ fontSize, fontWeight: '700', color: colors.paper, lineHeight: fontSize * 1.3 }}>
         {initial}
       </Text>
     </View>
@@ -46,10 +49,9 @@ const styles = StyleSheet.create({
   circle: {
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 8,
-    elevation: 8,
+    // Neutral fill for every user — the old per-user rainbow hash reused the
+    // retired per-activity color palette. See design system → Explicitly
+    // Rejected Patterns.
+    backgroundColor: AVATAR_PLACEHOLDER_FILL,
   },
 });

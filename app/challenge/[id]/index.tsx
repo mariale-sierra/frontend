@@ -1,105 +1,71 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
-import ActivityScrollGradient from '../../../components/layout/activityScrollGradient';
-import { ChallengeHeader, ChallengeRoutineList } from '../../../components/challenge/detail';
-import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '../../../components/challenge/create';
+import ScreenBackground from '../../../components/layout/screenBackground';
+import { Row } from '../../../components/layout/row';
+import { BackButton } from '../../../components/ui/backButton';
 import { Icon } from '../../../components/ui/icon';
 import { Text } from '../../../components/ui/text';
-import { colors, spacing } from '../../../constants/theme';
-import { getChallenge, joinChallenge, leaveChallenge } from '../../../services/challenge/challenge.service';
+import { ChallengeHeader, ChallengeAboutSection, ChallengeRoutineList, ChallengeInfoContentSkeleton } from '../../../components/challenge/detail';
+import { ChallengeAccentGlow } from '../../../components/challenge/challengeAccentGlow';
+import type { ChallengeInfoRow } from '../../../components/challenge/detail';
+import { colors, radius, spacing } from '../../../constants/theme';
+import { withAlpha } from '../../../utils/color';
+import { getChallenge, joinChallenge } from '../../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../../services/user/user.service';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
+import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
 import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
-import { useAuth } from '../../../hooks/useAuth';
+import { useErrorNotificationStore } from '../../../store/errorNotificationStore';
 import type { ChallengeContract } from '../../../types/challenge';
-import { useTranslation } from 'react-i18next';
 
 type MembershipStatus = 'creator' | 'joined' | 'none';
 
 /**
- * Challenge info screen — description, locations/activity badges, routine
- * days. This is what you land on exploring a challenge (joined or not), and
- * what the "INFO" button on the active-progress screen (app/challenge/[id]/progress.tsx)
- * navigates back to. It never shows the day-by-day progress dashboard —
- * that's a separate route so the two don't get mixed into one screen again.
+ * Challenge info screen — title, info rows (duration/location/focus/proof),
+ * "About", and the cycle's routine list. This is what the info-circle icon
+ * on the Consistency screen (app/challenge/[id]/progress.tsx) navigates to,
+ * and what a routine row's chevron leads BACK from — tapping a row here
+ * pushes into Routine-Detail (app/challenge/[id]/routine/[day].tsx), never
+ * the other way around.
  */
 export default function ChallengeDetail() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { userId } = useAuth();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [challenge, setChallenge] = useState<ChallengeContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  // Tracks whether the current user created this challenge or already joined it —
-  // without this, "Join Challenge" was always shown/enabled and pressing it for a
-  // challenge you created or already joined always failed against the backend's
-  // valid guardrails ("You cannot join a challenge you created" /
-  // "Already joined this challenge"), surfacing as a generic error alert.
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('none');
   const [membershipLoading, setMembershipLoading] = useState(true);
+  const { showSuccess } = useErrorNotificationStore();
 
-  // Join confirmation popup
   const joinPopup = useConfirmationPopup({
     type: 'join',
     challengeName: challenge?.name ?? t('challenges.fallbackName'),
     onConfirm: async () => {
       const challengeId = typeof id === 'string' ? id : '';
-      if (!challengeId) {
-        Alert.alert(
-          t('common.errors.genericTitle'),
-          t('challenges.joinInvalidId'),
-        );
-        return;
-      }
+      if (!challengeId) return;
       try {
         await joinChallenge(challengeId);
         setMembershipStatus('joined');
-        Alert.alert(
-          t('challenges.joinSuccessTitle'),
-          t('challenges.joinSuccessMessage'),
-        );
-      } catch (err) {
-        const backendMessage = (err as { response?: { data?: { message?: string } } })
-          ?.response?.data?.message;
-        Alert.alert(
-          t('common.errors.genericTitle'),
-          backendMessage ?? t('challenges.joinError'),
-        );
-      }
-    },
-  });
-
-  // Leave confirmation popup
-  const leavePopup = useConfirmationPopup({
-    type: 'leave',
-    challengeName: challenge?.name ?? t('challenges.fallbackName'),
-    onConfirm: async () => {
-      const challengeId = typeof id === 'string' ? id : '';
-      if (!challengeId) {
-        Alert.alert(
-          t('common.errors.genericTitle'),
-          t('challenges.leaveInvalidId'),
-        );
-        return;
-      }
-      try {
-        await leaveChallenge(challengeId);
-        setMembershipStatus('none');
-        Alert.alert(
-          t('challenges.leaveSuccessTitle'),
-          t('challenges.leaveSuccessMessage'),
-        );
-        router.back();
+        // Per explicit report: joining silently worked with no feedback and
+        // no way to see the new challenge without manually finding it —
+        // confirm it worked, then land on the exact list it now appears in
+        // (Mine, not wherever the user happened to be browsing from, e.g.
+        // Explore). `view=mine` forces the Challenges tab's own local
+        // `view` state to sync even if that screen is still mounted
+        // underneath this one (its `useState` initializer alone wouldn't
+        // re-run on an already-mounted screen) — see its own matching
+        // `useEffect` for the other half of this.
+        showSuccess({ message: t('challenges.joinConfirm.success', { name: challenge?.name ?? t('challenges.fallbackName') }) });
+        router.replace('/(tabs)/challenges?view=mine');
       } catch {
-        Alert.alert(
-          t('common.errors.genericTitle'),
-          t('challenges.leaveError'),
-        );
+        // The confirmation popup itself surfaces failure via its own error state; nothing else to do here.
       }
     },
   });
@@ -115,12 +81,9 @@ export default function ChallengeDetail() {
   useEffect(() => {
     if (!challenge) return;
 
-    if (userId && challenge.created_by_user_id === userId) {
-      setMembershipStatus('creator');
-      setMembershipLoading(false);
-      return;
-    }
-
+    // See app/challenge/[id]/routine/[day].tsx and progress.tsx — same
+    // "created_by_user_id vs enrolled-list membership" check used everywhere
+    // else in the app to decide whether the current user is already in.
     getMyChallenges()
       .then((enrolled) => {
         const isMember = enrolled.some(
@@ -130,242 +93,211 @@ export default function ChallengeDetail() {
       })
       .catch(() => setMembershipStatus('none'))
       .finally(() => setMembershipLoading(false));
-  }, [challenge, userId]);
+  }, [challenge]);
+
+  function handleShare() {
+    if (!challenge) return;
+    Share.share({ message: t('challengeInfo.shareMessage', { name: challenge.name }) }).catch(() => {});
+  }
 
   if (loading) {
     return (
-      <View style={styles.loadingScreen}>
-        <View style={styles.center}>
-          <ActivityIndicator color="#ffffff" />
-        </View>
-      </View>
+      <ScreenBackground variant="default">
+        <Row justify="space-between" align="center" style={styles.topBar}>
+          <BackButton style={styles.backButton} />
+          <View style={styles.iconButton} />
+        </Row>
+        <ChallengeInfoContentSkeleton />
+      </ScreenBackground>
     );
   }
 
-  if (error) {
+  const detailLabels = {
+    locationFallbackLabel: t('challenges.locationFallback'),
+    categoryFallbackLabel: t('challenges.categoryFallback'),
+  };
+  const result = challenge ? toChallengeDetailViewModel(challenge, detailLabels) : null;
+
+  if (error || !result?.ok) {
     return (
-      <View style={styles.missingScreen}>
-        <View style={styles.missingBlock}>
-          <Text variant="title" style={styles.missingTitle}>
-            {t('common.errors.genericTitle')}
-          </Text>
-          <Text style={styles.missingSubtitle}>
+      <ScreenBackground variant="default">
+        <View style={styles.center}>
+          <Text tone="secondary" align="center" style={styles.errorText}>
             {t('challenges.detailLoadError')}
           </Text>
         </View>
-      </View>
+      </ScreenBackground>
     );
   }
 
-  const challengeViewResult = challenge ? toChallengeDetailViewModel(challenge) : null;
-  const challengeView = challengeViewResult?.ok ? challengeViewResult.value : null;
+  const view = result.value;
+  // Activity Color System v2 — this challenge's own resolved accent color,
+  // used for the title, the "Lasts" row's calendar icon, the "Read more"
+  // toggle, and each workout day's numbered badge below.
+  const dominantActivityCategory = challenge ? pickDominantActivityCategory(challenge) : null;
+  const accentColor = getChallengeAccentColor(dominantActivityCategory);
 
-  if (!challengeView) {
-    return (
-      <View style={styles.missingScreen}>
-        <View style={styles.missingBlock}>
-          <Text variant="title" style={styles.missingTitle}>{t('challenges.incompleteTitle')}</Text>
-          <Text style={styles.missingSubtitle}>
-            {t('challenges.incompleteMessage')}
-          </Text>
-          {(challengeViewResult?.missingData ?? []).map((item) => (
-            <Text key={`${item.field}-${item.requirement}`} style={styles.missingItem}>
-              • {item.field}: {item.requirement}
-            </Text>
-          ))}
-        </View>
-      </View>
-    );
-  }
+  const infoRows: ChallengeInfoRow[] = [
+    {
+      icon: 'calendar-outline',
+      iconColor: accentColor,
+      label: t('challengeInfo.lastsLabel'),
+      value: `${t('challenges.durationDaysLabel', { count: view.durationDays })} · ${
+        view.restDaysPerCycleCount > 0
+          ? t('challengeInfo.restEveryCycle', { count: view.restDaysPerCycleCount, cycleLength: view.cycleLengthDays })
+          : t('challenges.noRestDays')
+      }`,
+    },
+    { icon: 'location-outline', label: t('challengeInfo.doItAtLabel'), value: view.locationsLabel },
+    { icon: 'flash-outline', label: t('challengeInfo.focusLabel'), value: view.categoriesLabel },
+    { icon: 'camera-outline', label: t('challengeInfo.dailyProofLabel'), value: t('challengeInfo.dailyProofValue') },
+  ];
 
   return (
-    <View style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <ActivityScrollGradient activityType={challengeView.dominantActivity} style={styles.gradientContent}>
-          <View style={[styles.topBar, { paddingTop: insets.top + spacing.xs }]}>
-            <View style={styles.topLeftRow}>
-              <Pressable
-                onPress={() => router.back()}
-                style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel={t('metrics.accessibilityBack')}
-                hitSlop={12}
-              >
-                <Icon name="chevron-back" size={22} color={colors.textPrimary} />
-              </Pressable>
+    <ScreenBackground variant="default" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
+      <ChallengeAccentGlow color={accentColor} />
 
-              <Text variant="caption" style={styles.authorTopLabel}>
-                {t('challenges.byAuthor', { name: challengeView.authorName ?? t('challenges.memberAuthor') })}
-              </Text>
-            </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: membershipStatus === 'none' ? spacing['2xl'] : insets.bottom + spacing.xl }}
+      >
+        <Row justify="space-between" align="center" style={styles.topBar}>
+          <BackButton style={styles.backButton} />
+          <Row gap="xs" align="center">
+            <Pressable
+              // `dominantActivityCategory` passed through as a route param
+              // (2026-08-30) — Members already resolved it here, so the
+              // destination screen can paint its own accent glow on its
+              // very first render instead of waiting out its own
+              // `getChallenge()` round trip first (was a real ~1s "no
+              // gradient, then it pops in" gap the user flagged on-device).
+              // See `services/adapters/challengeState.ts`'s `parseActivityType`
+              // for how the destination screen re-validates this untrusted
+              // string before trusting it.
+              onPress={() =>
+                router.push(
+                  `/challenge/${id}/members?dominantActivityCategory=${dominantActivityCategory ?? ''}`,
+                )
+              }
+              style={({ pressed }) => [styles.membersPill, pressed && styles.pressed]}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('challengeInfo.membersA11y')}
+            >
+              <Icon name="people-outline" size={18} color={colors.paper} />
+              <Text variant="label" weight="bold">{view.membersJoined}</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleShare}
+              style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel={t('challengeInfo.shareA11y')}
+            >
+              <Icon name="share-outline" size={22} color={colors.paper} />
+            </Pressable>
+          </Row>
+        </Row>
 
-            <View style={styles.topRightRow}>
-              {membershipStatus !== 'none' && (
-                <Pressable
-                  onPress={() => router.push(`/challenge/${id}/invite`)}
-                  style={({ pressed }) => [styles.saveIconButton, pressed && styles.pressed]}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('invites.inviteUsersA11y')}
-                  hitSlop={12}
-                >
-                  <Icon name="person-add-outline" size={20} color={colors.textPrimary} />
-                </Pressable>
-              )}
+        <View style={styles.section}>
+          <ChallengeHeader title={view.title} rows={infoRows} accentColor={accentColor} />
+        </View>
 
-              <Pressable
-                style={({ pressed }) => [styles.saveIconButton, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel={t('challenges.saveButtonA11y')}
-                hitSlop={12}
-              >
-                <Icon name="bookmark-outline" size={20} color={colors.textPrimary} />
-              </Pressable>
+        <View style={styles.section}>
+          <ChallengeAboutSection description={view.description} accentColor={accentColor} />
+        </View>
 
-              {membershipStatus !== 'none' && (
-                <Pressable
-                  onPress={leavePopup.show}
-                  style={({ pressed }) => [styles.saveIconButton, pressed && styles.pressed]}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('challenges.leaveButtonA11y')}
-                  hitSlop={12}
-                >
-                  <Icon name="exit-outline" size={20} color={colors.error} />
-                </Pressable>
-              )}
-            </View>
-          </View>
-
-          <ChallengeHeader
-            challenge={{
-              label: challengeView.title,
-              description: challengeView.description,
-              locations: challengeView.locations,
-              activityBadges: challengeView.activities,
-            }}
-            detail={{
-              days: challengeView.durationDays,
-              membersJoined: challengeView.membersJoined,
-            }}
-          />
+        <View style={styles.section}>
           <ChallengeRoutineList
-            routine={challengeView.days}
+            days={view.days}
+            cycleLengthDays={view.cycleLengthDays}
+            durationDays={view.durationDays}
+            accentColor={accentColor}
             onPressDay={(day) => router.push(`/challenge/${id}/routine/${day}`)}
           />
-        </ActivityScrollGradient>
+        </View>
       </ScrollView>
 
-      <CreateFlowFixedBottomBar bottomInset={Math.max(insets.bottom, spacing.lg)} topPadding={spacing.md}>
-        {membershipStatus === 'creator' ? (
-          <CreateChallengePrimaryActionButton
-            label={t('challenges.ownChallengeButton', { defaultValue: 'Your Challenge' })}
-            accessibilityLabel={t('challenges.ownChallengeButtonA11y', { defaultValue: 'This is your challenge' })}
-            onPress={() => {}}
-            loading={false}
-            disabled
-          />
-        ) : membershipStatus === 'joined' ? (
-          <CreateChallengePrimaryActionButton
-            label={t('challenges.alreadyJoinedButton', { defaultValue: 'Already Joined' })}
-            accessibilityLabel={t('challenges.alreadyJoinedButtonA11y', { defaultValue: 'You already joined this challenge' })}
-            onPress={() => {}}
-            loading={false}
-            disabled
-          />
-        ) : (
-          <CreateChallengePrimaryActionButton
-            label={t('challenges.joinButton', { defaultValue: 'Join Challenge' })}
-            accessibilityLabel={t('challenges.joinButtonA11y', { defaultValue: 'Join challenge' })}
+      {/* Per explicit request: an already-joined (or creator) user sees no
+          button at all here, not a disabled/relabeled one — the wireframe
+          only shows this bar for someone who hasn't joined yet. */}
+      {!membershipLoading && membershipStatus === 'none' && (
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+          <Pressable
             onPress={joinPopup.show}
-            loading={membershipLoading}
-            disabled={membershipLoading || !id || error}
-          />
-        )}
-      </CreateFlowFixedBottomBar>
+            style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel={t('challenges.joinButtonA11y')}
+          >
+            <Text variant="body" weight="bold" style={styles.joinButtonText}>
+              {t('challengeInfo.joinChallengeButton')}
+            </Text>
+          </Pressable>
+        </View>
+      )}
 
-      {/* Confirmation Popups for Join/Leave */}
       <joinPopup.Component />
-      <leavePopup.Component />
-    </View>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
-  scrollContainer: {
-    backgroundColor: '#000000',
-    flexGrow: 1,
-  },
-  gradientContent: {
-    minHeight: '100%',
-    paddingBottom: spacing['2xl'] + 132,
-  },
-  topBar: {
-    paddingHorizontal: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  topLeftRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  topRightRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  authorTopLabel: {
-    color: colors.textPrimary,
-    opacity: 0.9,
-  },
-  backButton: {
-    minWidth: 28,
-    minHeight: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveIconButton: {
-    minWidth: 28,
-    minHeight: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingScreen: {
-    flex: 1,
-    backgroundColor: '#000000',
-  },
   center: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    minHeight: 300,
-  },
-  missingScreen: {
-    flex: 1,
-    backgroundColor: '#000000',
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.xl,
   },
-  missingBlock: {
-    gap: spacing.sm,
+  errorText: {
+    opacity: 1,
   },
-  missingTitle: {
-    fontSize: 24,
-    lineHeight: 30,
+  topBar: {
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
   },
-  missingSubtitle: {
-    opacity: 0.85,
-    lineHeight: 21,
+  backButton: {
+    marginLeft: -spacing.sm,
   },
-  missingItem: {
-    opacity: 0.9,
-    lineHeight: 20,
+  iconButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: -spacing.sm,
+  },
+  // Fixed 2026-08-29, per explicit "remove the dark pill-shaped element
+  // behind it" request — was a `surface`-bg, `radius.big` pill (padding
+  // included). Now just the icon+count, no background chrome, matching the
+  // plain-icon look of its sibling `iconButton` (the share button) right
+  // next to it. `hitSlop` on the Pressable itself (see JSX) keeps a
+  // reasonable touch target now that padding isn't providing one.
+  membersPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   pressed: {
-    opacity: 0.84,
+    opacity: 0.85,
+  },
+  section: {
+    paddingBottom: spacing.lg,
+  },
+  bottomBar: {
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.md,
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: withAlpha(colors.paper, 0.08),
+  },
+  joinButton: {
+    height: 52,
+    borderRadius: radius.big,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  joinButtonText: {
+    color: colors.ink,
+    opacity: 1,
   },
 });

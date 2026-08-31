@@ -6,7 +6,8 @@ import { Icon } from '../../ui/icon';
 import { BackButton } from '../../ui/backButton';
 import { Text } from '../../ui/text';
 import { PhotoDetailCard } from '../../ui/photoDetailCard';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
+import { withAlpha } from '../../../utils/color';
 import type { ChallengePhoto } from '../../../types/challenge';
 
 interface ChallengePhotoGalleryModalProps {
@@ -24,7 +25,16 @@ function orderPhotosForFeed(photos: ChallengePhoto[], selectedPhotoId: string | 
   return [selected, ...photos.filter((p) => p.id !== selectedPhotoId)];
 }
 
-
+/**
+ * "Scroll pic mode" — opened from the Consistency screen by tapping a
+ * calendar day (feed filtered to that day) or a grid photo (feed shows
+ * every photo for the challenge, most-recent-first, selected one pinned to
+ * the top). No wireframe for this one; retokenized and given a header title
+ * for context (a bare back button with no indication of what you're
+ * looking at was a real gap — a modal pushed over the current screen should
+ * say what it's showing, same principle `members.tsx`'s screen title
+ * already follows).
+ */
 export function ChallengePhotoGalleryModal({
   visible,
   photos,
@@ -42,11 +52,16 @@ export function ChallengePhotoGalleryModal({
     return orderPhotosForFeed(relevant, selectedPhotoId);
   }, [photos, selectedDay, selectedPhotoId]);
 
+  const title = selectedDay != null ? t('challenges.dayLabel', { day: selectedDay }) : t('challengeProgress.gallery.feedTitle');
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <View style={styles.screen}>
         <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-          <BackButton onPress={onClose} />
+          <BackButton style={styles.backButton} onPress={onClose} />
+          <Text variant="subheader" numberOfLines={1} style={styles.title}>{title}</Text>
+          {/* Balances the back button so the title stays visually centered. */}
+          <View style={styles.headerSpacer} />
         </View>
 
         <FlatList
@@ -59,9 +74,10 @@ export function ChallengePhotoGalleryModal({
             { paddingBottom: insets.bottom + spacing['2xl'] },
             feedPhotos.length === 0 && styles.emptyContent,
           ]}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
           ListEmptyComponent={
             <View style={styles.emptyCard}>
-              <Icon name="images-outline" size={34} color="rgba(255,255,255,0.46)" />
+              <Icon name="images-outline" size={34} color={withAlpha(colors.paper, textOpacity.tertiary)} />
               <Text variant="body" tone="secondary" align="center">
                 {t('challengeProgress.gallery.emptyMessage')}
               </Text>
@@ -76,15 +92,35 @@ export function ChallengePhotoGalleryModal({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.ink,
   },
   header: {
-    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.base,
     paddingBottom: spacing.md,
   },
+  backButton: {
+    marginLeft: -spacing.sm,
+  },
+  title: {
+    flex: 1,
+    textAlign: 'center',
+  },
+  // Matches BackButton's rendered footprint (44 default size, minus the
+  // -sm marginLeft pulling it flush with the screen edge) so the title
+  // stays visually centered between the two.
+  headerSpacer: {
+    width: 36,
+  },
   feedContent: {
-    paddingHorizontal: spacing.lg,
-    gap: spacing['2xl'],
+    paddingHorizontal: spacing.base,
+  },
+  // Bumped a step up the scale (`xl` → `2xl`) — with a header row, photo,
+  // caption, and a metrics table all inside each card, `xl` wasn't reading
+  // as a clear break between one photo's content and the next.
+  separator: {
+    height: spacing['2xl'],
   },
   emptyContent: {
     flexGrow: 1,
@@ -92,9 +128,9 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     width: '100%',
-    borderRadius: radius.xl,
+    borderRadius: radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
+    borderColor: withAlpha(colors.paper, 0.08),
     backgroundColor: colors.surface,
     padding: spacing.lg,
     alignItems: 'center',

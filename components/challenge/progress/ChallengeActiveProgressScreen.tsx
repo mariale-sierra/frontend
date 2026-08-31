@@ -1,34 +1,50 @@
-import { ActivityIndicator, NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../../../constants/theme';
+import { useTranslation } from 'react-i18next';
+import { spacing } from '../../../constants/theme';
+import { Text } from '../../ui/text';
+import { SegmentedIconToggle } from '../../ui/segmentedIconToggle';
 import { useChallengeActiveProgress } from '../../../hooks/useChallengeActiveProgress';
+import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
+import { getChallengeAccentColor } from '../../../services/adapters/challengeState';
+import { leaveChallenge } from '../../../services/challenge/challenge.service';
 import ScreenBackground from '../../layout/screenBackground';
+import { ChallengeAccentGlow } from '../challengeAccentGlow';
 import { ChallengeProgressHeader } from './ChallengeProgressHeader';
 import { ChallengePhotoGalleryModal } from './ChallengePhotoGalleryModal';
 import { ChallengePhotoMosaicSkeleton } from './ChallengePhotoMosaicSkeleton';
+import { ChallengeProgressContentSkeleton } from './ChallengeProgressContentSkeleton';
 import { ChallengeWorkoutCalendar } from './ChallengeWorkoutCalendar';
-import { spacing } from '../../../constants/theme';
+
+type ConsistencyView = 'grid' | 'calendar';
 
 export function ChallengeActiveProgressScreen() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const routeChallengeId = typeof id === 'string' && id.length > 0 ? id : null;
 
   const data = useChallengeActiveProgress(routeChallengeId);
-  const [activePage, setActivePage] = useState(0);
+  const [view, setView] = useState<ConsistencyView>('grid');
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   const galleryVisible = selectedPhotoId != null || selectedDay != null;
+  const accentColor = getChallengeAccentColor(data.dominantActivityCategory);
 
-  function handleMomentumScrollEnd(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    setActivePage(Math.round(offsetX / width));
-  }
+  const leavePopup = useConfirmationPopup({
+    type: 'leave',
+    challengeName: data.title,
+    onConfirm: async () => {
+      if (!data.challengeId) return;
+      await leaveChallenge(data.challengeId);
+      router.replace('/(tabs)/challenges');
+    },
+  });
 
   function handlePressInfo() {
     if (data.challengeId) {
@@ -36,10 +52,25 @@ export function ChallengeActiveProgressScreen() {
     }
   }
 
+  function handlePressMembers() {
+    if (data.challengeId) {
+      // `dominantActivityCategory` passed through as a route param
+      // (2026-08-30, same fix as Challenge-Info's own members link) — this
+      // screen already resolved it (`accentColor` above), so Members can
+      // paint its accent glow on first render instead of waiting out its
+      // own `getChallenge()` round trip.
+      router.push(
+        `/challenge/${data.challengeId}/members?dominantActivityCategory=${data.dominantActivityCategory ?? ''}`,
+      );
+    }
+  }
+
+  function handlePressRoutine() {
+    if (!data.challengeId || data.isTodayRestDay) return;
+    router.push(`/challenge/${data.challengeId}/routine/${data.currentDayInCycle}`);
+  }
+
   function openPhotoGallery(photoId: string) {
-    // Mosaic shows every photo across the challenge, so opening one from here
-    // should browse the full feed — leave selectedDay unset (that filter is
-    // only for the calendar's per-day dots).
     setSelectedPhotoId(photoId);
     setSelectedDay(null);
   }
@@ -59,54 +90,71 @@ export function ChallengeActiveProgressScreen() {
   if (data.loading) {
     return (
       <ScreenBackground variant="challenges" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator color={colors.textPrimary} />
-        </View>
+        <ChallengeProgressContentSkeleton />
       </ScreenBackground>
     );
   }
 
   return (
     <ScreenBackground variant="challenges" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
-      <ChallengeProgressHeader
-        progress={data.progress}
-        totalDays={data.totalDays}
-        title={data.title}
-        timeLeft={data.timeLeft}
-        participantsLabel={data.participantsLabel}
-        participants={data.participants}
-        activePage={activePage}
-        onPressInfo={handlePressInfo}
-      />
+      <ChallengeAccentGlow color={accentColor} />
 
-      <View style={styles.pagerWrap}>
-        <ScrollView
-          horizontal
-          pagingEnabled
-          bounces={false}
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={handleMomentumScrollEnd}
-          scrollEventThrottle={16}
-        >
+      {/* The whole screen scrolls as one — the grid/calendar below are plain
+          content Views, not their own independently-scrolling pager pages,
+          so the ring/header don't trap the rest of the screen behind a fixed
+          viewport height. */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + spacing['2xl'] }}
+      >
+        <ChallengeProgressHeader
+          state={data.state}
+          title={data.title}
+          currentDay={data.currentDay}
+          totalDays={data.totalDays}
+          ticks={data.ticks}
+          todayRoutineName={data.todayRoutineName}
+          isTodayRestDay={data.isTodayRestDay}
+          dominantActivityCategory={data.dominantActivityCategory}
+          onPressRoutine={handlePressRoutine}
+          onPressMembers={handlePressMembers}
+          onPressInfo={handlePressInfo}
+          onPressLeave={leavePopup.show}
+        />
+
+        <View style={styles.consistencyHeader}>
+          <Text variant="subheader">{t('challengeProgress.consistency.title')}</Text>
+          <SegmentedIconToggle
+            value={view}
+            onChange={setView}
+            activeColor={accentColor}
+            options={[
+              { value: 'grid', icon: 'grid-outline', accessibilityLabel: t('challengeProgress.consistency.gridViewA11y') },
+              { value: 'calendar', icon: 'calendar-outline', accessibilityLabel: t('challengeProgress.consistency.calendarViewA11y') },
+            ]}
+          />
+        </View>
+
+        {view === 'grid' ? (
           <ChallengePhotoMosaicSkeleton
             width={width}
             photos={data.photos}
             totalDays={data.totalDays}
-            bottomInset={insets.bottom}
             onPressPhoto={openPhotoGallery}
           />
+        ) : (
           <ChallengeWorkoutCalendar
-            width={width}
             startDate={data.startDate}
             totalDays={data.totalDays}
-            completedWorkoutDays={data.completedWorkoutDays}
-            selectedDay={selectedDay}
+            currentDay={data.currentDay}
             photoDays={data.photoDays}
-            bottomInset={insets.bottom}
+            isRestDayFn={data.isDayRestDay}
+            selectedDay={selectedDay}
             onPressDay={openDayGallery}
+            accentColor={accentColor}
           />
-        </ScrollView>
-      </View>
+        )}
+      </ScrollView>
 
       <ChallengePhotoGalleryModal
         visible={galleryVisible}
@@ -115,18 +163,19 @@ export function ChallengeActiveProgressScreen() {
         selectedDay={selectedDay}
         onClose={closeGallery}
       />
+
+      <leavePopup.Component />
     </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  pagerWrap: {
-    flex: 1,
-    paddingTop: spacing.lg,
-  },
-  loadingWrap: {
-    flex: 1,
+  consistencyHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
   },
 });

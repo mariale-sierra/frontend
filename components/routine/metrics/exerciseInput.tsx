@@ -1,6 +1,7 @@
 import { StyleSheet, TextInput, ViewProps, View } from 'react-native';
 import { Text } from '../../ui/text';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
+import { withAlpha } from '../../../utils/color';
 
 interface ExerciseInputProps extends Omit<ViewProps, 'children'> {
   label: string;
@@ -27,14 +28,14 @@ export function ExerciseInput({
 }: ExerciseInputProps) {
   return (
     <View style={[styles.field, style]} {...props}>
-      <Text variant="label" style={styles.fieldLabel}>{label}</Text>
+      <Text variant="label" tone="secondary">{label}</Text>
       <TextInput
         keyboardType={keyboardType}
         value={value}
         onChangeText={onChangeText}
         style={styles.input}
         placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={withAlpha(colors.paper, textOpacity.tertiary)}
       />
     </View>
   );
@@ -43,24 +44,15 @@ export function ExerciseInput({
 const styles = StyleSheet.create({
   field: {
     gap: spacing.xs,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
-    borderRadius: 0,
-    backgroundColor: 'transparent',
-  },
-  fieldLabel: {
-    color: colors.textSecondary,
-    letterSpacing: 1,
   },
   input: {
     minHeight: 40,
-    borderRadius: radius.md,
+    borderRadius: radius.medium,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    color: colors.textPrimary,
+    borderColor: withAlpha(colors.paper, 0.12),
+    color: colors.paper,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
-    backgroundColor: 'rgba(0,0,0,0.24)',
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
   },

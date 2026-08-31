@@ -1,20 +1,22 @@
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { buildCreateChallengePayload } from '../services/adapters/index';
 import { createChallenge } from '../services/challenge/challenge.service';
 import type { ChallengeVisibility } from '../types/challenge';
 import { useChallengeBuilder } from '../store/challengeBuilderStore';
-import { useRoutineBuilder } from '../store/routineBuilderStore';
+import { getRoutineLocationSummary, useRoutineBuilder } from '../store/routineBuilderStore';
+import { colors, activityColors } from '../constants/theme';
+import { CATEGORY_TO_ACTIVITY } from '../constants/challengeFilters';
+import type { ActivityType } from '../types/activity';
 import { useTranslation } from 'react-i18next';
 
 export type CreateStep =
-  | { kind: 'identity'; eyebrow: string; title: string; description: string }
-  | { kind: 'categories'; eyebrow: string; title: string; description: string }
-  | { kind: 'cycle'; eyebrow: string; title: string; description: string }
-  | { kind: 'days'; eyebrow: string; title: string; description: string }
-  | { kind: 'settings'; eyebrow: string; title: string; description: string }
-  | { kind: 'review'; eyebrow: string; title: string; description: string };
+  | { kind: 'name'; title: string; description: string }
+  | { kind: 'activityLocation'; title: string; description: string }
+  | { kind: 'cycle'; title: string; description: string }
+  | { kind: 'durationVisibility'; title: string; description: string }
+  | { kind: 'review'; title: string; description: string };
 
 function toggleValue(values: string[], value: string) {
   return values.includes(value)
@@ -26,10 +28,7 @@ interface ValidationLabels {
   challengeName: string;
   exerciseCategories: string;
   challengeLocation: string;
-  cycleDuration: string;
   configureEveryDay: string;
-  routineSelectionPerDay: string;
-  challengeDurationTotal: string;
   visibility: string;
 }
 
@@ -38,47 +37,41 @@ function getStepErrors(step: CreateStep, params: {
   selectedCategories: string[];
   selectedLocations: string[];
   hasRoutineForEveryDay: boolean;
-  cycleDuration: number;
-  effectiveChallengeDuration: number;
   visibility: ChallengeVisibility | null;
   labels: ValidationLabels;
 }) {
   switch (step.kind) {
-    case 'identity':
+    case 'name':
       return params.title.trim().length === 0 ? [params.labels.challengeName] : [];
-    case 'categories':
+    case 'activityLocation':
       return [
         ...(params.selectedCategories.length === 0 ? [params.labels.exerciseCategories] : []),
         ...(params.selectedLocations.length === 0 ? [params.labels.challengeLocation] : []),
       ];
     case 'cycle':
-      return params.cycleDuration > 0 ? [] : [params.labels.cycleDuration];
-    case 'days':
       return params.hasRoutineForEveryDay ? [] : [params.labels.configureEveryDay];
-    case 'settings':
-      return [
-        ...(params.effectiveChallengeDuration > 0 ? [] : [params.labels.challengeDurationTotal]),
-        ...(params.visibility ? [] : [params.labels.visibility]),
-      ];
+    case 'durationVisibility':
+      return params.visibility ? [] : [params.labels.visibility];
     case 'review':
       return [];
   }
 }
 
 export function useCreateChallengeFlow() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const title = useChallengeBuilder((state) => state.title);
   const description = useChallengeBuilder((state) => state.description);
-  const cycleDuration = useChallengeBuilder((state) => state.cycleDuration);
-  const challengeDuration = useChallengeBuilder((state) => state.challengeDuration);
+  const cycleLengthDays = useChallengeBuilder((state) => state.cycleLengthDays);
+  const cyclesCount = useChallengeBuilder((state) => state.cyclesCount);
   const visibility = useChallengeBuilder((state) => state.visibility);
   const currentStep = useChallengeBuilder((state) => state.currentStep);
   const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
   const selectedLocations = useChallengeBuilder((state) => state.selectedLocations);
   const setTitle = useChallengeBuilder((state) => state.setTitle);
   const setDescription = useChallengeBuilder((state) => state.setDescription);
-  const setCycleDuration = useChallengeBuilder((state) => state.setCycleDuration);
-  const setChallengeDuration = useChallengeBuilder((state) => state.setChallengeDuration);
+  const addCycleDayInStore = useChallengeBuilder((state) => state.addCycleDay);
+  const removeCycleDayInStore = useChallengeBuilder((state) => state.removeCycleDay);
+  const setCyclesCount = useChallengeBuilder((state) => state.setCyclesCount);
   const setVisibility = useChallengeBuilder((state) => state.setVisibility);
   const setCurrentStep = useChallengeBuilder((state) => state.setCurrentStep);
   const setSelectedCategories = useChallengeBuilder((state) => state.setSelectedCategories);
@@ -86,96 +79,69 @@ export function useCreateChallengeFlow() {
   const resetChallengeBuilder = useChallengeBuilder((state) => state.resetChallengeBuilder);
 
   const routinesByDay = useRoutineBuilder((state) => state.routinesByDay);
-  const pruneRoutinesAfterDay = useRoutineBuilder((state) => state.pruneRoutinesAfterDay);
-  const unassignRoutineFromDay = useRoutineBuilder((state) => state.unassignRoutineFromDay);
+  const removeDayAndShift = useRoutineBuilder((state) => state.removeDayAndShift);
+  const resetRoutineBuilder = useRoutineBuilder((state) => state.resetBuilder);
 
-  const [selectedDay, setSelectedDay] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const validationLabels = useMemo<ValidationLabels>(() => ({
     challengeName: t('challengeCreate.validation.challengeName'),
     exerciseCategories: t('challengeCreate.validation.exerciseCategories'),
     challengeLocation: t('challengeCreate.validation.challengeLocation'),
-    cycleDuration: t('challengeCreate.validation.cycleDuration'),
     configureEveryDay: t('challengeCreate.validation.configureEveryDay'),
-    routineSelectionPerDay: t('challengeCreate.validation.routineSelectionPerDay'),
-    challengeDurationTotal: t('challengeCreate.validation.challengeDurationTotal'),
     visibility: t('challengeCreate.validation.visibility'),
   }), [t]);
 
   const steps = useMemo<CreateStep[]>(() => ([
     {
-      kind: 'identity',
-      eyebrow: t('challengeCreate.steps.identity.eyebrow'),
-      title: t('challengeCreate.steps.identity.title'),
-      description: t('challengeCreate.steps.identity.description'),
+      kind: 'name',
+      title: t('challengeCreate.steps.name.title'),
+      description: t('challengeCreate.steps.name.description'),
     },
     {
-      kind: 'categories',
-      eyebrow: t('challengeCreate.steps.categories.eyebrow'),
-      title: t('challengeCreate.steps.categories.title'),
-      description: t('challengeCreate.steps.categories.description'),
+      kind: 'activityLocation',
+      title: t('challengeCreate.steps.activityLocation.title'),
+      description: t('challengeCreate.steps.activityLocation.description'),
     },
     {
       kind: 'cycle',
-      eyebrow: t('challengeCreate.steps.cycle.eyebrow'),
       title: t('challengeCreate.steps.cycle.title'),
       description: t('challengeCreate.steps.cycle.description'),
     },
     {
-      kind: 'days',
-      eyebrow: t('challengeCreate.steps.days.eyebrow'),
-      title: t('challengeCreate.steps.days.title'),
-      description: t('challengeCreate.steps.days.description'),
-    },
-    {
-      kind: 'settings',
-      eyebrow: t('challengeCreate.steps.settings.eyebrow'),
-      title: t('challengeCreate.steps.settings.title'),
-      description: t('challengeCreate.steps.settings.description'),
+      kind: 'durationVisibility',
+      title: t('challengeCreate.steps.durationVisibility.title'),
+      description: t('challengeCreate.steps.durationVisibility.description'),
     },
     {
       kind: 'review',
-      eyebrow: t('challengeCreate.steps.review.eyebrow'),
       title: t('challengeCreate.steps.review.title'),
       description: t('challengeCreate.steps.review.description'),
     },
   ]), [t]);
 
   const hasRoutineForEveryDay = useMemo(
-    () => Array.from({ length: cycleDuration }, (_, index) => index + 1)
+    () => Array.from({ length: cycleLengthDays }, (_, index) => index + 1)
       .every((dayNumber) => Boolean(routinesByDay[dayNumber])),
-    [cycleDuration, routinesByDay],
+    [cycleLengthDays, routinesByDay],
   );
 
-  const effectiveChallengeDuration = challengeDuration ?? cycleDuration;
+  const durationDays = cycleLengthDays * cyclesCount;
   const activeStep = steps[Math.min(currentStep, steps.length - 1)];
-  const daysStepIndex = steps.findIndex((step) => step.kind === 'days');
+  const isReviewStep = activeStep.kind === 'review';
 
-  useEffect(() => {
-    if (currentStep > steps.length - 1) {
-      setCurrentStep(steps.length - 1);
-    }
-  }, [currentStep, setCurrentStep, steps.length]);
-
-  useEffect(() => {
-    pruneRoutinesAfterDay(cycleDuration);
-  }, [cycleDuration, pruneRoutinesAfterDay]);
-
-  useEffect(() => {
-    setSelectedDay((currentDay) => {
-      const maxDay = Math.max(1, cycleDuration);
-      return Math.min(Math.max(currentDay, 1), maxDay);
-    });
-  }, [cycleDuration]);
+  const endDateLabel = useMemo(() => {
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + durationDays - 1);
+    const locale = i18n.language?.startsWith('es') ? 'es-ES' : 'en-US';
+    return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(endDate);
+  }, [durationDays, i18n.language]);
 
   const activeStepErrors = getStepErrors(activeStep, {
     title,
     selectedCategories,
     selectedLocations,
     hasRoutineForEveryDay,
-    cycleDuration,
-    effectiveChallengeDuration,
     visibility,
     labels: validationLabels,
   });
@@ -186,9 +152,7 @@ export function useCreateChallengeFlow() {
     if (title.trim().length === 0) missing.push(validationLabels.challengeName);
     if (selectedCategories.length === 0) missing.push(validationLabels.exerciseCategories);
     if (selectedLocations.length === 0) missing.push(validationLabels.challengeLocation);
-    if (cycleDuration <= 0) missing.push(validationLabels.cycleDuration);
-    if (!hasRoutineForEveryDay) missing.push(validationLabels.routineSelectionPerDay);
-    if (effectiveChallengeDuration <= 0) missing.push(validationLabels.challengeDurationTotal);
+    if (!hasRoutineForEveryDay) missing.push(validationLabels.configureEveryDay);
     if (!visibility) missing.push(validationLabels.visibility);
 
     return missing;
@@ -196,9 +160,7 @@ export function useCreateChallengeFlow() {
     title,
     selectedCategories,
     selectedLocations,
-    cycleDuration,
     hasRoutineForEveryDay,
-    effectiveChallengeDuration,
     visibility,
     validationLabels,
   ]);
@@ -207,10 +169,6 @@ export function useCreateChallengeFlow() {
   // `missingConfigurationFields` list used to build the submit-blocking hint, rather than
   // re-declaring the same rule set as a second boolean chain.
   const isFormComplete = missingConfigurationFields.length === 0;
-
-  const configuredDays = Array.from({ length: cycleDuration }, (_, index) => index + 1)
-    .filter((dayNumber) => Boolean(routinesByDay[dayNumber]));
-  const selectedDayRoutine = routinesByDay[selectedDay];
 
   function getDayStatus(dayNumber: number) {
     const routine = routinesByDay[dayNumber];
@@ -244,15 +202,12 @@ export function useCreateChallengeFlow() {
     setCurrentStep(Math.min(currentStep + 1, steps.length - 1));
   }
 
-  async function handleActionPress(actionLabel: string) {
+  async function handleActionPress() {
     if (missingConfigurationFields.length > 0) {
       const bulletList = missingConfigurationFields.map((item) => `• ${item}`).join('\n');
       Alert.alert(
         t('challengeCreate.alerts.missingConfigTitle'),
-        t('challengeCreate.alerts.missingConfigMessage', {
-          action: actionLabel,
-          items: bulletList,
-        }),
+        t('challengeCreate.alerts.missingConfigMessage', { items: bulletList }),
       );
       return;
     }
@@ -272,8 +227,8 @@ export function useCreateChallengeFlow() {
       title,
       description,
       visibility,
-      challengeDuration: effectiveChallengeDuration,
-      cycleDuration,
+      cycleLengthDays,
+      cyclesCount,
       selectedCategories,
       selectedLocations,
       routinesByDay,
@@ -281,25 +236,33 @@ export function useCreateChallengeFlow() {
 
     setIsSubmitting(true);
     try {
-      console.log('[createChallenge] payload:', JSON.stringify(payload, null, 2));
       const created = await createChallenge(payload);
       resetChallengeBuilder();
+      // Real bug, fixed 2026-08-29, per user report ("the previous cycle
+      // configured shows set up" on the NEXT challenge creation): this store
+      // holds `routinesByDay` (the "Build the Cycle" step's per-day
+      // assignments) — resetChallengeBuilder() above never touched it, so a
+      // finished challenge's day-1..N routines stayed in the store and
+      // select.tsx's init(dayNumber) (no explicit routine — it falls back to
+      // `routinesByDay[day]`) would silently hydrate the NEXT challenge's
+      // "New workout" flow from the PREVIOUS challenge's leftover data.
+      resetRoutineBuilder();
       if (created?.id) {
         router.replace(`/challenge/${created.id}`);
       } else {
-        router.replace('/challenge/active-all');
+        // Fallback for the rare case the create response has no id — the
+        // Challenges tab's Mine view (its default) is where a just-created
+        // challenge shows up anyway, now that app/challenge/active-all.tsx
+        // (the old dedicated screen) is retired.
+        router.replace('/(tabs)/challenges');
       }
     } catch (err: unknown) {
       type AxiosLike = {
         response?: { status?: number; data?: { message?: string | string[] } };
-        config?: { headers?: Record<string, unknown> };
         message?: string;
       };
       const e = err as AxiosLike;
       console.error('[createChallenge] error:', err);
-      console.error('[createChallenge] status:', e?.response?.status);
-      console.error('[createChallenge] response.data:', JSON.stringify(e?.response?.data, null, 2));
-      console.error('[createChallenge] auth header:', e?.config?.headers?.['Authorization']);
 
       const raw = e?.response?.data?.message;
       const backendMessage = Array.isArray(raw) ? raw.join('\n') : (raw ?? e?.message);
@@ -319,6 +282,19 @@ export function useCreateChallengeFlow() {
 
   function toggleLocation(value: string) {
     setSelectedLocations(toggleValue(selectedLocations, value));
+  }
+
+  function addCycleDay() {
+    addCycleDayInStore();
+  }
+
+  function removeCycleDay(dayNumber: number) {
+    if (cycleLengthDays <= 1) {
+      return;
+    }
+
+    removeDayAndShift(dayNumber, cycleLengthDays);
+    removeCycleDayInStore();
   }
 
   function openDayRoutineSelector(day: number) {
@@ -342,54 +318,108 @@ export function useCreateChallengeFlow() {
     return routine.isRestDay ? 'Rest day' : undefined;
   }
 
-  function getDayRoutineDescription(dayNumber: number) {
+  // Row subtitle for a configured workout day: real exercise count + real
+  // location summary, both derived from the routine itself — no fabricated
+  // duration figure (the wireframe's literal "45 min" has no backing data
+  // anywhere in this flow, so it's intentionally left out rather than made up).
+  function getDayRoutineMeta(dayNumber: number) {
     const routine = routinesByDay[dayNumber];
 
-    if (!routine) {
+    if (!routine || routine.isRestDay) {
       return undefined;
     }
 
-    if (routine.description && routine.description.trim().length > 0) {
-      return routine.description;
+    const exercisesLabel = t('challengeInfo.exerciseCount', { count: routine.exercises.length });
+    const location = getRoutineLocationSummary(routine.exercises);
+
+    return location ? t('challengeInfo.exerciseSummary', { exercises: exercisesLabel, location }) : exercisesLabel;
+  }
+
+  // Activity Color System v2 — the assigned routine's own dominant activity
+  // color (routineBuilderStore.ts's getPrimaryActivityType(), computed
+  // client-side the moment exercises are added, same "count by category,
+  // most frequent wins" logic the backend uses for a submitted challenge).
+  // Falls back to `colors.primary` (white) for a rest day, an empty day, or
+  // a routine with no exercises yet.
+  function getDayRoutineColor(dayNumber: number) {
+    const routine = routinesByDay[dayNumber];
+    if (!routine || routine.isRestDay || !routine.primaryActivity) {
+      return colors.primary;
+    }
+    return activityColors[routine.primaryActivity];
+  }
+
+  // Activity Color System v2 — the whole challenge's own dominant activity
+  // color, computed client-side for the Review step (no challenge exists
+  // server-side yet to read `dominant_activity_category` from). Mirrors the
+  // backend's decided algorithm: tally every exercise across every assigned
+  // cycle day, once per day slot (a routine repeated on multiple days counts
+  // multiple times, matching the backend's non-dedup decision), highest
+  // count wins. Ties break by the order categories were selected in the
+  // Activity & Location step (`selectedCategories`), same tie-break rule the
+  // backend uses (`challenge_category_map.order_index`). Falls back to
+  // `colors.primary` until at least one non-rest day has exercises.
+  const challengeAccentColor = useMemo(() => {
+    const counts: Partial<Record<ActivityType, number>> = {};
+    for (let day = 1; day <= cycleLengthDays; day += 1) {
+      const routine = routinesByDay[day];
+      if (!routine || routine.isRestDay) continue;
+      for (const exercise of routine.exercises) {
+        counts[exercise.activityType] = (counts[exercise.activityType] ?? 0) + 1;
+      }
     }
 
-    return routine.isRestDay ? 'Recovery or complete rest' : undefined;
-  }
+    const entries = Object.entries(counts) as [ActivityType, number][];
+    if (entries.length === 0) return colors.primary;
+
+    const tieBreakOrder = selectedCategories
+      .map((category) => CATEGORY_TO_ACTIVITY[category])
+      .filter((type): type is ActivityType => Boolean(type));
+
+    entries.sort((a, b) => (
+      b[1] !== a[1] ? b[1] - a[1] : tieBreakOrder.indexOf(a[0]) - tieBreakOrder.indexOf(b[0])
+    ));
+
+    return activityColors[entries[0][0]];
+  }, [cycleLengthDays, routinesByDay, selectedCategories]);
 
   return {
     title,
     description,
-    cycleDuration,
+    cycleLengthDays,
+    cyclesCount,
+    durationDays,
+    endDateLabel,
     visibility,
     selectedCategories,
     selectedLocations,
     currentStep,
-    effectiveChallengeDuration,
     activeStep,
     steps,
     progress: (currentStep + 1) / steps.length,
+    isReviewStep,
     activeStepErrors,
     isFormComplete,
-    configuredDays,
-    selectedDay,
-    selectedDayRoutine,
+    missingConfigurationFields,
     setTitle,
     setDescription,
-    setCycleDuration,
-    setChallengeDuration,
+    addCycleDay,
+    removeCycleDay,
+    setCyclesCount,
     setVisibility,
     setCurrentStep,
-    setSelectedDay,
     isSubmitting,
+    hasRoutineForEveryDay,
     getDayStatus,
     getDayRoutineLabel,
-    getDayRoutineDescription,
+    getDayRoutineMeta,
+    getDayRoutineColor,
+    challengeAccentColor,
     handleBack,
     handleNext,
     handleActionPress,
     toggleCategory,
     toggleLocation,
     openDayRoutineSelector,
-    unassignRoutineFromDay,
   };
 }

@@ -4,13 +4,16 @@ import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 import { Row } from '../layout/row';
 import { spacing } from '../../constants/theme';
-import type { FollowUserSummaryContract } from '../../types/follow';
 
 interface FollowListItemProps {
-  user: FollowUserSummaryContract;
+  /** Structural, not `FollowUserSummaryContract` specifically — any user
+   * summary shape with at least these two fields works (e.g. a challenge
+   * member from `ChallengeParticipantContract`, reused as-is by the
+   * Challenge Detail screen's Members list). */
+  user: { id: string; username: string };
 }
 
-/** One row in a followers/following list — taps through to that user's profile. */
+/** One row in a followers/following/members list — taps through to that user's profile. */
 export function FollowListItem({ user }: FollowListItemProps) {
   const router = useRouter();
 

@@ -87,22 +87,11 @@ export default function UserProfile() {
               username={profile.username}
               bio={profile.bio}
               imageUrl={profile.profile_image_url}
+              streakDays={profile.streak_days}
+              followersCount={profile.followers_count}
+              followingCount={profile.following_count}
               actions={
-                <>
-                  <View style={styles.countsRow}>
-                    <Text variant="body">
-                      <Text variant="body" style={styles.countNumber}>
-                        {profile.followers_count}
-                      </Text>{' '}
-                      {t('profile.followersLabel')}
-                    </Text>
-                    <Text variant="body">
-                      <Text variant="body" style={styles.countNumber}>
-                        {profile.following_count}
-                      </Text>{' '}
-                      {t('profile.followingLabel')}
-                    </Text>
-                  </View>
+                <View style={styles.actionsWrap}>
                   <FollowButton
                     userId={profile.id}
                     initialIsFollowing={profile.is_following}
@@ -117,7 +106,7 @@ export default function UserProfile() {
                       )
                     }
                   />
-                </>
+                </View>
               }
             />
             <UserPostsGrid userId={profile.id} onPhotoPress={setSelectedPhoto} />
@@ -146,11 +135,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.md,
   },
-  countsRow: {
-    flexDirection: 'row',
-    gap: spacing.lg,
-  },
-  countNumber: {
-    fontWeight: '700',
+  actionsWrap: {
+    alignItems: 'center',
+    paddingTop: spacing.sm,
   },
 });

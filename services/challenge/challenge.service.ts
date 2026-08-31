@@ -77,7 +77,11 @@ export async function joinChallenge(id: string) {
 }
 
 export async function leaveChallenge(id: string) {
-  const response = await api.post(`/challenges/${id}/leave`);
+  // Backend route is @Patch(':id/leave') (challenges.controller.ts) — this
+  // was calling api.post() against it, which NestJS's method-specific
+  // routing guarantees a 404 for. Confirmed root cause of the "leave
+  // challenge doesn't work" bug report, 2026-08-29 — not a backend issue.
+  const response = await api.patch(`/challenges/${id}/leave`);
   return response.data;
 }
 
@@ -91,6 +95,23 @@ export async function getTodayRoutineForChallenge(
 export async function getPublicChallengePhotos(challengeId: string): Promise<ChallengePhoto[]> {
   const response = await api.get<ChallengePhoto[]>(`/workout-posts/challenge/${challengeId}`);
   return response.data;
+}
+
+/**
+ * Most recent visible progress photo for a challenge FROM ANY PARTICIPANT —
+ * `WHERE wl.challenge_id = $1` server-side, no user filter at all. This is
+ * the challenge-wide gallery's latest post, not "did the current user post
+ * today." Do NOT use this to derive a challenge card's own state — that
+ * shipped as a real bug once (a card stuck on "Train day" after the user
+ * uploaded, because this endpoint isn't scoped to them). For "does the
+ * current user have a photo for this challenge," use getMyProgressPhotos()
+ * + challengeState.ts's groupLatestPhotoByChallengeId instead — one call,
+ * genuinely user-scoped (`p.user_id = $1` server-side), already used by
+ * Home and Challenges-Mine.
+ */
+export async function getLatestChallengePhoto(challengeId: string): Promise<ChallengePhoto | null> {
+  const response = await api.get<ChallengePhoto | null>(`/workout-posts/challenge/${challengeId}/latest`);
+  return response.data ?? null;
 }
 
 /** Current user's own progress photos across all challenges (profile grid). */

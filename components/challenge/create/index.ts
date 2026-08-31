@@ -1,43 +1,31 @@
-// CreateChallengeHeader: Top bar for the create flow showing author identity.
-// Design: Compact horizontal layout with avatar and byline.
-export * from './CreateChallengeHeader';
+// CreateFlowProgressHeader: Back button + "Step N of total" + segmented progress bar.
+// Design: shared top-of-screen widget for every step of the 5-step create-challenge flow.
+export * from './CreateFlowProgressHeader';
 
-// ChallengeTitleInputs: Primary text entry block for challenge name and description.
-// Design: Title-first hierarchy with tight vertical rhythm and minimal input chrome.
-export * from './ChallengeTitleInputs';
+// ChallengeNameFields: Challenge name + optional description inputs (Step 1).
+export * from './ChallengeNameFields';
 
-// DurationStepper: Increment/decrement control for day count.
-// Design: Inline counter with balanced +/- controls and clear numeric emphasis.
-export * from './DurationStepper';
+// OptionPillGrid: Flex-wrap icon+label pill multi-select (Step 2 — activity/location).
+export * from './OptionPillGrid';
 
-// CycleDayVerticalStepper: Vertical checklist timeline for assigning routines one day at a time.
-// Design: Single active step with completed/current/pending indicators and connector line.
-export * from './CycleDayVerticalStepper';
+// CycleDayList: Numbered-badge day rows with Add/Edit/Remove (Step 3 — Build the Cycle).
+export * from './CycleDayList';
 
-// ChallengeVisibilitySection: Final setup area for duration override and public/private visibility.
-// Design: Two-panel gradient grouping with strong form hierarchy for publishing decisions.
-export * from './ChallengeVisibilitySection';
+// RepeatsStepper: "Repeats" cycles counter + duration/end-date callout (Step 4).
+export * from './RepeatsStepper';
 
-// ChallengeSubmitActions: Completion CTAs shown only when required setup fields are complete.
-// Design: Single primary action with compact secondary utility actions and icons.
-export * from './ChallengeSubmitActions';
+// VisibilityCardGroup: Public/Private selectable cards (Step 4).
+export * from './VisibilityCardGroup';
 
-// CreateChallengePrimaryActionButton: Styled primary CTA used in create review and related flows.
-// Design: White-outlined high-contrast action with subtle glow and soft depth.
-export * from './CreateChallengePrimaryActionButton';
+// ChallengeReviewSummary: Hero card + Setup/Cycle summary cards (Step 5 — Review).
+export * from './ChallengeReviewSummary';
 
-// CreateFlowFixedBottomBar: Shared stationary bottom container for main CTAs in challenge flows.
-// Design: Elevated dark backdrop with subtle separator for focus on the bottom action.
-export * from './CreateFlowFixedBottomBar';
+// CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar: deleted —
+// app/(add)/metrics.tsx (their last remaining consumer) got its own wireframe
+// pass and moved onto CreateFlowPrimaryButton + a plain bottom-bar View, the
+// same swap routine create/select/exercises already made. `ChallengeTitleInputs`
+// was deleted the same way once routine/create.tsx moved off it.
 
-// CreateFlowPrimaryButton: Main rounded CTA used across create-related flows.
-// Design: High-contrast full-width action button for primary progression/submission actions.
+// CreateFlowPrimaryButton: Full-width 52px primary CTA, retokenized — used by
+// every step of the create-challenge flow.
 export * from './CreateFlowPrimaryButton';
-
-// OptionSelectionPanel: Generic multi-select grid of option cards (categories, locations, ...).
-// Design: Two-column card grid with a per-card info affordance for a longer description.
-export * from './OptionSelectionPanel';
-
-// OptionInfoModal: Detail dialog shown when a user taps an option card's info affordance.
-// Design: Centered dialog with icon, title, and description over a dimmed backdrop.
-export * from './OptionInfoModal';

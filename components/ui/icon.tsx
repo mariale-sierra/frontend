@@ -13,5 +13,5 @@ export function Icon({
   color,
 }: IconProps) {
   const { colors } = useTheme();
-  return <Ionicons name={name} size={size} color={color ?? colors.textPrimary} />;
+  return <Ionicons name={name} size={size} color={color ?? colors.paper} />;
 }

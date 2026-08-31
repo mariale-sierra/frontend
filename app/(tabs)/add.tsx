@@ -1,72 +1,23 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import ScreenBackground from '../../components/layout/screenBackground';
-import { Text } from '../../components/ui/text';
-import { colors, radius, spacing } from '../../constants/theme';
 
-function ActionCard({
-  title,
-  description,
-  onPress,
-}: {
-  title: string;
-  description: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
-      <Text variant="subheader">{title}</Text>
-      <Text variant="body" tone="secondary">{description}</Text>
-    </Pressable>
-  );
-}
-
+/**
+ * Genuinely unreachable in normal use — the "+" tab's `tabPress` is always
+ * prevented and its `tabBarButton` is swapped for a custom FAB whose
+ * `onPress` goes straight to `/log` (see app/(tabs)/_layout.tsx). This file
+ * still has to exist for Expo Router to resolve the "add" tab's file-based
+ * route, even though nothing should ever actually render it. Kept as a
+ * trivial redirect (mirroring the real FAB behavior) rather than the old
+ * three-card action menu, which is dead: Metrics and Camera are both reached
+ * via the real Log flow now, and Rest Day moved to a button on the Log
+ * Metrics screen itself (2026-08-28) — see app/(add)/metrics.tsx.
+ */
 export default function Add() {
   const router = useRouter();
-  const { t } = useTranslation();
 
-  return (
-    <ScreenBackground variant="default">
-      <View style={styles.container}>
-        <Text variant="title">{t('addMenu.title')}</Text>
-        <Text variant="body" tone="secondary">
-          {t('addMenu.subtitle')}
-        </Text>
+  useEffect(() => {
+    router.replace('/log');
+  }, [router]);
 
-        <ActionCard
-          title={t('addMenu.metrics.title')}
-          description={t('addMenu.metrics.description')}
-          onPress={() => router.push('/(add)/metrics')}
-        />
-        <ActionCard
-          title={t('addMenu.restDay.title')}
-          description={t('addMenu.restDay.description')}
-          onPress={() => router.push('/(add)/rest-day')}
-        />
-        <ActionCard
-          title={t('addMenu.camera.title')}
-          description={t('addMenu.camera.description')}
-          onPress={() => router.push('/(add)/camera')}
-        />
-      </View>
-    </ScreenBackground>
-  );
+  return null;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  card: {
-    padding: spacing.lg,
-    borderRadius: radius.xl,
-    backgroundColor: colors.surfaceElevated,
-    gap: spacing.xs,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-});

@@ -15,8 +15,8 @@ interface BuildChallengePayloadParams {
   title: string;
   description: string;
   visibility: ChallengeVisibility;
-  challengeDuration: number;
-  cycleDuration: number;
+  cycleLengthDays: number;
+  cyclesCount: number;
   selectedCategories: string[];
   selectedLocations: string[];
   routinesByDay: Record<number, RoutineSummary>;
@@ -82,14 +82,14 @@ function mapExercise(exercise: ExerciseEntry): CreateChallengeExercisePayload {
 export function buildCreateChallengePayload(
   params: BuildChallengePayloadParams,
 ): CreateChallengePayload {
-  const cycleDays = Array.from({ length: params.cycleDuration }, (_, index) => index + 1);
+  const cycleDays = Array.from({ length: params.cycleLengthDays }, (_, index) => index + 1);
 
   return {
     name: params.title.trim(),
     description: params.description.trim() || undefined,
     visibility: params.visibility.toLowerCase() as Lowercase<ChallengeVisibility>,
-    duration_days: params.challengeDuration,
-    cycle_length_days: params.cycleDuration,
+    duration_days: params.cycleLengthDays * params.cyclesCount,
+    cycle_length_days: params.cycleLengthDays,
     categories: params.selectedCategories,
     locations: params.selectedLocations,
     cycle_days: cycleDays.map((dayNumber) => {

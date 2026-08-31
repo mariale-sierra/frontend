@@ -1,174 +1,77 @@
-import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
-import { colors, spacing, type ActivityType } from '../../../constants/theme';
+import { Row } from '../../layout/row';
+import { colors, spacing } from '../../../constants/theme';
 import ChallengeRoutineDayCard from './challengeRoutineDayCard';
+import type { ChallengeDaySummary } from '../../../services/adapters/challengeDetailAdapter';
 
-type RoutineItem = {
-  day: number;
-  title: string;
-  description: string;
-  activities: ActivityType[];
-};
-
-type Props = {
-  routine: RoutineItem[];
+interface ChallengeRoutineListProps {
+  days: ChallengeDaySummary[];
+  cycleLengthDays: number;
+  durationDays: number;
+  /** Activity Color System v2 — this challenge's own resolved accent color,
+   * passed through to each workout day's numbered badge. */
+  accentColor: string;
   onPressDay?: (day: number) => void;
-};
+}
 
-export default function ChallengeRoutineList({
-  routine,
-  onPressDay,
-}: Props) {
+/**
+ * "The cycle" section (Challenge-Info wireframe). One row per cycle day
+ * (already cycle-scoped by the adapter — see challengeDetailAdapter.ts's doc
+ * comment), flat list, no pagination — replaces the old week-by-week pager,
+ * which doesn't apply to a cycle-based model (a cycle repeats as a whole,
+ * it isn't paged through).
+ */
+export default function ChallengeRoutineList({ days, cycleLengthDays, durationDays, accentColor, onPressDay }: ChallengeRoutineListProps) {
   const { t } = useTranslation();
-  const [selectedWeekIndex, setSelectedWeekIndex] = useState(0);
-  const [weekPickerOpen, setWeekPickerOpen] = useState(false);
-
-  const weekGroups = useMemo(() => {
-    const sorted = [...routine].sort((a, b) => a.day - b.day);
-    const groups: RoutineItem[][] = [];
-
-    for (let index = 0; index < sorted.length; index += 7) {
-      groups.push(sorted.slice(index, index + 7));
-    }
-
-    return groups;
-  }, [routine]);
-
-  const showWeekPicker = routine.length > 7;
-  const activeDays = showWeekPicker
-    ? weekGroups[selectedWeekIndex] ?? []
-    : [...routine].sort((a, b) => a.day - b.day);
-
-  const maxWeekIndex = Math.max(0, weekGroups.length - 1);
 
   return (
     <View style={styles.container}>
-      <View style={styles.sectionRow}>
-        <Text variant="subheader" style={styles.sectionLabel}>{t('challenges.daysSummaryTitle')}</Text>
+      <Text variant="subheader" style={styles.title}>{t('challengeInfo.cycleTitle')}</Text>
 
-        {showWeekPicker && (
-          <View style={styles.weekPickerWrap}>
-            <Pressable
-              onPress={() => setWeekPickerOpen((current) => !current)}
-              style={({ pressed }) => [styles.weekPickerButton, pressed && styles.pressed]}
-            >
-              <Text variant="label" style={styles.weekPickerLabel}>
-                {t('challengeCreate.days.weekLabel', { number: Math.min(selectedWeekIndex + 1, maxWeekIndex + 1) })}
-              </Text>
-              <Ionicons
-                name={weekPickerOpen ? 'chevron-up' : 'chevron-down'}
-                size={16}
-                color={colors.textPrimary}
-              />
-            </Pressable>
-
-            {weekPickerOpen && (
-              <View style={styles.weekPickerList}>
-                {weekGroups.map((_week, index) => {
-                  const isActive = index === selectedWeekIndex;
-
-                  return (
-                    <Pressable
-                      key={`week-${index + 1}`}
-                      onPress={() => {
-                        setSelectedWeekIndex(index);
-                        setWeekPickerOpen(false);
-                      }}
-                      style={({ pressed }) => [
-                        styles.weekPickerOption,
-                        isActive && styles.weekPickerOptionActive,
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <Text variant="body">{t('challengeCreate.days.weekLabel', { number: index + 1 })}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            )}
-          </View>
-        )}
-      </View>
+      <Row gap="xs" align="center" style={styles.caption}>
+        <Icon name="repeat-outline" size={16} color={colors.paper} />
+        <Text variant="label" weight="bold">
+          {t('challengeInfo.cycleCaption', {
+            cycleDays: t('challenges.durationDaysLabel', { count: cycleLengthDays }),
+            totalDays: t('challenges.durationDaysLabel', { count: durationDays }),
+          })}
+        </Text>
+      </Row>
 
       <View style={styles.dayList}>
-        {activeDays.map((item) => {
-          const primaryIcon = item.activities[0];
-
-          return (
-            <ChallengeRoutineDayCard
-              key={`day-${item.day}`}
-              day={item.day}
-              title={item.title}
-              activity={primaryIcon}
-              onPress={() => onPressDay?.(item.day)}
-            />
-          );
-        })}
+        {days.map((item) => (
+          <ChallengeRoutineDayCard
+            key={`cycle-day-${item.day}`}
+            day={item.day}
+            isRestDay={item.isRestDay}
+            routineName={item.routineName}
+            subtitle={t('challengeInfo.exerciseSummary', {
+              exercises: t('challengeInfo.exerciseCount', { count: item.exerciseCount }),
+              location: item.location,
+            })}
+            accentColor={accentColor}
+            onPress={() => onPressDay?.(item.day)}
+          />
+        ))}
       </View>
-
-      <Text variant="label" style={styles.repeatLabel}>{t('challenges.repeatUntilEnds')}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: spacing['2xl'],
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.base,
   },
-  sectionLabel: {
-    opacity: 0.9,
-    textTransform: 'none',
+  title: {
+    marginBottom: spacing.sm,
   },
-  sectionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  caption: {
     marginBottom: spacing.md,
   },
-  weekPickerWrap: {
-    position: 'relative',
-  },
-  weekPickerButton: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  weekPickerLabel: {
-    color: colors.textPrimary,
-  },
-  weekPickerList: {
-    marginTop: spacing.xs,
-    borderRadius: 16,
-    backgroundColor: 'rgba(15,15,16,0.9)',
-    overflow: 'hidden',
-  },
-  weekPickerOption: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  weekPickerOptionActive: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
   dayList: {
-    gap: spacing.md,
-  },
-  repeatLabel: {
-    marginTop: spacing.lg,
-    textAlign: 'center',
-    opacity: 0.8,
-    letterSpacing: 1,
-  },
-  pressed: {
-    opacity: 0.86,
+    gap: spacing.sm,
   },
 });

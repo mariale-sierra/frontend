@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet } from 'react-native';
 import { Row } from '../layout/row';
 import { Text } from '../ui/text';
+import { colors } from '../../constants/theme';
 
 type AuthSwitchRowProps = {
   prompt: string;
@@ -15,7 +16,7 @@ export function AuthSwitchRow({ prompt, actionLabel, onPress }: AuthSwitchRowPro
         {prompt}
       </Text>
       <Pressable onPress={onPress}>
-        <Text variant="body" style={styles.linkText}>
+        <Text variant="body" weight="bold" style={styles.linkText}>
           {actionLabel}
         </Text>
       </Pressable>
@@ -25,6 +26,7 @@ export function AuthSwitchRow({ prompt, actionLabel, onPress }: AuthSwitchRowPro
 
 const styles = StyleSheet.create({
   linkText: {
-    fontWeight: '600',
+    color: colors.primary,
+    opacity: 1,
   },
 });

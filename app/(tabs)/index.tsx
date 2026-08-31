@@ -1,34 +1,34 @@
 import { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import ScreenBackground from '../../components/layout/screenBackground';
+import { Divider } from '../../components/ui/divider';
 import { Icon } from '../../components/ui/icon';
 import { Loader } from '../../components/ui/loader';
 import { Text } from '../../components/ui/text';
-import { UserAvatar } from '../../components/ui/userAvatar';
+import { Row } from '../../components/layout/row';
 import { ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
 import { FeedPostCard } from '../../components/home/FeedPostCard';
 import { FriendsStreakSection } from '../../components/home/FriendsStreakSection';
-import type { FriendStreakViewModel } from '../../components/home/FriendStreakCard';
-import { PostCardSkeleton } from '../../components/home/PostCardSkeleton';
+import type { FriendStreakViewModel } from '../../services/adapters/followAdapter';
+import { HomeContentSkeleton } from '../../components/home/HomeContentSkeleton';
 import { EmptyFeed } from '../../components/home/EmptyFeed';
 import { FeedErrorState } from '../../components/home/FeedErrorState';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
 import { getHomeChallengesSorted } from '../../services/adapters/homeAdapter';
+import { groupLatestPhotoByChallengeId } from '../../services/adapters/challengeState';
 import { getMyChallenges } from '../../services/user/user.service';
+import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
 import { getHomeFeed } from '../../services/feed/feed.service';
 import { toFeedPostViewModels } from '../../services/adapters/feedAdapter';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
-import { spacing } from '../../constants/theme';
-import { hoursUntilMidnight } from '../../utils/time';
-
-// No backend endpoint for friends' streaks exists yet (see FriendStreakCard),
-// so this stays empty until that service is available — the section already
-// renders its own empty state for this case.
-const FRIEND_STREAKS: FriendStreakViewModel[] = [];
+import { getFollowingStreaks } from '../../services/follow/follow.service';
+import { toFriendStreakViewModels } from '../../services/adapters/followAdapter';
+import { colors, spacing } from '../../constants/theme';
+import { formatTodayLabel, hoursUntilMidnight } from '../../utils/time';
 
 export default function Home() {
   const { username } = useAuth();
@@ -49,16 +49,23 @@ export default function Home() {
   const [feedNextCursor, setFeedNextCursor] = useState<string | undefined>(undefined);
   const [feedLoadingMore, setFeedLoadingMore] = useState(false);
 
+  const [friendStreaks, setFriendStreaks] = useState<FriendStreakViewModel[]>([]);
+  const [friendStreaksLoading, setFriendStreaksLoading] = useState(true);
+  const [friendStreaksError, setFriendStreaksError] = useState(false);
+
   const hoursLeft = hoursUntilMidnight();
 
   // Refetches on focus (not just on first mount) so returning to this tab after
-  // joining/completing a challenge elsewhere shows up-to-date days/hours-left cards.
+  // joining/completing a challenge elsewhere — or logging today's photo, which
+  // flips a card from active to completed — shows up-to-date state.
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      getMyChallenges()
-        .then((data) => {
-          if (active) setChallenges(getHomeChallengesSorted(data));
+      Promise.all([getMyChallenges(), getMyProgressPhotos()])
+        .then(([data, myPhotos]) => {
+          if (!active) return;
+          const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(myPhotos ?? []);
+          setChallenges(getHomeChallengesSorted(data ?? [], latestPhotoByChallengeId));
         })
         .catch(() => {
           if (active) setChallenges([]);
@@ -100,6 +107,30 @@ export default function Home() {
     }, []),
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      setFriendStreaksLoading(true);
+      getFollowingStreaks()
+        .then((rows) => {
+          if (!active) return;
+          setFriendStreaks(toFriendStreakViewModels(rows));
+          setFriendStreaksError(false);
+        })
+        .catch(() => {
+          if (!active) return;
+          setFriendStreaks([]);
+          setFriendStreaksError(true);
+        })
+        .finally(() => {
+          if (active) setFriendStreaksLoading(false);
+        });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+
   const loadMoreFeed = useCallback(() => {
     if (feedLoadingMore || feedLoading || !feedNextCursor) return;
     setFeedLoadingMore(true);
@@ -120,64 +151,72 @@ export default function Home() {
     return <FeedPostCard post={item} />;
   }
 
+  // One combined gate instead of three independent loading flags each
+  // rendering their own fallback — the screen reveals once, fully populated,
+  // instead of the hero card / streaks / feed popping in separately as each
+  // fetch happens to resolve. See HomeContentSkeleton.
+  const isReady = !challengeLoading && !feedLoading && !friendStreaksLoading;
+
   const listHeader = (
-    <View style={[styles.listHeader, { paddingTop: insets.top + spacing.xs }]}>
-      <View style={styles.profileRow}>
-        <UserAvatar username={username ?? ''} size={44} />
-        <Text variant="body" style={styles.username}>
-          {username ?? ''}
-        </Text>
-      </View>
+    <View style={styles.listHeader}>
+      <Row justify="space-between" align="flex-start">
+        <View style={styles.greetingBlock}>
+          <Text variant="caption" tone="secondary" style={styles.dateLabel}>
+            {formatTodayLabel()}
+          </Text>
+          <Text variant="title">{t('home.greeting', { name: username ?? '' })}</Text>
+        </View>
 
-      <View style={styles.challengeArea}>
-        {challengeLoading ? (
-          <View style={styles.challengeLoadingArea}>
-            <Loader visible={true} overlayStyle={styles.loaderTransparent} />
+        <Row gap="sm">
+          {/* Messaging/notifications routes exist but aren't wired to real
+              unread state yet — the dot below is decorative for now. */}
+          <Pressable style={styles.iconButton} onPress={() => router.push('/messaging')}>
+            <Icon name="chatbubble-ellipses-outline" size={22} />
+          </Pressable>
+          <Pressable style={styles.iconButton} onPress={() => router.push('/notifications')}>
+            <Icon name="notifications-outline" size={22} />
+            <View style={styles.notificationDot} />
+          </Pressable>
+        </Row>
+      </Row>
+
+      {!isReady ? (
+        <HomeContentSkeleton />
+      ) : (
+        <>
+          <View style={styles.challengeArea}>
+            {challenges.length > 0 ? (
+              <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
+            ) : (
+              <View style={styles.center}>
+                <Text variant="body" tone="secondary">{t('home.noActiveChallenge')}</Text>
+              </View>
+            )}
           </View>
-        ) : challenges.length > 0 ? (
-          <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
-        ) : (
-          <View style={styles.center}>
-            <Text variant="body" tone="secondary">{t('home.noActiveChallenge')}</Text>
+
+          <View style={styles.friendsArea}>
+            <FriendsStreakSection
+              friends={friendStreaks}
+              error={friendStreaksError}
+              onSeeMore={() => router.push('/home/streaks')}
+            />
           </View>
-        )}
-      </View>
 
-      <View style={styles.friendsArea}>
-        <FriendsStreakSection
-          friends={FRIEND_STREAKS}
-          onSeeMore={() => router.push('/home/streaks')}
-        />
-      </View>
-
-      <View style={styles.feedSectionHeader}>
-        <Text variant="header" tone="secondary">{t('home.communityTitle')}</Text>
-        <Icon name="people" size={20} color="rgba(255,255,255,0.4)" />
-      </View>
+          <Divider style={styles.divider} />
+        </>
+      )}
     </View>
   );
 
   return (
     <ScreenBackground variant="default">
       <FlatList
-        data={feedPosts}
+        data={isReady ? feedPosts : []}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ListHeaderComponent={listHeader}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
-        ListEmptyComponent={
-          feedLoading ? (
-            <View style={styles.feedSkeletonArea}>
-              <PostCardSkeleton />
-              <View style={styles.skeletonSpacer} />
-              <PostCardSkeleton />
-            </View>
-          ) : feedError ? (
-            <FeedErrorState />
-          ) : (
-            <EmptyFeed />
-          )
-        }
+        ListEmptyComponent={!isReady ? null : feedError ? <FeedErrorState /> : <EmptyFeed />}
         ListFooterComponent={
           feedLoadingMore ? (
             <View style={styles.feedFooterLoading}>
@@ -202,21 +241,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   listHeader: {
+    // ScreenBackground already pads for the safe-area top inset — this is
+    // just the small gap between that and the greeting row, matching the
+    // wireframe's status-bar-to-content spacing.
+    paddingTop: spacing.md,
     marginBottom: spacing.lg,
+    gap: spacing.xl,
   },
-  profileRow: {
-    flexDirection: 'row',
+  greetingBlock: {
+    gap: spacing.xs,
+  },
+  dateLabel: {
+    textTransform: 'uppercase',
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
-    gap: spacing.sm,
+    justifyContent: 'center',
   },
-  username: {
-    fontWeight: '600',
+  notificationDot: {
+    position: 'absolute',
+    top: 10,
+    right: 11,
+    width: 8,
+    height: 8,
+    borderRadius: 8,
+    backgroundColor: colors.accent,
+    borderWidth: 2,
+    borderColor: colors.ink,
   },
   challengeArea: {
-    marginTop: spacing['2xl'] + spacing.lg,
-  },
-  challengeLoadingArea: {
-    height: 120,
+    marginHorizontal: -spacing.lg,
   },
   loaderTransparent: {
     backgroundColor: 'transparent',
@@ -225,21 +281,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing['2xl'],
   },
-  friendsArea: {
-    marginTop: spacing['2xl'],
-  },
-  feedSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing['2xl'],
-    marginBottom: spacing.sm,
-  },
-  feedSkeletonArea: {
-    paddingTop: spacing.xs,
-  },
-  skeletonSpacer: {
-    height: spacing['2xl'],
+  friendsArea: {},
+  divider: {
+    marginTop: spacing.xs,
   },
   feedFooterLoading: {
     height: 60,

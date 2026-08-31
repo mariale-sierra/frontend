@@ -1,15 +1,23 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Pressable, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar } from '../../../components/challenge/create';
+import { CreateFlowPrimaryButton } from '../../../components/challenge/create';
 import ScreenBackground from '../../../components/layout/screenBackground';
+import { RestDayScreenBackground } from '../../../components/layout/restDayScreenBackground';
+import { Row } from '../../../components/layout/row';
 import { Stack } from '../../../components/layout/stack';
+import { BackButton } from '../../../components/ui/backButton';
 import { Text } from '../../../components/ui/text';
-import { Icon } from '../../../components/ui/icon';
-import { CreateRoutinePickerCard, DayRoutineHeader, RoutineModeToggle, RoutinePickerCard } from '../../../components/routine';
+import { RoutinePickerCard, RoutineModeToggle } from '../../../components/routine';
+import { RestDayPrimaryButton } from '../../../components/add/restDay/RestDayPrimaryButton';
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
+import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
+import { CATEGORY_TO_ACTIVITY } from '../../../constants/challengeFilters';
+import type { ActivityType } from '../../../types/activity';
 import { colors, spacing } from '../../../constants/theme';
+import { withAlpha } from '../../../utils/color';
 import { useTranslation } from 'react-i18next';
 
 export default function SelectRoutineScreen() {
@@ -17,12 +25,29 @@ export default function SelectRoutineScreen() {
   const insets = useSafeAreaInsets();
   const { day } = useLocalSearchParams<{ day: string }>();
   const { init, savedRoutines, assignRoutineToDay, assignRestDayToDay } = useRoutineBuilder();
+  const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
   const [mode, setMode] = useState<'workout' | 'rest'>('workout');
 
   const dayNumber = Number(day ?? '1');
+
+  // Real bug, fixed 2026-08-29, per explicit report: "existing routine" here
+  // showed EVERY routine ever built this session (including the store's own
+  // seed/mock "Leg Day for Glute Growth" — always Strength), with no regard
+  // for the challenge's own selected activity categories. A Cardio-only
+  // challenge could still show and let the user confirm a Strength routine
+  // as that day's workout. A routine only counts as pickable now if every
+  // exercise's activityType falls within what this challenge allows.
+  const allowedActivityTypes = useMemo(
+    () => new Set(selectedCategories.map((category) => CATEGORY_TO_ACTIVITY[category]).filter((type): type is ActivityType => Boolean(type))),
+    [selectedCategories],
+  );
   const workoutRoutines = useMemo(
-    () => savedRoutines.filter((routine) => !routine.isRestDay),
-    [savedRoutines],
+    () => savedRoutines.filter((routine) => {
+      if (routine.isRestDay) return false;
+      if (allowedActivityTypes.size === 0) return true;
+      return routine.activityTypes.every((type) => allowedActivityTypes.has(type));
+    }),
+    [savedRoutines, allowedActivityTypes],
   );
   const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(workoutRoutines[0]?.id ?? null);
 
@@ -56,100 +81,161 @@ export default function SelectRoutineScreen() {
     router.back();
   }
 
-  return (
-    <ScreenBackground variant="top">
-      <DayRoutineHeader
-        title={t('routineSelect.dayRoutineTitle', { day: dayNumber })}
-        onBack={() => router.back()}
-      />
+  const isRestMode = mode === 'rest';
 
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <Stack gap="md">
+  const content = (
+    <>
+      <Row justify="space-between" align="center" style={styles.topBar}>
+        <BackButton style={styles.backButton} iconColor={isRestMode ? colors.ink : undefined} onPress={() => router.back()} />
+        <Text variant="title" align="center" inverse={isRestMode} style={styles.headerTitle}>
+          {t('routineSelect.dayTitle', { day: dayNumber })}
+        </Text>
+        <View style={styles.trailingSpacer} />
+      </Row>
+
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <Stack gap="lg">
           <RoutineModeToggle value={mode} onChange={setMode} />
 
           {mode === 'workout' ? (
-            <>
-              <View style={styles.createCardWrap}>
-                <CreateRoutinePickerCard onPress={handleCreateNew} />
-              </View>
+            <Stack gap="md">
+              <Row justify="space-between" align="center">
+                <Text variant="header" tone="secondary" size="xs">{t('routineSelect.yourRoutines')}</Text>
+                <Text
+                  variant="label"
+                  weight="bold"
+                  onPress={handleCreateNew}
+                  style={styles.newWorkoutLink}
+                >
+                  {t('routineSelect.newWorkout')}
+                </Text>
+              </Row>
 
-              {workoutRoutines.map((routine) => (
-                <RoutinePickerCard
-                  key={routine.id}
-                  routine={routine}
-                  selected={selectedRoutineId === routine.id}
-                  onSelect={() => setSelectedRoutineId(routine.id)}
-                  onOpen={() => handleViewRoutine(routine.id)}
-                />
-              ))}
-
-              {workoutRoutines.length === 0 && (
-                <View style={styles.emptyState}>
-                  <Text variant="body" tone="secondary">{t('routineSelect.emptyState')}</Text>
-                </View>
+              {workoutRoutines.length > 0 ? (
+                <Stack gap="sm">
+                  {workoutRoutines.map((routine) => (
+                    <RoutinePickerCard
+                      key={routine.id}
+                      routine={routine}
+                      selected={selectedRoutineId === routine.id}
+                      onSelect={() => setSelectedRoutineId(routine.id)}
+                      onOpen={() => handleViewRoutine(routine.id)}
+                    />
+                  ))}
+                </Stack>
+              ) : (
+                // Fixed 2026-08-29, per explicit "I just want the plain
+                // label not a card" report — was a bordered `surface`-bg box
+                // (see the deleted `emptyState` style below), which read as
+                // its own component rather than a plain empty-state message.
+                // Also now shows more often than before, now that
+                // `workoutRoutines` is correctly filtered by the challenge's
+                // allowed categories (see that filter's own doc comment
+                // above) — a challenge whose categories don't match any
+                // saved routine (e.g. the seed mock, always Strength) hits
+                // this state legitimately, not just on a genuinely fresh
+                // challenge.
+                <Text variant="body" tone="secondary">{t('routineSelect.emptyState')}</Text>
               )}
-            </>
+            </Stack>
           ) : (
+            // Rest-Or-Plan-28C wireframe content — same shape as
+            // RestDayContent.tsx's choice screen, reused verbatim ("so they
+            // match") rather than kept as this screen's own illustration +
+            // separate copy.
             <View style={styles.restModeContent}>
-              <Icon name="moon" size={72} color={colors.textPrimary} />
-              <Text variant="subheader" style={styles.restModeTitle}>{t('routineSelect.restDay.title')}</Text>
-              <Text variant="body" tone="secondary" style={styles.restModeSubtitle}>
-                {t('routineSelect.restDay.description')}
-              </Text>
+              <Ionicons name="moon-outline" size={72} color={colors.ink} />
+              <Stack gap="xs" align="center">
+                <Text variant="body" size="2xl" weight="bold" align="center" inverse>
+                  {t('restDay.title')}
+                </Text>
+                <Text variant="body" tone="secondary" align="center" inverse style={styles.restModeSubtitle}>
+                  {t('routineSelect.restDay.description')}
+                </Text>
+              </Stack>
             </View>
           )}
         </Stack>
       </ScrollView>
 
-      <CreateFlowFixedBottomBar bottomInset={Math.max(insets.bottom, spacing.lg)}>
-        <CreateChallengePrimaryActionButton
-          onPress={mode === 'workout' ? handleConfirmWorkout : handleConfirmRestDay}
-          disabled={mode === 'workout' && !selectedRoutineId}
-          label={mode === 'workout' ? t('routineSelect.confirmRoutine') : t('routineSelect.confirmRestDay')}
-        />
-      </CreateFlowFixedBottomBar>
-    </ScreenBackground>
+      <View
+        style={[
+          styles.bottomBar,
+          isRestMode && styles.bottomBarRest,
+          { paddingBottom: Math.max(insets.bottom, spacing.lg) },
+        ]}
+      >
+        {isRestMode ? (
+          <RestDayPrimaryButton label={t('routineSelect.confirmRestDay')} onPress={handleConfirmRestDay} />
+        ) : (
+          <CreateFlowPrimaryButton
+            tone="primary"
+            onPress={handleConfirmWorkout}
+            disabled={!selectedRoutineId}
+            label={t('routineSelect.confirmRoutine')}
+          />
+        )}
+      </View>
+    </>
+  );
+
+  return isRestMode ? (
+    <RestDayScreenBackground>{content}</RestDayScreenBackground>
+  ) : (
+    <ScreenBackground variant="top">{content}</ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  topBar: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+  },
+  backButton: {
+    marginLeft: -spacing.sm,
+  },
+  headerTitle: {
+    flex: 1,
+  },
+  trailingSpacer: {
+    width: 44,
+    height: 44,
+  },
   container: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
     paddingBottom: spacing['2xl'] + 132,
     flexGrow: 1,
   },
-  pressed: {
-    opacity: 0.82,
-  },
-  createCardWrap: {
-    marginTop: spacing.md,
-  },
-  emptyState: {
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    padding: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
+  newWorkoutLink: {
+    color: colors.primary,
+    opacity: 1,
   },
   restModeContent: {
-    minHeight: 340,
+    minHeight: 400,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
+    gap: spacing.xl,
     paddingVertical: spacing['2xl'],
   },
-  restModeTitle: {
-    fontSize: 16,
-    lineHeight: 18,
-    color: colors.textPrimary,
-  },
   restModeSubtitle: {
-    textAlign: 'center',
-    color: colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-    maxWidth: 240,
+    maxWidth: 280,
+  },
+  bottomBar: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: withAlpha(colors.paper, 0.08),
+  },
+  // Rest-Or-Plan-28C wireframe has no separate bar behind the button — it
+  // sits directly on the gradient. Drops the dark `surface` fill/hairline
+  // rather than keeping a dark bar over a now-light-purple screen.
+  bottomBarRest: {
+    backgroundColor: 'transparent',
+    borderTopWidth: 0,
   },
 });

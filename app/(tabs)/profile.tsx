@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -7,8 +7,9 @@ import { colors, spacing } from '../../constants/theme';
 import { Text } from '../../components/ui/text';
 import { IconButton } from '../../components/ui/iconButton';
 import { getMyProfile } from '../../services/user/user.service';
+import { getPendingInvites } from '../../services/invites/invite.service';
 import type { MyProfileContract } from '../../types/user';
-import { ProfileHeader, PostsViewToggle, PostsGrid, ProfilePhotoModal } from '../../components/profile';
+import { ProfileHeader, PostsViewToggle, PostsGrid, ProfilePhotoModal, ProfileContentSkeleton } from '../../components/profile';
 import type { PostsView } from '../../components/profile';
 import type { ChallengePhoto } from '../../types/challenge';
 import { Row } from '../../components/layout/row';
@@ -32,6 +33,7 @@ export default function Profile() {
   // server-side). "Public" stays one tap away via the eye toggle.
   const [view, setView] = useState<PostsView>('photos');
   const [selectedPhoto, setSelectedPhoto] = useState<ChallengePhoto | null>(null);
+  const [hasPendingInvites, setHasPendingInvites] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -54,27 +56,48 @@ export default function Profile() {
     }, [t]),
   );
 
+  // Drives the notification dot on the invitations icon — real pending-invite
+  // data (already used by the invitations screen itself), not decorative.
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      getPendingInvites()
+        .then((invites) => {
+          if (active) setHasPendingInvites(invites.length > 0);
+        })
+        .catch(() => {
+          if (active) setHasPendingInvites(false);
+        });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
+
   const displayName = profile?.display_name ?? sessionUsername ?? 'User name';
   const username = profile?.username ?? sessionUsername ?? 'username';
 
   const topBar = (
-    <Row justify="flex-end" gap="md" style={styles.topBar}>
+    <Row justify="flex-end" gap="sm" style={styles.topBar}>
       <IconButton
-        name="mail"
-        iconSize={24}
-        onPress={() => router.push('/invitations')}
-        accessibilityRole="button"
-        accessibilityLabel={t('profile.invitationsButtonA11y')}
-        hitSlop={10}
-      />
-      <IconButton
-        name="settings"
-        iconSize={24}
+        name="pencil-outline"
+        iconSize={22}
         onPress={() => router.push('/profile/edit')}
         accessibilityRole="button"
-        accessibilityLabel={t('profile.settingsButtonA11y')}
+        accessibilityLabel={t('profile.editButtonA11y')}
         hitSlop={10}
       />
+      <View>
+        <IconButton
+          name="mail-outline"
+          iconSize={22}
+          onPress={() => router.push('/invitations')}
+          accessibilityRole="button"
+          accessibilityLabel={t('profile.invitationsButtonA11y')}
+          hitSlop={10}
+        />
+        {hasPendingInvites && <View style={styles.notificationDot} />}
+      </View>
     </Row>
   );
 
@@ -83,9 +106,7 @@ export default function Profile() {
       {topBar}
       <ScrollView contentContainerStyle={styles.container}>
         {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.primary} />
-          </View>
+          <ProfileContentSkeleton />
         ) : error ? (
           <View style={styles.center}>
             <Text tone="secondary">{error}</Text>
@@ -97,32 +118,11 @@ export default function Profile() {
               username={username}
               bio={profile?.bio}
               imageUrl={profile?.profile_image_url}
-              actions={
-                <Row gap="lg">
-                  <Pressable
-                    onPress={() => router.push('/profile/followers')}
-                    accessibilityRole="button"
-                  >
-                    <Text variant="body">
-                      <Text variant="body" style={styles.countNumber}>
-                        {profile?.followers_count ?? 0}
-                      </Text>{' '}
-                      {t('profile.followersLabel')}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => router.push('/profile/following')}
-                    accessibilityRole="button"
-                  >
-                    <Text variant="body">
-                      <Text variant="body" style={styles.countNumber}>
-                        {profile?.following_count ?? 0}
-                      </Text>{' '}
-                      {t('profile.followingLabel')}
-                    </Text>
-                  </Pressable>
-                </Row>
-              }
+              streakDays={profile?.streak_days}
+              followersCount={profile?.followers_count ?? 0}
+              followingCount={profile?.following_count ?? 0}
+              onPressFollowers={() => router.push('/profile/followers')}
+              onPressFollowing={() => router.push('/profile/following')}
             />
             <PostsViewToggle view={view} onViewChange={setView} />
             <PostsGrid view={view} onPhotoPress={setSelectedPhoto} />
@@ -136,17 +136,30 @@ export default function Profile() {
 
 const styles = StyleSheet.create({
   topBar: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xs,
+    // Matches the wireframe's consistent 16px (`base`) edge margin —
+    // everything on this screen (icon row, avatar block, toggle, grid) sits
+    // at that inset except the stats row, which adds its own extra padding
+    // on top (see ProfileHeader's statsRow) to reach the wireframe's wider
+    // 32px there specifically.
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.md,
   },
   container: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
     paddingBottom: spacing['2xl'],
     gap: spacing.lg,
   },
-  countNumber: {
-    fontWeight: '700',
+  notificationDot: {
+    position: 'absolute',
+    top: 8,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 8,
+    backgroundColor: colors.accent,
+    borderWidth: 2,
+    borderColor: colors.ink,
   },
   center: {
     minHeight: 280,

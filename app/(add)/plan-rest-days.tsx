@@ -1,28 +1,33 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import ScreenBackground from '../../components/layout/screenBackground';
+import { RestDayScreenBackground } from '../../components/layout/restDayScreenBackground';
 import { IconButton } from '../../components/ui/iconButton';
-import { Button } from '../../components/ui/button';
 import { Text } from '../../components/ui/text';
 import { RestDayCalendar } from '../../components/add/restDay/RestDayCalendar';
 import { getChallengeProgress } from '../../services/challenge/challenge.service';
-import { colors, spacing } from '../../constants/theme';
-
-const BOTTOM_BAR_BG = 'rgba(0,0,0,0.88)';
+import { useMetricsEntryStore } from '../../store/metricsEntryStore';
+import { colors, radius, spacing } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 
 export default function PlanRestDays() {
   const router = useRouter();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const selectedChallengeId = useMetricsEntryStore((state) => state.selectedChallengeId);
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [challengeBounds, setChallengeBounds] = useState<{ startDate: Date; totalDays: number } | null>(null);
 
   useEffect(() => {
-    getChallengeProgress().then((progress) => {
+    // Same bug/fix as rest-day.tsx (see its own doc comment): calling
+    // getChallengeProgress() with no id checks the backend's fallback "most
+    // recently joined active challenge," not the one actually selected —
+    // this screen's calendar bounds (startDate/totalDays) would silently be
+    // for the wrong challenge entirely.
+    getChallengeProgress(selectedChallengeId ?? undefined).then((progress) => {
       if (!progress) return;
       const currentDay = progress.currentDay ?? 1;
       const today = new Date();
@@ -31,7 +36,7 @@ export default function PlanRestDays() {
       startDate.setDate(today.getDate() - (currentDay - 1));
       setChallengeBounds({ startDate, totalDays: progress.totalDays });
     }).catch(() => {});
-  }, []);
+  }, [selectedChallengeId]);
 
   const handleToggleDate = useCallback((dateKey: string) => {
     setSelectedDates((prev) => {
@@ -63,25 +68,28 @@ export default function PlanRestDays() {
   }
 
   const bottomBarHeight = Math.max(insets.bottom, spacing.lg) + spacing.md + 44;
+  const setButtonDisabled = saving || selectedDates.size === 0;
 
   return (
-    <ScreenBackground variant="top">
+    <RestDayScreenBackground>
       <View style={styles.screen}>
         <View style={styles.header}>
           <IconButton
-            name="chevron-back"
+            name="close-outline"
             onPress={() => router.back()}
-            size={28}
-            iconSize={18}
+            size={44}
+            iconSize={24}
             variant="ghost"
+            iconColor={colors.ink}
+            style={styles.iconButton}
             accessibilityRole="button"
             accessibilityLabel={t('metrics.accessibilityBack')}
           />
         </View>
 
         <View style={styles.titleBlock}>
-          <Text variant="title" align="center">{t('planRestDays.title')}</Text>
-          <Text variant="body" align="center" style={styles.subtitle}>
+          <Text variant="title" align="center" inverse>{t('planRestDays.title')}</Text>
+          <Text variant="body" tone="secondary" align="center" inverse>
             {t('planRestDays.subtitle')}
           </Text>
         </View>
@@ -107,19 +115,26 @@ export default function PlanRestDays() {
             { paddingBottom: Math.max(insets.bottom, spacing.lg) },
           ]}
         >
-          <Button
-            variant="primary"
-            size="md"
+          <Pressable
             onPress={handleSetRestDays}
-            loading={saving}
-            disabled={selectedDates.size === 0}
-            style={styles.actionButton}
+            disabled={setButtonDisabled}
+            style={({ pressed }) => [
+              styles.setButton,
+              pressed && !setButtonDisabled && styles.pressed,
+              setButtonDisabled && styles.disabled,
+            ]}
           >
-            {t('planRestDays.setButton')}
-          </Button>
+            {saving ? (
+              <ActivityIndicator color={colors.rest} />
+            ) : (
+              <Text variant="label" weight="bold" style={styles.setButtonText}>
+                {t('planRestDays.setButton')}
+              </Text>
+            )}
+          </Pressable>
         </View>
       </View>
-    </ScreenBackground>
+    </RestDayScreenBackground>
   );
 }
 
@@ -128,18 +143,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.base,
+  },
+  iconButton: {
+    marginLeft: -spacing.sm,
   },
   titleBlock: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xl,
     gap: spacing.sm,
     alignItems: 'center',
-  },
-  subtitle: {
-    color: colors.primary,
   },
   scroll: {
     flex: 1,
@@ -151,12 +166,27 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    backgroundColor: BOTTOM_BAR_BG,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: colors.rest,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: withAlpha(colors.ink, 0.15),
     alignItems: 'center',
   },
-  actionButton: {
+  setButton: {
     width: 220,
+    paddingVertical: spacing.md,
+    borderRadius: radius.big,
+    backgroundColor: colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setButtonText: {
+    color: colors.rest,
+    opacity: 1,
+  },
+  pressed: {
+    opacity: 0.85,
+  },
+  disabled: {
+    opacity: 0.5,
   },
 });

@@ -1,5 +1,10 @@
 // Challenge components organized by feature area.
 
+// ChallengeAccentGlow: subtle top-to-bottom activity-color glow, shared by
+// Challenge-Info and the Consistency/progress screen — see its own doc
+// comment before adding it to a third screen.
+export { ChallengeAccentGlow } from './challengeAccentGlow';
+
 // create/: Components for the multi-step challenge creation flow
 // (header, title inputs, duration stepper, day assignment, visibility settings, submit actions).
 export * from './create';

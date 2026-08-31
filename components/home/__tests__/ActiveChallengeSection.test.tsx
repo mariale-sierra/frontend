@@ -8,11 +8,9 @@ function buildChallenge(overrides: Partial<HomeActiveChallengeViewModel> = {}): 
     title: 'Iron Will',
     currentDay: 14,
     totalDays: 75,
-    isTodayCompleted: false,
-    isCompleted: false,
-    activityType: 'strength',
-    isRestDay: false,
+    state: 'active',
     streakCount: 0,
+    dominantActivityCategory: null,
     ...overrides,
   };
 }
@@ -30,8 +28,8 @@ describe('ActiveChallengeSection', () => {
     expect(screen.getByText('Morning Cardio')).toBeTruthy();
   });
 
-  it('shows "Completed" and hides the hours-left badge for a completed challenge', async () => {
-    const challenge = buildChallenge({ isCompleted: true });
+  it('shows "Completed" and hides the hours-left badge once today has a logged photo', async () => {
+    const challenge = buildChallenge({ state: 'completed' });
 
     const screen = await renderWithProviders(<ActiveChallengeSection challenges={[challenge]} hoursLeft={8} />);
 
@@ -39,8 +37,8 @@ describe('ActiveChallengeSection', () => {
     expect(screen.queryByText(/left/)).toBeNull();
   });
 
-  it('shows the hours-left badge when the challenge is active and not completed today', async () => {
-    const challenge = buildChallenge({ isCompleted: false, isTodayCompleted: false });
+  it('shows the hours-left badge when the challenge is active and today has no photo yet', async () => {
+    const challenge = buildChallenge({ state: 'active' });
 
     const screen = await renderWithProviders(<ActiveChallengeSection challenges={[challenge]} hoursLeft={8} />);
 
@@ -50,11 +48,12 @@ describe('ActiveChallengeSection', () => {
     expect(screen.getByText('8h left')).toBeTruthy();
   });
 
-  it('hides both the "Completed" and hours-left badges once today is already completed', async () => {
-    const challenge = buildChallenge({ isCompleted: false, isTodayCompleted: true });
+  it('shows "Rest day" and hides both the completed and hours-left badges on a rest day', async () => {
+    const challenge = buildChallenge({ state: 'rest' });
 
     const screen = await renderWithProviders(<ActiveChallengeSection challenges={[challenge]} hoursLeft={8} />);
 
+    expect(screen.getByText('Rest day')).toBeTruthy();
     expect(screen.queryByText('Completed')).toBeNull();
     expect(screen.queryByText(/left/)).toBeNull();
   });

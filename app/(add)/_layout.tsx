@@ -5,7 +5,6 @@ export default function AddLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="metrics" />
       <Stack.Screen name="camera" />
-      <Stack.Screen name="preview" />
       <Stack.Screen name="rest-day" />
       <Stack.Screen name="plan-rest-days" />
     </Stack>

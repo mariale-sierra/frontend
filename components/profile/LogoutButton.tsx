@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors } from '../../constants/theme';
+import { colors, textOpacity } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import { Card } from '../ui/card';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
@@ -24,7 +25,7 @@ export function LogoutButton() {
     <>
       <Card
         variant="basic"
-        radius="lg"
+        radius="medium"
         onPress={() => setConfirmVisible(true)}
         accessibilityRole="button"
         accessibilityLabel={t('profile.logoutButtonA11y')}
@@ -36,7 +37,7 @@ export function LogoutButton() {
               {t('profile.logoutButton')}
             </Text>
           </Row>
-          <Icon name="chevron-forward" size={18} color={colors.textMuted} />
+          <Icon name="chevron-forward-outline" size={18} color={withAlpha(colors.paper, textOpacity.tertiary)} />
         </Row>
       </Card>
 
