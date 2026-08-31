@@ -11,13 +11,34 @@ import { countAdjustedSets } from '../../services/adapters/index';
 import { ACTIVITY_METRIC_CONFIG } from '../../types/metrics';
 import type { ExerciseMetricsBlock, MetricField } from '../../types/metrics';
 
+// Steps (and `duration`'s displayed value) are in the same unit as
+// `col.label` (ACTIVITY_METRIC_CONFIG) — 1 here means "1 minute" for
+// duration, not 1 second. See toDisplayValue()/toStoredValue() below for
+// the seconds↔minutes conversion at the storage boundary.
 const METRIC_STEP: Record<MetricField, number> = {
   reps: 1,
   lbs: 5,
   distance: 0.5,
-  duration: 5,
+  duration: 1,
   rounds: 1,
 };
+
+/** Storage is always native seconds for `duration` (see
+ * ACTIVITY_METRIC_CONFIG's own doc comment for why) — these two convert at
+ * the one presentation boundary that displays/edits it as minutes instead.
+ * Rounds display to 1 decimal place (so a 45s target reads "0.8", not an
+ * ugly repeating decimal) without losing precision in what's actually
+ * stored — `toStoredValue` rounds to the nearest whole second, same
+ * precision the backend column already has. */
+function toDisplayValue(field: MetricField, rawSeconds: number): number {
+  if (field !== 'duration') return rawSeconds;
+  return Math.round((rawSeconds / 60) * 10) / 10;
+}
+
+function toStoredValue(field: MetricField, displayValue: number): number {
+  if (field !== 'duration') return displayValue;
+  return Math.round(displayValue * 60);
+}
 
 interface LogMetricsExerciseCardProps {
   exercise: ExerciseMetricsBlock;
@@ -55,7 +76,9 @@ export function LogMetricsExerciseCard({ exercise, onChangeValue }: LogMetricsEx
         <Text variant="caption" tone="secondary">
           {t('logMetrics.entry.setsProgress', { done: adjustedCount, total: totalSets })}
           {primaryTarget !== undefined
-            ? ` · ${t('logMetrics.entry.targetLabel', { value: primaryTarget })}`
+            ? ` · ${t('logMetrics.entry.targetLabel', {
+                value: toDisplayValue(primaryColumn.key, primaryTarget),
+              })} ${primaryColumn.label}`
             : ''}
         </Text>
       </Row>
@@ -82,7 +105,8 @@ export function LogMetricsExerciseCard({ exercise, onChangeValue }: LogMetricsEx
               <Stack gap="xs" style={styles.steppers}>
                 {columns.map((col) => {
                   const target = row.targets?.[col.key] ?? 0;
-                  const current = Number(row[col.key] ?? target);
+                  const currentRaw = Number(row[col.key] ?? target);
+                  const current = toDisplayValue(col.key, currentRaw);
                   const step = METRIC_STEP[col.key];
 
                   return (
@@ -90,10 +114,11 @@ export function LogMetricsExerciseCard({ exercise, onChangeValue }: LogMetricsEx
                       key={col.key}
                       value={current}
                       unitLabel={col.label}
-                      adjusted={current !== target}
+                      adjusted={currentRaw !== target}
                       step={step}
-                      onIncrease={() => onChangeValue(rowIndex, col.key, current + step)}
-                      onDecrease={() => onChangeValue(rowIndex, col.key, Math.max(0, current - step))}
+                      onIncrease={() => onChangeValue(rowIndex, col.key, toStoredValue(col.key, current + step))}
+                      onDecrease={() => onChangeValue(rowIndex, col.key, Math.max(0, toStoredValue(col.key, current - step)))}
+                      onChangeValue={(nextDisplay) => onChangeValue(rowIndex, col.key, Math.max(0, toStoredValue(col.key, nextDisplay)))}
                     />
                   );
                 })}

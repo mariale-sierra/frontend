@@ -442,6 +442,8 @@ const es = {
     todayLogged: 'Progreso registrado hoy',
     dayOf: 'Día {{current}}',
     noActiveChallenge: 'Sin reto activo',
+    logProgressA11y: 'Registrar progreso de {{name}}',
+    openChallengeA11y: 'Abrir {{name}}',
     communityTitle: 'Comunidad',
     emptyFeedMessage: 'Aún no hay publicaciones. ¡Sé el primero en compartir!',
     feedErrorMessage: 'No se pudo cargar el feed. Intenta de nuevo más tarde.',

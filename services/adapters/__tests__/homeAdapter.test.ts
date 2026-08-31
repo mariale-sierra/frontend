@@ -162,4 +162,27 @@ describe('getHomeChallengesSorted', () => {
 
     expect(result.map((vm) => vm.challengeId)).toEqual(['A', 'B']);
   });
+
+  // Real ordering bug, fixed per explicit request: `active`/`rest` used to
+  // be one merged "still actionable" bucket sorted only by days remaining —
+  // a rest-day challenge with fewer days remaining could float ABOVE an
+  // active challenge that genuinely still needs today's progress logged.
+  // Three explicit tiers now: active, then rest, then completed, regardless
+  // of days remaining across tiers (days-remaining is still the tiebreak
+  // WITHIN a tier — see the first test above).
+  it('always shows active before rest before completed, even when days-remaining would otherwise reorder them', () => {
+    // Rest challenge has the FEWEST days remaining (would sort first under
+    // the old days-remaining-only comparator) — must still land after the
+    // active one under the new tiered ordering.
+    const restChallenge = buildChallenge({
+      id: 'REST', current_day: 29, duration_days: 30, status: 'active', today_is_rest_day: true,
+    });
+    const activeChallenge = buildChallenge({ id: 'ACTIVE', current_day: 5, duration_days: 30, status: 'active' });
+    const completedChallenge = buildChallenge({ id: 'DONE', current_day: 10, duration_days: 30, status: 'active' });
+    const photos = new Map([['DONE', buildPhoto({ challengeId: 'DONE', day: 10 })]]);
+
+    const result = getHomeChallengesSorted([restChallenge, completedChallenge, activeChallenge], photos);
+
+    expect(result.map((vm) => vm.challengeId)).toEqual(['ACTIVE', 'REST', 'DONE']);
+  });
 });

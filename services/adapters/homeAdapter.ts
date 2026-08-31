@@ -166,14 +166,22 @@ export function getHomeChallengesSorted(
 
   const vms = withState.map(({ challenge, state }) => toHomeActiveChallengeViewModel(challenge, state));
 
-  // Still-actionable challenges (active/rest) first, soonest-to-finish first;
-  // already-completed-today ones last (nothing left to do today).
-  const actionable = vms
-    .filter((vm) => vm.state !== 'completed')
-    .sort((a, b) => (a.totalDays - a.currentDay) - (b.totalDays - b.currentDay));
-  const completedToday = vms.filter((vm) => vm.state === 'completed');
+  // Three explicit tiers, per explicit request — `active` (still needs
+  // today's log) before `rest` (nothing to log, but not "done" either)
+  // before `completed` (already logged today). Previously `active`/`rest`
+  // were one merged "actionable" bucket sorted only by days-remaining, which
+  // could float a rest-day challenge above an active one that genuinely
+  // still needs today's progress logged — the exact ordering being fixed
+  // here. Soonest-to-finish-first is kept as the tiebreak WITHIN each tier,
+  // not across them.
+  const byDaysRemaining = (a: HomeActiveChallengeViewModel, b: HomeActiveChallengeViewModel) =>
+    (a.totalDays - a.currentDay) - (b.totalDays - b.currentDay);
 
-  return [...actionable, ...completedToday];
+  const active = vms.filter((vm) => vm.state === 'active').sort(byDaysRemaining);
+  const rest = vms.filter((vm) => vm.state === 'rest').sort(byDaysRemaining);
+  const completedToday = vms.filter((vm) => vm.state === 'completed').sort(byDaysRemaining);
+
+  return [...active, ...rest, ...completedToday];
 }
 
 export function progressToHomeActiveChallengeViewModel(

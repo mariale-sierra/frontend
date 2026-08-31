@@ -445,6 +445,8 @@ const en = {
     todayLogged: 'Progress logged today',
     dayOf: 'Day {{current}}',
     noActiveChallenge: 'No active challenge',
+    logProgressA11y: 'Log progress for {{name}}',
+    openChallengeA11y: 'Open {{name}}',
     communityTitle: 'Community',
     emptyFeedMessage: 'No posts yet. Be the first to share!',
     feedErrorMessage: 'Could not load the feed. Try again later.',

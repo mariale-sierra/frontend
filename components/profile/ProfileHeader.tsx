@@ -26,7 +26,15 @@ interface ProfileHeaderProps {
   actions?: React.ReactNode;
 }
 
-const AVATAR_SIZE = 88;
+// Bumped 88 → 104, per explicit "make the profile pic bigger" request —
+// still a plain per-component literal, not a spacing/radius token (avatar
+// dimensions are inherently per-component, same exception `FAB_SIZE`/
+// `THUMB_SIZE` already document elsewhere). 104 lands just above
+// `app/profile/edit.tsx`'s own avatar (`size={96}`, the next-largest in the
+// app) rather than an arbitrary jump — this screen is the main "view
+// profile" identity moment, reasonable for it to be the single biggest
+// avatar rendered anywhere, not smaller than the edit screen's own.
+const AVATAR_SIZE = 104;
 
 function StatColumn({
   value,

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Dimensions, FlatList, NativeScrollEvent, NativeSyntheticEvent, StyleSheet, View } from 'react-native';
+import { Dimensions, FlatList, NativeScrollEvent, NativeSyntheticEvent, Pressable, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
@@ -45,6 +46,22 @@ function StatusPill({
 
 function ChallengeItem({ challenge, hoursLeft }: ItemProps) {
   const { t } = useTranslation();
+  const router = useRouter();
+  // Per explicit request: tapping the card jumps straight into logging
+  // today's progress for THIS challenge (skipping the challenge-picker
+  // sheet, same `/(add)/metrics?challengeId=` shortcut Challenges-Mine's
+  // own "Add photo" square already uses) — but only when there's actually
+  // something to log today. `rest`/`completed` have nothing to log (no
+  // routine today / already logged today), so those go to the challenge's
+  // own progress screen instead, same destination Challenges-Mine's card
+  // itself opens on a normal tap (`/challenge/:id/progress`).
+  function handlePress() {
+    if (challenge.state === 'active') {
+      router.push(`/(add)/metrics?challengeId=${challenge.challengeId}`);
+    } else {
+      router.push(`/challenge/${challenge.challengeId}/progress`);
+    }
+  }
   // Card background signals state — same shared getChallengeCardColor()
   // (challengeState.ts) used by Challenges-Mine's status card and the
   // progress-ring eyebrow. `rest`/`completed` keep their own fixed meaning
@@ -60,7 +77,16 @@ function ChallengeItem({ challenge, hoursLeft }: ItemProps) {
   const progress = challenge.totalDays > 0 ? Math.min(challenge.currentDay / challenge.totalDays, 1) : 0;
 
   return (
-    <View style={[styles.card, { backgroundColor: accentColor }]}>
+    <Pressable
+      onPress={handlePress}
+      style={({ pressed }) => [styles.card, { backgroundColor: accentColor }, pressed && styles.pressed]}
+      accessibilityRole="button"
+      accessibilityLabel={
+        challenge.state === 'active'
+          ? t('home.logProgressA11y', { name: challenge.title })
+          : t('home.openChallengeA11y', { name: challenge.title })
+      }
+    >
       <View style={styles.topRow}>
         <Text variant="header" inverse tone="secondary">{t('home.activeChallenge')}</Text>
 
@@ -84,7 +110,7 @@ function ChallengeItem({ challenge, hoursLeft }: ItemProps) {
           <Text variant="label" inverse tone="secondary"> / {challenge.totalDays}</Text>
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -141,6 +167,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.big,
     padding: spacing.base,
     gap: spacing.md,
+  },
+  pressed: {
+    opacity: 0.9,
   },
   topRow: {
     flexDirection: 'row',

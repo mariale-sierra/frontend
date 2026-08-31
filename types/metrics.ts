@@ -61,6 +61,17 @@ export interface ActivityMetricConfig {
   showSetColumn: boolean;
 }
 
+// `duration`'s label is `min`, not `sec` — the underlying stored/submitted
+// value is still native seconds everywhere else in the app (backend column,
+// routine targets, `applyExerciseMetrics.ts`'s submit payload — see that
+// file's own doc comment for why seconds end-to-end was a deliberate fix,
+// not something to revert). Only `components/add/logMetricsExerciseCard.tsx`
+// reads this `label` (for the Log-Metrics stepper), and it converts to/from
+// minutes at that one presentation boundary — per explicit "seconds isn't
+// intuitive" report, 2026-08-31. `.label` isn't read anywhere else that
+// touches duration (`routine/[day].tsx`/`metricsAdapter.ts`/
+// `applyExerciseMetrics.ts` all only read `.key`), confirmed via grep before
+// changing this shared config.
 export const ACTIVITY_METRIC_CONFIG: Record<ActivityType, ActivityMetricConfig> = {
   strength: {
     columns: [{ key: 'reps', label: 'reps' }, { key: 'lbs', label: 'lbs' }],
@@ -68,22 +79,22 @@ export const ACTIVITY_METRIC_CONFIG: Record<ActivityType, ActivityMetricConfig> 
     showSetColumn: true,
   },
   cardioIntense: {
-    columns: [{ key: 'duration', label: 'sec' }, { key: 'distance', label: 'km' }],
+    columns: [{ key: 'duration', label: 'min' }, { key: 'distance', label: 'km' }],
     defaultRows: 1,
     showSetColumn: false,
   },
   cardioLow: {
-    columns: [{ key: 'duration', label: 'sec' }, { key: 'distance', label: 'km' }],
+    columns: [{ key: 'duration', label: 'min' }, { key: 'distance', label: 'km' }],
     defaultRows: 1,
     showSetColumn: false,
   },
   flexibility: {
-    columns: [{ key: 'duration', label: 'sec' }],
+    columns: [{ key: 'duration', label: 'min' }],
     defaultRows: 1,
     showSetColumn: false,
   },
   mindBody: {
-    columns: [{ key: 'duration', label: 'sec' }],
+    columns: [{ key: 'duration', label: 'min' }],
     defaultRows: 1,
     showSetColumn: false,
   },
