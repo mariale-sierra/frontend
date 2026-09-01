@@ -249,11 +249,14 @@ export const radius = {
   // cards), so bumping it directly would have re-rounded every one of those
   // too, not just the two components that got the complaint. A real new
   // tier for the small set of "showcase" surfaces that want to read as
-  // noticeably rounder than even a hero card — currently only
-  // ConfirmationPopup's card and the toast notification. Don't reach for
-  // this as a default; `big` stays the standard "very rounded" token for
-  // everything else.
-  xl: 40, // ConfirmationPopup's card, the toast notification
+  // noticeably rounder than even a hero card — ConfirmationPopup's card,
+  // the toast notification, and (merged in from the chats feature branch,
+  // 2026-08-31) MessageBubble's chat bubbles — a heavily-rounded bubble
+  // shape happened to already reference this exact token name pre-merge,
+  // a genuine coincidence confirmed by reading that branch's own code, not
+  // a deliberate reuse decided here. Don't reach for this as a default;
+  // `big` stays the standard "very rounded" token for everything else.
+  xl: 40, // ConfirmationPopup's card, the toast notification, MessageBubble's chat bubbles
 } as const;
 
 export type RadiusToken = keyof typeof radius;
