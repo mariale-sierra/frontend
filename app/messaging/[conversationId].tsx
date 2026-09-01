@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'expo-router';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { BackButton } from '../../components/ui/backButton';
 import { Text } from '../../components/ui/text';
@@ -25,10 +26,12 @@ import type { MessageContract } from '../../types/chat';
 
 export default function Chat() {
   const { t } = useTranslation();
+  const router = useRouter();
   const { userId } = useAuth();
-  const { conversationId, otherUsername, otherDisplayName, otherProfileImageUrl } =
+  const { conversationId, otherUserId, otherUsername, otherDisplayName, otherProfileImageUrl } =
     useLocalSearchParams<{
       conversationId: string;
+      otherUserId?: string;
       otherUsername?: string;
       otherDisplayName?: string;
       otherProfileImageUrl?: string;
@@ -65,11 +68,27 @@ export default function Chat() {
         <BackButton />
         <Row align="center" gap="sm" style={styles.headerInfo} justify="flex-start">
           <UserAvatar username={otherUsername ?? ''} imageUrl={otherProfileImageUrl || null} size={32} />
-          <Text variant="body" numberOfLines={1} style={styles.headerName}>
+          <Text variant="body" weight="bold" numberOfLines={1} style={styles.headerName}>
             {name}
           </Text>
         </Row>
-        <View style={styles.headerSpacer} />
+        {/* Chats-47A's header also shows an "Active now" presence indicator
+            next to the name — no online/presence data exists anywhere in
+            the backend (chats or otherwise), so it's left out rather than
+            faked as always-on or always-off. */}
+        <IconButton
+          name="ellipsis-horizontal"
+          size={44}
+          iconSize={20}
+          iconColor={colors.paper}
+          onPress={() =>
+            router.push({
+              pathname: '/messaging/chat-details',
+              params: { otherUserId: otherUserId ?? '', otherUsername: otherUsername ?? '', otherDisplayName: otherDisplayName ?? '', otherProfileImageUrl: otherProfileImageUrl ?? '' },
+            })
+          }
+          accessibilityLabel={t('chats.optionsA11y')}
+        />
       </View>
 
       {loading ? (
@@ -155,10 +174,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerName: {
-    fontWeight: '600',
-  },
-  headerSpacer: {
-    width: 40,
+    flexShrink: 1,
   },
   list: {
     paddingHorizontal: spacing.lg,

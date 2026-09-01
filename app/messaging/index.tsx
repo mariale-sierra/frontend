@@ -14,25 +14,28 @@ import { Divider } from '../../components/ui/divider';
 import { ConversationListItem } from '../../components/chats/ConversationListItem';
 import { useConversations } from '../../hooks/useConversations';
 import { useAuth } from '../../hooks/useAuth';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, radius, spacing, textOpacity } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 
 /**
  * Matches the Chats-46A wireframe's layout — search bar + compose FAB up
- * top, a "Messages" section below (its own eyebrow-style header, matching
- * the wireframe's Bebas Neue section title + small people icon). No screen
- * title above the search bar — the wireframe doesn't have one either,
- * relying on the chat-bubble icon the user tapped to get here for context.
+ * top, a "Spaces" section, then a "Messages" section below (its own
+ * eyebrow-style header, matching the wireframe's Bebas Neue section title +
+ * small people icon). No screen title above the search bar — the wireframe
+ * doesn't have one either, relying on the chat-bubble icon the user tapped
+ * to get here for context.
  *
- * The wireframe ALSO has a "Spaces" section above Messages (joinable/
- * requestable group chats, each tagged with its own activity color) — NOT
- * built here. Per explicit instruction: Spaces has no backend at all yet
- * (its tables exist in the schema — `spaces`/`space_members`/
- * `space_messages` — but chats.service.ts's own doc comment confirms no
- * service/controller was built against them, deliberately out of scope of
- * the 1:1 chats module that shipped). Faking that section with placeholder
- * cards would misrepresent it as real, working data, which it isn't — same
- * "don't fabricate what the backend doesn't provide" rule this app follows
- * everywhere else. Only the Messages section (real, live data) is built.
+ * Spaces (joinable/requestable group chats, each tagged with its own
+ * activity color) has no backend at all yet — its tables exist in the
+ * schema (`spaces`/`space_members`/`space_messages`) but chats.service.ts's
+ * own doc comment confirms no service/controller was built against them,
+ * deliberately out of scope of the 1:1 chats module that shipped. Rendering
+ * real-looking space cards here would misrepresent them as live data, which
+ * they aren't. Per explicit instruction the SECTION still belongs in the
+ * layout though — same shape as any other "nothing to show yet" list on
+ * this app (`EmptyFeed`/`FeedErrorState` on the home feed) rather than
+ * omitted outright: header stays, an empty-state message takes the cards'
+ * place until a real Spaces backend exists.
  *
  * The compose FAB's wireframe behavior is "opens New message / Create
  * space" — collapsed to a direct `/messaging/new` push (skipping a menu for
@@ -74,6 +77,16 @@ export default function Messaging() {
       </Row>
 
       <Row align="center" gap="xs" style={styles.sectionHeader}>
+        <Text variant="subheader">{t('chats.spacesTitle')}</Text>
+      </Row>
+      <View style={styles.spacesEmptyCard}>
+        <Icon name="layers-outline" size={28} color={withAlpha(colors.paper, textOpacity.tertiary)} />
+        <Text variant="body" tone="secondary" align="center">
+          {t('chats.spacesEmptyState')}
+        </Text>
+      </View>
+
+      <Row align="center" gap="xs" style={styles.sectionHeader}>
         <Text variant="subheader">{t('chats.title')}</Text>
         <Icon name="people-outline" size={20} color={colors.paper} />
       </Row>
@@ -103,6 +116,7 @@ export default function Messaging() {
                   pathname: '/messaging/[conversationId]',
                   params: {
                     conversationId: item.id,
+                    otherUserId: item.otherParticipant.id,
                     otherUsername: item.otherParticipant.username,
                     otherDisplayName: item.otherParticipant.displayName ?? '',
                     otherProfileImageUrl: item.otherParticipant.profileImageUrl ?? '',
@@ -144,6 +158,15 @@ const styles = StyleSheet.create({
   sectionHeader: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
+  },
+  spacesEmptyCard: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    paddingVertical: spacing.xl,
+    borderRadius: radius.medium,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   list: {
     paddingHorizontal: spacing.lg,

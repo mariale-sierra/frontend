@@ -613,6 +613,11 @@ const es = {
     composeA11y: 'Iniciar una conversación nueva',
     newMessageTitle: 'Mensaje nuevo',
     noResultsForSearch: 'Ninguna conversación coincide con tu búsqueda.',
+    spacesTitle: 'Espacios',
+    spacesEmptyState: 'No hay espacios disponibles por ahora.',
+    optionsA11y: 'Opciones del chat',
+    detailsTitle: 'Detalles del chat',
+    viewProfile: 'Ver perfil',
   },
   placeholders: {
     challengeInfoTitle: 'Información del reto',

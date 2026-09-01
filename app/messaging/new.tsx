@@ -45,6 +45,7 @@ export default function NewConversation() {
       pathname: '/messaging/[conversationId]',
       params: {
         conversationId: conversation.id,
+        otherUserId: conversation.otherParticipant.id,
         otherUsername: conversation.otherParticipant.username,
         otherDisplayName: conversation.otherParticipant.displayName ?? '',
         otherProfileImageUrl: conversation.otherParticipant.profileImageUrl ?? '',

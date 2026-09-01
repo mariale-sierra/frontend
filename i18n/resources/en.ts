@@ -616,6 +616,11 @@ const en = {
     composeA11y: 'Start a new conversation',
     newMessageTitle: 'New message',
     noResultsForSearch: 'No conversations match your search.',
+    spacesTitle: 'Spaces',
+    spacesEmptyState: 'No spaces available right now.',
+    optionsA11y: 'Chat options',
+    detailsTitle: 'Chat details',
+    viewProfile: 'View profile',
   },
   placeholders: {
     challengeInfoTitle: 'Challenge Info',
