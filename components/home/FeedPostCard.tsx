@@ -17,11 +17,15 @@ export function FeedPostCard({ post }: FeedPostCardProps) {
   const router = useRouter();
   const { t } = useTranslation();
 
-  // Messaging isn't implemented yet — app/messaging/[conversationId].tsx is
-  // still a placeholder screen, and post.userId is used as a stand-in for a
-  // real conversationId. Swap this once a real conversations endpoint exists.
+  // Fixed 2026-08-31, real bug — was `router.push(\`/messaging/${post.userId}\`)`,
+  // treating the OTHER user's id as if it were a conversationId (the
+  // comment here used to explain this was a deliberate placeholder before
+  // the real chats module existed — it now does, so this is the actual
+  // swap that comment called for). `/messaging/new` resolves-or-creates the
+  // real 1:1 conversation for `recipientUserId` and hands off to the real
+  // thread screen — see app/messaging/new.tsx's own doc comment.
   function handleSendMessage() {
-    router.push(`/messaging/${post.userId}`);
+    router.push({ pathname: '/messaging/new', params: { recipientUserId: post.userId } });
   }
 
   return (

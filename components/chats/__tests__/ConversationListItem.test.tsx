@@ -78,7 +78,10 @@ describe('ConversationListItem', () => {
     expect(screen.getByText('hey!')).toBeTruthy();
   });
 
-  it('shows the unread count, capped at "9+"', async () => {
+  // Per the Chats-46A wireframe: unread is a small colored dot before the
+  // name (+ bold text), NOT a numeric count badge — replaced the old
+  // "9+" badge behavior with this, 2026-08-31.
+  it('shows a filled unread dot (not a count) once there are unread messages', async () => {
     const screen = await renderWithTheme(
       <ConversationListItem
         conversation={buildConversation({ unreadCount: 12 })}
@@ -87,7 +90,25 @@ describe('ConversationListItem', () => {
       />,
     );
 
-    expect(screen.getByText('9+')).toBeTruthy();
+    expect(screen.queryByText('12')).toBeNull();
+    expect(screen.queryByText('9+')).toBeNull();
+    const dotStyle = screen.getByTestId('unread-dot').props.style;
+    const flatStyle = Array.isArray(dotStyle) ? Object.assign({}, ...dotStyle) : dotStyle;
+    expect(flatStyle.backgroundColor).not.toBe('transparent');
+  });
+
+  it('keeps the unread dot transparent (a same-size spacer) when there is nothing unread', async () => {
+    const screen = await renderWithTheme(
+      <ConversationListItem
+        conversation={buildConversation({ unreadCount: 0 })}
+        currentUserId="user-1"
+        onPress={jest.fn()}
+      />,
+    );
+
+    const dotStyle = screen.getByTestId('unread-dot').props.style;
+    const flatStyle = Array.isArray(dotStyle) ? Object.assign({}, ...dotStyle) : dotStyle;
+    expect(flatStyle.backgroundColor).toBe('transparent');
   });
 
   it('fires onPress when tapped', async () => {
