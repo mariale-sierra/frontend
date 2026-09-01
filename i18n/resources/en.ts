@@ -612,6 +612,10 @@ const en = {
     loadingOlder: 'Loading older messages...',
     startingConversation: 'Starting conversation...',
     startConversationError: 'Could not start this conversation.',
+    searchPlaceholder: 'Search',
+    composeA11y: 'Start a new conversation',
+    newMessageTitle: 'New message',
+    noResultsForSearch: 'No conversations match your search.',
   },
   placeholders: {
     challengeInfoTitle: 'Challenge Info',

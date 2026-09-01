@@ -609,6 +609,10 @@ const es = {
     loadingOlder: 'Cargando mensajes anteriores...',
     startingConversation: 'Iniciando conversación...',
     startConversationError: 'No se pudo iniciar esta conversación.',
+    searchPlaceholder: 'Buscar',
+    composeA11y: 'Iniciar una conversación nueva',
+    newMessageTitle: 'Mensaje nuevo',
+    noResultsForSearch: 'Ninguna conversación coincide con tu búsqueda.',
   },
   placeholders: {
     challengeInfoTitle: 'Información del reto',
