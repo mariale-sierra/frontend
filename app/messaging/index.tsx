@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -12,10 +12,16 @@ import { SearchBar } from '../../components/ui/searchBar';
 import { Row } from '../../components/layout/row';
 import { Divider } from '../../components/ui/divider';
 import { ConversationListItem } from '../../components/chats/ConversationListItem';
+import { SpaceCard } from '../../components/spaces/SpaceCard';
 import { useConversations } from '../../hooks/useConversations';
+import { useSpaces } from '../../hooks/useSpaces';
 import { useAuth } from '../../hooks/useAuth';
+import { joinSpace } from '../../services/spaces/spaces.service';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
+import type { SpaceContract } from '../../types/space';
+
+const SPACES_PREVIEW_COUNT = 2;
 
 /**
  * Matches the Chats-46A wireframe's layout — search bar + compose FAB up
@@ -25,29 +31,25 @@ import { withAlpha } from '../../utils/color';
  * doesn't have one either, relying on the chat-bubble icon the user tapped
  * to get here for context.
  *
- * Spaces (joinable/requestable group chats, each tagged with its own
- * activity color) has no backend at all yet — its tables exist in the
- * schema (`spaces`/`space_members`/`space_messages`) but chats.service.ts's
- * own doc comment confirms no service/controller was built against them,
- * deliberately out of scope of the 1:1 chats module that shipped. Rendering
- * real-looking space cards here would misrepresent them as live data, which
- * they aren't. Per explicit instruction the SECTION still belongs in the
- * layout though — same shape as any other "nothing to show yet" list on
- * this app (`EmptyFeed`/`FeedErrorState` on the home feed) rather than
- * omitted outright: header stays, an empty-state message takes the cards'
- * place until a real Spaces backend exists.
+ * Spaces now has a real backend (Sprint 8, Bloque 2) — this section shows
+ * up to SPACES_PREVIEW_COUNT joinable spaces (loading/error/empty states,
+ * same ladder as Messages below) with a "See all" link to the full
+ * `/messaging/spaces` list once there are more than that.
  *
- * The compose FAB's wireframe behavior is "opens New message / Create
- * space" — collapsed to a direct `/messaging/new` push (skipping a menu for
- * a single real option) for the same reason: Create Space has nothing to
- * open onto yet.
+ * The compose FAB now opens a small chooser (New message / Create space)
+ * instead of jumping straight to `/messaging/new`, per the wireframe's own
+ * "opens New message / Create space" note — collapsed to a direct push
+ * before Spaces had a backend to create against.
  */
 export default function Messaging() {
   const { t } = useTranslation();
   const router = useRouter();
   const { userId } = useAuth();
   const { conversations, loading, error, reload } = useConversations();
+  const { spaces, loading: spacesLoading, error: spacesError, reload: reloadSpaces } = useSpaces();
   const [query, setQuery] = useState('');
+  const [composeMenuVisible, setComposeMenuVisible] = useState(false);
+  const [joiningSpaceId, setJoiningSpaceId] = useState<string | null>(null);
 
   const filteredConversations = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -57,6 +59,20 @@ export default function Messaging() {
       return username.toLowerCase().includes(q) || (displayName ?? '').toLowerCase().includes(q);
     });
   }, [conversations, query]);
+
+  const spacesPreview = spaces.slice(0, SPACES_PREVIEW_COUNT);
+
+  async function handleJoinSpace(space: SpaceContract) {
+    setJoiningSpaceId(space.id);
+    try {
+      await joinSpace(space.id);
+      reloadSpaces();
+    } catch {
+      // Global api.ts interceptor already surfaces an error toast.
+    } finally {
+      setJoiningSpaceId(null);
+    }
+  }
 
   return (
     <ScreenBackground variant="default">
@@ -71,7 +87,7 @@ export default function Messaging() {
           iconSize={22}
           iconColor={colors.ink}
           style={styles.composeButton}
-          onPress={() => router.push('/messaging/new')}
+          onPress={() => setComposeMenuVisible(true)}
           accessibilityLabel={t('chats.composeA11y')}
         />
       </Row>
@@ -79,12 +95,44 @@ export default function Messaging() {
       <Row align="center" gap="xs" style={styles.sectionHeader}>
         <Text variant="subheader">{t('chats.spacesTitle')}</Text>
       </Row>
-      <View style={styles.spacesEmptyCard}>
-        <Icon name="layers-outline" size={28} color={withAlpha(colors.paper, textOpacity.tertiary)} />
-        <Text variant="body" tone="secondary" align="center">
-          {t('chats.spacesEmptyState')}
-        </Text>
-      </View>
+      {spacesLoading ? (
+        <View style={styles.spacesEmptyCard}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : spacesError ? (
+        <View style={styles.spacesEmptyCard}>
+          <Text variant="body" tone="secondary" align="center">
+            {t('spaces.loadError')}
+          </Text>
+        </View>
+      ) : spaces.length === 0 ? (
+        <View style={styles.spacesEmptyCard}>
+          <Icon name="layers-outline" size={28} color={withAlpha(colors.paper, textOpacity.tertiary)} />
+          <Text variant="body" tone="secondary" align="center">
+            {t('chats.spacesEmptyState')}
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.spacesPreviewList}>
+          {spacesPreview.map((space) => (
+            <SpaceCard
+              key={space.id}
+              space={space}
+              onPress={() => router.push(`/messaging/spaces/${space.id}`)}
+              onPressCta={() => handleJoinSpace(space)}
+              ctaLoading={joiningSpaceId === space.id}
+            />
+          ))}
+          {spaces.length > SPACES_PREVIEW_COUNT && (
+            <Pressable onPress={() => router.push('/messaging/spaces')} style={styles.seeAllRow}>
+              <Text variant="label" weight="bold">
+                {t('spaces.seeAll')}
+              </Text>
+              <Icon name="chevron-forward-outline" size={16} color={colors.paper} />
+            </Pressable>
+          )}
+        </View>
+      )}
 
       <Row align="center" gap="xs" style={styles.sectionHeader}>
         <Text variant="subheader">{t('chats.title')}</Text>
@@ -135,6 +183,43 @@ export default function Messaging() {
           }
         />
       )}
+
+      <Modal
+        visible={composeMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setComposeMenuVisible(false)}
+      >
+        <Pressable style={styles.composeBackdrop} onPress={() => setComposeMenuVisible(false)}>
+          <View style={styles.composeMenu}>
+            <Pressable
+              style={styles.composeMenuRow}
+              onPress={() => {
+                setComposeMenuVisible(false);
+                router.push('/messaging/new');
+              }}
+            >
+              <Icon name="chatbubble-outline" size={20} color={colors.paper} />
+              <Text variant="body" weight="bold">
+                {t('chats.newMessageTitle')}
+              </Text>
+            </Pressable>
+            <Divider marginVertical="xs" />
+            <Pressable
+              style={styles.composeMenuRow}
+              onPress={() => {
+                setComposeMenuVisible(false);
+                router.push('/messaging/spaces/create');
+              }}
+            >
+              <Icon name="add-circle-outline" size={20} color={colors.paper} />
+              <Text variant="body" weight="bold">
+                {t('spaces.createCta')}
+              </Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </ScreenBackground>
   );
 }
@@ -165,6 +250,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  spacesPreviewList: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  seeAllRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+  },
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['2xl'],
@@ -174,5 +271,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
+  },
+  composeBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: withAlpha(colors.ink, 0.75),
+  },
+  composeMenu: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.big,
+    borderTopRightRadius: radius.big,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing['2xl'],
+  },
+  composeMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
   },
 });

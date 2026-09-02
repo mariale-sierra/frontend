@@ -46,6 +46,12 @@ function RootNavigator() {
       <Stack.Screen name="messaging/[conversationId]" options={{ headerShown: false }} />
       <Stack.Screen name="messaging/new" options={{ headerShown: false }} />
       <Stack.Screen name="messaging/chat-details" options={{ headerShown: false }} />
+      <Stack.Screen name="messaging/spaces/index" options={{ headerShown: false }} />
+      <Stack.Screen name="messaging/spaces/create" options={{ headerShown: false }} />
+      <Stack.Screen name="messaging/spaces/[id]/index" options={{ headerShown: false }} />
+      <Stack.Screen name="messaging/spaces/[id]/members" options={{ headerShown: false }} />
+      <Stack.Screen name="messaging/spaces/[id]/manage" options={{ headerShown: false }} />
+      <Stack.Screen name="messaging/spaces/[id]/join-requests" options={{ headerShown: false }} />
       <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
       {/* Real bug, fixed 2026-08-29, per explicit report: this route had no
           entry here at all, so it fell back to Expo Router's default native

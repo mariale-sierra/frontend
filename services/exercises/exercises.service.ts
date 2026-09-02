@@ -66,3 +66,17 @@ export async function getBodyParts(): Promise<BodyPart[]> {
   const response = await api.get('/exercises/body-parts');
   return response.data;
 }
+
+/** GET /exercises/categories — the same exercise-category taxonomy
+ * challenges use for their dominant activity color, reused by Spaces'
+ * "Activity Color" picker (wireframe 47C) instead of a duplicate list. */
+export interface ExerciseCategory {
+  id: number;
+  code: string;
+  name: string;
+}
+
+export async function getExerciseCategories(): Promise<ExerciseCategory[]> {
+  const response = await api.get<ExerciseCategory[]>('/exercises/categories');
+  return Array.isArray(response.data) ? response.data : [];
+}

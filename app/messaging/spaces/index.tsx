@@ -1,12 +1,133 @@
-import { View, Text } from "react-native";
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import ScreenBackground from '../../../components/layout/screenBackground';
+import { BackButton } from '../../../components/ui/backButton';
+import { IconButton } from '../../../components/ui/iconButton';
+import { Text } from '../../../components/ui/text';
+import { Button } from '../../../components/ui/button';
+import { SearchBar } from '../../../components/ui/searchBar';
+import { Row } from '../../../components/layout/row';
+import { SpaceCard } from '../../../components/spaces/SpaceCard';
+import { useSpaces } from '../../../hooks/useSpaces';
+import { joinSpace } from '../../../services/spaces/spaces.service';
+import { colors, spacing } from '../../../constants/theme';
+import type { SpaceContract } from '../../../types/space';
 
-export default function Spaces() {
+/** Spaces discovery screen — the full list behind the "See all" link on the
+ * Spaces section of messaging/index.tsx (wireframe Chats-46A's "Spaces &
+ * Messages" screen shows this section directly; a dedicated full-list
+ * screen with search is this app's usual pattern for "more than a preview"
+ * lists, same as Home's Streaks-All or a challenge's Members list). */
+export default function SpacesScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
+  const { spaces, loading, error, reload } = useSpaces();
+  const [query, setQuery] = useState('');
+  const [joiningId, setJoiningId] = useState<string | null>(null);
+
+  const filteredSpaces = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return spaces;
+    return spaces.filter((space) => space.name.toLowerCase().includes(q));
+  }, [spaces, query]);
+
+  async function handleJoin(space: SpaceContract) {
+    setJoiningId(space.id);
+    try {
+      await joinSpace(space.id);
+      reload();
+    } catch {
+      // Global api.ts interceptor already surfaces an error toast.
+    } finally {
+      setJoiningId(null);
+    }
+  }
 
   return (
-    <View>
-      <Text>{t('placeholders.spaces')}</Text>
-    </View>
+    <ScreenBackground variant="default">
+      <Row align="center" gap="sm" style={styles.header}>
+        <BackButton style={styles.backButton} />
+        <View style={styles.searchWrap}>
+          <SearchBar value={query} onChangeText={setQuery} placeholder={t('spaces.searchPlaceholder')} />
+        </View>
+        <IconButton
+          name="add-outline"
+          size={48}
+          iconSize={24}
+          iconColor={colors.ink}
+          style={styles.createButton}
+          onPress={() => router.push('/messaging/spaces/create')}
+          accessibilityLabel={t('spaces.composeA11y')}
+        />
+      </Row>
+
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : error ? (
+        <View style={styles.center}>
+          <Text tone="secondary">{t('spaces.loadError')}</Text>
+          <Button variant="outline" size="sm" onPress={reload}>
+            {t('common.actions.continue')}
+          </Button>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredSpaces}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
+            <SpaceCard
+              space={item}
+              onPress={() => router.push(`/messaging/spaces/${item.id}`)}
+              onPressCta={() => handleJoin(item)}
+              ctaLoading={joiningId === item.id}
+            />
+          )}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ListEmptyComponent={
+            <View style={styles.center}>
+              <Text tone="secondary">
+                {query.trim() ? t('spaces.noResultsForSearch') : t('spaces.emptyState')}
+              </Text>
+            </View>
+          }
+        />
+      )}
+    </ScreenBackground>
   );
 }
+
+const styles = StyleSheet.create({
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+  },
+  backButton: {
+    marginLeft: -spacing.sm,
+  },
+  searchWrap: {
+    flex: 1,
+  },
+  createButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+  },
+  list: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['2xl'],
+  },
+  separator: {
+    height: spacing.sm,
+  },
+  center: {
+    minHeight: 220,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+});
