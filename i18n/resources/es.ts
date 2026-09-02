@@ -210,6 +210,7 @@ const es = {
       subtitle: '¿Qué reto?',
       dayLabel: 'Día {{day}}',
       emptyMessage: 'Aún no perteneces a ningún reto.',
+      allLoggedMessage: 'Ya estás al día — no queda nada por registrar hoy.',
       errorMessage: 'No se pudieron cargar tus retos.',
       exploreCta: 'Explorar retos',
     },

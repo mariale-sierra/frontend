@@ -213,6 +213,7 @@ const en = {
       subtitle: 'Which challenge?',
       dayLabel: 'Day {{day}}',
       emptyMessage: 'You are not part of any challenge yet.',
+      allLoggedMessage: "You're all caught up — nothing left to log today.",
       errorMessage: 'Could not load your challenges.',
       exploreCta: 'Explore challenges',
     },

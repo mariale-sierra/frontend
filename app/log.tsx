@@ -35,6 +35,14 @@ export default function LogChallengePicker() {
   const { height: windowHeight } = useWindowDimensions();
 
   const [challenges, setChallenges] = useState<LogChallengeQuickPick[]>([]);
+  // Real, reported bug: `challenges` (the LOGGABLE-today quick-pick list,
+  // after getLogChallengeQuickPicks filters out rest days/already-logged/
+  // non-active ones) landing on zero doesn't mean "not part of any
+  // challenge" — it just as often means every active challenge is already
+  // done for today. Tracked separately (the raw, unfiltered enrolled count)
+  // so the empty state can tell those two real situations apart instead of
+  // always showing the "you don't have any challenges" copy.
+  const [hasAnyChallenges, setHasAnyChallenges] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -44,6 +52,7 @@ export default function LogChallengePicker() {
     Promise.all([getMyChallenges(), getMyProgressPhotos()])
       .then(([myChallenges, photos]) => {
         if (!active) return;
+        setHasAnyChallenges(myChallenges.length > 0);
         const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(photos);
         setChallenges(getLogChallengeQuickPicks(myChallenges, latestPhotoByChallengeId));
       })
@@ -99,7 +108,11 @@ export default function LogChallengePicker() {
           </View>
         ) : challenges.length === 0 ? (
           <View style={styles.stateWrap}>
-            <Text variant="body" tone="secondary" align="center">{t('logMetrics.pickChallenge.emptyMessage')}</Text>
+            <Text variant="body" tone="secondary" align="center">
+              {hasAnyChallenges
+                ? t('logMetrics.pickChallenge.allLoggedMessage')
+                : t('logMetrics.pickChallenge.emptyMessage')}
+            </Text>
             <Pressable onPress={handleExplore} style={({ pressed }) => [styles.exploreButton, pressed && styles.pressed]}>
               <Text variant="label" weight="bold" style={styles.exploreLabel}>
                 {t('logMetrics.pickChallenge.exploreCta')}
