@@ -19,7 +19,12 @@ import type { SpaceContract } from '../../../types/space';
  * Spaces section of messaging/index.tsx (wireframe Chats-46A's "Spaces &
  * Messages" screen shows this section directly; a dedicated full-list
  * screen with search is this app's usual pattern for "more than a preview"
- * lists, same as Home's Streaks-All or a challenge's Members list). */
+ * lists, same as Home's Streaks-All or a challenge's Members list).
+ *
+ * Same "explore, not manage" scope as that preview section: a space the
+ * viewer has already joined (or owns) doesn't belong here — it's a
+ * conversation now, living in Messages instead — so it's filtered out here
+ * too, not just in the preview. */
 export default function SpacesScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -27,11 +32,13 @@ export default function SpacesScreen() {
   const [query, setQuery] = useState('');
   const [joiningId, setJoiningId] = useState<string | null>(null);
 
+  const exploreSpaces = useMemo(() => spaces.filter((space) => !space.isMember), [spaces]);
+
   const filteredSpaces = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return spaces;
-    return spaces.filter((space) => space.name.toLowerCase().includes(q));
-  }, [spaces, query]);
+    if (!q) return exploreSpaces;
+    return exploreSpaces.filter((space) => space.name.toLowerCase().includes(q));
+  }, [exploreSpaces, query]);
 
   async function handleJoin(space: SpaceContract) {
     setJoiningId(space.id);

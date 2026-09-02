@@ -13,15 +13,23 @@ import { Row } from '../../components/layout/row';
 import { Divider } from '../../components/ui/divider';
 import { ConversationListItem } from '../../components/chats/ConversationListItem';
 import { SpaceCard } from '../../components/spaces/SpaceCard';
+import { SpaceThreadListItem } from '../../components/spaces/SpaceThreadListItem';
 import { useConversations } from '../../hooks/useConversations';
 import { useSpaces } from '../../hooks/useSpaces';
+import { useSpaceThreadPreviews } from '../../hooks/useSpaceThreadPreviews';
+import type { SpaceThreadPreview } from '../../hooks/useSpaceThreadPreviews';
 import { useAuth } from '../../hooks/useAuth';
 import { joinSpace } from '../../services/spaces/spaces.service';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
+import type { ConversationSummaryContract } from '../../types/chat';
 import type { SpaceContract } from '../../types/space';
 
 const SPACES_PREVIEW_COUNT = 2;
+
+type MessagingRow =
+  | { kind: 'conversation'; key: string; timestamp: number; conversation: ConversationSummaryContract }
+  | { kind: 'space'; key: string; timestamp: number; preview: SpaceThreadPreview };
 
 /**
  * Matches the Chats-46A wireframe's layout — search bar + compose FAB up
@@ -32,9 +40,15 @@ const SPACES_PREVIEW_COUNT = 2;
  * to get here for context.
  *
  * Spaces now has a real backend (Sprint 8, Bloque 2) — this section shows
- * up to SPACES_PREVIEW_COUNT joinable spaces (loading/error/empty states,
- * same ladder as Messages below) with a "See all" link to the full
- * `/messaging/spaces` list once there are more than that.
+ * up to SPACES_PREVIEW_COUNT NOT-YET-joined spaces to explore (loading/
+ * error/empty states, same ladder as Messages below) with a "See all" link
+ * to the full `/messaging/spaces` list once there are more than that. Per
+ * the wireframe's own note: joining a space (or being approved into one)
+ * removes its card from here — it's no longer something to discover, it's
+ * now a conversation — and it moves down into Messages instead, merged in
+ * and sorted alongside 1:1 conversations by whichever had the most recent
+ * activity (`SpaceThreadListItem`, own row shape since it needs a
+ * space-shaped preview, not a `ConversationSummaryContract`).
  *
  * The compose FAB now opens a small chooser (New message / Create space)
  * instead of jumping straight to `/messaging/new`, per the wireframe's own
@@ -51,6 +65,13 @@ export default function Messaging() {
   const [composeMenuVisible, setComposeMenuVisible] = useState(false);
   const [joiningSpaceId, setJoiningSpaceId] = useState<string | null>(null);
 
+  // "Spaces" is for exploring ones you haven't joined — a space you're
+  // already a member/owner of moves down into "Messages" instead (see
+  // `joinedSpaces`/`messagingRows` below).
+  const exploreSpaces = useMemo(() => spaces.filter((space) => !space.isMember), [spaces]);
+  const joinedSpaces = useMemo(() => spaces.filter((space) => space.isMember), [spaces]);
+  const { previews: spaceThreadPreviews, loading: spaceThreadsLoading } = useSpaceThreadPreviews(joinedSpaces);
+
   const filteredConversations = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return conversations;
@@ -60,7 +81,34 @@ export default function Messaging() {
     });
   }, [conversations, query]);
 
-  const spacesPreview = spaces.slice(0, SPACES_PREVIEW_COUNT);
+  const filteredSpaceThreadPreviews = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return spaceThreadPreviews;
+    return spaceThreadPreviews.filter((p) => p.space.name.toLowerCase().includes(q));
+  }, [spaceThreadPreviews, query]);
+
+  // Merged, sorted by whichever (conversation or space thread) had the most
+  // recent activity — a joined space with no messages yet sorts by its own
+  // `createdAt`, same fallback `ConversationSummaryContract` already uses
+  // for a DM with no messages yet.
+  const messagingRows = useMemo<MessagingRow[]>(() => {
+    const conversationRows: MessagingRow[] = filteredConversations.map((conversation) => ({
+      kind: 'conversation',
+      key: `conversation:${conversation.id}`,
+      timestamp: new Date(conversation.lastMessage?.sentAt ?? conversation.createdAt).getTime(),
+      conversation,
+    }));
+    const spaceRows: MessagingRow[] = filteredSpaceThreadPreviews.map((preview) => ({
+      kind: 'space',
+      key: `space:${preview.space.id}`,
+      timestamp: new Date(preview.lastMessage?.sentAt ?? preview.space.createdAt).getTime(),
+      preview,
+    }));
+    return [...conversationRows, ...spaceRows].sort((a, b) => b.timestamp - a.timestamp);
+  }, [filteredConversations, filteredSpaceThreadPreviews]);
+
+  const messagesLoading = loading || (joinedSpaces.length > 0 && spaceThreadsLoading);
+  const spacesPreview = exploreSpaces.slice(0, SPACES_PREVIEW_COUNT);
 
   async function handleJoinSpace(space: SpaceContract) {
     setJoiningSpaceId(space.id);
@@ -92,97 +140,110 @@ export default function Messaging() {
         />
       </Row>
 
-      <Row align="center" gap="xs" style={styles.sectionHeader}>
-        <Text variant="subheader">{t('chats.spacesTitle')}</Text>
-      </Row>
-      {spacesLoading ? (
-        <View style={styles.spacesEmptyCard}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      ) : spacesError ? (
-        <View style={styles.spacesEmptyCard}>
-          <Text variant="body" tone="secondary" align="center">
-            {t('spaces.loadError')}
-          </Text>
-        </View>
-      ) : spaces.length === 0 ? (
-        <View style={styles.spacesEmptyCard}>
-          <Icon name="layers-outline" size={28} color={withAlpha(colors.paper, textOpacity.tertiary)} />
-          <Text variant="body" tone="secondary" align="center">
-            {t('chats.spacesEmptyState')}
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.spacesPreviewList}>
-          {spacesPreview.map((space) => (
-            <SpaceCard
-              key={space.id}
-              space={space}
-              onPress={() => router.push(`/messaging/spaces/${space.id}`)}
-              onPressCta={() => handleJoinSpace(space)}
-              ctaLoading={joiningSpaceId === space.id}
-            />
-          ))}
-          {spaces.length > SPACES_PREVIEW_COUNT && (
-            <Pressable onPress={() => router.push('/messaging/spaces')} style={styles.seeAllRow}>
-              <Text variant="label" weight="bold">
-                {t('spaces.seeAll')}
-              </Text>
-              <Icon name="chevron-forward-outline" size={16} color={colors.paper} />
-            </Pressable>
-          )}
-        </View>
-      )}
+      <FlatList
+        data={messagesLoading || error ? [] : messagingRows}
+        keyExtractor={(row) => row.key}
+        contentContainerStyle={styles.list}
+        ListHeaderComponent={
+          <>
+            <Row align="center" gap="xs" style={styles.sectionHeader}>
+              <Text variant="subheader">{t('chats.spacesTitle')}</Text>
+            </Row>
+            {spacesLoading ? (
+              <View style={styles.spacesEmptyCard}>
+                <ActivityIndicator color={colors.primary} />
+              </View>
+            ) : spacesError ? (
+              <View style={styles.spacesEmptyCard}>
+                <Text variant="body" tone="secondary" align="center">
+                  {t('spaces.loadError')}
+                </Text>
+              </View>
+            ) : exploreSpaces.length === 0 ? (
+              <View style={styles.spacesEmptyCard}>
+                <Icon name="layers-outline" size={28} color={withAlpha(colors.paper, textOpacity.tertiary)} />
+                <Text variant="body" tone="secondary" align="center">
+                  {t('chats.spacesEmptyState')}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.spacesPreviewList}>
+                {spacesPreview.map((space) => (
+                  <SpaceCard
+                    key={space.id}
+                    space={space}
+                    onPress={() => router.push(`/messaging/spaces/${space.id}`)}
+                    onPressCta={() => handleJoinSpace(space)}
+                    ctaLoading={joiningSpaceId === space.id}
+                  />
+                ))}
+                {exploreSpaces.length > SPACES_PREVIEW_COUNT && (
+                  <Pressable onPress={() => router.push('/messaging/spaces')} style={styles.seeAllRow}>
+                    <Text variant="label" weight="bold">
+                      {t('spaces.seeAll')}
+                    </Text>
+                    <Icon name="chevron-forward-outline" size={16} color={colors.paper} />
+                  </Pressable>
+                )}
+              </View>
+            )}
 
-      <Row align="center" gap="xs" style={styles.sectionHeader}>
-        <Text variant="subheader">{t('chats.title')}</Text>
-        <Icon name="people-outline" size={20} color={colors.paper} />
-      </Row>
-
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      ) : error ? (
-        <View style={styles.center}>
-          <Text tone="secondary">{t('chats.loadError')}</Text>
-          <Button variant="outline" size="sm" onPress={reload}>
-            {t('common.actions.continue')}
-          </Button>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredConversations}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
+            <Row align="center" gap="xs" style={styles.sectionHeader}>
+              <Text variant="subheader">{t('chats.title')}</Text>
+              <Icon name="people-outline" size={20} color={colors.paper} />
+            </Row>
+          </>
+        }
+        renderItem={({ item: row }) =>
+          row.kind === 'conversation' ? (
             <ConversationListItem
-              conversation={item}
+              conversation={row.conversation}
               currentUserId={userId}
               onPress={() =>
                 router.push({
                   pathname: '/messaging/[conversationId]',
                   params: {
-                    conversationId: item.id,
-                    otherUserId: item.otherParticipant.id,
-                    otherUsername: item.otherParticipant.username,
-                    otherDisplayName: item.otherParticipant.displayName ?? '',
-                    otherProfileImageUrl: item.otherParticipant.profileImageUrl ?? '',
+                    conversationId: row.conversation.id,
+                    otherUserId: row.conversation.otherParticipant.id,
+                    otherUsername: row.conversation.otherParticipant.username,
+                    otherDisplayName: row.conversation.otherParticipant.displayName ?? '',
+                    otherProfileImageUrl: row.conversation.otherParticipant.profileImageUrl ?? '',
                   },
                 })
               }
             />
-          )}
-          ItemSeparatorComponent={() => <Divider marginVertical="xs" />}
-          ListEmptyComponent={
+          ) : (
+            <SpaceThreadListItem
+              space={row.preview.space}
+              lastMessage={row.preview.lastMessage}
+              lastViewedAt={row.preview.lastViewedAt}
+              currentUserId={userId}
+              onPress={() => router.push(`/messaging/spaces/${row.preview.space.id}`)}
+            />
+          )
+        }
+        ItemSeparatorComponent={() => <Divider marginVertical="xs" />}
+        ListEmptyComponent={
+          messagesLoading ? (
+            <View style={styles.center}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : error ? (
+            <View style={styles.center}>
+              <Text tone="secondary">{t('chats.loadError')}</Text>
+              <Button variant="outline" size="sm" onPress={reload}>
+                {t('common.actions.continue')}
+              </Button>
+            </View>
+          ) : (
             <View style={styles.center}>
               <Text tone="secondary">
                 {query.trim() ? t('chats.noResultsForSearch') : t('chats.emptyState')}
               </Text>
             </View>
-          }
-        />
-      )}
+          )
+        }
+      />
 
       <Modal
         visible={composeMenuVisible}
@@ -240,8 +301,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: radius.big,
   },
+  // No horizontal padding of their own anymore — this whole section now
+  // renders inside the Messages FlatList's own ListHeaderComponent (so the
+  // full screen scrolls as one unit), which already applies
+  // `paddingHorizontal: spacing.lg` via `list` below. Real, reported bug
+  // from that move: these previously sat OUTSIDE the FlatList and needed
+  // their own inset, so keeping it here on top of the FlatList's own
+  // doubled it.
   sectionHeader: {
-    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
   spacesEmptyCard: {
@@ -251,7 +318,6 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   spacesPreviewList: {
-    paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
     gap: spacing.sm,
   },

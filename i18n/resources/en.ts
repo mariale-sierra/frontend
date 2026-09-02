@@ -632,8 +632,13 @@ const en = {
     emptyState: 'No spaces available right now.',
     noResultsForSearch: 'No spaces match your search.',
     loadError: 'Could not load spaces.',
-    membersCount_one: '{{count}} member',
-    membersCount_other: '{{count}} members',
+    // `{{formattedCount}}`, not `{{count}}` — `count` here is kept as a real
+    // number purely so i18next can pick `_one` vs `_other` (its plural
+    // resolution needs an actual number, not the abbreviated "1.2k"-style
+    // string `formatCount()` returns); the abbreviated string is what's
+    // actually shown, via this separate interpolation variable.
+    membersCount_one: '{{formattedCount}} member',
+    membersCount_other: '{{formattedCount}} members',
     seeAll: 'See all',
     createCta: 'Create space',
     composeA11y: 'Create a new space',
@@ -647,6 +652,7 @@ const en = {
     activityColorLabel: 'Activity color',
     activityColorHint: 'Shows on your card everywhere',
     activityColorSelected: '{{name}} selected',
+    activityColorNotSelected: 'No color selected yet',
     previewLabel: 'Preview',
     visibilityLabel: 'Privacy',
     visibilityPublicTitle: 'Public',
@@ -654,7 +660,6 @@ const en = {
     visibilityPrivateTitle: 'Private',
     visibilityPrivateDescription: 'People must request to join, you approve',
     membersRowLabel: 'Members',
-    joinRequestsRowLabel: 'Join requests',
     deleteCta: 'Delete space',
     deleteConfirmTitle: 'Delete space?',
     deleteConfirmMessage: 'This cannot be undone. Members will lose access to this space.',
@@ -667,6 +672,16 @@ const en = {
     joinCta: 'Join',
     requestCta: 'Request to join',
     pendingCta: 'Pending',
+    // Preview screen (Chats-49A/49B) — the "{{visibility}} space · N members"
+    // meta line under a not-yet-joined space's name. Distinct from
+    // visibilityPublicTitle/visibilityPrivateTitle (SpaceForm's Privacy card
+    // titles, just "Public"/"Private" with no "space" suffix there).
+    previewVisibilityPublic: 'Public space',
+    previewVisibilityPrivate: 'Private space',
+    // The preview screen's own sticky CTA once a request is already sent
+    // (49B) — distinct copy from the shared `pendingCta` above, which stays
+    // the compact "Pending" label SpaceCard's small pill (Chats-46A) uses.
+    requestPendingCta: 'Request pending',
     joinedLabel: "You're a member",
     ownerLabel: 'Owner',
     joinError: 'Could not join this space.',
@@ -682,9 +697,26 @@ const en = {
     joinRequestsTitle: 'Join requests',
     joinRequestsEmpty: 'No pending requests.',
     joinRequestsLoadError: 'Could not load join requests.',
+    requestsA11y: 'Join requests',
     approveA11y: 'Approve',
     rejectA11y: 'Reject',
     cancelCta: 'Cancel',
+    // "{{name}} space" — the accent-colored category subtitle under a
+    // space's name (thread header, wireframe Chats-47B; also reused on the
+    // Join requests header, Chats-47E).
+    categorySubtitle: '{{name}} space',
+    messagePlaceholder: 'Message the space…',
+    noMessagesYet: 'No messages yet',
+    threadLoadError: 'Could not load this space.',
+    // A joined space's own row preview in the Messages list (Chats-46A) —
+    // "{{sender}}: {{message}}", the group-chat equivalent of
+    // `chats.lastMessageFromYou` (reused as-is for the "I sent it" case;
+    // this key is only for when someone ELSE in the space sent it, since a
+    // 1:1 conversation's own preview never needs to name the sender at all).
+    lastMessagePreview: '{{sender}}: {{message}}',
+    // The stacked-avatars row on the join preview screen (Chats-49A/49B) —
+    // shown next to the first few members' avatars when there are more.
+    memberStackMore: '+{{count}}',
   },
   placeholders: {
     challengeInfoTitle: 'Challenge Info',

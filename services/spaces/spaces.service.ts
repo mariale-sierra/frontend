@@ -5,6 +5,8 @@ import type {
   SpaceContract,
   SpaceJoinRequestContract,
   SpaceMemberContract,
+  SpaceMessageContract,
+  SpaceMessagesPageContract,
   UpdateSpacePayload,
 } from '../../types/space';
 
@@ -70,6 +72,35 @@ export async function rejectSpaceJoinRequest(
 ): Promise<SpaceJoinRequestContract> {
   const response = await api.post<SpaceJoinRequestContract>(
     `/spaces/${spaceId}/join-requests/${requestId}/reject`,
+  );
+  return response.data;
+}
+
+interface GetSpaceMessagesOptions {
+  before?: number;
+  limit?: number;
+}
+
+/** Messages in a space's thread, oldest-first — same `before`/`nextBefore`
+ * cursor pagination as 1:1 chat's `getMessages` (see `chats.service.ts`). */
+export async function getSpaceMessages(
+  spaceId: string,
+  options: GetSpaceMessagesOptions = {},
+): Promise<SpaceMessagesPageContract> {
+  const response = await api.get<SpaceMessagesPageContract>(
+    `/spaces/${spaceId}/messages`,
+    { params: options },
+  );
+  return response.data;
+}
+
+export async function sendSpaceMessage(
+  spaceId: string,
+  content: string,
+): Promise<SpaceMessageContract> {
+  const response = await api.post<SpaceMessageContract>(
+    `/spaces/${spaceId}/messages`,
+    { content },
   );
   return response.data;
 }

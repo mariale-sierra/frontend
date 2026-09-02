@@ -6,6 +6,7 @@ import {
   View,
 } from 'react-native';
 import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
+import type { FontWeightToken } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { Text } from './text';
 
@@ -47,6 +48,8 @@ interface ButtonProps extends Omit<PressableProps, 'children'> {
   disabled?: boolean;
   /** @deprecated the `activity` variant no longer color-codes by category — this prop has no effect. Kept for call-site compatibility. */
   activityType?: string;
+  /** Override the label's default `label`-variant weight (medium) with another DM Sans weight token — e.g. `"bold"` for a heavier CTA label. */
+  textWeight?: FontWeightToken;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   children: string;
@@ -58,6 +61,7 @@ export function Button({
   loading = false,
   disabled = false,
   activityType: _activityType,
+  textWeight,
   leftIcon,
   rightIcon,
   children,
@@ -100,6 +104,7 @@ export function Button({
           {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
           <Text
             variant={size === 'sm' ? 'caption' : 'label'}
+            weight={textWeight}
             style={[
               styles.text,
               { color: textColor },

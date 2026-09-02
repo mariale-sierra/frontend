@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -20,11 +20,11 @@ import { UserAvatar } from '../../components/ui/userAvatar';
 import { Row } from '../../components/layout/row';
 import { MessageBubble } from '../../components/chats/MessageBubble';
 import { useConversationMessages } from '../../hooks/useConversationMessages';
+import { useScrollToLatestMessage } from '../../hooks/useScrollToLatestMessage';
 import { useAuth } from '../../hooks/useAuth';
 import { colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { getDaySeparator, isDifferentDay } from '../../utils/time';
-import type { MessageContract } from '../../types/chat';
 
 const HEADER_AVATAR_SIZE = 40;
 // Shrunk from 48, per explicit "row is too tall" request — happens to land
@@ -68,7 +68,7 @@ export default function Chat() {
   } = useConversationMessages(conversationId);
 
   const [draft, setDraft] = useState('');
-  const listRef = useRef<FlatList<MessageContract>>(null);
+  const { listRef, onContentSizeChange, onLayout } = useScrollToLatestMessage(messages);
 
   const name = otherDisplayName || (otherUsername ? `@${otherUsername}` : '');
   const otherAvatar = { username: otherUsername ?? '', imageUrl: otherProfileImageUrl || null };
@@ -78,7 +78,6 @@ export default function Chat() {
     const toSend = draft;
     setDraft('');
     await send(toSend);
-    requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
   }, [draft, send]);
 
   return (
@@ -145,6 +144,8 @@ export default function Chat() {
             data={messages}
             keyExtractor={(item) => String(item.id)}
             contentContainerStyle={styles.list}
+            onContentSizeChange={onContentSizeChange}
+            onLayout={onLayout}
             renderItem={({ item, index }) => {
               const previous = messages[index - 1];
               const showDaySeparator = !previous || isDifferentDay(previous.sentAt, item.sentAt);
@@ -156,7 +157,6 @@ export default function Chat() {
                 </>
               );
             }}
-            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
             ListHeaderComponent={
               hasMore ? (
                 <Button

@@ -23,14 +23,14 @@ import { withAlpha } from '../../utils/color';
  */
 type InputVariant = 'default' | 'filled';
 
-type LabelVariant = 'title' | 'subheader';
+type LabelVariant = 'title' | 'subheader' | 'header';
 type PlaceholderVariant = 'body' | 'secondary' | 'caption';
 
 /**
  * InputProps defines all configuration options for the Input component.
  * 
  * @property label - Optional text displayed above the input field
- * @property labelVariant - Text style for the label; 'title' for large bold text, 'subheader' for medium semi-bold (default: 'subheader')
+ * @property labelVariant - Text style for the label; 'title' for large bold text, 'subheader' for medium semi-bold, 'header' for the small uppercase eyebrow style (default: 'subheader')
  * @property placeholder - Optional hint text displayed inside the input when empty
  * @property placeholderVariant - Text color style for the placeholder; 'body' (primary), 'secondary' (secondary), or 'caption' (muted) (default: 'body')
  * @property leftIcon - Optional icon or element rendered on the left side of the input

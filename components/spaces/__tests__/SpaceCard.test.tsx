@@ -91,6 +91,14 @@ describe('SpaceCard', () => {
     );
 
     expect(screen.getByText('Cardio Low')).toBeTruthy();
-    expect(screen.getByText('spaces.membersCount:50')).toBeTruthy();
+    // Real bug this test previously couldn't catch: `react-i18next` is
+    // mocked here (no real pluralization), so this assertion used to encode
+    // the ACTUAL production bug (passing `formatCount()`'s string output as
+    // `count`, which breaks i18next's real `_one`/`_other` resolution and
+    // prints the raw key on screen) as if it were correct. `count` (a real
+    // number, for plural resolution) and `formattedCount` (the display
+    // string) are now passed separately — both show up in this mock's
+    // `key:val1,val2` output.
+    expect(screen.getByText('spaces.membersCount:50,50')).toBeTruthy();
   });
 });

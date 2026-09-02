@@ -19,8 +19,11 @@ interface ConversationListItemProps {
 // already does for the Home streak-chip/StreaksGrid badges elsewhere), read
 // gets `transparent` at the SAME size, per the Chats-46A wireframe's own
 // note: "unread = has one, read = spacer of the same width so names still
-// align." A space-based thread (not built yet — see index.tsx's own doc
-// comment) would use that space's own activity color here instead.
+// align." This dot's meaning stays fixed even for a joined space's own row
+// in this same list (`SpaceThreadListItem`) — per explicit request, that
+// row's activity-color identity goes on the NAME text instead, not a
+// repurposed dot (space messages also have no read-tracking to drive an
+// unread dot with yet, unlike this one's real `unreadCount`).
 const DOT_SIZE = 7;
 
 // Bumped from 44, per explicit "make the profile circle bigger" request.

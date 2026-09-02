@@ -65,6 +65,34 @@ export interface JoinSpaceResultContract {
   space: SpaceContract;
 }
 
+/** Public shape of a space message's author (backend SpaceMessageSenderDto) —
+ * unlike 1:1 chat's `MessageContract` (a fixed "other participant" resolved
+ * from route params), a space is a group thread where every message can come
+ * from a different member, so the sender's identity travels on the message
+ * itself. */
+export interface SpaceMessageSenderContract {
+  id: string;
+  username: string;
+  displayName: string | null;
+  profileImageUrl: string | null;
+}
+
+/** GET/POST /spaces/:id/messages row (backend SpaceMessageDto). */
+export interface SpaceMessageContract {
+  id: number;
+  spaceId: string;
+  sender: SpaceMessageSenderContract;
+  content: string;
+  sentAt: string;
+}
+
+/** GET /spaces/:id/messages response shape — same oldest-first + `nextBefore`
+ * cursor pagination as `MessagesPageContract` (1:1 chat). */
+export interface SpaceMessagesPageContract {
+  messages: SpaceMessageContract[];
+  nextBefore: number | null;
+}
+
 export interface CreateSpacePayload {
   name: string;
   description?: string;
