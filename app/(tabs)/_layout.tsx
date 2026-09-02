@@ -53,14 +53,31 @@ const ROUTE_ICON: Record<string, React.ComponentProps<typeof Ionicons>["name"]> 
   challenges: "trophy-outline",
   profile: "person-outline",
 };
+// Filled counterpart of each icon above, swapped in only for the active
+// tab — per explicit "make the selected icon's weight heavier" request.
+// Ionicons doesn't expose a stroke-width/font-weight axis to bump directly
+// (unlike DM Sans's per-weight font files elsewhere in this app), so the
+// filled glyph is the real mechanism for "heavier" here, the same way
+// Instagram/most tab bars distinguish an active icon from an inactive one.
+// This is a different, narrower thing than the app's general "filled icons
+// were swept to -outline" pattern elsewhere (activity/camera icons, a
+// blanket style decision) — this is a per-STATE swap on exactly one glyph
+// pair, scoped to the tab bar only.
+const ROUTE_ICON_FOCUSED: Record<string, React.ComponentProps<typeof Ionicons>["name"]> = {
+  index: "home",
+  search: "search",
+  challenges: "trophy",
+  profile: "person",
+};
 
 function TabIcon({
-  name,
+  routeKey,
   focused,
 }: {
-  name: React.ComponentProps<typeof Ionicons>["name"];
+  routeKey: keyof typeof ROUTE_ICON;
   focused: boolean;
 }) {
+  const name = focused ? ROUTE_ICON_FOCUSED[routeKey] : ROUTE_ICON[routeKey];
   return (
     <View style={styles.tabIconWrap}>
       <Ionicons name={name} size={22} color={focused ? colors.primary : INACTIVE_ICON_COLOR} />
@@ -102,14 +119,14 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ focused }) => <TabIcon name={ROUTE_ICON.index} focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon routeKey="index" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
           title: "Search",
-          tabBarIcon: ({ focused }) => <TabIcon name={ROUTE_ICON.search} focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon routeKey="search" focused={focused} />,
         }}
       />
 
@@ -135,14 +152,14 @@ export default function TabsLayout() {
         name="challenges"
         options={{
           title: "Challenges",
-          tabBarIcon: ({ focused }) => <TabIcon name={ROUTE_ICON.challenges} focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon routeKey="challenges" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ focused }) => <TabIcon name={ROUTE_ICON.profile} focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon routeKey="profile" focused={focused} />,
         }}
       />
     </Tabs>

@@ -13,12 +13,18 @@ interface ConversationListItemProps {
   onPress: () => void;
 }
 
-// A fixed 7px circle either way — unread gets `colors.primary`, read gets
-// `transparent` at the SAME size, per the Chats-46A wireframe's own note:
-// "unread = has one, read = spacer of the same width so names still align."
-// A space-based thread (not built yet — see index.tsx's own doc comment)
-// would use that space's own activity color here instead of `primary`.
+// A fixed 7px circle either way — unread gets `colors.success` (switched
+// from `primary` per explicit request — "success" reads as the semantically
+// correct color for "something new/positive happened here" the same way it
+// already does for the Home streak-chip/StreaksGrid badges elsewhere), read
+// gets `transparent` at the SAME size, per the Chats-46A wireframe's own
+// note: "unread = has one, read = spacer of the same width so names still
+// align." A space-based thread (not built yet — see index.tsx's own doc
+// comment) would use that space's own activity color here instead.
 const DOT_SIZE = 7;
+
+// Bumped from 44, per explicit "make the profile circle bigger" request.
+const AVATAR_SIZE = 56;
 
 export function ConversationListItem({
   conversation,
@@ -42,7 +48,7 @@ export function ConversationListItem({
         <UserAvatar
           username={otherParticipant.username}
           imageUrl={otherParticipant.profileImageUrl}
-          size={44}
+          size={AVATAR_SIZE}
         />
         <View style={styles.content}>
           {/* `justify="flex-start"` — `Row` defaults to `space-between`,
@@ -53,7 +59,7 @@ export function ConversationListItem({
           <Row align="center" gap="xs" justify="flex-start">
             <View
               testID="unread-dot"
-              style={[styles.dot, { backgroundColor: hasUnread ? colors.primary : 'transparent' }]}
+              style={[styles.dot, { backgroundColor: hasUnread ? colors.success : 'transparent' }]}
             />
             {/* Always bold, per the wireframe — every name in Chats-46A's
                 message rows is weight 700 regardless of read state; only
@@ -99,7 +105,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    gap: spacing.xs,
+    // `spacing.xs` (4) is already the scale's floor — closer than that
+    // isn't a named tier, but `spacing(n)` is still the real token
+    // mechanism for an arbitrary multiple-of-4 value (see its own doc
+    // comment in theme.ts), not a raw magic number. Per explicit "name and
+    // message label closer" request.
+    gap: spacing(0),
   },
   name: {
     flexShrink: 1,

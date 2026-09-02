@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
 import { colors, fillOpacity, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
@@ -5,6 +6,26 @@ import { Text } from '../ui/text';
 import type { ChallengePhoto } from '../../types/challenge';
 
 const SKELETON_COUNT = 8;
+
+// Real, reported bug: the skeleton used to leave as soon as the photo
+// LIST loaded (the `loading` prop below, backed by one fast metadata
+// fetch), but each tile's actual `<Image>` still had to download
+// separately after that — so tiles popped in one by one instead of
+// together, looking broken rather than "still loading." Prefetching every
+// visible photo's URL first (populating RN's native image cache) and only
+// leaving the skeleton once ALL of them have settled means the swap to
+// real content happens all at once, and the `<Image>` renders below then
+// read from cache instead of re-downloading.
+//
+// Capped so one slow/broken URL can't hang the skeleton forever — past
+// this, whatever hasn't finished just loads in normally (RN's own
+// default per-`<Image>` behavior), which is a reasonable degrade, not a
+// regression from the pre-preload behavior.
+const IMAGE_PRELOAD_TIMEOUT_MS = 6000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 interface PhotoGridProps {
   photos: ChallengePhoto[];
@@ -31,7 +52,34 @@ function PhotoTile({ photo, onPress }: { photo: ChallengePhoto; onPress?: () => 
 /** Presentational tile grid shared by PostsGrid (own posts) and other-user
  * profile screens — pure rendering, callers own fetching/filtering. */
 export function PhotoGrid({ photos, loading, emptyLabel, onPhotoPress }: PhotoGridProps) {
-  if (loading) {
+  const [imagesReady, setImagesReady] = useState(false);
+
+  useEffect(() => {
+    if (loading) {
+      setImagesReady(false);
+      return;
+    }
+    if (photos.length === 0) {
+      setImagesReady(true);
+      return;
+    }
+
+    let cancelled = false;
+    setImagesReady(false);
+
+    const urls = photos.map((photo) => photo.imageUrl).filter((url): url is string => Boolean(url));
+    const preload = Promise.allSettled(urls.map((url) => Image.prefetch(url)));
+
+    Promise.race([preload, delay(IMAGE_PRELOAD_TIMEOUT_MS)]).finally(() => {
+      if (!cancelled) setImagesReady(true);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, photos]);
+
+  if (loading || !imagesReady) {
     return (
       <View style={styles.grid}>
         {Array.from({ length: SKELETON_COUNT }).map((_, i) => (

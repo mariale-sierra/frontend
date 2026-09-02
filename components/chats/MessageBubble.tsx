@@ -72,9 +72,12 @@ const styles = StyleSheet.create({
   bubbleColumnMine: {
     alignItems: 'flex-end',
   },
+  // Bumped a tier each — `spacing.md`→`base`, `spacing.sm`→`md` — per
+  // explicit "text too close to the bubble edge" report. Still real scale
+  // tokens, just the next ones up, not arbitrary values.
   bubble: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
     borderRadius: radius.xl,
   },
   // `radius.small` — was `radius.sm` (doesn't exist; the scale's small tier
