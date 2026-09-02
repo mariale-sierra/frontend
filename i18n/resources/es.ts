@@ -618,6 +618,9 @@ const es = {
     optionsA11y: 'Opciones del chat',
     detailsTitle: 'Detalles del chat',
     viewProfile: 'Ver perfil',
+    today: 'Hoy',
+    yesterday: 'Ayer',
+    messagePlaceholder: 'Mensaje a {{name}}...',
   },
   placeholders: {
     challengeInfoTitle: 'Información del reto',

@@ -45,28 +45,45 @@ export function ConversationListItem({
           size={44}
         />
         <View style={styles.content}>
-          <Row align="center" gap="xs">
+          {/* `justify="flex-start"` — `Row` defaults to `space-between`,
+              which with only two children (the dot + the name) shoves the
+              name all the way to the far right of `content`'s full width
+              instead of sitting right next to the dot. Real, reported bug,
+              not a wireframe departure. */}
+          <Row align="center" gap="xs" justify="flex-start">
             <View
               testID="unread-dot"
               style={[styles.dot, { backgroundColor: hasUnread ? colors.primary : 'transparent' }]}
             />
+            {/* Always bold, per the wireframe — every name in Chats-46A's
+                message rows is weight 700 regardless of read state; only
+                the PREVIEW line's weight/tone changes with `hasUnread`. */}
             <Text
               variant="body"
-              weight={hasUnread ? 'bold' : undefined}
+              weight="bold"
               numberOfLines={1}
               style={styles.name}
             >
               {name}
             </Text>
           </Row>
-          <Text
-            variant="body"
-            tone={hasUnread ? undefined : 'secondary'}
-            weight={hasUnread ? 'medium' : undefined}
-            numberOfLines={1}
-          >
-            {preview}
-          </Text>
+          {/* The preview line gets the SAME leading dot-width spacer (always
+              transparent) so its text starts flush with the name's text
+              above it — without this, the name (pushed right by the real
+              dot) reads noticeably further from the avatar than the preview
+              line does. Real, reported misalignment. */}
+          <Row align="center" gap="xs" justify="flex-start">
+            <View style={styles.dot} />
+            <Text
+              variant="body"
+              tone={hasUnread ? undefined : 'secondary'}
+              weight={hasUnread ? 'medium' : undefined}
+              numberOfLines={1}
+              style={styles.name}
+            >
+              {preview}
+            </Text>
+          </Row>
         </View>
         {lastMessage && (
           <Text variant="caption" tone="secondary">{formatRelativeTime(lastMessage.sentAt)}</Text>

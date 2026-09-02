@@ -18,9 +18,22 @@ import { useAuth } from '../../hooks/useAuth';
  * privacy-filtered server-side). Viewing your own id here just redirects to
  * the tab (same data, but the tab has the edit/settings entry points).
  */
+// Every "view this other user" entry point in the app funnels through this
+// one screen, so this is the single choke point to stop a malformed id
+// before it ever reaches `GET /users/:id/profile` — that route's
+// `ParseUUIDPipe` rejects anything that isn't UUID-shaped with a
+// "Validation failed (uuid is expected)" error, which the app's global
+// axios interceptor then surfaces as a toast regardless of this screen's
+// own (silent) local error handling. Real, reported bug: whatever the
+// exact upstream cause (a caller passing an empty/mangled id), this guard
+// means it now degrades to the normal "user not found" state instead of a
+// confusing validation toast.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default function UserProfile() {
   const { userId: rawUserId } = useLocalSearchParams<{ userId: string }>();
-  const userId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
+  const rawId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
+  const userId = rawId && UUID_RE.test(rawId) ? rawId : undefined;
   const { t } = useTranslation();
   const router = useRouter();
   const { userId: sessionUserId } = useAuth();
@@ -34,7 +47,10 @@ export default function UserProfile() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!userId || isOwnProfile) return;
+      if (!userId || isOwnProfile) {
+        if (!userId) setLoading(false);
+        return;
+      }
       let active = true;
       setLoading(true);
       getPublicProfile(userId)

@@ -66,7 +66,7 @@ export default function Messaging() {
           <SearchBar value={query} onChangeText={setQuery} placeholder={t('chats.searchPlaceholder')} />
         </View>
         <IconButton
-          name="create-outline"
+          name="paper-plane-outline"
           size={48}
           iconSize={22}
           iconColor={colors.ink}
@@ -160,11 +160,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   spacesEmptyCard: {
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,
-    paddingVertical: spacing.xl,
-    borderRadius: radius.medium,
-    backgroundColor: colors.surface,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
     gap: spacing.sm,
   },

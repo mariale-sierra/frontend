@@ -621,6 +621,9 @@ const en = {
     optionsA11y: 'Chat options',
     detailsTitle: 'Chat details',
     viewProfile: 'View profile',
+    today: 'Today',
+    yesterday: 'Yesterday',
+    messagePlaceholder: 'Message {{name}}...',
   },
   placeholders: {
     challengeInfoTitle: 'Challenge Info',

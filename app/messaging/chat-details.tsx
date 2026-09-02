@@ -34,13 +34,22 @@ const AVATAR_SIZE = 88;
 export default function ChatDetails() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { otherUserId, otherUsername, otherDisplayName, otherProfileImageUrl } =
-    useLocalSearchParams<{
-      otherUserId?: string;
-      otherUsername?: string;
-      otherDisplayName?: string;
-      otherProfileImageUrl?: string;
-    }>();
+  const params = useLocalSearchParams<{
+    otherUserId?: string | string[];
+    otherUsername?: string | string[];
+    otherDisplayName?: string | string[];
+    otherProfileImageUrl?: string | string[];
+  }>();
+  // expo-router's params can come back as string[] (same unwrap
+  // `app/profile/[userId].tsx` already does) — without it a bad shape here
+  // means `/profile/${otherUserId}` gets pushed with something like
+  // "abc,def" instead of a real UUID, which the backend's `ParseUUIDPipe`
+  // rejects with a "Validation failed" toast. Real, reported bug.
+  const unwrap = (v?: string | string[]) => (Array.isArray(v) ? v[0] : v);
+  const otherUserId = unwrap(params.otherUserId);
+  const otherUsername = unwrap(params.otherUsername);
+  const otherDisplayName = unwrap(params.otherDisplayName);
+  const otherProfileImageUrl = unwrap(params.otherProfileImageUrl);
 
   const name = otherDisplayName || (otherUsername ? `@${otherUsername}` : '');
 
@@ -61,21 +70,23 @@ export default function ChatDetails() {
         </Text>
       </View>
 
-      <View style={styles.section}>
-        <Row
-          align="center"
-          gap="md"
-          style={styles.row}
-          pressable
-          onPress={() => otherUserId && router.push(`/profile/${otherUserId}`)}
-        >
-          <Icon name="person-outline" size={20} color={colors.paper} />
-          <Text variant="label" weight="medium" style={styles.rowLabel}>
-            {t('chats.viewProfile')}
-          </Text>
-          <Icon name="chevron-forward" size={18} color={withAlpha(colors.paper, textOpacity.tertiary)} />
-        </Row>
-      </View>
+      {otherUserId && (
+        <View style={styles.section}>
+          <Row
+            align="center"
+            gap="md"
+            style={styles.row}
+            pressable
+            onPress={() => router.push(`/profile/${otherUserId}`)}
+          >
+            <Icon name="person-outline" size={20} color={colors.paper} />
+            <Text variant="label" weight="medium" style={styles.rowLabel}>
+              {t('chats.viewProfile')}
+            </Text>
+            <Icon name="chevron-forward" size={18} color={withAlpha(colors.paper, textOpacity.tertiary)} />
+          </Row>
+        </View>
+      )}
     </ScreenBackground>
   );
 }
