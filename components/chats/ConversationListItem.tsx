@@ -35,15 +35,17 @@ export function ConversationListItem({
   onPress,
 }: ConversationListItemProps) {
   const { t } = useTranslation();
-  const { otherParticipant, lastMessage, unreadCount } = conversation;
+  const { otherParticipant, lastMessage, unreadCount, isPending } = conversation;
   const name = otherParticipant.displayName ?? `@${otherParticipant.username}`;
   const hasUnread = unreadCount > 0;
 
-  const preview = lastMessage
-    ? lastMessage.senderId === currentUserId
-      ? t('chats.lastMessageFromYou', { message: lastMessage.content })
-      : lastMessage.content
-    : t('chats.noMessagesYet');
+  const preview = isPending
+    ? t('chats.messageRequestLabel')
+    : lastMessage
+      ? lastMessage.senderId === currentUserId
+        ? t('chats.lastMessageFromYou', { message: lastMessage.content })
+        : lastMessage.content
+      : t('chats.noMessagesYet');
 
   return (
     <Pressable onPress={onPress} accessibilityRole="button" style={styles.row}>
@@ -83,12 +85,16 @@ export function ConversationListItem({
               line does. Real, reported misalignment. */}
           <Row align="center" gap="xs" justify="flex-start">
             <View style={styles.dot} />
+            {/* A pending request's own label always reads as "new" —
+                bold + the app's accent color, like Instagram's own blue
+                "Message request" line — regardless of `unreadCount` (a
+                request you haven't acted on yet is never really "read"). */}
             <Text
               variant="body"
-              tone={hasUnread ? undefined : 'secondary'}
-              weight={hasUnread ? 'medium' : undefined}
+              tone={isPending || hasUnread ? undefined : 'secondary'}
+              weight={isPending ? 'bold' : hasUnread ? 'medium' : undefined}
               numberOfLines={1}
-              style={styles.name}
+              style={[styles.name, isPending && styles.pendingLabel]}
             >
               {preview}
             </Text>
@@ -117,6 +123,12 @@ const styles = StyleSheet.create({
   },
   name: {
     flexShrink: 1,
+  },
+  // Custom `color` override needs an explicit `opacity: 1` — see
+  // components/ui/text.tsx's own documented warning.
+  pendingLabel: {
+    color: colors.primary,
+    opacity: 1,
   },
   dot: {
     width: DOT_SIZE,

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -13,7 +13,9 @@ import { Row } from '../../components/layout/row';
 import { Divider } from '../../components/ui/divider';
 import { ConversationListItem } from '../../components/chats/ConversationListItem';
 import { SpaceCard } from '../../components/spaces/SpaceCard';
+import { SpaceCardSkeleton } from '../../components/spaces/SpaceCardSkeleton';
 import { SpaceThreadListItem } from '../../components/spaces/SpaceThreadListItem';
+import { MessageRowSkeleton } from '../../components/chats/MessageRowSkeleton';
 import { useConversations } from '../../hooks/useConversations';
 import { useSpaces } from '../../hooks/useSpaces';
 import { useSpaceThreadPreviews } from '../../hooks/useSpaceThreadPreviews';
@@ -108,6 +110,13 @@ export default function Messaging() {
   }, [filteredConversations, filteredSpaceThreadPreviews]);
 
   const messagesLoading = loading || (joinedSpaces.length > 0 && spaceThreadsLoading);
+  // One shared flag for BOTH sections — real, reported "loads by parts"
+  // complaint: Spaces and Messages resolve from independent fetches, so
+  // gating each section on its own loading flag let one flip to real
+  // content while the other was still showing its skeleton, a staggered
+  // reveal. Neither section shows real content until EVERYTHING has
+  // loaded; they flip together.
+  const initialLoading = spacesLoading || messagesLoading;
   const spacesPreview = exploreSpaces.slice(0, SPACES_PREVIEW_COUNT);
 
   async function handleJoinSpace(space: SpaceContract) {
@@ -141,7 +150,7 @@ export default function Messaging() {
       </Row>
 
       <FlatList
-        data={messagesLoading || error ? [] : messagingRows}
+        data={initialLoading || error ? [] : messagingRows}
         keyExtractor={(row) => row.key}
         contentContainerStyle={styles.list}
         ListHeaderComponent={
@@ -149,9 +158,11 @@ export default function Messaging() {
             <Row align="center" gap="xs" style={styles.sectionHeader}>
               <Text variant="subheader">{t('chats.spacesTitle')}</Text>
             </Row>
-            {spacesLoading ? (
-              <View style={styles.spacesEmptyCard}>
-                <ActivityIndicator color={colors.primary} />
+            {initialLoading ? (
+              <View style={styles.spacesPreviewList}>
+                {Array.from({ length: SPACES_PREVIEW_COUNT }, (_, index) => (
+                  <SpaceCardSkeleton key={index} />
+                ))}
               </View>
             ) : spacesError ? (
               <View style={styles.spacesEmptyCard}>
@@ -208,6 +219,7 @@ export default function Messaging() {
                     otherUsername: row.conversation.otherParticipant.username,
                     otherDisplayName: row.conversation.otherParticipant.displayName ?? '',
                     otherProfileImageUrl: row.conversation.otherParticipant.profileImageUrl ?? '',
+                    isPending: row.conversation.isPending ? '1' : '',
                   },
                 })
               }
@@ -224,9 +236,11 @@ export default function Messaging() {
         }
         ItemSeparatorComponent={() => <Divider marginVertical="xs" />}
         ListEmptyComponent={
-          messagesLoading ? (
-            <View style={styles.center}>
-              <ActivityIndicator color={colors.primary} />
+          initialLoading ? (
+            <View>
+              {Array.from({ length: 4 }, (_, index) => (
+                <MessageRowSkeleton key={index} />
+              ))}
             </View>
           ) : error ? (
             <View style={styles.center}>

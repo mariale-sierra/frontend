@@ -107,6 +107,59 @@ describe('SpaceForm', () => {
     );
   });
 
+  it('switches to the newly picked category when editing a space that already had one', async () => {
+    // The specific edit-flow scenario reported broken: name/description/
+    // visibility save fine when editing an existing space, but changing
+    // the activity color specifically doesn't stick.
+    const onSubmit = jest.fn();
+    const ref = createRef<SpaceFormHandle>();
+    const screen = await renderWithTheme(
+      <SpaceForm
+        ref={ref}
+        initialValues={{ name: 'Girls running club', activityType: 'cardioLow' }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await waitFor(() => expect(mockedGetExerciseCategories).toHaveBeenCalled());
+
+    await act(async () => {
+      fireEvent.press(screen.getByLabelText('challenges.categories.strength:strength'));
+    });
+    await act(async () => {
+      await ref.current?.submit();
+    });
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ activityCategoryId: 1 }),
+    );
+  });
+
+  it('keeps the original category when editing a space without touching the color picker', async () => {
+    const onSubmit = jest.fn();
+    const ref = createRef<SpaceFormHandle>();
+    const screen = await renderWithTheme(
+      <SpaceForm
+        ref={ref}
+        initialValues={{ name: 'Girls running club', activityType: 'cardioLow' }}
+        onSubmit={onSubmit}
+      />,
+    );
+
+    await waitFor(() => expect(mockedGetExerciseCategories).toHaveBeenCalled());
+
+    await act(async () => {
+      fireEvent.changeText(screen.getByPlaceholderText('spaces.namePlaceholder'), 'Renamed club');
+    });
+    await act(async () => {
+      await ref.current?.submit();
+    });
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Renamed club', activityCategoryId: 2 }),
+    );
+  });
+
   it('does not call onSubmit when the name is blank', async () => {
     const onSubmit = jest.fn();
     const ref = createRef<SpaceFormHandle>();

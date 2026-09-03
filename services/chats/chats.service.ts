@@ -55,3 +55,21 @@ export async function sendMessage(
 export async function markConversationRead(conversationId: string): Promise<void> {
   await api.patch(`/chats/conversations/${conversationId}/read`);
 }
+
+/** Accepts a pending message request — only meaningful when the caller is
+ * its recipient (`ConversationSummaryContract.isPending`); reveals the
+ * composer in place of the Accept/Decline row. */
+export async function acceptConversationRequest(
+  conversationId: string,
+): Promise<ConversationSummaryContract> {
+  const response = await api.patch<ConversationSummaryContract>(
+    `/chats/conversations/${conversationId}/accept`,
+  );
+  return response.data;
+}
+
+/** Declines a pending message request — removes the conversation for both
+ * participants (Instagram-style "immediate delete", not a soft hide). */
+export async function declineConversationRequest(conversationId: string): Promise<void> {
+  await api.delete(`/chats/conversations/${conversationId}/decline`);
+}

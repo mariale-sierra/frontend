@@ -5,11 +5,13 @@ import {
   getMessages,
   sendMessage,
   markConversationRead,
+  acceptConversationRequest,
+  declineConversationRequest,
 } from '../chats.service';
 
 jest.mock('../../api', () => ({
   __esModule: true,
-  default: { get: jest.fn(), post: jest.fn(), patch: jest.fn() },
+  default: { get: jest.fn(), post: jest.fn(), patch: jest.fn(), delete: jest.fn() },
 }));
 
 const mockedApi = api as jest.Mocked<typeof api>;
@@ -79,6 +81,24 @@ describe('chats.service', () => {
     await markConversationRead('conv-1');
 
     expect(mockedApi.patch).toHaveBeenCalledWith('/chats/conversations/conv-1/read');
+  });
+
+  it('acceptConversationRequest patches the accept endpoint', async () => {
+    const conversation = { id: 'conv-1', isPending: false };
+    mockedApi.patch.mockResolvedValue({ data: conversation });
+
+    const result = await acceptConversationRequest('conv-1');
+
+    expect(mockedApi.patch).toHaveBeenCalledWith('/chats/conversations/conv-1/accept');
+    expect(result).toEqual(conversation);
+  });
+
+  it('declineConversationRequest deletes via the decline endpoint', async () => {
+    mockedApi.delete.mockResolvedValue({ data: undefined });
+
+    await declineConversationRequest('conv-1');
+
+    expect(mockedApi.delete).toHaveBeenCalledWith('/chats/conversations/conv-1/decline');
   });
 
   it('propagates API errors to the caller', async () => {

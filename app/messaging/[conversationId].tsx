@@ -17,11 +17,13 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { IconButton } from '../../components/ui/iconButton';
 import { UserAvatar } from '../../components/ui/userAvatar';
+import { ConfirmationPopup } from '../../components/ui/confirmationPopup';
 import { Row } from '../../components/layout/row';
 import { MessageBubble } from '../../components/chats/MessageBubble';
 import { useConversationMessages } from '../../hooks/useConversationMessages';
 import { useScrollToLatestMessage } from '../../hooks/useScrollToLatestMessage';
 import { useAuth } from '../../hooks/useAuth';
+import { acceptConversationRequest, declineConversationRequest } from '../../services/chats/chats.service';
 import { colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { getDaySeparator, isDifferentDay } from '../../utils/time';
@@ -42,6 +44,7 @@ export default function Chat() {
     otherUsername?: string | string[];
     otherDisplayName?: string | string[];
     otherProfileImageUrl?: string | string[];
+    isPending?: string | string[];
   }>();
   const { conversationId } = params;
   // expo-router params can come back as string[] — same unwrap
@@ -54,6 +57,17 @@ export default function Chat() {
   const otherUsername = unwrap(params.otherUsername);
   const otherDisplayName = unwrap(params.otherDisplayName);
   const otherProfileImageUrl = unwrap(params.otherProfileImageUrl);
+
+  // Message requests (Instagram-style) — 1:1 conversations only; spaces have
+  // their own separate join-request system (Chats-47E). Seeded from the
+  // route param (the list row already knows this from its own fetch) and
+  // then owned locally — accepting/declining doesn't need a full conversation
+  // refetch just to flip one flag.
+  const [isPending, setIsPending] = useState(unwrap(params.isPending) === '1');
+  const [accepting, setAccepting] = useState(false);
+  const [declining, setDeclining] = useState(false);
+  const [declineConfirmVisible, setDeclineConfirmVisible] = useState(false);
+  const [requestActionError, setRequestActionError] = useState<string | null>(null);
 
   const {
     messages,
@@ -68,7 +82,7 @@ export default function Chat() {
   } = useConversationMessages(conversationId);
 
   const [draft, setDraft] = useState('');
-  const { listRef, onContentSizeChange, onLayout } = useScrollToLatestMessage(messages);
+  const { listRef, ready, onContentSizeChange, onLayout } = useScrollToLatestMessage(messages);
 
   const name = otherDisplayName || (otherUsername ? `@${otherUsername}` : '');
   const otherAvatar = { username: otherUsername ?? '', imageUrl: otherProfileImageUrl || null };
@@ -79,6 +93,32 @@ export default function Chat() {
     setDraft('');
     await send(toSend);
   }, [draft, send]);
+
+  async function handleAccept() {
+    setAccepting(true);
+    setRequestActionError(null);
+    try {
+      await acceptConversationRequest(conversationId);
+      setIsPending(false);
+    } catch {
+      setRequestActionError(t('chats.acceptError'));
+    } finally {
+      setAccepting(false);
+    }
+  }
+
+  async function handleDecline() {
+    setDeclining(true);
+    setRequestActionError(null);
+    try {
+      await declineConversationRequest(conversationId);
+      setDeclineConfirmVisible(false);
+      router.back();
+    } catch {
+      setRequestActionError(t('chats.declineError'));
+      setDeclining(false);
+    }
+  }
 
   return (
     <ScreenBackground variant="default">
@@ -110,6 +150,12 @@ export default function Chat() {
       </View>
 
       {loading ? (
+        // A chat thread's real shape (message count, bubble widths, mixed
+        // sides, day separators) is genuinely unpredictable — a skeleton
+        // here would just be fake bubbles that don't resemble what's about
+        // to load and would visibly jump/reflow once it does. A spinner is
+        // the honest signal for content whose shape can't be previewed,
+        // same as this app's error/empty states elsewhere.
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} />
         </View>
@@ -144,6 +190,11 @@ export default function Chat() {
             data={messages}
             keyExtractor={(item) => String(item.id)}
             contentContainerStyle={styles.list}
+            // Hidden until scrolled to the latest message — see
+            // useScrollToLatestMessage's own doc comment: without this, the
+            // thread visibly flashes its TOP for a frame before jumping to
+            // the bottom.
+            style={{ opacity: ready ? 1 : 0 }}
             onContentSizeChange={onContentSizeChange}
             onLayout={onLayout}
             renderItem={({ item, index }) => {
@@ -177,41 +228,102 @@ export default function Chat() {
             }
           />
 
-          <View style={styles.inputBar}>
-            {/* `justify="flex-start"` + wrapping `Input` in its own
-                `flex:1` View — `Row` defaults to `space-between`, and
-                `Input`'s OWN outer wrapper (its `containerStyle` prop only
-                reaches the inner pill, not that wrapper) has no flex of its
-                own, so with nothing forcing it to grow it collapsed to the
-                width of an empty `TextInput` — a real, reported "the input
-                is tiny/doesn't work" bug, not a cosmetic one. */}
-            <Row align="center" gap="sm" justify="flex-start">
-              <View style={styles.inputWrapper}>
-                <Input
-                  containerStyle={styles.input}
-                  style={styles.inputText}
-                  placeholderVariant="caption"
-                  placeholder={t('chats.messagePlaceholder', { name })}
-                  value={draft}
-                  onChangeText={setDraft}
-                  multiline
-                  maxLength={2000}
-                  showCounter={false}
+          {isPending ? (
+            // Message request (Instagram-style) — the composer is replaced
+            // entirely until accepted; the recipient can read but not reply.
+            <View style={styles.requestBar}>
+              <Text variant="body" tone="secondary" align="center" style={styles.requestNotice}>
+                {t('chats.messageRequestNotice', { name })}
+              </Text>
+              {requestActionError ? (
+                <Text variant="caption" style={styles.requestError}>
+                  {requestActionError}
+                </Text>
+              ) : null}
+              <Row gap="sm" align="center" justify="flex-start">
+                {/* `dangerSubtle` — a translucent `error`-tinted wash with
+                    an `error`-colored (not neutral `paper`) border, softer
+                    than solid `danger` but with real visible color/weight —
+                    a plain `surface` fill with no border read as too flat
+                    next to Accept's solid `primary` pill (also tried, also
+                    rejected). */}
+                <Button
+                  variant="dangerSubtle"
+                  style={styles.requestButton}
+                  loading={declining}
+                  disabled={accepting}
+                  onPress={() => setDeclineConfirmVisible(true)}
+                >
+                  {t('chats.declineCta')}
+                </Button>
+                <Button
+                  style={styles.requestButton}
+                  loading={accepting}
+                  disabled={declining}
+                  onPress={handleAccept}
+                >
+                  {t('chats.acceptCta')}
+                </Button>
+              </Row>
+            </View>
+          ) : (
+            <View style={styles.inputBar}>
+              {/* `justify="flex-start"` + wrapping `Input` in its own
+                  `flex:1` View — `Row` defaults to `space-between`, and
+                  `Input`'s OWN outer wrapper (its `containerStyle` prop only
+                  reaches the inner pill, not that wrapper) has no flex of its
+                  own, so with nothing forcing it to grow it collapsed to the
+                  width of an empty `TextInput` — a real, reported "the input
+                  is tiny/doesn't work" bug, not a cosmetic one. */}
+              <Row align="center" gap="sm" justify="flex-start">
+                <View style={styles.inputWrapper}>
+                  <Input
+                    containerStyle={styles.input}
+                    style={styles.inputText}
+                    placeholderVariant="caption"
+                    placeholder={t('chats.messagePlaceholder', { name })}
+                    value={draft}
+                    onChangeText={setDraft}
+                    multiline
+                    maxLength={2000}
+                    showCounter={false}
+                  />
+                </View>
+                <IconButton
+                  name="send"
+                  size={SEND_BUTTON_SIZE}
+                  iconSize={18}
+                  iconColor={colors.ink}
+                  style={[styles.sendButton, (sending || !draft.trim()) && styles.sendButtonDisabled]}
+                  onPress={handleSend}
+                  disabled={sending || !draft.trim()}
                 />
-              </View>
-              <IconButton
-                name="send"
-                size={SEND_BUTTON_SIZE}
-                iconSize={18}
-                iconColor={colors.ink}
-                style={[styles.sendButton, (sending || !draft.trim()) && styles.sendButtonDisabled]}
-                onPress={handleSend}
-                disabled={sending || !draft.trim()}
-              />
-            </Row>
-          </View>
+              </Row>
+            </View>
+          )}
         </KeyboardAvoidingView>
       )}
+
+      <ConfirmationPopup
+        visible={declineConfirmVisible}
+        title={t('chats.declineConfirmTitle')}
+        description={t('chats.declineConfirmMessage')}
+        icon="trash-outline"
+        iconColor={colors.error}
+        primaryButton={{
+          label: t('chats.declineCta'),
+          onPress: handleDecline,
+          variant: 'danger',
+          loading: declining,
+        }}
+        secondaryButton={{
+          label: t('chats.cancelCta'),
+          onPress: () => setDeclineConfirmVisible(false),
+          variant: 'neutral',
+          disabled: declining,
+        }}
+        onDismiss={() => setDeclineConfirmVisible(false)}
+      />
     </ScreenBackground>
   );
 }
@@ -277,6 +389,28 @@ const styles = StyleSheet.create({
     // Tightened from sm/md, per explicit "row is too tall" request.
     paddingTop: spacing.xs,
     paddingBottom: spacing.sm,
+  },
+  // Message request (Instagram-style) — replaces inputBar entirely while
+  // `isPending`, same surface/border chrome so the footer reads as one
+  // consistent "bottom bar" family either way.
+  requestBar: {
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: withAlpha(colors.paper, 0.08),
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.base,
+    gap: spacing.sm,
+  },
+  requestNotice: {
+    paddingHorizontal: spacing.sm,
+  },
+  requestError: {
+    color: colors.error,
+    textAlign: 'center',
+  },
+  requestButton: {
+    flex: 1,
   },
   inputWrapper: {
     flex: 1,

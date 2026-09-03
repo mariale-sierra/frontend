@@ -625,6 +625,17 @@ const en = {
     today: 'Today',
     yesterday: 'Yesterday',
     messagePlaceholder: 'Message {{name}}...',
+    // Message requests (Instagram-style) — 1:1 conversations only, spaces
+    // have their own separate join-request system (Chats-47E).
+    messageRequestLabel: 'Message request',
+    messageRequestNotice: '{{name}} wants to send you a message',
+    acceptCta: 'Accept',
+    declineCta: 'Decline',
+    declineConfirmTitle: 'Decline this request?',
+    declineConfirmMessage: "This can't be undone — the conversation and its messages will be deleted.",
+    acceptError: 'Could not accept this request.',
+    declineError: 'Could not decline this request.',
+    cancelCta: 'Cancel',
   },
   spaces: {
     title: 'Spaces',

@@ -49,6 +49,7 @@ export default function NewConversation() {
         otherUsername: conversation.otherParticipant.username,
         otherDisplayName: conversation.otherParticipant.displayName ?? '',
         otherProfileImageUrl: conversation.otherParticipant.profileImageUrl ?? '',
+        isPending: conversation.isPending ? '1' : '',
       },
     });
   };

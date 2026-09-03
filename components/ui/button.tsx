@@ -37,8 +37,19 @@ import { Text } from './text';
  *   havit-design-system-SKILL.md's Search section) until confirmed to read
  *   wrong. Same shape any other "already active/toggled" secondary state can
  *   reuse, not a one-off.
+ * - dangerSubtle: translucent `error`@14% fill (same `fillOpacity.chip`
+ *   token `subtle` uses, just tinted `error` instead of `paper`), a 1px
+ *   `error` border (own-color edge, not the neutral `paper` border
+ *   `outline` uses), full-strength `error` text — added for a Decline-style
+ *   trigger that needs real visible color/weight (a solid `surface` fill
+ *   with no border read as too flat/washed-out next to a solid `primary`
+ *   Accept — tried and rejected) without the full loudness of solid
+ *   `danger`, and explicitly NOT `outline` (a neutral bordered secondary
+ *   button rejected for this same "which one is the destructive one" spot
+ *   more than once — this variant's own border is tinted `error` for that
+ *   exact reason, not a repeat of that rejected neutral look).
  */
-type ButtonVariant = 'primary' | 'activity' | 'outline' | 'danger' | 'neutral' | 'subtle';
+type ButtonVariant = 'primary' | 'activity' | 'outline' | 'danger' | 'neutral' | 'subtle' | 'dangerSubtle';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends Omit<PressableProps, 'children'> {
@@ -71,9 +82,11 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const textColor =
-    variant === 'primary' || variant === 'activity' || variant === 'danger' || variant === 'neutral'
-      ? colors.ink
-      : colors.paper;
+    variant === 'dangerSubtle'
+      ? colors.error
+      : variant === 'primary' || variant === 'activity' || variant === 'danger' || variant === 'neutral'
+        ? colors.ink
+        : colors.paper;
 
   const loaderColor = textColor;
 
@@ -150,6 +163,16 @@ const styles = StyleSheet.create({
 
   subtle: {
     backgroundColor: withAlpha(colors.paper, fillOpacity.chip),
+  },
+
+  dangerSubtle: {
+    backgroundColor: withAlpha(colors.error, fillOpacity.chip),
+    // Same borderWidth as `outline` above, but tinted `error` to match this
+    // variant's own fill instead of the neutral `paper` border that got
+    // this whole variant started (a red-on-red edge, not a repeat of the
+    // rejected neutral bordered look).
+    borderWidth: 1,
+    borderColor: colors.error,
   },
 
   // SIZES

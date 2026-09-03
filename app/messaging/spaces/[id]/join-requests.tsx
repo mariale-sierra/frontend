@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../../../components/layout/screenBackground';
@@ -7,6 +7,7 @@ import { BackButton } from '../../../../components/ui/backButton';
 import { Row } from '../../../../components/layout/row';
 import { Text } from '../../../../components/ui/text';
 import { JoinRequestListItem } from '../../../../components/spaces/JoinRequestListItem';
+import { JoinRequestRowSkeleton } from '../../../../components/spaces/JoinRequestRowSkeleton';
 import { useSpace } from '../../../../hooks/useSpace';
 import { useSpaceJoinRequests } from '../../../../hooks/useSpaceJoinRequests';
 import { approveSpaceJoinRequest, rejectSpaceJoinRequest } from '../../../../services/spaces/spaces.service';
@@ -81,8 +82,10 @@ export default function SpaceJoinRequestsScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
+        <View style={styles.list}>
+          {Array.from({ length: 4 }, (_, index) => (
+            <JoinRequestRowSkeleton key={index} />
+          ))}
         </View>
       ) : error ? (
         <View style={styles.center}>

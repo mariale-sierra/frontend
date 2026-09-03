@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../../components/layout/screenBackground';
@@ -10,6 +10,7 @@ import { Button } from '../../../components/ui/button';
 import { SearchBar } from '../../../components/ui/searchBar';
 import { Row } from '../../../components/layout/row';
 import { SpaceCard } from '../../../components/spaces/SpaceCard';
+import { SpaceCardSkeleton } from '../../../components/spaces/SpaceCardSkeleton';
 import { useSpaces } from '../../../hooks/useSpaces';
 import { joinSpace } from '../../../services/spaces/spaces.service';
 import { colors, spacing } from '../../../constants/theme';
@@ -71,8 +72,10 @@ export default function SpacesScreen() {
       </Row>
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
+        <View style={styles.skeletonList}>
+          {Array.from({ length: 4 }, (_, index) => (
+            <SpaceCardSkeleton key={index} />
+          ))}
         </View>
       ) : error ? (
         <View style={styles.center}>
@@ -127,6 +130,10 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['2xl'],
+  },
+  skeletonList: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
   },
   separator: {
     height: spacing.sm,

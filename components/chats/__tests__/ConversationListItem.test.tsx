@@ -23,6 +23,7 @@ const buildConversation = (
   },
   lastMessage: null,
   unreadCount: 0,
+  isPending: false,
   ...overrides,
 });
 
@@ -109,6 +110,27 @@ describe('ConversationListItem', () => {
     const dotStyle = screen.getByTestId('unread-dot').props.style;
     const flatStyle = Array.isArray(dotStyle) ? Object.assign({}, ...dotStyle) : dotStyle;
     expect(flatStyle.backgroundColor).toBe('transparent');
+  });
+
+  it('shows a "Message request" label instead of the last message preview when pending', async () => {
+    const screen = await renderWithTheme(
+      <ConversationListItem
+        conversation={buildConversation({
+          isPending: true,
+          lastMessage: {
+            id: 1,
+            content: 'hey, saw your post!',
+            senderId: 'user-2',
+            sentAt: '2026-09-01T00:00:00Z',
+          },
+        })}
+        currentUserId="user-1"
+        onPress={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('chats.messageRequestLabel')).toBeTruthy();
+    expect(screen.queryByText('hey, saw your post!')).toBeNull();
   });
 
   it('fires onPress when tapped', async () => {

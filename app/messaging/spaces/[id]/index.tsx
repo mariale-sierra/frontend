@@ -22,6 +22,7 @@ import { Row } from '../../../../components/layout/row';
 import { IconStack } from '../../../../components/layout/iconStack';
 import { SpaceAvatar } from '../../../../components/spaces/SpaceAvatar';
 import { SpaceMessageBubble } from '../../../../components/spaces/SpaceMessageBubble';
+import { SpacePreviewSkeleton } from '../../../../components/spaces/SpacePreviewSkeleton';
 import { UserAvatar } from '../../../../components/ui/userAvatar';
 import { useSpace } from '../../../../hooks/useSpace';
 import { useSpaceMessages } from '../../../../hooks/useSpaceMessages';
@@ -186,9 +187,7 @@ function SpacePreview({
 
       <View style={styles.previewBody}>
         {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.primary} />
-          </View>
+          <SpacePreviewSkeleton />
         ) : error || !space ? (
           <View style={styles.center}>
             <Text tone="secondary">{t('spaces.infoLoadError')}</Text>
@@ -316,7 +315,7 @@ function SpaceThread({ space, accentColor, isOwner, onLeavePress }: SpaceThreadP
   const { messages, loading, error, sending, hasMore, loadingOlder, loadOlder, send, reload } =
     useSpaceMessages(space.id);
   const [draft, setDraft] = useState('');
-  const { listRef, onContentSizeChange, onLayout } = useScrollToLatestMessage(messages);
+  const { listRef, ready, onContentSizeChange, onLayout } = useScrollToLatestMessage(messages);
 
   // Space messages have no server-side read-tracking (see
   // utils/spaceThreadReads.ts) — opening the thread is this device's own
@@ -387,6 +386,9 @@ function SpaceThread({ space, accentColor, isOwner, onLeavePress }: SpaceThreadP
       </View>
 
       {loading ? (
+        // Same reasoning as 1:1 chat's own thread loading state — a
+        // message thread's real shape isn't predictable enough for a
+        // skeleton to preview honestly, so this stays a spinner.
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} />
         </View>
@@ -408,6 +410,9 @@ function SpaceThread({ space, accentColor, isOwner, onLeavePress }: SpaceThreadP
             data={messages}
             keyExtractor={(item) => String(item.id)}
             contentContainerStyle={styles.list}
+            // Hidden until scrolled to the latest message — see
+            // useScrollToLatestMessage's own doc comment.
+            style={{ opacity: ready ? 1 : 0 }}
             onContentSizeChange={onContentSizeChange}
             onLayout={onLayout}
             renderItem={({ item, index }) => {

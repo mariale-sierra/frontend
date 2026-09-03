@@ -21,6 +21,14 @@ export interface ConversationSummaryContract {
   otherParticipant: ConversationParticipantContract;
   lastMessage: LastMessagePreviewContract | null;
   unreadCount: number;
+  /** True when the CALLER is the recipient of a not-yet-accepted message
+   * request (Instagram-style) — the person who started the conversation
+   * always sees `false` for their own copy of it. A pending conversation's
+   * composer is replaced by an Accept/Decline row (see
+   * `app/messaging/[conversationId].tsx`) until accepted. Space threads
+   * have their own, separate join-request system (Chats-47E) — this only
+   * applies to 1:1 conversations. */
+  isPending: boolean;
 }
 
 /** GET/POST /chats/conversations/:id/messages row (backend MessageDto). */
