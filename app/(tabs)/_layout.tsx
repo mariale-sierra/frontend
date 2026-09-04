@@ -87,7 +87,7 @@ export default function TabsLayout() {
   const router = useRouter();
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
-  const { tabSlotWidth } = getBottomNavGeometry(width);
+  const { tabEdgeInset, tabSlotWidth } = getBottomNavGeometry(width);
 
   // Only `width` (+ margins, for the outer-edge/gap items) matters here —
   // each real button (BottomNavTabButton / BottomNavFab) positions itself
@@ -104,6 +104,14 @@ export default function TabsLayout() {
   // options object (and re-triggering its own internal options-change
   // handling) on every unrelated re-render, e.g. a plain tab switch.
   const tabItemStyle = useMemo(() => ({ flex: 0 as const, width: tabSlotWidth }), [tabSlotWidth]);
+  const firstTabItemStyle = useMemo(
+    () => ({ ...tabItemStyle, marginLeft: BOTTOM_NAV_OUTER_MARGIN + tabEdgeInset }),
+    [tabEdgeInset, tabItemStyle],
+  );
+  const lastTabItemStyle = useMemo(
+    () => ({ ...tabItemStyle, marginRight: tabEdgeInset }),
+    [tabEdgeInset, tabItemStyle],
+  );
   const fabItemStyle = useMemo(
     () => ({
       flex: 0 as const,
@@ -127,7 +135,7 @@ export default function TabsLayout() {
           name="index"
           options={{
             title: "Home",
-            tabBarItemStyle: { ...tabItemStyle, marginLeft: BOTTOM_NAV_OUTER_MARGIN },
+            tabBarItemStyle: firstTabItemStyle,
             tabBarButton: (props) => (
               <BottomNavTabButton
                 {...props}
@@ -178,7 +186,7 @@ export default function TabsLayout() {
           name="profile"
           options={{
             title: "Profile",
-            tabBarItemStyle: tabItemStyle,
+            tabBarItemStyle: lastTabItemStyle,
             tabBarButton: (props) => (
               <BottomNavTabButton
                 {...props}

@@ -29,7 +29,7 @@ import { BottomNavIndicator } from './bottomNavIndicator';
 // re-reading that history and re-testing touch on a real iOS device first.
 export function BottomNavBackground() {
   const { width } = useWindowDimensions();
-  const { navCapsuleWidth, tabSlotWidth } = getBottomNavGeometry(width);
+  const { navCapsuleWidth, tabSlotWidth, indicatorWidth } = getBottomNavGeometry(width);
   const { barExpansion } = useBottomNavContext();
   const insets = useSafeAreaInsets();
 
@@ -75,7 +75,7 @@ export function BottomNavBackground() {
               translucent glass bar on both platforms, never a broken one. */}
           <BlurView intensity={28} tint="dark" style={StyleSheet.absoluteFill} />
           <View style={styles.navCapsuleTint} />
-          <BottomNavIndicator tabSlotWidth={tabSlotWidth} />
+          <BottomNavIndicator tabSlotWidth={tabSlotWidth} indicatorWidth={indicatorWidth} />
         </Animated.View>
       )}
     </>

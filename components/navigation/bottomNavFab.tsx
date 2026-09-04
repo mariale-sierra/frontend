@@ -5,6 +5,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { colors } from '../../constants/theme';
 import {
   BOTTOM_NAV_BOTTOM_INSET,
+  BOTTOM_NAV_FAB_ICON_SIZE,
   BOTTOM_NAV_FAB_PRESS_SCALE,
   BOTTOM_NAV_FAB_SIZE,
   BOTTOM_NAV_PRESS_SPRING,
@@ -39,7 +40,7 @@ export function BottomNavFab({ onPress, accessibilityLabel }: BottomNavFabProps)
   }
 
   function handlePress() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     onPress();
   }
 
@@ -53,7 +54,7 @@ export function BottomNavFab({ onPress, accessibilityLabel }: BottomNavFabProps)
       hitSlop={8}
       style={[styles.fab, pressStyle]}
     >
-      <Ionicons name="add-outline" size={24} color={colors.ink} />
+      <Ionicons name="add" size={BOTTOM_NAV_FAB_ICON_SIZE} color={colors.ink} />
     </AnimatedPressable>
   );
 }

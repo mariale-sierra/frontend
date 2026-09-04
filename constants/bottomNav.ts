@@ -12,12 +12,21 @@ export const BOTTOM_NAV_TAB_COUNT = 4;
  * per explicit "should read as visual siblings, not one dominant over the
  * other" request (unlike the old design, where the FAB rose well above the
  * bar via a large negative margin). */
-export const BOTTOM_NAV_HEIGHT = 60;
+export const BOTTOM_NAV_HEIGHT = 62;
 
 /** True circle at BOTTOM_NAV_HEIGHT — same "fixed-diameter circle via
  * size/2" exception this file's sibling constant (FAB_SIZE, in
  * app/(tabs)/_layout.tsx) already documents. */
 export const BOTTOM_NAV_FAB_SIZE = BOTTOM_NAV_HEIGHT;
+
+/** Prominent glyph size for the separate add action. */
+export const BOTTOM_NAV_FAB_ICON_SIZE = 37;
+
+/** Shared size for the outline and focused icon layers in every tab. */
+export const BOTTOM_NAV_ICON_SIZE = 24;
+
+/** Lets the navigation labels be hidden without changing tab behavior. */
+export const BOTTOM_NAV_SHOW_LABELS = true;
 
 /** Compact text treatment reserved for the dense bottom-navigation labels. */
 export const BOTTOM_NAV_LABEL_FONT_SIZE = 11;
@@ -33,10 +42,17 @@ export const BOTTOM_NAV_CAPSULE_GAP = spacing.sm; // 8
 
 /** Distance from the bottom of the tab bar's own (already safe-area-aware)
  * box to the bottom of both capsules — matches the previous design. */
-export const BOTTOM_NAV_BOTTOM_INSET = spacing.lg; // 24
+export const BOTTOM_NAV_BOTTOM_INSET = 0;
 
 /** Inset of the sliding indicator pill within its own tab slot. */
 export const BOTTOM_NAV_INDICATOR_INSET = spacing.xs; // 4
+
+/**
+ * Total visual width added to the active selector, split evenly across both
+ * sides so it remains centered on its tab. Set to 0 to restore the slot
+ * inset width, or adjust this value to tune the selector's presence.
+ */
+export const BOTTOM_NAV_INDICATOR_EXTRA_WIDTH = spacing.sm + 6; // 14
 
 /**
  * Derives the tab-capsule width and per-tab slot width from the current
@@ -51,9 +67,23 @@ export function getBottomNavGeometry(screenWidth: number) {
     screenWidth - BOTTOM_NAV_OUTER_MARGIN * 2 - BOTTOM_NAV_CAPSULE_GAP - BOTTOM_NAV_FAB_SIZE,
     0,
   );
-  const tabSlotWidth = navCapsuleWidth / BOTTOM_NAV_TAB_COUNT;
+  const defaultIndicatorWidth = navCapsuleWidth / BOTTOM_NAV_TAB_COUNT - BOTTOM_NAV_INDICATOR_INSET * 2;
+  const maximumIndicatorWidth = Math.max(navCapsuleWidth - BOTTOM_NAV_INDICATOR_INSET * 2, 0);
+  const indicatorWidth = Math.min(
+    Math.max(defaultIndicatorWidth + BOTTOM_NAV_INDICATOR_EXTRA_WIDTH, 0),
+    maximumIndicatorWidth,
+  );
+  const tabEdgeInset = Math.min(
+    Math.max(
+      (BOTTOM_NAV_INDICATOR_INSET + indicatorWidth / 2 - navCapsuleWidth / (BOTTOM_NAV_TAB_COUNT * 2)) /
+        (1 - 1 / BOTTOM_NAV_TAB_COUNT),
+      0,
+    ),
+    navCapsuleWidth / 2,
+  );
+  const tabSlotWidth = Math.max((navCapsuleWidth - tabEdgeInset * 2) / BOTTOM_NAV_TAB_COUNT, 0);
 
-  return { navCapsuleWidth, tabSlotWidth };
+  return { navCapsuleWidth, tabSlotWidth, tabEdgeInset, indicatorWidth };
 }
 
 // Spring tuning — fast, physical, very little overshoot ("premium", not

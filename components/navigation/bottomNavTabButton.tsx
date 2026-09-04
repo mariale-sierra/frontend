@@ -18,9 +18,11 @@ import {
   BOTTOM_NAV_BOTTOM_INSET,
   BOTTOM_NAV_BREATHE_SPRING,
   BOTTOM_NAV_HEIGHT,
+  BOTTOM_NAV_ICON_SIZE,
   BOTTOM_NAV_LABEL_FONT_SIZE,
   BOTTOM_NAV_LABEL_LINE_HEIGHT,
   BOTTOM_NAV_PRESS_SPRING,
+  BOTTOM_NAV_SHOW_LABELS,
   BOTTOM_NAV_TAB_COUNT,
   BOTTOM_NAV_TAB_PRESS_SCALE,
 } from '../../constants/bottomNav';
@@ -237,12 +239,22 @@ export function BottomNavTabButton({
         style={[style, styles.button, pressStyle]}
       >
         <View style={styles.iconSlot}>
-          <AnimatedIonicons name={iconName} size={22} style={[styles.iconLayer, tintStyle, iconOutlineStyle]} />
-          <AnimatedIonicons name={iconNameFocused} size={22} style={[styles.iconLayer, tintStyle, iconFilledStyle]} />
+          <AnimatedIonicons
+            name={iconName}
+            size={BOTTOM_NAV_ICON_SIZE}
+            style={[styles.iconLayer, tintStyle, iconOutlineStyle]}
+          />
+          <AnimatedIonicons
+            name={iconNameFocused}
+            size={BOTTOM_NAV_ICON_SIZE}
+            style={[styles.iconLayer, tintStyle, iconFilledStyle]}
+          />
         </View>
-        <AnimatedText style={[styles.label, tintStyle]} numberOfLines={1}>
-          {label}
-        </AnimatedText>
+        {BOTTOM_NAV_SHOW_LABELS ? (
+          <AnimatedText style={[styles.label, tintStyle]} numberOfLines={1}>
+            {label}
+          </AnimatedText>
+        ) : null}
       </Animated.View>
     </GestureDetector>
   );
@@ -266,8 +278,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   iconSlot: {
-    width: 22,
-    height: 22,
+    width: BOTTOM_NAV_ICON_SIZE,
+    height: BOTTOM_NAV_ICON_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
   },

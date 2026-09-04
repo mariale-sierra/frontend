@@ -12,6 +12,7 @@ import { useBottomNavContext } from './bottomNavContext';
 
 interface BottomNavIndicatorProps {
   tabSlotWidth: number;
+  indicatorWidth: number;
 }
 
 /**
@@ -23,14 +24,14 @@ interface BottomNavIndicatorProps {
  * Navigation already renders `pointerEvents="none"` — purely visual, the
  * real touch targets are the tabBarButtons drawn on top of it.
  */
-export function BottomNavIndicator({ tabSlotWidth }: BottomNavIndicatorProps) {
+export function BottomNavIndicator({ tabSlotWidth, indicatorWidth }: BottomNavIndicatorProps) {
   const { activeIndex, indicatorStretch } = useBottomNavContext();
 
-  const indicatorWidth = Math.max(tabSlotWidth - BOTTOM_NAV_INDICATOR_INSET * 2, 0);
   const indicatorHeight = BOTTOM_NAV_HEIGHT - BOTTOM_NAV_INDICATOR_INSET * 2;
 
   const animatedStyle = useAnimatedStyle(() => {
     const stretch = indicatorStretch.value;
+
     return {
       transform: [
         { translateX: activeIndex.value * tabSlotWidth + BOTTOM_NAV_INDICATOR_INSET },
