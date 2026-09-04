@@ -20,7 +20,6 @@ import { useTranslation } from 'react-i18next';
 
 const TRANSITION_DURATION = 380;
 const AnimatedText = Animated.createAnimatedComponent(RNText);
-const AnimatedIonicon = Animated.createAnimatedComponent(Ionicons);
 
 export default function SelectRoutineScreen() {
   const { t } = useTranslation();
@@ -155,7 +154,20 @@ export default function SelectRoutineScreen() {
       <View style={[styles.content, { paddingTop: insets.top }]}>
         <Row justify="space-between" align="center" style={styles.topBar}>
           <Pressable onPress={() => safeBack()} style={styles.backButton} hitSlop={8}>
-            <AnimatedIonicon name="chevron-back-outline" size={24} style={{ color: titleColor }} />
+            {/* Crossfading two statically-colored icons instead of animating
+                Ionicons' own color directly — react-native-vector-icons'
+                Icon class implements its own `setNativeProps` that forwards
+                to an internal ref which doesn't support it on this app's
+                Fabric setup, crashing the instant Animated tries to update
+                it. Animated.View's opacity (a real host-component prop) has
+                no such issue, so two overlaid icons + fading opacity gets
+                the same smooth color-morph effect safely. */}
+            <Animated.View style={[styles.backIconLayer, { opacity: workoutGlowOpacity }]} pointerEvents="none">
+              <Ionicons name="chevron-back-outline" size={24} color={colors.paper} />
+            </Animated.View>
+            <Animated.View style={[styles.backIconLayer, { opacity: restHighlightOpacity }]} pointerEvents="none">
+              <Ionicons name="chevron-back-outline" size={24} color={colors.ink} />
+            </Animated.View>
           </Pressable>
           <AnimatedText style={[styles.headerTitleText, { color: titleColor }]}>
             {t('routineSelect.dayTitle', { day: dayNumber })}
@@ -277,6 +289,11 @@ const styles = StyleSheet.create({
     marginLeft: -spacing.sm,
     width: 44,
     height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backIconLayer: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
