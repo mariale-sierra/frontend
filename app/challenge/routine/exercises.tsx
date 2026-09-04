@@ -11,7 +11,7 @@ import { Text } from '../../../components/ui/text';
 import { Icon } from '../../../components/ui/icon';
 import { SearchBar } from '../../../components/ui/searchBar';
 import { CreateFlowPrimaryButton } from '../../../components/challenge/create';
-import { FilterToggleButton, ExerciseListItem } from '../../../components/routine';
+import { FilterToggleButton, ExerciseListItem, ExercisePickerSkeleton } from '../../../components/routine';
 import { FilterSheet } from '../../../components/exercises/filterSheet';
 import { MuscleFilterSheet } from '../../../components/exercises/muscleFilterSheet';
 import type { MuscleFilterSelection } from '../../../components/exercises/muscleFilterSheet';
@@ -172,6 +172,15 @@ export default function ExercisesScreen() {
     [selectedLocations],
   );
 
+  // When the challenge only allows exactly one category/location, there's
+  // nothing to actually choose between — auto-select that single value and
+  // don't let the sheet open at all (per explicit request), rather than
+  // showing a technically-openable picker with only one real option in it.
+  const lockedCategoryCode = allowedCategoryCodes.length === 1 ? allowedCategoryCodes[0] : null;
+  const lockedLocationCode = allowedLocationCodes.length === 1 ? allowedLocationCodes[0] : null;
+  const effectiveCategoryCode = lockedCategoryCode ?? activeCategoryCode;
+  const effectiveLocationCode = lockedLocationCode ?? activeLocationCode;
+
   // Filter-sheet options: restricted to the challenge's own allowed categories/locations
   // when it scoped any (that's the whole point of the Activity & Location step), else
   // every real category/location — same set the exercise catalog's own sheets use.
@@ -207,8 +216,8 @@ export default function ExercisesScreen() {
       if (replace) setIsLoading(true);
       else setLoadingMore(true);
       try {
-        const categoryParam = activeCategoryCode ?? (allowedCategoryCodes.length ? allowedCategoryCodes.join(',') : undefined);
-        const locationParam = activeLocationCode ?? (allowedLocationCodes.length ? allowedLocationCodes.join(',') : undefined);
+        const categoryParam = effectiveCategoryCode ?? (allowedCategoryCodes.length ? allowedCategoryCodes.join(',') : undefined);
+        const locationParam = effectiveLocationCode ?? (allowedLocationCodes.length ? allowedLocationCodes.join(',') : undefined);
 
         const result = await getExerciseList({
           page: pageToLoad,
@@ -241,7 +250,7 @@ export default function ExercisesScreen() {
         setHasLoadedOnce(true);
       }
     },
-    [debouncedQuery, activeCategoryCode, activeLocationCode, activeMuscleFilter, allowedCategoryCodes, allowedLocationCodes, t],
+    [debouncedQuery, effectiveCategoryCode, effectiveLocationCode, activeMuscleFilter, allowedCategoryCodes, allowedLocationCodes, t],
   );
 
   useEffect(() => {
@@ -298,7 +307,7 @@ export default function ExercisesScreen() {
     safeBack();
   }
 
-  const activeCategoryActivityType = activeCategoryCode ? CATEGORY_CODE_TO_ACTIVITY[activeCategoryCode] : undefined;
+  const activeCategoryActivityType = effectiveCategoryCode ? CATEGORY_CODE_TO_ACTIVITY[effectiveCategoryCode] : undefined;
   const activeCategoryPillColor = activeCategoryActivityType ? activityColors[activeCategoryActivityType] : undefined;
 
   const categoryPillIcon = activeCategoryActivityType ? (
@@ -306,8 +315,8 @@ export default function ExercisesScreen() {
   ) : (
     <Icon name="grid-outline" size={16} color={INACTIVE_ICON_COLOR} />
   );
-  const locationPillIcon = activeLocationCode ? (
-    <LocationIcon type={activeLocationCode as LocationType} variant="plain" size="sm" color={colors.ink} />
+  const locationPillIcon = effectiveLocationCode ? (
+    <LocationIcon type={effectiveLocationCode as LocationType} variant="plain" size="sm" color={colors.ink} />
   ) : (
     <Icon name="navigate-outline" size={16} color={INACTIVE_ICON_COLOR} />
   );
@@ -329,58 +338,61 @@ export default function ExercisesScreen() {
         <SearchBar value={query} onChangeText={setQuery} placeholder={t('routineExercises.searchPlaceholder')} />
       </View>
 
-      {/* Three distinct filter accesses — category / location / muscle — mirroring the
-          exercise catalog's own filter row, never one combined panel. Category/location
-          options are pre-narrowed to what this challenge already allows; muscle is
-          unrestricted (browsing by muscle isn't scoped by the challenge). Content-aware
-          flexible widths: each pill keeps the space its label/icon needs, remaining row
-          width is distributed between them via flex-grow — no fixed widths, no scroll. */}
-      <View style={styles.pillRow}>
-        <FilterToggleButton
-          label={
-            activeCategoryCode
-              ? t(`exerciseCatalog.categories.${activeCategoryCode}` as never)
-              : t('exerciseCatalog.filters.categories')
-          }
-          isActive={activeCategoryCode !== null}
-          onPress={() => setSheet('categories')}
-          activeColor={activeCategoryPillColor}
-          icon={categoryPillIcon}
-          style={styles.filterButton}
-        />
-        <FilterToggleButton
-          label={
-            activeLocationCode
-              ? t(`exerciseCatalog.locations.${activeLocationCode}` as never)
-              : t('exerciseCatalog.filters.locations')
-          }
-          isActive={activeLocationCode !== null}
-          onPress={() => setSheet('locations')}
-          icon={locationPillIcon}
-          style={styles.filterButton}
-        />
-        <FilterToggleButton
-          label={activeMuscleFilter?.label ?? t('exerciseCatalog.filters.muscles')}
-          isActive={activeMuscleFilter !== null}
-          onPress={() => setSheet('muscles')}
-          icon={musclePillIcon}
-          style={styles.filterButton}
-        />
-      </View>
-
-      <Row justify="space-between" align="center" style={styles.countRow}>
-        <Text variant="header" tone="secondary" size="xs">
-          {t('routineExercises.resultsCount', { count: total })}
-        </Text>
-        <Text variant="caption" tone="secondary">{t('routineExercises.tapToAdd')}</Text>
-      </Row>
-
       {isLoading && !hasLoadedOnce ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
+        <ExercisePickerSkeleton />
       ) : (
-        <FlatList
+        <>
+          {/* Three distinct filter accesses — category / location / muscle — mirroring the
+              exercise catalog's own filter row, never one combined panel. Category/location
+              options are pre-narrowed to what this challenge already allows; muscle is
+              unrestricted (browsing by muscle isn't scoped by the challenge). Content-aware
+              flexible widths: each pill keeps the space its label/icon needs, remaining row
+              width is distributed between them via flex-grow — no fixed widths, no scroll. */}
+          <View style={styles.pillRow}>
+            <FilterToggleButton
+              label={
+                effectiveCategoryCode
+                  ? t(`exerciseCatalog.categories.${effectiveCategoryCode}` as never)
+                  : t('exerciseCatalog.filters.categories')
+              }
+              isActive={effectiveCategoryCode !== null}
+              onPress={() => {
+                if (!lockedCategoryCode) setSheet('categories');
+              }}
+              activeColor={activeCategoryPillColor}
+              icon={categoryPillIcon}
+              style={styles.filterButton}
+            />
+            <FilterToggleButton
+              label={
+                effectiveLocationCode
+                  ? t(`exerciseCatalog.locations.${effectiveLocationCode}` as never)
+                  : t('exerciseCatalog.filters.locations')
+              }
+              isActive={effectiveLocationCode !== null}
+              onPress={() => {
+                if (!lockedLocationCode) setSheet('locations');
+              }}
+              icon={locationPillIcon}
+              style={styles.filterButton}
+            />
+            <FilterToggleButton
+              label={activeMuscleFilter?.label ?? t('exerciseCatalog.filters.muscles')}
+              isActive={activeMuscleFilter !== null}
+              onPress={() => setSheet('muscles')}
+              icon={musclePillIcon}
+              style={styles.filterButton}
+            />
+          </View>
+
+          <Row justify="space-between" align="center" style={styles.countRow}>
+            <Text variant="header" tone="secondary" size="xs">
+              {t('routineExercises.resultsCount', { count: total })}
+            </Text>
+            <Text variant="caption" tone="secondary">{t('routineExercises.tapToAdd')}</Text>
+          </Row>
+
+          <FlatList
           data={rows}
           keyExtractor={(item) => item.id}
           style={styles.listContainer}
@@ -404,7 +416,8 @@ export default function ExercisesScreen() {
             </View>
           }
           showsVerticalScrollIndicator={false}
-        />
+          />
+        </>
       )}
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
@@ -420,7 +433,7 @@ export default function ExercisesScreen() {
         title={t('exerciseCatalog.filters.categories')}
         allLabel={t('exerciseCatalog.filters.all')}
         options={categoryOptions}
-        selectedCode={activeCategoryCode}
+        selectedCode={effectiveCategoryCode}
         onSelect={(code) => {
           setActiveCategoryCode(code);
           setSheet(null);
@@ -432,7 +445,7 @@ export default function ExercisesScreen() {
         title={t('exerciseCatalog.filters.locations')}
         allLabel={t('exerciseCatalog.filters.all')}
         options={locationOptions}
-        selectedCode={activeLocationCode}
+        selectedCode={effectiveLocationCode}
         onSelect={(code) => {
           setActiveLocationCode(code);
           setSheet(null);
@@ -497,10 +510,6 @@ const styles = StyleSheet.create({
   separator: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: withAlpha(colors.paper, 0.08),
-  },
-  loadingWrap: {
-    paddingTop: spacing.xl,
-    alignItems: 'center',
   },
   footerLoading: {
     paddingVertical: spacing.md,
