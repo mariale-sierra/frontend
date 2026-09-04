@@ -4,6 +4,13 @@ import { Icon } from '../../ui/icon';
 import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 
+// Bigger than the previous 44 — the row no longer has its own card padding
+// around it (see below), so the freed horizontal space goes to the image
+// instead. Radius stays `small` regardless of size, per the standing
+// "photo tiles ALWAYS radius.small" rule (same precedent as
+// ChallengeQuickPickRow's own THUMB_SIZE bump).
+const THUMB_SIZE = 64;
+
 interface ExerciseListItemProps {
   name: string;
   meta: string;
@@ -21,14 +28,16 @@ interface ExerciseListItemProps {
   mode?: 'select' | 'navigate';
 }
 
-/** Add-Exercises list row — List-row card (`surface` bg, `medium` radius),
- * a `primary` border + filled checkmark circle when selected. Same shell
- * shape as the routine-select screen's `RoutinePickerCard`. */
+/** Add-Exercises list row — a continuous divided list, not an independent
+ * card: no background/border/radius of its own, rows are separated purely
+ * by the parent list's own hairline `ItemSeparatorComponent`. Selection is
+ * conveyed by the trailing filled checkmark circle alone (no more selected
+ * border, since a bordered "card" doesn't fit this shell shape). */
 export function ExerciseListItem({ name, meta, selected, onPress, imageUrl, mode = 'select' }: ExerciseListItemProps) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.card, selected && styles.cardSelected, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       {imageUrl !== undefined && (
         <View style={styles.thumbnail}>
@@ -57,23 +66,15 @@ export function ExerciseListItem({ name, meta, selected, onPress, imageUrl, mode
 }
 
 const styles = StyleSheet.create({
-  card: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    borderRadius: radius.medium,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-  },
-  cardSelected: {
-    borderColor: colors.primary,
+    gap: spacing.base,
+    paddingVertical: spacing.sm,
   },
   thumbnail: {
-    width: 44,
-    height: 44,
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
     borderRadius: radius.small,
     overflow: 'hidden',
     backgroundColor: colors.ink,

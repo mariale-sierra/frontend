@@ -301,7 +301,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   separator: {
-    height: spacing.sm,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: withAlpha(colors.paper, 0.08),
   },
   loadingWrap: {
     paddingTop: spacing.xl,
