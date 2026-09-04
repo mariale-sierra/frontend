@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
@@ -129,13 +130,20 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <ErrorNotificationProvider>
-          <RootNavigator />
-          <UploadSuccessPopup />
-        </ErrorNotificationProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    // Required by react-native-gesture-handler (added for the bottom nav's
+    // drag-to-switch-tabs gesture, see components/navigation/
+    // bottomNavTabButton.tsx) — gestures silently fail to register touches
+    // correctly without this wrapping the app root. Zero effect on anything
+    // else; a plain flex:1 passthrough view.
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <AuthProvider>
+          <ErrorNotificationProvider>
+            <RootNavigator />
+            <UploadSuccessPopup />
+          </ErrorNotificationProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

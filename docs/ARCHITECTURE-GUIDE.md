@@ -64,14 +64,18 @@ New screens should first be matched to an existing route group. Put tab-level sc
 ## 6. Bottom Navigation
 Bottom tabs are defined in `app/(tabs)/_layout.tsx` using `Tabs` from Expo Router.
 
-Current tabs:
-- `index`: Home tab, maps to `app/(tabs)/index.tsx`.
-- `search`: Search tab, maps to `app/(tabs)/search.tsx`.
-- `add`: center Add button, maps to `app/(tabs)/add.tsx` but intercepts `tabPress` and pushes `/(add)/metrics`.
-- `challenges`: Challenges tab, maps to `app/(tabs)/challenges.tsx`.
-- `profile`: Profile tab, maps to `app/(tabs)/profile.tsx`.
+There are four routable tabs inside one capsule: `index` (Home), `search`, `challenges`, and `profile`. The `add` route remains registered only because Expo Router needs a file for it, but its separate right-hand `+` action prevents `tabPress` and opens `/log` directly.
 
-The Challenges tab currently points to `app/(tabs)/challenges.tsx`. To change the Challenges tab screen implementation, edit that file. To change tab metadata, icons, ordering, or tab press behavior, edit `app/(tabs)/_layout.tsx`.
+The navbar implementation is deliberately split across:
+- `components/navigation/bottomNavBackground.tsx`: decorative capsule, blur, and one shared indicator.
+- `components/navigation/bottomNavIndicator.tsx`: the single oval that translates between tab slots.
+- `components/navigation/bottomNavTabButton.tsx`: explicit `Tap` and `Pan` gestures for tab selection and horizontal dragging.
+- `components/navigation/bottomNavContext.tsx`: shared visual state and the UI-thread spring/stretch sequence.
+- `constants/bottomNav.ts`: geometry and motion settings used by both the drawing and interactive layers.
+
+`activeIndex` is a Reanimated `SharedValue` representing only the visual position (continuous from 0 through 3), not React Navigation's discrete route state. A drag writes this value on the UI thread, bounds it to the first/last tab, then rounds and springs to the nearest slot on release before a single JS bridge requests navigation. A tap starts that same spring before navigation. Route selection is only a fallback synchronizer for external navigation; a matching route update from the gesture is ignored so it cannot reset or restart an in-flight animation.
+
+Do not set `tabBarStyle` or use a fully custom `tabBar`: on iOS with Fabric enabled, both have historically made the whole bar unresponsive. Preserve the existing `tabBarBackground` plus custom `tabBarButton` extension points. To change tab metadata, icons, ordering, or behavior, edit `app/(tabs)/_layout.tsx`; keep geometry and indicator motion synchronized through `constants/bottomNav.ts` rather than duplicating values.
 
 ## 7. API and Backend Integration
 - API client: `services/api.ts`.
