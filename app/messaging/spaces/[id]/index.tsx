@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { safeBack } from '../../../../utils/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../../../components/layout/screenBackground';
@@ -57,7 +58,6 @@ const HEADER_SIDE_SIZE = 44;
  */
 export default function SpaceScreen() {
   const { t } = useTranslation();
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const spaceId = typeof id === 'string' && id.length > 0 ? id : null;
   const { space, loading, error, reload } = useSpace(spaceId);
@@ -83,7 +83,7 @@ export default function SpaceScreen() {
     try {
       await leaveSpace(spaceId);
       setLeaveConfirmVisible(false);
-      router.back();
+      safeBack('/(tabs)');
     } catch {
       setActionLoading(false);
     }

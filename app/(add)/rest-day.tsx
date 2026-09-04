@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { safeBack, safeBackTimes } from '../../utils/navigation';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { RestDayScreenBackground } from '../../components/layout/restDayScreenBackground';
@@ -76,8 +77,7 @@ export default function RestDay() {
       // reaches this screen via router.push() too, so it's the same
       // always-exactly-2-deep case — two back() calls pop rest-day then
       // metrics, and the second bubbles up to close the (add) modal itself.
-      router.back();
-      router.back();
+      safeBackTimes(2);
     } catch (navError) {
       console.error('[RestDay] closing the (add) modal failed after a successful save:', navError);
     }
@@ -94,7 +94,7 @@ export default function RestDay() {
           <View style={styles.header}>
             <IconButton
               name="chevron-back-outline"
-              onPress={() => router.back()}
+              onPress={() => safeBack()}
               size={28}
               iconSize={18}
               variant="ghost"
@@ -117,7 +117,7 @@ export default function RestDay() {
           <View style={styles.header}>
             <IconButton
               name="chevron-back-outline"
-              onPress={() => router.back()}
+              onPress={() => safeBack()}
               size={28}
               iconSize={18}
               variant="ghost"
@@ -126,7 +126,7 @@ export default function RestDay() {
             />
           </View>
           <RestDayAlreadyLogged
-            onBack={() => router.back()}
+            onBack={() => safeBack()}
             onPlanRestDays={handlePlanRestDays}
           />
         </View>
@@ -140,7 +140,7 @@ export default function RestDay() {
         <View style={styles.restChoiceHeader}>
           <IconButton
             name="close-outline"
-            onPress={() => router.back()}
+            onPress={() => safeBack()}
             size={44}
             iconSize={24}
             variant="ghost"

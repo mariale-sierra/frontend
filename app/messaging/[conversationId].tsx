@@ -10,6 +10,7 @@ import {
 import { useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
+import { safeBack } from '../../utils/navigation';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { BackButton } from '../../components/ui/backButton';
 import { Text } from '../../components/ui/text';
@@ -113,7 +114,7 @@ export default function Chat() {
     try {
       await declineConversationRequest(conversationId);
       setDeclineConfirmVisible(false);
-      router.back();
+      safeBack('/(tabs)');
     } catch {
       setRequestActionError(t('chats.declineError'));
       setDeclining(false);

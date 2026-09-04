@@ -59,6 +59,12 @@ function RootNavigator() {
           this screen's own BackButton/header. Every other custom-header
           screen in this app is registered the same way. */}
       <Stack.Screen name="profile/[userId]" options={{ headerShown: false }} />
+      <Stack.Screen name="profile/about" options={{ headerShown: false }} />
+      <Stack.Screen name="exercises/index" options={{ headerShown: false }} />
+      <Stack.Screen name="exercises/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="exercises/muscles/index" options={{ headerShown: false }} />
+      <Stack.Screen name="exercises/muscles/[code]" options={{ headerShown: false }} />
+      <Stack.Screen name="exercises/muscles/region/[code]" options={{ headerShown: false }} />
       {/* Top-level on purpose, not nested inside "(add)" — that group is
           itself a `fullScreenModal` (opaque), so a transparentModal screen
           nested inside it only reveals that opaque modal's own backdrop, not
