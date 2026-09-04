@@ -29,9 +29,20 @@ export interface ExerciseFull {
   metrics: ExerciseMetricConfig[];
 }
 
+/** Legacy contract: the routine builder's Add-Exercises screen
+ * (app/challenge/routine/exercises.tsx) still loads the WHOLE catalog once
+ * and filters client-side — it predates `getExerciseList`'s real pagination.
+ * `GET /exercises` itself is paginated now (601 RepDB exercises, no longer
+ * the original ~27), so this wraps that same endpoint with a large
+ * `pageSize` and unwraps `.data` back into a bare array, preserving the
+ * shape that screen's `data.map(...)` expects — real bug, found 2026-09-04:
+ * this used to return the paginated `{data,page,pageSize,total}` envelope
+ * directly, which broke `data.map is not a function` there. */
 export async function getExercises() {
-  const response = await api.get('/exercises');
-  return response.data;
+  const response = await api.get<PaginatedResult<ExerciseListRow>>('/exercises', {
+    params: { pageSize: 1000 },
+  });
+  return response.data.data;
 }
 
 export async function getExerciseFull(id: number): Promise<ExerciseFull> {
@@ -104,6 +115,7 @@ export interface ExerciseListRow {
   category: { code: string; name: string } | null;
   locations: { code: string; name: string }[];
   region: { code: string; name: string } | null;
+  trackingMode: string;
 }
 
 export interface PaginatedResult<T> {

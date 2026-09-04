@@ -20,28 +20,36 @@ import type { ExerciseMetricConfig } from '../../../services/exercises/exercises
 import type { ActivityType } from '../../../types/activity';
 import { CATEGORY_TO_ACTIVITY } from '../../../constants/challengeFilters';
 
+// Matches GET /exercises's real row shape (services/exercises/exercises.service.ts's
+// ExerciseListRow) — category/locations are real objects now, not flat strings, since
+// this endpoint became the paginated RepDB catalog list (2026-09-04). `category`/
+// `locations` here read `.name` to stay compatible with CATEGORY_TO_ACTIVITY (keyed by
+// display name) and with matchesAllowedLocation's "/"-joined-string convention below.
 interface BackendExercise {
   id: number;
   name: string;
-  category?: string | null;
-  location?: string | null;
-  tracking_mode?: string;
-  muscle_groups?: string[];
+  category?: { code: string; name: string } | null;
+  locations?: { code: string; name: string }[];
+  trackingMode?: string;
 }
 
 function mapBackendExerciseToCandidate(exercise: BackendExercise, defaultLocationLabel: string): ExerciseCandidate {
+  const categoryName = exercise.category?.name;
   const activityType: ActivityType =
-    (exercise.category && CATEGORY_TO_ACTIVITY[exercise.category]) || 'strength';
+    (categoryName && CATEGORY_TO_ACTIVITY[categoryName]) || 'strength';
   const metricType: ExerciseCandidate['metricType'] =
-    exercise.tracking_mode === 'sets' ? 'strength' : 'schema';
+    exercise.trackingMode === 'sets' ? 'strength' : 'schema';
+  const locationLabel = exercise.locations?.length ? exercise.locations.map((l) => l.name).join(' / ') : undefined;
 
   return {
     id: String(exercise.id),
     name: exercise.name,
-    location: exercise.location ?? defaultLocationLabel,
+    location: locationLabel ?? defaultLocationLabel,
     metricType,
     activityType,
-    muscleGroups: exercise.muscle_groups ?? [],
+    // No longer available from this thin list endpoint (never actually read
+    // downstream — useFilteredExercises, the only consumer, is orphaned).
+    muscleGroups: [],
   };
 }
 
@@ -121,8 +129,10 @@ export default function ExercisesScreen() {
         const locationMap: Record<string, string> = {};
         data.forEach((exercise) => {
           idMap[String(exercise.id)] = exercise.id;
-          if (exercise.category) categoryMap[String(exercise.id)] = exercise.category;
-          if (exercise.location) locationMap[String(exercise.id)] = exercise.location;
+          if (exercise.category?.name) categoryMap[String(exercise.id)] = exercise.category.name;
+          if (exercise.locations?.length) {
+            locationMap[String(exercise.id)] = exercise.locations.map((l) => l.name).join(' / ');
+          }
         });
 
         setAllExercises(candidates);
