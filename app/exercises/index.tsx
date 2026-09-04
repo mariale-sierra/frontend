@@ -1,23 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Row } from '../../components/layout/row';
 import { BackButton } from '../../components/ui/backButton';
 import { IconButton } from '../../components/ui/iconButton';
+import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
 import { SearchBar } from '../../components/ui/searchBar';
 import { FilterToggleButton, ExerciseListItem } from '../../components/routine';
 import { FilterSheet } from '../../components/exercises/filterSheet';
 import { MuscleFilterSheet } from '../../components/exercises/muscleFilterSheet';
-import { colors, spacing, activityColors } from '../../constants/theme';
+import type { MuscleFilterSelection } from '../../components/exercises/muscleFilterSheet';
+import { colors, spacing, activityColors, textOpacity } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import { ActivityIcon } from '../../components/icons/activityIcon';
 import { LocationIcon } from '../../components/icons/locationIcon';
 import type { LocationType } from '../../components/icons/locationIcon';
 import { getExerciseList, getExerciseCategories, type ExerciseCategory } from '../../services/exercises/exercises.service';
 import { adaptExerciseListRow } from '../../services/adapters/exerciseAdapter';
 import { CATEGORY_CODE_TO_ACTIVITY } from '../../constants/challengeFilters';
+
+const INACTIVE_ICON_COLOR = withAlpha(colors.paper, textOpacity.secondary);
 
 const LOCATION_CODES: LocationType[] = ['gym', 'home', 'outdoor', 'studio', 'anywhere'];
 const PAGE_SIZE = 20;
@@ -32,7 +37,7 @@ export default function ExerciseCatalogScreen() {
   const [categories, setCategories] = useState<ExerciseCategory[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeLocation, setActiveLocation] = useState<string | null>(null);
-  const [activeMuscle, setActiveMuscle] = useState<{ code: string; label: string } | null>(null);
+  const [activeMuscleFilter, setActiveMuscleFilter] = useState<MuscleFilterSelection | null>(null);
   const [sheet, setSheet] = useState<'categories' | 'locations' | 'muscles' | null>(null);
 
   const [rows, setRows] = useState<ReturnType<typeof adaptExerciseListRow>[]>([]);
@@ -63,7 +68,8 @@ export default function ExerciseCatalogScreen() {
           search: debouncedQuery || undefined,
           category: activeCategory ?? undefined,
           location: activeLocation ?? undefined,
-          muscle: activeMuscle?.code,
+          region: activeMuscleFilter?.level === 'region' ? activeMuscleFilter.code : undefined,
+          muscle: activeMuscleFilter?.level === 'muscle' ? activeMuscleFilter.code : undefined,
           locale,
         });
         const adapted = result.data.map(adaptExerciseListRow);
@@ -77,7 +83,7 @@ export default function ExerciseCatalogScreen() {
         setLoadingMore(false);
       }
     },
-    [debouncedQuery, activeCategory, activeLocation, activeMuscle, locale],
+    [debouncedQuery, activeCategory, activeLocation, activeMuscleFilter, locale],
   );
 
   useEffect(() => {
@@ -95,7 +101,10 @@ export default function ExerciseCatalogScreen() {
     return {
       code: c.code,
       label: t(`exerciseCatalog.categories.${c.code}` as never),
-      icon: activityType ? <ActivityIcon type={activityType} variant="plain" size="sm" color={colors.paper} /> : undefined,
+      // Each category keeps its own Activity Color System v2 color here — this
+      // sheet is a legend of distinct categories, not a per-exercise badge, so
+      // the "icon+name only, no per-category color" rule doesn't apply to it.
+      icon: activityType ? <ActivityIcon type={activityType} variant="plain" size="sm" color={activityColors[activityType]} /> : undefined,
     };
   });
   const locationOptions = LOCATION_CODES.map((code) => ({
@@ -106,7 +115,22 @@ export default function ExerciseCatalogScreen() {
 
   const activeCategoryLabel = activeCategory ? t(`exerciseCatalog.categories.${activeCategory}` as never) : t('exerciseCatalog.filters.categories');
   const activeLocationLabel = activeLocation ? t(`exerciseCatalog.locations.${activeLocation}` as never) : t('exerciseCatalog.filters.locations');
-  const activeCategoryColor = activeCategory && CATEGORY_CODE_TO_ACTIVITY[activeCategory] ? activityColors[CATEGORY_CODE_TO_ACTIVITY[activeCategory]] : undefined;
+  const activeCategoryActivityType = activeCategory ? CATEGORY_CODE_TO_ACTIVITY[activeCategory] : undefined;
+  const activeCategoryColor = activeCategoryActivityType ? activityColors[activeCategoryActivityType] : undefined;
+
+  const categoryPillIcon = activeCategoryActivityType ? (
+    <ActivityIcon type={activeCategoryActivityType} variant="plain" size="sm" color={colors.ink} />
+  ) : (
+    <Icon name="grid-outline" size={16} color={INACTIVE_ICON_COLOR} />
+  );
+  const locationPillIcon = activeLocation ? (
+    <LocationIcon type={activeLocation as LocationType} variant="plain" size="sm" color={colors.ink} />
+  ) : (
+    <Icon name="navigate-outline" size={16} color={INACTIVE_ICON_COLOR} />
+  );
+  const musclePillIcon = (
+    <Icon name="body-outline" size={16} color={activeMuscleFilter ? colors.ink : INACTIVE_ICON_COLOR} />
+  );
 
   return (
     <ScreenBackground variant="top">
@@ -130,25 +154,33 @@ export default function ExerciseCatalogScreen() {
       </View>
 
       {/* Three distinct filter accesses — categories / locations / muscles — never one
-          combined panel. Each opens its own sheet. */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow} style={styles.filterRowWrap}>
+          combined panel. Each opens its own sheet. Content-aware flexible widths:
+          each pill keeps the space its own label/icon needs, remaining row width
+          is distributed between them via flex-grow — no fixed widths, no scroll. */}
+      <View style={styles.filterRow}>
         <FilterToggleButton
           label={activeCategoryLabel}
           isActive={activeCategory !== null}
           onPress={() => setSheet('categories')}
           activeColor={activeCategoryColor}
+          icon={categoryPillIcon}
+          style={styles.filterButton}
         />
         <FilterToggleButton
           label={activeLocationLabel}
           isActive={activeLocation !== null}
           onPress={() => setSheet('locations')}
+          icon={locationPillIcon}
+          style={styles.filterButton}
         />
         <FilterToggleButton
-          label={activeMuscle?.label ?? t('exerciseCatalog.filters.muscles')}
-          isActive={activeMuscle !== null}
+          label={activeMuscleFilter?.label ?? t('exerciseCatalog.filters.muscles')}
+          isActive={activeMuscleFilter !== null}
           onPress={() => setSheet('muscles')}
+          icon={musclePillIcon}
+          style={styles.filterButton}
         />
-      </ScrollView>
+      </View>
 
       <Row justify="space-between" align="center" style={styles.countRow}>
         <Text variant="header" tone="secondary" size="xs">
@@ -215,10 +247,9 @@ export default function ExerciseCatalogScreen() {
       />
       <MuscleFilterSheet
         visible={sheet === 'muscles'}
-        selectedCode={activeMuscle?.code ?? null}
-        selectedLabel={activeMuscle?.label ?? null}
-        onSelect={(code, label) => {
-          setActiveMuscle(code && label ? { code, label } : null);
+        selected={activeMuscleFilter}
+        onSelect={(selection) => {
+          setActiveMuscleFilter(selection);
           setSheet(null);
         }}
         onClose={() => setSheet(null)}
@@ -247,13 +278,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
-  filterRowWrap: {
-    flexGrow: 0,
-  },
   filterRow: {
+    flexDirection: 'row',
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
     paddingBottom: spacing.base,
+  },
+  filterButton: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 'auto',
   },
   countRow: {
     paddingHorizontal: spacing.lg,

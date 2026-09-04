@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../../components/layout/screenBackground';
@@ -10,6 +10,7 @@ import { Icon } from '../../../components/ui/icon';
 import { getMuscleRegions } from '../../../services/exercises/exercises.service';
 import type { MuscleRegionSummary } from '../../../services/exercises/exercises.service';
 import { colors, radius, spacing } from '../../../constants/theme';
+import { withAlpha } from '../../../utils/color';
 
 export default function MuscleRegionsScreen() {
   const { t } = useTranslation();
@@ -52,6 +53,13 @@ export default function MuscleRegionsScreen() {
               style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
               onPress={() => router.push(`/exercises/muscles/region/${item.code}`)}
             >
+              <View style={styles.thumbnail}>
+                {item.iconUrl ? (
+                  <Image source={{ uri: item.iconUrl }} style={styles.thumbnailImage} resizeMode="contain" />
+                ) : (
+                  <View style={styles.thumbnailPlaceholder} />
+                )}
+              </View>
               <View style={styles.textColumn}>
                 <Text variant="body" weight="bold">{t(`exerciseCatalog.regions.${item.code}` as never)}</Text>
                 <Text variant="caption" tone="secondary">
@@ -110,7 +118,26 @@ const styles = StyleSheet.create({
   rowPressed: {
     opacity: 0.9,
   },
+  thumbnail: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.small,
+    overflow: 'hidden',
+    backgroundColor: colors.ink,
+    flexShrink: 0,
+    marginRight: spacing.md,
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  thumbnailPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: withAlpha(colors.paper, 0.06),
+  },
   textColumn: {
+    flex: 1,
     gap: spacing.xs,
   },
 });

@@ -163,6 +163,10 @@ export interface MuscleRegionSummary {
   code: string;
   name: string;
   muscleCount: number;
+  /** Representative icon (borrowed from the region's first RepDB-iconed
+   * muscle, e.g. Chest -> pectoralis_major) — regions have no image asset
+   * of their own. Null only for `full_body`, which has no child muscles. */
+  iconUrl: string | null;
 }
 
 export async function getMuscleRegions(): Promise<MuscleRegionSummary[]> {

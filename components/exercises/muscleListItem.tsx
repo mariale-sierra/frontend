@@ -1,5 +1,6 @@
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../ui/text';
+import { Icon } from '../ui/icon';
 import { colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
@@ -7,6 +8,10 @@ interface MuscleListItemProps {
   name: string;
   imageUrl: string | null;
   onPress: () => void;
+  /** Shows a trailing checkmark, same treatment as `FilterSheet`'s own rows —
+   * used where this row doubles as a filter option (the Muscles filter
+   * sheet), not needed for a plain navigation list. */
+  selected?: boolean;
 }
 
 /** Muscle browser / muscle-filter row — image ALWAYS present (requirement,
@@ -15,7 +20,7 @@ interface MuscleListItemProps {
  * generic silhouette pretending to BE the muscle; the real anatomical
  * fallback lives in the SVG panel via `muscle_svg_parts.is_fallback`, this
  * is just the small list thumbnail). Same shell shape as `ExerciseListItem`. */
-export function MuscleListItem({ name, imageUrl, onPress }: MuscleListItemProps) {
+export function MuscleListItem({ name, imageUrl, onPress, selected = false }: MuscleListItemProps) {
   return (
     <Pressable
       onPress={onPress}
@@ -31,6 +36,7 @@ export function MuscleListItem({ name, imageUrl, onPress }: MuscleListItemProps)
       <Text variant="body" weight="bold" numberOfLines={1} style={styles.name}>
         {name}
       </Text>
+      {selected && <Icon name="checkmark-outline" size={18} color={colors.primary} />}
     </Pressable>
   );
 }
