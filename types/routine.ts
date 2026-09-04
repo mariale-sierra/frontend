@@ -60,6 +60,10 @@ export interface ExerciseEntry {
   muscleGroups: string[];
   metrics: ExerciseMetrics;
   note: string;
+  /** Thumbnail shown on the routine builder's own exercise card. Optional —
+   * the store's seed/mock routines predate real exercise images and carry
+   * none. */
+  imageUrl?: string | null;
 }
 
 export interface RoutineSummary {

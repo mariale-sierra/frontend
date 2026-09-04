@@ -1,4 +1,4 @@
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
 import { Row } from '../../layout/row';
@@ -65,6 +65,12 @@ export function ExerciseHeader({
           <Text variant="caption" weight="bold" style={styles.badgeNumber}>{index + 1}</Text>
         </View>
 
+        {exercise.imageUrl ? (
+          <View style={styles.thumbnail}>
+            <Image source={{ uri: exercise.imageUrl }} style={styles.thumbnailImage} resizeMode="cover" />
+          </View>
+        ) : null}
+
         <View style={styles.textColumn}>
           <Text variant="body" weight="bold" numberOfLines={1}>{exercise.name}</Text>
           <Text variant="caption" weight="medium" tone="primary" numberOfLines={1}>
@@ -119,6 +125,18 @@ const styles = StyleSheet.create({
   badgeNumber: {
     color: colors.ink,
     opacity: 1,
+  },
+  thumbnail: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.small,
+    overflow: 'hidden',
+    backgroundColor: colors.ink,
+    flexShrink: 0,
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
   },
   textColumn: {
     flex: 1,

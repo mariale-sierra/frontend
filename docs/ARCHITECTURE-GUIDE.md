@@ -64,14 +64,18 @@ New screens should first be matched to an existing route group. Put tab-level sc
 ## 6. Bottom Navigation
 Bottom tabs are defined in `app/(tabs)/_layout.tsx` using `Tabs` from Expo Router.
 
-Current tabs:
-- `index`: Home tab, maps to `app/(tabs)/index.tsx`.
-- `search`: Search tab, maps to `app/(tabs)/search.tsx`.
-- `add`: center Add button, maps to `app/(tabs)/add.tsx` but intercepts `tabPress` and pushes `/(add)/metrics`.
-- `challenges`: Challenges tab, maps to `app/(tabs)/challenges.tsx`.
-- `profile`: Profile tab, maps to `app/(tabs)/profile.tsx`.
+There are four routable tabs inside one capsule: `index` (Home), `search`, `challenges`, and `profile`. The `add` route remains registered only because Expo Router needs a file for it, but its separate right-hand `+` action prevents `tabPress` and opens `/log` directly.
 
-The Challenges tab currently points to `app/(tabs)/challenges.tsx`. To change the Challenges tab screen implementation, edit that file. To change tab metadata, icons, ordering, or tab press behavior, edit `app/(tabs)/_layout.tsx`.
+The navbar implementation is deliberately split across:
+- `components/navigation/bottomNavBackground.tsx`: decorative capsule, blur, and one shared indicator.
+- `components/navigation/bottomNavIndicator.tsx`: the single oval that translates between tab slots.
+- `components/navigation/bottomNavTabButton.tsx`: explicit `Tap` and `Pan` gestures for tab selection and horizontal dragging.
+- `components/navigation/bottomNavContext.tsx`: shared visual state and the UI-thread spring/stretch sequence.
+- `constants/bottomNav.ts`: geometry, icon/label/FAB presentation settings, and motion settings used by both the drawing and interactive layers.
+
+`activeIndex` is a Reanimated `SharedValue` representing only the visual position (continuous from 0 through 3), not React Navigation's discrete route state. A drag writes this value on the UI thread, bounds it to the first/last tab, then rounds and springs to the nearest slot on release before a single JS bridge requests navigation. A tap starts that same spring before navigation. Route selection is only a fallback synchronizer for external navigation; a matching route update from the gesture is ignored so it cannot reset or restart an in-flight animation. `BOTTOM_NAV_HEIGHT` is the single shared outer-height source: the capsule uses it directly and the FAB derives both width and height from it, with half-height radii so the pair remains aligned as a capsule and a true circle. Its labels use a local compact treatment so their visual weight remains balanced in the taller capsule. `BOTTOM_NAV_INDICATOR_EXTRA_WIDTH` widens the selector while recalculating the four tab slots and their outer insets from the same geometry: icons and selector centers remain aligned, including Home and Profile. It never changes route state or spring behavior.
+
+Do not set `tabBarStyle` or use a fully custom `tabBar`: on iOS with Fabric enabled, both have historically made the whole bar unresponsive. Preserve the existing `tabBarBackground` plus custom `tabBarButton` extension points. To change tab metadata, icons, ordering, or behavior, edit `app/(tabs)/_layout.tsx`; keep geometry and indicator motion synchronized through `constants/bottomNav.ts` rather than duplicating values.
 
 ## 7. API and Backend Integration
 - API client: `services/api.ts`.
@@ -198,7 +202,28 @@ Don't:
 - Do not silently keep or add mock data in backend-connected tasks.
 - Do not expose secrets or copy private env values into docs or code.
 
-## 14. Future AI Task Checklist
+## 14. Forms & Validation
+
+As of the form-validation refactor (2026-09-04), every text-input form that needs validation uses `react-hook-form` + `zod` + `@hookform/resolvers`, with inline field-level errors instead of `Alert.alert`. This supersedes the previous library-free `useState` + hand-written validator convention for text fields specifically — multi-step builder flows (challenge/routine creation) still keep their non-text state (pill selections, cycle day config, Zustand stores) exactly as before; only the actual text fields inside them changed.
+
+**Shared field components** (visual layer, no validation logic of its own):
+- `components/ui/input.tsx` — the base `TextInput` wrapper (`default`/`filled` variants, label, counter, multiline). Gained an `error?: boolean` prop that tints the container border `colors.error`; the border is always reserved at `borderWidth: 1.5` (transparent when there's no error) so toggling the error state never shifts layout.
+- `components/ui/formField.tsx` — label + `Input` + inline error message below the field (`error?: string | null`). The default field for most forms.
+- `components/auth/auth-input.tsx` / `components/auth/auth-form-field.tsx` — the auth-screen variant (recessed `ink` fill, `primary` focus border, `error` overrides the focus border to `colors.error`). Same error-message-below pattern as `FormField`, kept as a separate component because its visual treatment is a real, pre-existing, legitimate difference from the default field — not a duplicate.
+- `components/form/ControlledFormField.tsx` / `components/form/ControlledAuthField.tsx` — thin `react-hook-form` `Controller` adapters. They own zero validation logic themselves; they just wire a `control`/`name` pair to the visual component above (`value`, `onChangeText`, `onBlur`, and the resolved `error.message`).
+
+**Validation schemas** live in `validation/*Schemas.ts` (one file per form/feature: `authSchemas.ts`, `profileSchemas.ts`, `challengeSchemas.ts`, `routineSchemas.ts`, `spaceSchemas.ts`), each exporting a `createXSchema(t: TFunction)` factory (plus the `z.infer` type). Validation logic lives entirely in these files, not in components — passing the current `t` in means every error message is translated and stays in sync with the active language, same as any other `t()` call in the app. A screen builds its schema with `useMemo(() => createXSchema(t), [t])` and passes it to `useForm`'s `resolver: zodResolver(schema)`.
+
+**Implementing a new form:**
+1. Add a `createXSchema(t)` factory in `validation/` (or extend an existing one) using `zod`. Reuse `common.validation.required`/`common.validation.emailInvalid` for generic messages (`t('common.validation.required', { field: t('common.fields.x') })`), or add a screen-specific key next to the field's own label if the copy needs to be more specific (see `routineCreate.alerts.nameRequiredMessage`, `spaces.nameRequiredError` for precedent) — add the key to **both** `en.ts` and `es.ts`.
+2. In the screen/component: `const schema = useMemo(() => createXSchema(t), [t]); const { control, handleSubmit } = useForm({ resolver: zodResolver(schema), defaultValues: {...} });`.
+3. Render each field as `<ControlledFormField control={control} name="fieldName" label={...} .../>` (or `ControlledAuthField` on an auth screen). Don't pass `value`/`onChangeText`/`error` yourself — the controller supplies them.
+4. Wrap the submit handler in `handleSubmit(async (values) => {...})`.
+5. Keep `Alert.alert` only for errors that aren't attributable to one on-screen field — a failed network request, a server-side auth failure, a destructive confirmation, or a step whose "fields" are non-text selections (pill grids, day lists, visibility cards) rather than `Input`s.
+
+**Zustand-backed fields (multi-step builders):** when a field's value lives in a Zustand store shared across steps/screens (e.g. `challengeBuilderStore.title`, `routineBuilderStore.routineName`), `react-hook-form` still owns the validation/error state, but the store stays the source of truth for the value itself — see `hooks/useCreateChallengeFlow.ts` (`title`/`titleError`/`onBlurTitle`) and `app/challenge/routine/create.tsx` for the pattern: the field's `onChangeText` calls both the store setter and `setValue(name, value, { shouldValidate: hasExistingError })`, and validation is triggered explicitly (on blur, and again before advancing past that step) via `trigger(name)`.
+
+## 15. Future AI Task Checklist
 - Read this guide.
 - Inspect relevant files.
 - Identify the correct route.

@@ -55,6 +55,9 @@ interface InputProps extends TextInputProps {
   maxLength?: number;
   /** Set false to suppress the auto-rendered below-input counter when a caller renders its own (e.g. inline in a label row). Default true. */
   showCounter?: boolean;
+  /** Tints the container border `colors.error` when true. The border is
+   * always reserved at the same width so toggling this never shifts layout. */
+  error?: boolean;
 }
 
 export function Input({
@@ -69,6 +72,7 @@ export function Input({
   multiline = false,
   maxLength,
   showCounter = true,
+  error = false,
   style,
   ...props
 }: InputProps) {
@@ -101,6 +105,7 @@ export function Input({
         style={[
           styles.container,
           variant === 'filled' && styles.filled,
+          error && styles.errorBorder,
           containerStyle,
         ]}
       >
@@ -139,10 +144,18 @@ const styles = StyleSheet.create({
     borderRadius: radius.medium,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
+    // Reserved at all times (transparent by default) so switching into/out
+    // of an error state never shifts the input's box size.
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
 
   filled: {
     backgroundColor: colors.surface,
+  },
+
+  errorBorder: {
+    borderColor: colors.error,
   },
 
   input: {

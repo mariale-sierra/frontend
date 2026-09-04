@@ -22,7 +22,6 @@ interface ChallengeReviewSummaryProps {
    * activity color (client-computed, no challenge exists server-side yet at
    * this step). Falls back to `colors.primary` when nothing's configured. */
   accentColor: string;
-  onEditSetup: () => void;
   onEditCycle: () => void;
 }
 
@@ -49,7 +48,6 @@ export function ChallengeReviewSummary({
   getDayStatus,
   getDayRoutineLabel,
   accentColor,
-  onEditSetup,
   onEditCycle,
 }: ChallengeReviewSummaryProps) {
   const { t } = useTranslation();
@@ -84,12 +82,15 @@ export function ChallengeReviewSummary({
       </View>
 
       <View style={styles.card}>
-        <Row justify="space-between" align="center" style={styles.cardHeader}>
+        {/* No "Edit" link here (unlike the Cycle card below) — Categories/
+            Location are read-only, derived from whichever exercises ended
+            up in the routines, not a separately editable manual choice
+            anymore (the old "What kind of training?" step is deprecated,
+            per explicit 2026-09-04 request). To change them, change the
+            exercises via the Cycle card's own edit instead. */}
+        <View style={styles.cardHeader}>
           <Text variant="header" tone="secondary">{t('challengeCreate.review.setupLabel')}</Text>
-          <Pressable onPress={onEditSetup} hitSlop={8}>
-            <Text variant="label" weight="bold" style={styles.editLink}>{t('challengeCreate.review.edit')}</Text>
-          </Pressable>
-        </Row>
+        </View>
 
         <SummaryRow
           label={t('challengeCreate.review.categoriesLabel')}

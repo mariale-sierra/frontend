@@ -14,9 +14,22 @@ export interface ChallengeNameFieldsProps {
   description: string;
   onChangeTitle: (value: string) => void;
   onChangeDescription: (value: string) => void;
+  /** Inline validation message for the title field (zod-driven, see
+   * validation/challengeSchemas.ts), shown/cleared by useCreateChallengeFlow. */
+  titleError?: string | null;
+  /** Fired when the title field loses focus, so the caller can run
+   * validation and surface `titleError` at the natural "done typing" moment. */
+  onBlurTitle?: () => void;
 }
 
-export function ChallengeNameFields({ title, description, onChangeTitle, onChangeDescription }: ChallengeNameFieldsProps) {
+export function ChallengeNameFields({
+  title,
+  description,
+  onChangeTitle,
+  onChangeDescription,
+  titleError,
+  onBlurTitle,
+}: ChallengeNameFieldsProps) {
   const { t } = useTranslation();
   const [nameFocused, setNameFocused] = useState(false);
 
@@ -32,13 +45,24 @@ export function ChallengeNameFields({ title, description, onChangeTitle, onChang
           value={title}
           onChangeText={(value) => onChangeTitle(value.slice(0, NAME_MAX_LENGTH))}
           onFocus={() => setNameFocused(true)}
-          onBlur={() => setNameFocused(false)}
+          onBlur={() => {
+            setNameFocused(false);
+            onBlurTitle?.();
+          }}
+          error={Boolean(titleError)}
           variant="filled"
           placeholder={t('challengeCreate.fields.namePlaceholder')}
           placeholderVariant="caption"
-          containerStyle={[styles.nameContainer, nameFocused && styles.nameContainerFocused]}
+          containerStyle={[
+            styles.nameContainer,
+            nameFocused && styles.nameContainerFocused,
+            titleError && styles.nameContainerError,
+          ]}
           style={styles.nameInput}
         />
+        {titleError ? (
+          <Text variant="caption" style={styles.errorText}>{titleError}</Text>
+        ) : null}
       </Stack>
 
       <Stack gap="sm">
@@ -70,6 +94,12 @@ const styles = StyleSheet.create({
   },
   nameContainerFocused: {
     borderColor: colors.primary,
+  },
+  nameContainerError: {
+    borderColor: colors.error,
+  },
+  errorText: {
+    color: colors.error,
   },
   nameInput: {
     fontFamily: typography.fontFamily.bold,

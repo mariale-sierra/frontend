@@ -36,12 +36,16 @@ export default function CreateChallenge() {
     visibility,
     selectedCategories,
     selectedLocations,
+    derivedCategories,
+    derivedLocations,
     currentStep,
     activeStep,
     steps,
     isSubmitting,
     hasRoutineForEveryDay,
     setTitle,
+    titleError,
+    onBlurTitle,
     setDescription,
     addCycleDay,
     removeCycleDay,
@@ -97,6 +101,8 @@ export default function CreateChallenge() {
             description={description}
             onChangeTitle={setTitle}
             onChangeDescription={setDescription}
+            titleError={titleError}
+            onBlurTitle={onBlurTitle}
           />
         );
 
@@ -170,13 +176,12 @@ export default function CreateChallenge() {
             cyclesCount={cyclesCount}
             durationDays={durationDays}
             visibility={visibility}
-            selectedCategories={selectedCategories}
-            selectedLocations={selectedLocations}
+            selectedCategories={derivedCategories}
+            selectedLocations={derivedLocations}
             getDayStatus={getDayStatus}
             getDayRoutineLabel={getDayRoutineLabel}
             accentColor={challengeAccentColor}
-            onEditSetup={() => setCurrentStep(1)}
-            onEditCycle={() => setCurrentStep(2)}
+            onEditCycle={() => setCurrentStep(1)}
           />
         );
     }

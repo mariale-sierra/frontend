@@ -97,6 +97,20 @@ Download Expo Go:
 
 ---
 
+## Running against a local backend
+
+By default the app talks to the shared Azure server (`EXPO_PUBLIC_API_URL` in `.env`). To point it at a backend running on your own machine instead (see `raiz/README.md` for `npm run dev:local`):
+
+```bash
+npm run start:local
+```
+
+This detects your machine's LAN IPv4 address and writes it to `.env.local` as `EXPO_PUBLIC_API_URL=http://<your-ip>:3000` (gitignored, per-machine only — `.env` and the Azure URL are untouched), then runs `expo start`. Your phone must be on the **same WiFi network** as the machine running the backend, and able to reach it on port 3000 (check the OS firewall if the connection times out). Rerun `npm run start:local` any time your IP changes (new WiFi network, etc.) — it detects the IP fresh every time.
+
+If the wrong IP gets picked (e.g. a VPN adapter), edit `EXPO_PUBLIC_API_URL` in `.env.local` by hand.
+
+---
+
 ## 🧹 If Something Breaks
 
 Try:

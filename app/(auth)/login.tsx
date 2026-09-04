@@ -1,18 +1,21 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { AuthScreenShell } from '../../components/auth/auth-screen-shell';
 import { AuthSwitchRow } from '../../components/auth/auth-switch-row';
-import { AuthInput } from '../../components/auth/auth-input';
 import { Stack } from '../../components/layout/stack';
 import { Button } from '../../components/ui/button';
 import { Icon } from '../../components/ui/icon';
 import { Loader } from '../../components/ui/loader';
 import { Text } from '../../components/ui/text';
+import { ControlledAuthField } from '../../components/form/ControlledAuthField';
 import { useAuth } from '../../hooks/useAuth';
 import { colors, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { useTranslation } from 'react-i18next';
+import { createLoginSchema, type LoginFormValues } from '../../validation/authSchemas';
 
 const iconColor = withAlpha(colors.paper, textOpacity.secondary);
 
@@ -20,10 +23,27 @@ export default function Login() {
   const router = useRouter();
   const { login } = useAuth();
   const { t } = useTranslation();
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const schema = useMemo(() => createLoginSchema(t), [t]);
+  const { control, handleSubmit } = useForm<LoginFormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { email: '', password: '' },
+  });
+
+  const onSubmit = handleSubmit(async ({ email, password }) => {
+    setIsLoading(true);
+    try {
+      await login(email, password);
+    } catch (error: any) {
+      Alert.alert(
+        t('common.errors.genericTitle'),
+        error?.response?.data?.message || t('auth.login.invalidCredentials'),
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  });
 
   return (
     <AuthScreenShell
@@ -45,10 +65,10 @@ export default function Login() {
         </Stack>
       }
     >
-      <AuthInput
+      <ControlledAuthField
+        control={control}
+        name="email"
         placeholder={t('common.fields.email')}
-        value={email}
-        onChangeText={setEmail}
         autoCapitalize="none"
         autoCorrect={false}
         keyboardType="email-address"
@@ -56,29 +76,17 @@ export default function Login() {
         leftIcon={<Icon name="mail-outline" size={18} color={iconColor} />}
       />
 
-      <AuthInput
+      <ControlledAuthField
+        control={control}
+        name="password"
         placeholder={t('common.fields.password')}
-        value={password}
-        onChangeText={setPassword}
         secureTextEntry
         autoCapitalize="none"
         autoCorrect={false}
         textContentType="password"
         leftIcon={<Icon name="lock-closed-outline" size={18} color={iconColor} />}
       />
-      <Button size="md" onPress={async () => {
-        setIsLoading(true);
-        try {
-          await login(email, password);
-        } catch (error: any) {
-          Alert.alert(
-            t('common.errors.genericTitle'),
-            error?.response?.data?.message || t('auth.login.invalidCredentials'),
-          );
-        } finally {
-          setIsLoading(false);
-        }
-      }}>
+      <Button size="md" onPress={onSubmit}>
         {t('common.actions.login')}
       </Button>
 

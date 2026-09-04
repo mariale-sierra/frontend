@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeBack } from '../../../utils/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { CreateFlowPrimaryButton } from '../../../components/challenge/create';
 import ScreenBackground from '../../../components/layout/screenBackground';
 import { Row } from '../../../components/layout/row';
@@ -16,6 +19,7 @@ import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { addExerciseToRoutine, buildRoutineExercisePersistence, createRoutine } from '../../../services/routine/routine.service';
 import { getMetricTypes } from '../../../services/metrics/metrics.service';
+import { createRoutineNameSchema, type RoutineNameFormValues } from '../../../validation/routineSchemas';
 
 const ROUTINE_NAME_MAX = 40;
 
@@ -40,14 +44,31 @@ export default function CreateRoutineScreen() {
   const hasExercises = exercises.length > 0;
   const canSave = routineName.trim().length > 0;
 
-  function requireName(): boolean {
-    if (routineName.trim().length > 0) return true;
-    Alert.alert(t('routineCreate.alerts.nameRequiredTitle'), t('routineCreate.alerts.nameRequiredMessage'));
-    return false;
+  // routineName itself lives in routineBuilderStore (shared across this
+  // multi-step flow) — this form only owns the zod validation + inline
+  // error, synced to the store on every change (same pattern as the
+  // Challenge Create Name step, see useCreateChallengeFlow.ts).
+  const nameSchema = useMemo(() => createRoutineNameSchema(t), [t]);
+  const {
+    setValue: setNameFormValue,
+    trigger: triggerNameValidation,
+    formState: { errors: nameErrors },
+  } = useForm<RoutineNameFormValues>({
+    resolver: zodResolver(nameSchema),
+    defaultValues: { routineName },
+  });
+
+  function handleChangeName(value: string) {
+    setRoutineName(value);
+    setNameFormValue('routineName', value, { shouldValidate: Boolean(nameErrors.routineName) });
   }
 
-  function handleAddExercises() {
-    if (!requireName()) return;
+  async function requireName(): Promise<boolean> {
+    return triggerNameValidation('routineName');
+  }
+
+  async function handleAddExercises() {
+    if (!(await requireName())) return;
     router.push(`/challenge/routine/exercises?day=${dayNumber}`);
   }
 
@@ -61,7 +82,7 @@ export default function CreateRoutineScreen() {
       return;
     }
 
-    if (!requireName()) return;
+    if (!(await requireName())) return;
 
     setIsSubmitting(true);
     try {
@@ -104,7 +125,7 @@ export default function CreateRoutineScreen() {
   return (
     <ScreenBackground variant="top">
       <Row justify="space-between" align="center" style={styles.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.iconButton}>
+        <Pressable onPress={() => safeBack()} hitSlop={12} style={styles.iconButton}>
           <Icon
             name={hasExercises ? 'chevron-back-outline' : 'close-outline'}
             size={24}
@@ -145,12 +166,19 @@ export default function CreateRoutineScreen() {
                 <Input
                   variant="filled"
                   value={routineName}
-                  onChangeText={setRoutineName}
+                  onChangeText={handleChangeName}
+                  onBlur={() => triggerNameValidation('routineName')}
+                  error={Boolean(nameErrors.routineName)}
                   maxLength={ROUTINE_NAME_MAX}
                   showCounter={false}
                   placeholder={t('routineCreate.routineNamePlaceholder')}
                   placeholderVariant="secondary"
                 />
+                {nameErrors.routineName ? (
+                  <Text variant="caption" style={styles.errorText}>
+                    {nameErrors.routineName.message}
+                  </Text>
+                ) : null}
               </Stack>
 
               <Stack gap="sm">
@@ -229,6 +257,9 @@ const styles = StyleSheet.create({
   descriptionInput: {
     minHeight: 96,
     alignItems: 'flex-start',
+  },
+  errorText: {
+    color: colors.error,
   },
   addMoreRow: {
     flexDirection: 'row',

@@ -1,19 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { safeBack } from '../../utils/navigation';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import * as ImagePicker from 'expo-image-picker';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { BackButton } from '../../components/ui/backButton';
 import { Text } from '../../components/ui/text';
 import { Button } from '../../components/ui/button';
 import { Icon } from '../../components/ui/icon';
-import { FormField } from '../../components/ui/formField';
 import { UserAvatar } from '../../components/ui/userAvatar';
 import { Divider } from '../../components/ui/divider';
 import { Row } from '../../components/layout/row';
 import { Stack } from '../../components/layout/stack';
 import { LogoutButton } from '../../components/profile/LogoutButton';
+import { ControlledFormField } from '../../components/form/ControlledFormField';
 import {
   getMyProfile,
   updateMyProfile,
@@ -27,6 +29,7 @@ import type { MyProfileContract, UpdateProfilePayload } from '../../types/user';
 import i18n, { PREFERRED_LANGUAGE_KEY } from '../../i18n';
 import type { SupportedLanguage } from '../../i18n';
 import { storage } from '../../utils/storage';
+import { createProfileEditSchema, type ProfileEditFormValues } from '../../validation/profileSchemas';
 
 const DISPLAY_NAME_MAX = 150;
 const BIO_MAX = 1000;
@@ -38,14 +41,11 @@ const BIO_MAX = 1000;
  */
 export default function EditProfile() {
   const { t } = useTranslation();
-  const router = useRouter();
 
   const [profile, setProfile] = useState<MyProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
-  const [displayName, setDisplayName] = useState('');
-  const [bio, setBio] = useState('');
   // Real bug, fixed 2026-08-30, per explicit "toggle shows Spanish even
   // though the app is actually in English" report: this used to default to
   // a hardcoded 'en', then get silently overwritten by the profile fetch
@@ -59,11 +59,16 @@ export default function EditProfile() {
   // instead of the backend field.
   const [language, setLanguage] = useState<SupportedLanguage>(i18n.language === 'es' ? 'es' : 'en');
   const [isPrivate, setIsPrivate] = useState(false);
-  const [displayNameError, setDisplayNameError] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const { show, showSuccess } = useErrorNotificationStore();
+
+  const schema = useMemo(() => createProfileEditSchema(t), [t]);
+  const { control, handleSubmit, reset } = useForm<ProfileEditFormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { displayName: '', bio: '' },
+  });
 
   const loadProfile = () => {
     setLoading(true);
@@ -71,8 +76,7 @@ export default function EditProfile() {
     getMyProfile()
       .then((data) => {
         setProfile(data);
-        setDisplayName(data.display_name);
-        setBio(data.bio ?? '');
+        reset({ displayName: data.display_name, bio: data.bio ?? '' });
         // NOT `setLanguage(data.preferred_language)` — see the state's own
         // doc comment above for why that field must never drive this
         // toggle's displayed value.
@@ -84,17 +88,8 @@ export default function EditProfile() {
 
   useEffect(loadProfile, []);
 
-  const validate = (): boolean => {
-    if (!displayName.trim()) {
-      setDisplayNameError(t('profileEdit.displayNameRequired'));
-      return false;
-    }
-    setDisplayNameError(null);
-    return true;
-  };
-
-  const handleSave = async () => {
-    if (!profile || saving || !validate()) return;
+  const handleSave = handleSubmit(async ({ displayName, bio }) => {
+    if (!profile || saving) return;
 
     // PATCH semantics: only send what actually changed.
     const payload: UpdateProfilePayload = {};
@@ -104,7 +99,7 @@ export default function EditProfile() {
     if (isPrivate !== profile.is_private) payload.is_private = isPrivate;
 
     if (Object.keys(payload).length === 0) {
-      router.back();
+      safeBack('/(tabs)/profile');
       return;
     }
 
@@ -117,13 +112,13 @@ export default function EditProfile() {
       } else {
         showSuccess({ message: t('profileEdit.saved') });
       }
-      router.back();
+      safeBack('/(tabs)/profile');
     } catch {
       show({ message: t('profileEdit.saveError') });
     } finally {
       setSaving(false);
     }
-  };
+  });
 
   const handleChangePhoto = async () => {
     if (uploadingPhoto) return;
@@ -214,23 +209,19 @@ export default function EditProfile() {
         <Divider variant="section" marginVertical="sm" />
 
         <Stack gap="lg">
-          <FormField
+          <ControlledFormField
+            control={control}
+            name="displayName"
             label={t('profileEdit.displayName')}
-            value={displayName}
-            onChangeText={(value: string) => {
-              setDisplayName(value);
-              if (displayNameError && value.trim()) setDisplayNameError(null);
-            }}
             maxLength={DISPLAY_NAME_MAX}
-            error={displayNameError}
             placeholder={t('profileEdit.displayNamePlaceholder')}
             placeholderVariant="caption"
           />
 
-          <FormField
+          <ControlledFormField
+            control={control}
+            name="bio"
             label={t('profileEdit.bio')}
-            value={bio}
-            onChangeText={setBio}
             multiline
             maxLength={BIO_MAX}
             placeholder={t('profileEdit.bioPlaceholder')}

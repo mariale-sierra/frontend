@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeBack } from '../utils/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useMetricsEntryStore } from '../store/metricsEntryStore';
@@ -151,7 +152,7 @@ export function useMetricsScreen() {
   }, []);
 
   const goBack = useCallback(() => {
-    router.back();
+    safeBack();
   }, []);
 
   return {

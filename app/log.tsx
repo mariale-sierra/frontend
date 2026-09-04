@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
+import { safeBack } from '../utils/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Stack } from '../components/layout/stack';
@@ -69,7 +70,7 @@ export default function LogChallengePicker() {
   }, []);
 
   function handleDismiss() {
-    router.back();
+    safeBack();
   }
 
   function handleSelectChallenge(challengeId: string) {

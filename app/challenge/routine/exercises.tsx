@@ -1,47 +1,74 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeBack } from '../../../utils/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../../components/layout/screenBackground';
 import { Row } from '../../../components/layout/row';
 import { BackButton } from '../../../components/ui/backButton';
 import { Text } from '../../../components/ui/text';
+import { Icon } from '../../../components/ui/icon';
 import { SearchBar } from '../../../components/ui/searchBar';
 import { CreateFlowPrimaryButton } from '../../../components/challenge/create';
-import { FilterToggleButton, ExerciseListItem } from '../../../components/routine';
+import { FilterToggleButton, ExerciseListItem, ExercisePickerSkeleton } from '../../../components/routine';
+import { FilterSheet } from '../../../components/exercises/filterSheet';
+import { MuscleFilterSheet } from '../../../components/exercises/muscleFilterSheet';
+import type { MuscleFilterSelection } from '../../../components/exercises/muscleFilterSheet';
+import { ActivityIcon } from '../../../components/icons/activityIcon';
+import { LocationIcon } from '../../../components/icons/locationIcon';
+import type { LocationType } from '../../../components/icons/locationIcon';
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
-import { colors, spacing, activityColors } from '../../../constants/theme';
+import { colors, spacing, activityColors, textOpacity } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import type { ExerciseCandidate } from '../../../hooks/useFilteredExercises';
-import { getExercises, getExerciseFull } from '../../../services/exercises/exercises.service';
-import type { ExerciseMetricConfig } from '../../../services/exercises/exercises.service';
+import {
+  getExerciseList,
+  getExerciseFull,
+  getExerciseCategories,
+} from '../../../services/exercises/exercises.service';
+import type {
+  ExerciseMetricConfig,
+  ExerciseListRow,
+  ExerciseCategory,
+} from '../../../services/exercises/exercises.service';
 import type { ActivityType } from '../../../types/activity';
-import { CATEGORY_TO_ACTIVITY } from '../../../constants/challengeFilters';
+import { CATEGORY_TO_ACTIVITY, CATEGORY_CODE_TO_ACTIVITY } from '../../../constants/challengeFilters';
+import { LOCATION_OPTIONS } from '../../../constants/challengeCreateOptions';
 
-interface BackendExercise {
-  id: number;
-  name: string;
-  category?: string | null;
-  location?: string | null;
-  tracking_mode?: string;
-  muscle_groups?: string[];
+const PAGE_SIZE = 20;
+const SEARCH_DEBOUNCE_MS = 300;
+const ALL_LOCATION_CODES: LocationType[] = ['gym', 'home', 'outdoor', 'studio', 'anywhere'];
+const INACTIVE_ICON_COLOR = withAlpha(colors.paper, textOpacity.secondary);
+
+// Real backend location codes for the challenge builder's own selected display names
+// (e.g. "Gym" -> "gym") — LOCATION_OPTIONS is the same constant the Activity & Location
+// step itself renders its pills from, so there's no separate source of truth to drift.
+const LOCATION_NAME_TO_CODE: Record<string, string> = Object.fromEntries(
+  LOCATION_OPTIONS.map((option) => [option.value, option.type]),
+);
+
+interface ExerciseRowCandidate extends ExerciseCandidate {
+  imageUrl: string | null;
+  meta: string;
 }
 
-function mapBackendExerciseToCandidate(exercise: BackendExercise, defaultLocationLabel: string): ExerciseCandidate {
-  const activityType: ActivityType =
-    (exercise.category && CATEGORY_TO_ACTIVITY[exercise.category]) || 'strength';
-  const metricType: ExerciseCandidate['metricType'] =
-    exercise.tracking_mode === 'sets' ? 'strength' : 'schema';
+function toCandidate(row: ExerciseListRow, defaultLocationLabel: string): ExerciseRowCandidate {
+  const categoryName = row.category?.name;
+  const activityType: ActivityType = (categoryName && CATEGORY_TO_ACTIVITY[categoryName]) || 'strength';
+  const metricType: ExerciseCandidate['metricType'] = row.trackingMode === 'sets' ? 'strength' : 'schema';
+  const locationLabel = row.locations.length ? row.locations.map((l) => l.name).join(' / ') : defaultLocationLabel;
 
   return {
-    id: String(exercise.id),
-    name: exercise.name,
-    location: exercise.location ?? defaultLocationLabel,
+    id: String(row.id),
+    name: row.name,
+    location: locationLabel,
     metricType,
     activityType,
-    muscleGroups: exercise.muscle_groups ?? [],
+    muscleGroups: [],
+    imageUrl: row.imageUrl,
+    meta: `${categoryName ?? ''} · ${locationLabel}`,
   };
 }
 
@@ -91,118 +118,167 @@ export default function ExercisesScreen() {
   const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
   const selectedLocations = useChallengeBuilder((state) => state.selectedLocations);
 
-  const [allExercises, setAllExercises] = useState<ExerciseCandidate[]>([]);
-  const [categoryByExerciseId, setCategoryByExerciseId] = useState<Record<string, string>>({});
-  const [locationByExerciseId, setLocationByExerciseId] = useState<Record<string, string>>({});
-  const [backendIdByLocalId, setBackendIdByLocalId] = useState<Record<string, number>>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [categories, setCategories] = useState<ExerciseCategory[]>([]);
   const [query, setQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [activeCategoryCode, setActiveCategoryCode] = useState<string | null>(null);
+  const [activeLocationCode, setActiveLocationCode] = useState<string | null>(null);
+  const [activeMuscleFilter, setActiveMuscleFilter] = useState<MuscleFilterSelection | null>(null);
+  const [sheet, setSheet] = useState<'categories' | 'locations' | 'muscles' | null>(null);
+  const [rows, setRows] = useState<ExerciseRowCandidate[]>([]);
+  const [backendIdByLocalId, setBackendIdByLocalId] = useState<Record<string, number>>({});
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const dayNumber = Number(day ?? '1');
 
   useEffect(() => {
-    let cancelled = false;
+    const handle = setTimeout(() => setDebouncedQuery(query.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [query]);
 
-    async function loadExercises() {
+  useEffect(() => {
+    getExerciseCategories()
+      .then(setCategories)
+      .catch((error: any) => console.error('[Exercises] categories', error?.message));
+  }, []);
+
+  // Real exercise_categories.code, keyed by the same display name this screen already
+  // carries around everywhere else (selectedCategories, activeCategory, pill labels).
+  const categoryNameToCode = useMemo(
+    () => Object.fromEntries(categories.map((c) => [c.name, c.code])),
+    [categories],
+  );
+
+  // Restrict to the activity categories chosen in the challenge's own Activity &
+  // Location step — that's the whole point of that step existing. Empty
+  // `selectedCategories` (shouldn't happen — that step requires at least one) falls
+  // back to allowing everything rather than showing nothing.
+  const allowedCategoryCodes = useMemo(
+    () => selectedCategories.map((name) => categoryNameToCode[name]).filter((code): code is string => Boolean(code)),
+    [selectedCategories, categoryNameToCode],
+  );
+
+  // Same for locations — real codes now (exercise_locations.code), matched server-side
+  // via a normal EXISTS/IN join instead of the old client-side "/"-split string
+  // matching. That old approach was fragile (had a real bug history, see the
+  // pre-2026-09-04 version of this file); filtering by code is exact.
+  const allowedLocationCodes = useMemo(
+    () => selectedLocations.map((name) => LOCATION_NAME_TO_CODE[name]).filter((code): code is string => Boolean(code)),
+    [selectedLocations],
+  );
+
+  // When the challenge only allows exactly one category/location, there's
+  // nothing to actually choose between — auto-select that single value and
+  // don't let the sheet open at all (per explicit request), rather than
+  // showing a technically-openable picker with only one real option in it.
+  const lockedCategoryCode = allowedCategoryCodes.length === 1 ? allowedCategoryCodes[0] : null;
+  const lockedLocationCode = allowedLocationCodes.length === 1 ? allowedLocationCodes[0] : null;
+  const effectiveCategoryCode = lockedCategoryCode ?? activeCategoryCode;
+  const effectiveLocationCode = lockedLocationCode ?? activeLocationCode;
+
+  // Filter-sheet options: restricted to the challenge's own allowed categories/locations
+  // when it scoped any (that's the whole point of the Activity & Location step), else
+  // every real category/location — same set the exercise catalog's own sheets use.
+  const categoryOptions = useMemo(() => {
+    const source = allowedCategoryCodes.length
+      ? categories.filter((c) => allowedCategoryCodes.includes(c.code))
+      : categories;
+    return source.map((c) => ({
+      code: c.code,
+      label: t(`exerciseCatalog.categories.${c.code}` as never),
+      // Each category keeps its own Activity Color System v2 color here — this
+      // sheet is a legend of distinct categories, not a per-exercise badge, so
+      // the "icon+name only, no per-category color" rule doesn't apply to it.
+      icon: CATEGORY_CODE_TO_ACTIVITY[c.code] ? (
+        <ActivityIcon type={CATEGORY_CODE_TO_ACTIVITY[c.code]} variant="plain" size="sm" color={activityColors[CATEGORY_CODE_TO_ACTIVITY[c.code]]} />
+      ) : undefined,
+    }));
+  }, [categories, allowedCategoryCodes, t]);
+
+  const locationOptions = useMemo(() => {
+    const source = allowedLocationCodes.length
+      ? ALL_LOCATION_CODES.filter((code) => allowedLocationCodes.includes(code))
+      : ALL_LOCATION_CODES;
+    return source.map((code) => ({
+      code,
+      label: t(`exerciseCatalog.locations.${code}` as never),
+      icon: <LocationIcon type={code} variant="plain" size="sm" color={colors.paper} />,
+    }));
+  }, [allowedLocationCodes, t]);
+
+  // Guards against the classic FlatList `onEndReached`-fires-twice race:
+  // RN can call it more than once before a re-render lands, so two calls for
+  // the SAME next page can both be in flight at once — merging both
+  // responses into `rows` produced two entries with the same exercise id,
+  // which React's FlatList then reported as a duplicate key. Every call
+  // stamps its own id here; a response only gets applied if it's still the
+  // most recent request by the time it resolves, so a redundant duplicate
+  // call (or a stale response from before a filter change) is discarded
+  // instead of merged.
+  const requestIdRef = useRef(0);
+
+  const loadPage = useCallback(
+    async (pageToLoad: number, replace: boolean) => {
+      const requestId = ++requestIdRef.current;
+      if (replace) setIsLoading(true);
+      else setLoadingMore(true);
       try {
-        const data: BackendExercise[] = await getExercises();
-        if (cancelled) return;
+        const categoryParam = effectiveCategoryCode ?? (allowedCategoryCodes.length ? allowedCategoryCodes.join(',') : undefined);
+        const locationParam = effectiveLocationCode ?? (allowedLocationCodes.length ? allowedLocationCodes.join(',') : undefined);
 
-        const candidates = data.map((exercise) => mapBackendExerciseToCandidate(exercise, t('routineExercises.anywhere')));
-        const idMap: Record<string, number> = {};
-        const categoryMap: Record<string, string> = {};
-        // Raw backend location string, untouched by i18n — mirrors
-        // categoryMap's own pattern, needed to filter against
-        // `selectedLocations` (real `exercise_locations.name` values), which
-        // the translated `ExerciseCandidate.location` fallback can't reliably
-        // match (see matchesAllowedLocation's own doc comment below).
-        const locationMap: Record<string, string> = {};
-        data.forEach((exercise) => {
-          idMap[String(exercise.id)] = exercise.id;
-          if (exercise.category) categoryMap[String(exercise.id)] = exercise.category;
-          if (exercise.location) locationMap[String(exercise.id)] = exercise.location;
+        const result = await getExerciseList({
+          page: pageToLoad,
+          pageSize: PAGE_SIZE,
+          search: debouncedQuery || undefined,
+          category: categoryParam,
+          location: locationParam,
+          region: activeMuscleFilter?.level === 'region' ? activeMuscleFilter.code : undefined,
+          muscle: activeMuscleFilter?.level === 'muscle' ? activeMuscleFilter.code : undefined,
         });
 
-        setAllExercises(candidates);
-        setBackendIdByLocalId(idMap);
-        setCategoryByExerciseId(categoryMap);
-        setLocationByExerciseId(locationMap);
+        if (requestId !== requestIdRef.current) return;
+
+        const defaultLocationLabel = t('routineExercises.anywhere');
+        const candidates = result.data.map((row) => toCandidate(row, defaultLocationLabel));
+
+        setRows((current) => (replace ? candidates : [...current, ...candidates]));
+        setTotal(result.total);
+        setPage(pageToLoad);
+        setBackendIdByLocalId((current) => {
+          const next = replace ? {} : { ...current };
+          result.data.forEach((row) => {
+            next[String(row.id)] = row.id;
+          });
+          return next;
+        });
       } catch (error: any) {
-        if (cancelled) return;
+        if (requestId !== requestIdRef.current) return;
         console.error('[Exercises] Failed to load:', error?.response?.data ?? error?.message);
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (requestId === requestIdRef.current) {
+          setIsLoading(false);
+          setLoadingMore(false);
+          setHasLoadedOnce(true);
+        }
       }
-    }
+    },
+    [debouncedQuery, effectiveCategoryCode, effectiveLocationCode, activeMuscleFilter, allowedCategoryCodes, allowedLocationCodes, t],
+  );
 
-    loadExercises();
-    return () => {
-      cancelled = true;
-    };
-  }, [t]);
+  useEffect(() => {
+    loadPage(1, true);
+  }, [loadPage]);
 
-  // Restrict to the activity categories chosen in the challenge's own
-  // Activity & Location step — that's the whole point of that step existing
-  // (previously had zero effect here, real bug: every catalog exercise was
-  // offered regardless of what the challenge creator selected). Empty
-  // `selectedCategories` (shouldn't happen — that step requires at least
-  // one) falls back to allowing everything rather than showing nothing.
-  const allowedCategories = useMemo(() => new Set(selectedCategories), [selectedCategories]);
-
-  // Real bug, fixed 2026-08-29, per explicit report: the location pills on
-  // the challenge's own Activity & Location step had zero effect here — only
-  // categories actually filtered the catalog, even though the wireframe
-  // treats both as filters. `exercise.location` can be a single backend
-  // `exercise_locations.name` ("Gym") or, for a custom multi-location
-  // exercise created via ensureExerciseLocation's free-text join, a
-  // " / "-joined combo ("Home / Outdoor") — split and check for ANY overlap
-  // with what the challenge allows, not an exact string match.
-  //
-  // Deliberately NOT special-casing "Anywhere" to always pass — matches
-  // GET /exercises/count's own strict `LOWER(el.name) IN (...)` membership
-  // check (exercises.service.ts's countMatchingExercises) exactly, so the
-  // "N exercises unlocked" count shown on the challenge's own Activity &
-  // Location step can never disagree with what actually shows up here. If
-  // "Anywhere" should count as a wildcard, that needs to change on both ends
-  // together — doing it only here would just trade one count/list mismatch
-  // for another.
-  const allowedLocations = useMemo(() => new Set(selectedLocations), [selectedLocations]);
-
-  function matchesAllowedLocation(exerciseId: string): boolean {
-    if (allowedLocations.size === 0) return true;
-    const raw = locationByExerciseId[exerciseId];
-    if (!raw) return true;
-    const parts = raw.split('/').map((part) => part.trim()).filter(Boolean);
-    return parts.some((part) => allowedLocations.has(part));
+  function handleEndReached() {
+    if (loadingMore || isLoading) return;
+    if (rows.length >= total) return;
+    loadPage(page + 1, false);
   }
-
-  // Real category names present in the catalog (e.g. "Strength", "Cardio
-  // Intense") — not the wireframe's literal "Legs & glutes"/"Push" pills,
-  // which don't correspond to any category or muscle-group taxonomy the
-  // backend actually has (`exercise_categories` only has 6 broad rows —
-  // Strength/Cardio Intense/Cardio Low/Flexibility/Mind-Body/Functional).
-  // Real data instead of fabricated category names, same substitution
-  // pattern already used for the Create-Challenge flow's day-row meta line.
-  // Further narrowed to the challenge's own selected categories, same rule
-  // as `filtered` below.
-  const categories = useMemo(() => {
-    const present = Array.from(new Set(Object.values(categoryByExerciseId)));
-    const scoped = allowedCategories.size === 0 ? present : present.filter((c) => allowedCategories.has(c));
-    return scoped.sort();
-  }, [categoryByExerciseId, allowedCategories]);
-
-  const filtered = useMemo(() => {
-    const queryValue = query.trim().toLowerCase();
-    return allExercises.filter((exercise) => {
-      const exerciseCategory = categoryByExerciseId[exercise.id];
-      const matchesQuery = exercise.name.toLowerCase().includes(queryValue);
-      const matchesCategory = !activeCategory || exerciseCategory === activeCategory;
-      const matchesAllowedCategory = allowedCategories.size === 0 || allowedCategories.has(exerciseCategory);
-      return matchesQuery && matchesCategory && matchesAllowedCategory && matchesAllowedLocation(exercise.id);
-    });
-  }, [allExercises, query, activeCategory, categoryByExerciseId, allowedCategories, allowedLocations, locationByExerciseId]);
 
   function toggleSelected(id: string) {
     setSelectedIds((current) => {
@@ -219,7 +295,7 @@ export default function ExercisesScreen() {
   async function handleAddSelected() {
     if (selectedIds.size === 0) return;
 
-    const toAdd = allExercises.filter((exercise) => selectedIds.has(exercise.id));
+    const toAdd = rows.filter((exercise) => selectedIds.has(exercise.id));
 
     for (const exercise of toAdd) {
       const backendId = backendIdByLocalId[exercise.id];
@@ -245,13 +321,30 @@ export default function ExercisesScreen() {
       }
     }
 
-    router.back();
+    safeBack();
   }
+
+  const activeCategoryActivityType = effectiveCategoryCode ? CATEGORY_CODE_TO_ACTIVITY[effectiveCategoryCode] : undefined;
+  const activeCategoryPillColor = activeCategoryActivityType ? activityColors[activeCategoryActivityType] : undefined;
+
+  const categoryPillIcon = activeCategoryActivityType ? (
+    <ActivityIcon type={activeCategoryActivityType} variant="plain" size="sm" color={colors.ink} />
+  ) : (
+    <Icon name="grid-outline" size={16} color={INACTIVE_ICON_COLOR} />
+  );
+  const locationPillIcon = effectiveLocationCode ? (
+    <LocationIcon type={effectiveLocationCode as LocationType} variant="plain" size="sm" color={colors.ink} />
+  ) : (
+    <Icon name="navigate-outline" size={16} color={INACTIVE_ICON_COLOR} />
+  );
+  const musclePillIcon = (
+    <Icon name="body-outline" size={16} color={activeMuscleFilter ? colors.ink : INACTIVE_ICON_COLOR} />
+  );
 
   return (
     <ScreenBackground variant="top">
       <Row justify="space-between" align="center" style={styles.topBar}>
-        <BackButton style={styles.backButton} onPress={() => router.back()} />
+        <BackButton style={styles.backButton} />
         <Text variant="body" weight="bold" align="center" style={styles.headerTitle}>
           {t('routineExercises.title')}
         </Text>
@@ -262,64 +355,86 @@ export default function ExercisesScreen() {
         <SearchBar value={query} onChangeText={setQuery} placeholder={t('routineExercises.searchPlaceholder')} />
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.pillRow}
-        style={styles.pillRowWrap}
-      >
-        <FilterToggleButton
-          label={t('routineExercises.categoryAll')}
-          isActive={activeCategory === null}
-          onPress={() => setActiveCategory(null)}
-        />
-        {categories.map((category) => {
-          const activityType = CATEGORY_TO_ACTIVITY[category];
-          return (
-            <FilterToggleButton
-              key={category}
-              label={category}
-              isActive={activeCategory === category}
-              onPress={() => setActiveCategory(category)}
-              activeColor={activityType ? activityColors[activityType] : undefined}
-            />
-          );
-        })}
-      </ScrollView>
-
-      <Row justify="space-between" align="center" style={styles.countRow}>
-        <Text variant="header" tone="secondary" size="xs">
-          {t('routineExercises.resultsCount', { count: filtered.length })}
-        </Text>
-        <Text variant="caption" tone="secondary">{t('routineExercises.tapToAdd')}</Text>
-      </Row>
-
-      {isLoading ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
+      {isLoading && !hasLoadedOnce ? (
+        <ExercisePickerSkeleton />
       ) : (
-        <FlatList
-          data={filtered}
+        <>
+          {/* Three distinct filter accesses — category / location / muscle — mirroring the
+              exercise catalog's own filter row, never one combined panel. Category/location
+              options are pre-narrowed to what this challenge already allows; muscle is
+              unrestricted (browsing by muscle isn't scoped by the challenge). Content-aware
+              flexible widths: each pill keeps the space its label/icon needs, remaining row
+              width is distributed between them via flex-grow — no fixed widths, no scroll. */}
+          <View style={styles.pillRow}>
+            <FilterToggleButton
+              label={
+                effectiveCategoryCode
+                  ? t(`exerciseCatalog.categories.${effectiveCategoryCode}` as never)
+                  : t('exerciseCatalog.filters.categories')
+              }
+              isActive={effectiveCategoryCode !== null}
+              onPress={() => {
+                if (!lockedCategoryCode) setSheet('categories');
+              }}
+              activeColor={activeCategoryPillColor}
+              icon={categoryPillIcon}
+              style={styles.filterButton}
+            />
+            <FilterToggleButton
+              label={
+                effectiveLocationCode
+                  ? t(`exerciseCatalog.locations.${effectiveLocationCode}` as never)
+                  : t('exerciseCatalog.filters.locations')
+              }
+              isActive={effectiveLocationCode !== null}
+              onPress={() => {
+                if (!lockedLocationCode) setSheet('locations');
+              }}
+              icon={locationPillIcon}
+              style={styles.filterButton}
+            />
+            <FilterToggleButton
+              label={activeMuscleFilter?.label ?? t('exerciseCatalog.filters.muscles')}
+              isActive={activeMuscleFilter !== null}
+              onPress={() => setSheet('muscles')}
+              icon={musclePillIcon}
+              style={styles.filterButton}
+            />
+          </View>
+
+          <Row justify="space-between" align="center" style={styles.countRow}>
+            <Text variant="header" tone="secondary" size="xs">
+              {t('routineExercises.resultsCount', { count: total })}
+            </Text>
+            <Text variant="caption" tone="secondary">{t('routineExercises.tapToAdd')}</Text>
+          </Row>
+
+          <FlatList
+          data={rows}
           keyExtractor={(item) => item.id}
           style={styles.listContainer}
           renderItem={({ item }) => (
             <ExerciseListItem
               name={item.name}
-              meta={`${categoryByExerciseId[item.id] ?? ''} · ${item.location}`}
+              meta={item.meta}
+              imageUrl={item.imageUrl}
               selected={selectedIds.has(item.id)}
               onPress={() => toggleSelected(item.id)}
             />
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           contentContainerStyle={styles.list}
+          onEndReachedThreshold={0.4}
+          onEndReached={handleEndReached}
+          ListFooterComponent={loadingMore ? <ActivityIndicator color={colors.primary} style={styles.footerLoading} /> : null}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <Text variant="body" tone="secondary">{t('routineExercises.empty')}</Text>
             </View>
           }
           showsVerticalScrollIndicator={false}
-        />
+          />
+        </>
       )}
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
@@ -329,6 +444,40 @@ export default function ExercisesScreen() {
           label={t('routineExercises.addSelectedCta', { count: selectedIds.size })}
         />
       </View>
+
+      <FilterSheet
+        visible={sheet === 'categories'}
+        title={t('exerciseCatalog.filters.categories')}
+        allLabel={t('exerciseCatalog.filters.all')}
+        options={categoryOptions}
+        selectedCode={effectiveCategoryCode}
+        onSelect={(code) => {
+          setActiveCategoryCode(code);
+          setSheet(null);
+        }}
+        onClose={() => setSheet(null)}
+      />
+      <FilterSheet
+        visible={sheet === 'locations'}
+        title={t('exerciseCatalog.filters.locations')}
+        allLabel={t('exerciseCatalog.filters.all')}
+        options={locationOptions}
+        selectedCode={effectiveLocationCode}
+        onSelect={(code) => {
+          setActiveLocationCode(code);
+          setSheet(null);
+        }}
+        onClose={() => setSheet(null)}
+      />
+      <MuscleFilterSheet
+        visible={sheet === 'muscles'}
+        selected={activeMuscleFilter}
+        onSelect={(selection) => {
+          setActiveMuscleFilter(selection);
+          setSheet(null);
+        }}
+        onClose={() => setSheet(null)}
+      />
     </ScreenBackground>
   );
 }
@@ -353,13 +502,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
-  pillRowWrap: {
-    flexGrow: 0,
-  },
   pillRow: {
+    flexDirection: 'row',
     paddingHorizontal: spacing.lg,
     gap: spacing.sm,
     paddingBottom: spacing.base,
+  },
+  filterButton: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 'auto',
   },
   countRow: {
     paddingHorizontal: spacing.lg,
@@ -373,11 +525,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
   },
   separator: {
-    height: spacing.sm,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: withAlpha(colors.paper, 0.08),
   },
-  loadingWrap: {
-    paddingTop: spacing.xl,
-    alignItems: 'center',
+  footerLoading: {
+    paddingVertical: spacing.md,
   },
   emptyWrap: {
     paddingTop: spacing.xl,

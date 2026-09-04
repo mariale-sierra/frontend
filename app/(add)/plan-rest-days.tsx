@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { safeBack } from '../../utils/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { RestDayScreenBackground } from '../../components/layout/restDayScreenBackground';
@@ -13,7 +13,6 @@ import { colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
 export default function PlanRestDays() {
-  const router = useRouter();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const selectedChallengeId = useMetricsEntryStore((state) => state.selectedChallengeId);
@@ -59,7 +58,7 @@ export default function PlanRestDays() {
     try {
       // TODO: wire up API endpoint for scheduling future rest days
       await Promise.resolve();
-      router.back();
+      safeBack();
     } catch {
       Alert.alert(t('common.errors.genericTitle'), t('planRestDays.alerts.saveFailedMessage'));
     } finally {
@@ -76,7 +75,7 @@ export default function PlanRestDays() {
         <View style={styles.header}>
           <IconButton
             name="close-outline"
-            onPress={() => router.back()}
+            onPress={() => safeBack()}
             size={44}
             iconSize={24}
             variant="ghost"

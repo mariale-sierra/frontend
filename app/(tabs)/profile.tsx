@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -80,6 +80,14 @@ export default function Profile() {
   const topBar = (
     <Row justify="flex-end" gap="sm" style={styles.topBar}>
       <IconButton
+        name="barbell-outline"
+        iconSize={22}
+        onPress={() => router.push('/exercises')}
+        accessibilityRole="button"
+        accessibilityLabel={t('profile.exercisesButtonA11y')}
+        hitSlop={10}
+      />
+      <IconButton
         name="pencil-outline"
         iconSize={22}
         onPress={() => router.push('/profile/edit')}
@@ -126,6 +134,9 @@ export default function Profile() {
             />
             <PostsViewToggle view={view} onViewChange={setView} />
             <PostsGrid view={view} onPhotoPress={setSelectedPhoto} />
+            <Pressable onPress={() => router.push('/profile/about')} style={styles.aboutLink}>
+              <Text variant="caption" tone="secondary">{t('about.title')}</Text>
+            </Pressable>
           </>
         )}
       </ScrollView>
@@ -166,5 +177,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
+  },
+  aboutLink: {
+    alignItems: 'center',
+    paddingTop: spacing.md,
   },
 });

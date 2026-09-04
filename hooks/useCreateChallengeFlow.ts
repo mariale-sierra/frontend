@@ -1,15 +1,19 @@
 import { router } from 'expo-router';
+import { safeBack } from '../utils/navigation';
 import { Alert } from 'react-native';
 import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { buildCreateChallengePayload } from '../services/adapters/index';
 import { createChallenge } from '../services/challenge/challenge.service';
 import type { ChallengeVisibility } from '../types/challenge';
 import { useChallengeBuilder } from '../store/challengeBuilderStore';
 import { getRoutineLocationSummary, useRoutineBuilder } from '../store/routineBuilderStore';
 import { colors, activityColors } from '../constants/theme';
-import { CATEGORY_TO_ACTIVITY } from '../constants/challengeFilters';
+import { CATEGORY_TO_ACTIVITY, ACTIVITY_TO_CATEGORY } from '../constants/challengeFilters';
 import type { ActivityType } from '../types/activity';
 import { useTranslation } from 'react-i18next';
+import { createChallengeNameSchema, type ChallengeNameFormValues } from '../validation/challengeSchemas';
 
 export type CreateStep =
   | { kind: 'name'; title: string; description: string }
@@ -84,6 +88,31 @@ export function useCreateChallengeFlow() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Name step's title field: the only text input in this whole multi-step
+  // flow (the other steps are pill grids / day lists / cards, not text
+  // fields — they keep the existing step-level Alert summary below). `title`
+  // itself still lives in challengeBuilderStore (shared across steps/screens
+  // in this flow); this form only owns the zod validation + inline error,
+  // synced to the store on every change.
+  const nameSchema = useMemo(() => createChallengeNameSchema(t), [t]);
+  const {
+    setValue: setTitleFormValue,
+    trigger: triggerTitleValidation,
+    formState: { errors: titleErrors },
+  } = useForm<ChallengeNameFormValues>({
+    resolver: zodResolver(nameSchema),
+    defaultValues: { title },
+  });
+
+  function handleChangeTitle(value: string) {
+    setTitle(value);
+    setTitleFormValue('title', value, { shouldValidate: Boolean(titleErrors.title) });
+  }
+
+  function handleBlurTitle() {
+    triggerTitleValidation('title');
+  }
+
   const validationLabels = useMemo<ValidationLabels>(() => ({
     challengeName: t('challengeCreate.validation.challengeName'),
     exerciseCategories: t('challengeCreate.validation.exerciseCategories'),
@@ -98,11 +127,18 @@ export function useCreateChallengeFlow() {
       title: t('challengeCreate.steps.name.title'),
       description: t('challengeCreate.steps.name.description'),
     },
-    {
-      kind: 'activityLocation',
-      title: t('challengeCreate.steps.activityLocation.title'),
-      description: t('challengeCreate.steps.activityLocation.description'),
-    },
+    // 'activityLocation' ("What kind of training?") deprecated 2026-09-04,
+    // per explicit request — NOT deleted, just omitted from the step
+    // sequence: create.tsx's `case 'activityLocation':` branch, the
+    // toggleCategory/toggleLocation actions, and selectedCategories/
+    // selectedLocations in the store are all still intact below. Reason:
+    // the exercise picker (app/challenge/routine/exercises.tsx) already has
+    // its own Categories/Locations/Muscles filters, so asking the user to
+    // guess a challenge-wide category/location before they've even picked
+    // an exercise was redundant. Categories/locations are now derived AFTER
+    // the fact from whichever exercises actually end up in the built
+    // routines — see `derivedCategories`/`derivedLocations` below, used for
+    // both the Review step's read-only summary and the real submit payload.
     {
       kind: 'cycle',
       title: t('challengeCreate.steps.cycle.title'),
@@ -146,24 +182,58 @@ export function useCreateChallengeFlow() {
     labels: validationLabels,
   });
 
+  // Categories/locations are no longer a manual, independently-validated
+  // field (see the 'activityLocation' deprecation note in `steps` above) —
+  // they're derived from whatever exercises actually ended up in the
+  // routines, so `hasRoutineForEveryDay` (already required below) is the
+  // one real gate that also guarantees derivedCategories/derivedLocations
+  // end up non-empty in the normal case.
   const missingConfigurationFields = useMemo(() => {
     const missing: string[] = [];
 
     if (title.trim().length === 0) missing.push(validationLabels.challengeName);
-    if (selectedCategories.length === 0) missing.push(validationLabels.exerciseCategories);
-    if (selectedLocations.length === 0) missing.push(validationLabels.challengeLocation);
     if (!hasRoutineForEveryDay) missing.push(validationLabels.configureEveryDay);
     if (!visibility) missing.push(validationLabels.visibility);
 
     return missing;
   }, [
     title,
-    selectedCategories,
-    selectedLocations,
     hasRoutineForEveryDay,
     visibility,
     validationLabels,
   ]);
+
+  // Derived from the exercises actually picked across every configured
+  // cycle day — replaces the old manual selectedCategories/selectedLocations
+  // as the real source of truth for both the Review step's read-only
+  // summary and the submitted payload. Empty only if every day is a rest
+  // day (no exercises anywhere in the cycle).
+  const derivedCategories = useMemo(() => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (let day = 1; day <= cycleLengthDays; day += 1) {
+      const routine = routinesByDay[day];
+      if (!routine || routine.isRestDay) continue;
+      for (const exercise of routine.exercises) {
+        const name = ACTIVITY_TO_CATEGORY[exercise.activityType];
+        if (name && !seen.has(name)) {
+          seen.add(name);
+          result.push(name);
+        }
+      }
+    }
+    return result;
+  }, [cycleLengthDays, routinesByDay]);
+
+  const derivedLocations = useMemo(() => {
+    const exercises = Array.from({ length: cycleLengthDays }, (_, index) => index + 1)
+      .flatMap((day) => {
+        const routine = routinesByDay[day];
+        return routine && !routine.isRestDay ? routine.exercises : [];
+      });
+    const summary = getRoutineLocationSummary(exercises);
+    return summary ? summary.split('/').map((value) => value.trim()).filter(Boolean) : [];
+  }, [cycleLengthDays, routinesByDay]);
 
   // Single source of truth for "is the form complete": derived from the same
   // `missingConfigurationFields` list used to build the submit-blocking hint, rather than
@@ -182,14 +252,25 @@ export function useCreateChallengeFlow() {
 
   function handleBack() {
     if (currentStep === 0) {
-      router.back();
+      safeBack();
       return;
     }
 
     setCurrentStep(currentStep - 1);
   }
 
-  function handleNext() {
+  async function handleNext() {
+    // The name step's title is a real text field now validated inline
+    // (see nameSchema/titleErrors above) rather than through the step-level
+    // Alert — every other step stays on the Alert summary below, since none
+    // of them are text inputs the shared field system covers.
+    if (activeStep.kind === 'name') {
+      const valid = await triggerTitleValidation('title');
+      if (!valid) return;
+      setCurrentStep(Math.min(currentStep + 1, steps.length - 1));
+      return;
+    }
+
     if (activeStepErrors.length > 0) {
       const bulletList = activeStepErrors.map((item) => `• ${item}`).join('\n');
       Alert.alert(
@@ -229,8 +310,8 @@ export function useCreateChallengeFlow() {
       visibility,
       cycleLengthDays,
       cyclesCount,
-      selectedCategories,
-      selectedLocations,
+      selectedCategories: derivedCategories,
+      selectedLocations: derivedLocations,
       routinesByDay,
     });
 
@@ -393,6 +474,8 @@ export function useCreateChallengeFlow() {
     visibility,
     selectedCategories,
     selectedLocations,
+    derivedCategories,
+    derivedLocations,
     currentStep,
     activeStep,
     steps,
@@ -401,7 +484,9 @@ export function useCreateChallengeFlow() {
     activeStepErrors,
     isFormComplete,
     missingConfigurationFields,
-    setTitle,
+    setTitle: handleChangeTitle,
+    titleError: titleErrors.title?.message,
+    onBlurTitle: handleBlurTitle,
     setDescription,
     addCycleDay,
     removeCycleDay,

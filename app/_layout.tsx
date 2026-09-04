@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
@@ -59,6 +60,12 @@ function RootNavigator() {
           this screen's own BackButton/header. Every other custom-header
           screen in this app is registered the same way. */}
       <Stack.Screen name="profile/[userId]" options={{ headerShown: false }} />
+      <Stack.Screen name="profile/about" options={{ headerShown: false }} />
+      <Stack.Screen name="exercises/index" options={{ headerShown: false }} />
+      <Stack.Screen name="exercises/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="exercises/muscles/index" options={{ headerShown: false }} />
+      <Stack.Screen name="exercises/muscles/[code]" options={{ headerShown: false }} />
+      <Stack.Screen name="exercises/muscles/region/[code]" options={{ headerShown: false }} />
       {/* Top-level on purpose, not nested inside "(add)" — that group is
           itself a `fullScreenModal` (opaque), so a transparentModal screen
           nested inside it only reveals that opaque modal's own backdrop, not
@@ -123,13 +130,20 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <ErrorNotificationProvider>
-          <RootNavigator />
-          <UploadSuccessPopup />
-        </ErrorNotificationProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    // Required by react-native-gesture-handler (added for the bottom nav's
+    // drag-to-switch-tabs gesture, see components/navigation/
+    // bottomNavTabButton.tsx) — gestures silently fail to register touches
+    // correctly without this wrapping the app root. Zero effect on anything
+    // else; a plain flex:1 passthrough view.
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <AuthProvider>
+          <ErrorNotificationProvider>
+            <RootNavigator />
+            <UploadSuccessPopup />
+          </ErrorNotificationProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
