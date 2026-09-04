@@ -48,7 +48,7 @@ export function ChallengeAccentGlow({ color }: ChallengeAccentGlowProps) {
   const widenFactor = 1.8;
 
   return (
-    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <Svg width="100%" height="100%">
         <Defs>
           <RadialGradient

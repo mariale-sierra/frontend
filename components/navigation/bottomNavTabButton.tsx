@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { StyleSheet, Text as RNText, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarButtonProps } from 'expo-router/tabs';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';

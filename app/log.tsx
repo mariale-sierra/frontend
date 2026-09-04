@@ -86,7 +86,7 @@ export default function LogChallengePicker() {
 
   return (
     <View style={styles.root}>
-      <Pressable style={StyleSheet.absoluteFillObject} onPress={handleDismiss} />
+      <Pressable style={StyleSheet.absoluteFill} onPress={handleDismiss} />
 
       {/* Inner Pressable with a no-op onPress stops a tap on the sheet's own
           empty padding from falling through to the backdrop Pressable behind it.
