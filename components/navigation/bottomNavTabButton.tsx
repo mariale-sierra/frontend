@@ -236,9 +236,19 @@ export function BottomNavTabButton({
         }}
         onAccessibilityTap={handleAccessibilityActivate}
         testID={testID}
+        // `collapsable={false}`: this view has no paint properties of its
+        // own (no backgroundColor/border), which makes it a Fabric
+        // view-flattening candidate — and it's both a gesture target (RNGH)
+        // and the thing Reanimated mutates every frame for the press-scale
+        // style. Newer RN/Fabric versions flatten more aggressively than
+        // when this was last verified on device (RN 0.81), which can make
+        // per-frame native prop updates land inconsistently. Opting out of
+        // flattening here is the documented fix for exactly that class of
+        // symptom and changes nothing visually.
+        collapsable={false}
         style={[style, styles.button, pressStyle]}
       >
-        <View style={styles.iconSlot}>
+        <View style={styles.iconSlot} collapsable={false}>
           <AnimatedIonicons
             name={iconName}
             size={BOTTOM_NAV_ICON_SIZE}
