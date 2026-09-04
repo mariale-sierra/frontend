@@ -18,7 +18,7 @@ export function BackButton({ iconColor = colors.paper, size = 44, style, onPress
       iconSize={24}
       iconColor={iconColor}
       size={size}
-      onPress={onPress ?? (() => router.back())}
+      onPress={onPress ?? (() => (router.canGoBack() ? router.back() : router.replace('/(tabs)')))}
       style={style}
     />
   );

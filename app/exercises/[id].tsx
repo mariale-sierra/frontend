@@ -83,7 +83,7 @@ export default function ExerciseDetailScreen() {
     return (
       <ScreenBackground variant="top">
         <Row justify="space-between" align="center" style={styles.topBar}>
-          <BackButton style={styles.backButton} onPress={() => router.back()} />
+          <BackButton style={styles.backButton} />
           <View style={styles.trailingSpacer} />
         </Row>
         <View style={styles.loadingWrap}>
@@ -100,7 +100,7 @@ export default function ExerciseDetailScreen() {
   return (
     <ScreenBackground variant="top">
       <Row justify="space-between" align="center" style={styles.topBar}>
-        <BackButton style={styles.backButton} onPress={() => router.back()} />
+        <BackButton style={styles.backButton} />
         <Text variant="body" weight="bold" align="center" numberOfLines={1} style={styles.headerTitle}>
           {exercise.name}
         </Text>

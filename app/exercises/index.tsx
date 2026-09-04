@@ -111,7 +111,7 @@ export default function ExerciseCatalogScreen() {
   return (
     <ScreenBackground variant="top">
       <Row justify="space-between" align="center" style={styles.topBar}>
-        <BackButton style={styles.backButton} onPress={() => router.back()} />
+        <BackButton style={styles.backButton} />
         <Text variant="body" weight="bold" align="center" style={styles.headerTitle}>
           {t('exerciseCatalog.title')}
         </Text>
