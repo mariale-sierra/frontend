@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeBack } from '../../../utils/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../../components/layout/screenBackground';
@@ -294,7 +295,7 @@ export default function ExercisesScreen() {
       }
     }
 
-    router.back();
+    safeBack();
   }
 
   const activeCategoryActivityType = activeCategoryCode ? CATEGORY_CODE_TO_ACTIVITY[activeCategoryCode] : undefined;

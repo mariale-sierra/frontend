@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { safeBack } from '../utils/navigation';
 import { Alert } from 'react-native';
 import { useMemo, useState } from 'react';
 import { buildCreateChallengePayload } from '../services/adapters/index';
@@ -182,7 +183,7 @@ export function useCreateChallengeFlow() {
 
   function handleBack() {
     if (currentStep === 0) {
-      router.back();
+      safeBack();
       return;
     }
 

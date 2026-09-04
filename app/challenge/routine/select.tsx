@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeBack } from '../../../utils/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CreateFlowPrimaryButton } from '../../../components/challenge/create';
 import ScreenBackground from '../../../components/layout/screenBackground';
@@ -73,12 +74,12 @@ export default function SelectRoutineScreen() {
     }
 
     assignRoutineToDay(dayNumber, routine);
-    router.back();
+    safeBack();
   }
 
   function handleConfirmRestDay() {
     assignRestDayToDay(dayNumber);
-    router.back();
+    safeBack();
   }
 
   const isRestMode = mode === 'rest';
@@ -86,7 +87,7 @@ export default function SelectRoutineScreen() {
   const content = (
     <>
       <Row justify="space-between" align="center" style={styles.topBar}>
-        <BackButton style={styles.backButton} iconColor={isRestMode ? colors.ink : undefined} onPress={() => router.back()} />
+        <BackButton style={styles.backButton} iconColor={isRestMode ? colors.ink : undefined} />
         <Text variant="title" align="center" inverse={isRestMode} style={styles.headerTitle}>
           {t('routineSelect.dayTitle', { day: dayNumber })}
         </Text>

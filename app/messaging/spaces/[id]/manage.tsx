@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { safeBack } from '../../../../utils/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../../../components/layout/screenBackground';
@@ -45,7 +46,7 @@ export default function ManageSpaceScreen() {
     setSubmitError(null);
     try {
       await updateSpace(spaceId, payload);
-      router.back();
+      safeBack('/(tabs)');
     } catch {
       setSubmitError(t('spaces.saveError'));
     } finally {

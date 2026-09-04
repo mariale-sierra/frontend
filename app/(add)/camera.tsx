@@ -8,7 +8,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { safeBack, safeBackTimes } from '../../utils/navigation';
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -57,7 +57,6 @@ function VisibilityToggle({
 }
 
 export default function Camera() {
-  const router = useRouter();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const selectedChallengeId = useMetricsEntryStore((s) => s.selectedChallengeId);
@@ -204,8 +203,7 @@ export default function Camera() {
       // parent navigator once the current one has nothing left to pop, the
       // second call correctly continues upward and pops the (add) entry
       // itself off the root stack too, actually closing the whole modal.
-      router.back();
-      router.back();
+      safeBackTimes(2);
     } catch (navError) {
       console.error('[Camera] closing the (add) modal failed after a successful save:', navError);
     }
@@ -228,7 +226,7 @@ export default function Camera() {
           <Text variant="body" style={styles.permissionButtonLabel}>{t('camera.grantPermission')}</Text>
         </Pressable>
         <Pressable
-          onPress={() => router.back()}
+          onPress={() => safeBack()}
           style={({ pressed }) => [styles.backLink, pressed && styles.pressed]}
         >
           <Text variant="caption" tone="secondary">{t('camera.goBack')}</Text>
@@ -283,7 +281,7 @@ export default function Camera() {
       <View style={styles.header}>
         <IconButton
           name="arrow-back-outline"
-          onPress={() => router.back()}
+          onPress={() => safeBack()}
           size={40}
           iconSize={22}
           iconColor={colors.paper}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { safeBack } from '../../utils/navigation';
 import { useTranslation } from 'react-i18next';
 import * as ImagePicker from 'expo-image-picker';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -38,7 +38,6 @@ const BIO_MAX = 1000;
  */
 export default function EditProfile() {
   const { t } = useTranslation();
-  const router = useRouter();
 
   const [profile, setProfile] = useState<MyProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
@@ -104,7 +103,7 @@ export default function EditProfile() {
     if (isPrivate !== profile.is_private) payload.is_private = isPrivate;
 
     if (Object.keys(payload).length === 0) {
-      router.back();
+      safeBack('/(tabs)/profile');
       return;
     }
 
@@ -117,7 +116,7 @@ export default function EditProfile() {
       } else {
         showSuccess({ message: t('profileEdit.saved') });
       }
-      router.back();
+      safeBack('/(tabs)/profile');
     } catch {
       show({ message: t('profileEdit.saveError') });
     } finally {

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeBack } from '../../../utils/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { CreateFlowPrimaryButton } from '../../../components/challenge/create';
@@ -104,7 +105,7 @@ export default function CreateRoutineScreen() {
   return (
     <ScreenBackground variant="top">
       <Row justify="space-between" align="center" style={styles.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={12} style={styles.iconButton}>
+        <Pressable onPress={() => safeBack()} hitSlop={12} style={styles.iconButton}>
           <Icon
             name={hasExercises ? 'chevron-back-outline' : 'close-outline'}
             size={24}
