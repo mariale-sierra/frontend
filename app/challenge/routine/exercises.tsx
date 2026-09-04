@@ -10,6 +10,11 @@ import { Text } from '../../../components/ui/text';
 import { SearchBar } from '../../../components/ui/searchBar';
 import { CreateFlowPrimaryButton } from '../../../components/challenge/create';
 import { FilterToggleButton, ExerciseListItem } from '../../../components/routine';
+import { FilterSheet } from '../../../components/exercises/filterSheet';
+import { MuscleFilterSheet } from '../../../components/exercises/muscleFilterSheet';
+import { ActivityIcon } from '../../../components/icons/activityIcon';
+import { LocationIcon } from '../../../components/icons/locationIcon';
+import type { LocationType } from '../../../components/icons/locationIcon';
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
 import { colors, spacing, activityColors } from '../../../constants/theme';
@@ -26,11 +31,12 @@ import type {
   ExerciseCategory,
 } from '../../../services/exercises/exercises.service';
 import type { ActivityType } from '../../../types/activity';
-import { CATEGORY_TO_ACTIVITY } from '../../../constants/challengeFilters';
+import { CATEGORY_TO_ACTIVITY, CATEGORY_CODE_TO_ACTIVITY } from '../../../constants/challengeFilters';
 import { LOCATION_OPTIONS } from '../../../constants/challengeCreateOptions';
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
+const ALL_LOCATION_CODES: LocationType[] = ['gym', 'home', 'outdoor', 'studio', 'anywhere'];
 
 // Real backend location codes for the challenge builder's own selected display names
 // (e.g. "Gym" -> "gym") — LOCATION_OPTIONS is the same constant the Activity & Location
@@ -111,12 +117,16 @@ export default function ExercisesScreen() {
   const [categories, setCategories] = useState<ExerciseCategory[]>([]);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeCategoryCode, setActiveCategoryCode] = useState<string | null>(null);
+  const [activeLocationCode, setActiveLocationCode] = useState<string | null>(null);
+  const [activeMuscle, setActiveMuscle] = useState<{ code: string; label: string } | null>(null);
+  const [sheet, setSheet] = useState<'categories' | 'locations' | 'muscles' | null>(null);
   const [rows, setRows] = useState<ExerciseRowCandidate[]>([]);
   const [backendIdByLocalId, setBackendIdByLocalId] = useState<Record<string, number>>({});
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -158,21 +168,40 @@ export default function ExercisesScreen() {
     [selectedLocations],
   );
 
-  // Pills shown: the challenge's own allowed categories when it scoped any, else every
-  // real category — same real display names as before (Strength, Cardio Intense, ...).
-  const categoryOptions = useMemo(
-    () => (selectedCategories.length > 0 ? selectedCategories : categories.map((c) => c.name)),
-    [selectedCategories, categories],
-  );
+  // Filter-sheet options: restricted to the challenge's own allowed categories/locations
+  // when it scoped any (that's the whole point of the Activity & Location step), else
+  // every real category/location — same set the exercise catalog's own sheets use.
+  const categoryOptions = useMemo(() => {
+    const source = allowedCategoryCodes.length
+      ? categories.filter((c) => allowedCategoryCodes.includes(c.code))
+      : categories;
+    return source.map((c) => ({
+      code: c.code,
+      label: t(`exerciseCatalog.categories.${c.code}` as never),
+      icon: CATEGORY_CODE_TO_ACTIVITY[c.code] ? (
+        <ActivityIcon type={CATEGORY_CODE_TO_ACTIVITY[c.code]} variant="plain" size="sm" color={colors.paper} />
+      ) : undefined,
+    }));
+  }, [categories, allowedCategoryCodes, t]);
+
+  const locationOptions = useMemo(() => {
+    const source = allowedLocationCodes.length
+      ? ALL_LOCATION_CODES.filter((code) => allowedLocationCodes.includes(code))
+      : ALL_LOCATION_CODES;
+    return source.map((code) => ({
+      code,
+      label: t(`exerciseCatalog.locations.${code}` as never),
+      icon: <LocationIcon type={code} variant="plain" size="sm" color={colors.paper} />,
+    }));
+  }, [allowedLocationCodes, t]);
 
   const loadPage = useCallback(
     async (pageToLoad: number, replace: boolean) => {
       if (replace) setIsLoading(true);
       else setLoadingMore(true);
       try {
-        const activeCategoryCode = activeCategory ? categoryNameToCode[activeCategory] : undefined;
         const categoryParam = activeCategoryCode ?? (allowedCategoryCodes.length ? allowedCategoryCodes.join(',') : undefined);
-        const locationParam = allowedLocationCodes.length ? allowedLocationCodes.join(',') : undefined;
+        const locationParam = activeLocationCode ?? (allowedLocationCodes.length ? allowedLocationCodes.join(',') : undefined);
 
         const result = await getExerciseList({
           page: pageToLoad,
@@ -180,6 +209,7 @@ export default function ExercisesScreen() {
           search: debouncedQuery || undefined,
           category: categoryParam,
           location: locationParam,
+          muscle: activeMuscle?.code,
         });
 
         const defaultLocationLabel = t('routineExercises.anywhere');
@@ -200,9 +230,10 @@ export default function ExercisesScreen() {
       } finally {
         setIsLoading(false);
         setLoadingMore(false);
+        setHasLoadedOnce(true);
       }
     },
-    [debouncedQuery, activeCategory, allowedCategoryCodes, allowedLocationCodes, categoryNameToCode, t],
+    [debouncedQuery, activeCategoryCode, activeLocationCode, activeMuscle, allowedCategoryCodes, allowedLocationCodes, t],
   );
 
   useEffect(() => {
@@ -273,6 +304,10 @@ export default function ExercisesScreen() {
         <SearchBar value={query} onChangeText={setQuery} placeholder={t('routineExercises.searchPlaceholder')} />
       </View>
 
+      {/* Three distinct filter accesses — category / location / muscle — mirroring the
+          exercise catalog's own filter row, never one combined panel. Category/location
+          options are pre-narrowed to what this challenge already allows; muscle is
+          unrestricted (browsing by muscle isn't scoped by the challenge). */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -280,22 +315,33 @@ export default function ExercisesScreen() {
         style={styles.pillRowWrap}
       >
         <FilterToggleButton
-          label={t('routineExercises.categoryAll')}
-          isActive={activeCategory === null}
-          onPress={() => setActiveCategory(null)}
+          label={
+            activeCategoryCode
+              ? t(`exerciseCatalog.categories.${activeCategoryCode}` as never)
+              : t('exerciseCatalog.filters.categories')
+          }
+          isActive={activeCategoryCode !== null}
+          onPress={() => setSheet('categories')}
+          activeColor={
+            activeCategoryCode && CATEGORY_CODE_TO_ACTIVITY[activeCategoryCode]
+              ? activityColors[CATEGORY_CODE_TO_ACTIVITY[activeCategoryCode]]
+              : undefined
+          }
         />
-        {categoryOptions.map((category) => {
-          const activityType = CATEGORY_TO_ACTIVITY[category];
-          return (
-            <FilterToggleButton
-              key={category}
-              label={category}
-              isActive={activeCategory === category}
-              onPress={() => setActiveCategory(category)}
-              activeColor={activityType ? activityColors[activityType] : undefined}
-            />
-          );
-        })}
+        <FilterToggleButton
+          label={
+            activeLocationCode
+              ? t(`exerciseCatalog.locations.${activeLocationCode}` as never)
+              : t('exerciseCatalog.filters.locations')
+          }
+          isActive={activeLocationCode !== null}
+          onPress={() => setSheet('locations')}
+        />
+        <FilterToggleButton
+          label={activeMuscle?.label ?? t('exerciseCatalog.filters.muscles')}
+          isActive={activeMuscle !== null}
+          onPress={() => setSheet('muscles')}
+        />
       </ScrollView>
 
       <Row justify="space-between" align="center" style={styles.countRow}>
@@ -305,7 +351,7 @@ export default function ExercisesScreen() {
         <Text variant="caption" tone="secondary">{t('routineExercises.tapToAdd')}</Text>
       </Row>
 
-      {isLoading ? (
+      {isLoading && !hasLoadedOnce ? (
         <View style={styles.loadingWrap}>
           <ActivityIndicator color={colors.primary} />
         </View>
@@ -344,6 +390,41 @@ export default function ExercisesScreen() {
           label={t('routineExercises.addSelectedCta', { count: selectedIds.size })}
         />
       </View>
+
+      <FilterSheet
+        visible={sheet === 'categories'}
+        title={t('exerciseCatalog.filters.categories')}
+        allLabel={t('exerciseCatalog.filters.all')}
+        options={categoryOptions}
+        selectedCode={activeCategoryCode}
+        onSelect={(code) => {
+          setActiveCategoryCode(code);
+          setSheet(null);
+        }}
+        onClose={() => setSheet(null)}
+      />
+      <FilterSheet
+        visible={sheet === 'locations'}
+        title={t('exerciseCatalog.filters.locations')}
+        allLabel={t('exerciseCatalog.filters.all')}
+        options={locationOptions}
+        selectedCode={activeLocationCode}
+        onSelect={(code) => {
+          setActiveLocationCode(code);
+          setSheet(null);
+        }}
+        onClose={() => setSheet(null)}
+      />
+      <MuscleFilterSheet
+        visible={sheet === 'muscles'}
+        selectedCode={activeMuscle?.code ?? null}
+        selectedLabel={activeMuscle?.label ?? null}
+        onSelect={(code, label) => {
+          setActiveMuscle(code && label ? { code, label } : null);
+          setSheet(null);
+        }}
+        onClose={() => setSheet(null)}
+      />
     </ScreenBackground>
   );
 }
