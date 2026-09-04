@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -57,8 +57,18 @@ export default function ExerciseCatalogScreen() {
       .catch((error: any) => console.error('[ExerciseCatalog] categories', error?.message));
   }, []);
 
+  // Guards against the classic FlatList `onEndReached`-fires-twice race: RN
+  // can call it more than once before a re-render lands, so two calls for
+  // the SAME next page can both be in flight at once — merging both
+  // responses into `rows` produces two entries with the same exercise id,
+  // which React's FlatList then reports as a duplicate key. Every call
+  // stamps its own id here; a response only gets applied if it's still the
+  // most recent request by the time it resolves.
+  const requestIdRef = useRef(0);
+
   const loadPage = useCallback(
     async (pageToLoad: number, replace: boolean) => {
+      const requestId = ++requestIdRef.current;
       if (replace) setLoading(true);
       else setLoadingMore(true);
       try {
@@ -72,15 +82,19 @@ export default function ExerciseCatalogScreen() {
           muscle: activeMuscleFilter?.level === 'muscle' ? activeMuscleFilter.code : undefined,
           locale,
         });
+        if (requestId !== requestIdRef.current) return;
         const adapted = result.data.map(adaptExerciseListRow);
         setRows((current) => (replace ? adapted : [...current, ...adapted]));
         setTotal(result.total);
         setPage(pageToLoad);
       } catch (error: any) {
+        if (requestId !== requestIdRef.current) return;
         console.error('[ExerciseCatalog] load', error?.response?.data ?? error?.message);
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [debouncedQuery, activeCategory, activeLocation, activeMuscleFilter, locale],

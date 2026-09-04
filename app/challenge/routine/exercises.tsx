@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '../../../utils/navigation';
@@ -211,8 +211,20 @@ export default function ExercisesScreen() {
     }));
   }, [allowedLocationCodes, t]);
 
+  // Guards against the classic FlatList `onEndReached`-fires-twice race:
+  // RN can call it more than once before a re-render lands, so two calls for
+  // the SAME next page can both be in flight at once — merging both
+  // responses into `rows` produced two entries with the same exercise id,
+  // which React's FlatList then reported as a duplicate key. Every call
+  // stamps its own id here; a response only gets applied if it's still the
+  // most recent request by the time it resolves, so a redundant duplicate
+  // call (or a stale response from before a filter change) is discarded
+  // instead of merged.
+  const requestIdRef = useRef(0);
+
   const loadPage = useCallback(
     async (pageToLoad: number, replace: boolean) => {
+      const requestId = ++requestIdRef.current;
       if (replace) setIsLoading(true);
       else setLoadingMore(true);
       try {
@@ -229,6 +241,8 @@ export default function ExercisesScreen() {
           muscle: activeMuscleFilter?.level === 'muscle' ? activeMuscleFilter.code : undefined,
         });
 
+        if (requestId !== requestIdRef.current) return;
+
         const defaultLocationLabel = t('routineExercises.anywhere');
         const candidates = result.data.map((row) => toCandidate(row, defaultLocationLabel));
 
@@ -243,11 +257,14 @@ export default function ExercisesScreen() {
           return next;
         });
       } catch (error: any) {
+        if (requestId !== requestIdRef.current) return;
         console.error('[Exercises] Failed to load:', error?.response?.data ?? error?.message);
       } finally {
-        setIsLoading(false);
-        setLoadingMore(false);
-        setHasLoadedOnce(true);
+        if (requestId === requestIdRef.current) {
+          setIsLoading(false);
+          setLoadingMore(false);
+          setHasLoadedOnce(true);
+        }
       }
     },
     [debouncedQuery, effectiveCategoryCode, effectiveLocationCode, activeMuscleFilter, allowedCategoryCodes, allowedLocationCodes, t],
