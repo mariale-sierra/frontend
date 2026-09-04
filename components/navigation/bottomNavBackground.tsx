@@ -2,7 +2,7 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { colors, radius } from '../../constants/theme';
+import { colors } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import {
   BOTTOM_NAV_BOTTOM_INSET,
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: BOTTOM_NAV_OUTER_MARGIN,
     height: BOTTOM_NAV_HEIGHT,
-    borderRadius: radius.big,
+    borderRadius: BOTTOM_NAV_HEIGHT / 2,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: withAlpha(colors.paper, 0.08),

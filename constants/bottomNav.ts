@@ -12,12 +12,16 @@ export const BOTTOM_NAV_TAB_COUNT = 4;
  * per explicit "should read as visual siblings, not one dominant over the
  * other" request (unlike the old design, where the FAB rose well above the
  * bar via a large negative margin). */
-export const BOTTOM_NAV_HEIGHT = 52;
+export const BOTTOM_NAV_HEIGHT = 60;
 
 /** True circle at BOTTOM_NAV_HEIGHT — same "fixed-diameter circle via
  * size/2" exception this file's sibling constant (FAB_SIZE, in
  * app/(tabs)/_layout.tsx) already documents. */
 export const BOTTOM_NAV_FAB_SIZE = BOTTOM_NAV_HEIGHT;
+
+/** Compact text treatment reserved for the dense bottom-navigation labels. */
+export const BOTTOM_NAV_LABEL_FONT_SIZE = 11;
+export const BOTTOM_NAV_LABEL_LINE_HEIGHT = 14;
 
 /** Screen-edge inset for the whole nav unit (capsule + FAB) — matches the
  * previous single-capsule design's own inset (`spacing.md`). */

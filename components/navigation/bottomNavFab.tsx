@@ -2,7 +2,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { colors, radius } from '../../constants/theme';
+import { colors } from '../../constants/theme';
 import {
   BOTTOM_NAV_BOTTOM_INSET,
   BOTTOM_NAV_FAB_PRESS_SCALE,
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     bottom: BOTTOM_NAV_BOTTOM_INSET,
     width: BOTTOM_NAV_FAB_SIZE,
     height: BOTTOM_NAV_FAB_SIZE,
-    borderRadius: radius.big,
+    borderRadius: BOTTOM_NAV_FAB_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,

@@ -18,6 +18,8 @@ import {
   BOTTOM_NAV_BOTTOM_INSET,
   BOTTOM_NAV_BREATHE_SPRING,
   BOTTOM_NAV_HEIGHT,
+  BOTTOM_NAV_LABEL_FONT_SIZE,
+  BOTTOM_NAV_LABEL_LINE_HEIGHT,
   BOTTOM_NAV_PRESS_SPRING,
   BOTTOM_NAV_TAB_COUNT,
   BOTTOM_NAV_TAB_PRESS_SCALE,
@@ -275,7 +277,7 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: typography.fontFamily.medium,
     fontWeight: typography.fontWeight.medium,
-    fontSize: typography.fontSize.xs,
-    lineHeight: typography.lineHeight.xs,
+    fontSize: BOTTOM_NAV_LABEL_FONT_SIZE,
+    lineHeight: BOTTOM_NAV_LABEL_LINE_HEIGHT,
   },
 });
