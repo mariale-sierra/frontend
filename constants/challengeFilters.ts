@@ -12,3 +12,15 @@ export const CATEGORY_TO_ACTIVITY: Record<string, ActivityType> = {
   'Mind-Body': 'mindBody',
   Functional: 'functional',
 };
+
+/** Real, stable `exercise_categories.code` -> `ActivityType`, for the RepDB
+ * exercise catalog (which has real codes to key off, unlike the display-name
+ * mock above). */
+export const CATEGORY_CODE_TO_ACTIVITY: Record<string, ActivityType> = {
+  strength: 'strength',
+  cardio_intense: 'cardioIntense',
+  cardio_low: 'cardioLow',
+  flexibility: 'flexibility',
+  mind_body: 'mindBody',
+  functional: 'functional',
+};

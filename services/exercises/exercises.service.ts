@@ -80,3 +80,124 @@ export async function getExerciseCategories(): Promise<ExerciseCategory[]> {
   const response = await api.get<ExerciseCategory[]>('/exercises/categories');
   return Array.isArray(response.data) ? response.data : [];
 }
+
+// ---------------------------------------------------------------------------
+// RepDB exercise catalog — list/detail/muscle-browser endpoints
+// ---------------------------------------------------------------------------
+
+export interface ExerciseListQuery {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  category?: string;
+  location?: string;
+  region?: string;
+  muscle?: string;
+  locale?: string;
+}
+
+export interface ExerciseListRow {
+  id: number;
+  slug: string;
+  name: string;
+  imageUrl: string | null;
+  category: { code: string; name: string } | null;
+  locations: { code: string; name: string }[];
+  region: { code: string; name: string } | null;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+/** GET /exercises — paginated, filterable, multilingual-search catalog list.
+ * Always carries an image URL (RepDB exercises always have at least one
+ * asset) so a list row never has to render without a thumbnail. */
+export async function getExerciseList(query: ExerciseListQuery = {}): Promise<PaginatedResult<ExerciseListRow>> {
+  const response = await api.get<PaginatedResult<ExerciseListRow>>('/exercises', { params: query });
+  return response.data;
+}
+
+export interface ExerciseDetail {
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  instructions: string[];
+  tips: string[];
+  region: { code: string; name: string } | null;
+  categories: { code: string; name: string; isPrimary: boolean }[];
+  locations: { code: string; name: string; isPrimary: boolean }[];
+  muscles: {
+    id: number;
+    code: string;
+    name: string;
+    role: 'primary' | 'secondary';
+    region: { code: string; name: string };
+  }[];
+  assets: { type: string; url: string | null }[];
+  metrics: ExerciseMetricConfig[];
+}
+
+export async function getExerciseDetail(id: number, locale = 'en'): Promise<ExerciseDetail> {
+  const response = await api.get<ExerciseDetail>(`/exercises/${id}/full`, { params: { locale } });
+  return response.data;
+}
+
+export interface MuscleRegionSummary {
+  code: string;
+  name: string;
+  muscleCount: number;
+}
+
+export async function getMuscleRegions(): Promise<MuscleRegionSummary[]> {
+  const response = await api.get<MuscleRegionSummary[]>('/exercises/muscle-regions');
+  return response.data;
+}
+
+export interface MuscleSvgPartDto {
+  view: 'front' | 'back';
+  side: 'left' | 'right' | 'center';
+  svgPartId: string;
+  coverage: 'exact' | 'grouped' | 'partial' | 'unavailable';
+  isFallback: boolean;
+}
+
+export interface MuscleSummary {
+  id: number;
+  code: string;
+  name: string;
+  iconUrl: string | null;
+  svgParts: MuscleSvgPartDto[];
+}
+
+export async function getMusclesInRegion(regionCode: string): Promise<MuscleSummary[]> {
+  const response = await api.get<MuscleSummary[]>(`/exercises/muscle-regions/${regionCode}/muscles`);
+  return response.data;
+}
+
+export interface MuscleExerciseRow {
+  id: number;
+  slug: string;
+  name: string;
+  imageUrl: string | null;
+}
+
+export interface MuscleDetail {
+  id: number;
+  code: string;
+  name: string;
+  region: { code: string; name: string };
+  iconUrl: string | null;
+  svgParts: MuscleSvgPartDto[];
+  primaryExercises: PaginatedResult<MuscleExerciseRow>;
+  secondaryExercises: PaginatedResult<MuscleExerciseRow>;
+}
+
+export async function getMuscleDetail(code: string, page = 1, pageSize = 20): Promise<MuscleDetail> {
+  const response = await api.get<MuscleDetail>(`/exercises/muscles/${code}`, { params: { page, pageSize } });
+  return response.data;
+}
