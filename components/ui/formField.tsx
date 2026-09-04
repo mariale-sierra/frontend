@@ -6,7 +6,7 @@ import type { ComponentProps } from 'react';
 
 type InputProps = ComponentProps<typeof Input>;
 
-interface FormFieldProps extends InputProps {
+interface FormFieldProps extends Omit<InputProps, 'error'> {
   /** Validation message shown under the field; also tints the counter red. */
   error?: string | null;
 }
@@ -19,7 +19,7 @@ interface FormFieldProps extends InputProps {
 export function FormField({ error, ...inputProps }: FormFieldProps) {
   return (
     <View style={{ gap: spacing.xs }}>
-      <Input variant="filled" {...inputProps} />
+      <Input variant="filled" {...inputProps} error={Boolean(error)} />
       {error ? (
         <Text variant="caption" style={{ color: colors.error }}>
           {error}

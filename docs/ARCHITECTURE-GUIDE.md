@@ -198,7 +198,28 @@ Don't:
 - Do not silently keep or add mock data in backend-connected tasks.
 - Do not expose secrets or copy private env values into docs or code.
 
-## 14. Future AI Task Checklist
+## 14. Forms & Validation
+
+As of the form-validation refactor (2026-09-04), every text-input form that needs validation uses `react-hook-form` + `zod` + `@hookform/resolvers`, with inline field-level errors instead of `Alert.alert`. This supersedes the previous library-free `useState` + hand-written validator convention for text fields specifically — multi-step builder flows (challenge/routine creation) still keep their non-text state (pill selections, cycle day config, Zustand stores) exactly as before; only the actual text fields inside them changed.
+
+**Shared field components** (visual layer, no validation logic of its own):
+- `components/ui/input.tsx` — the base `TextInput` wrapper (`default`/`filled` variants, label, counter, multiline). Gained an `error?: boolean` prop that tints the container border `colors.error`; the border is always reserved at `borderWidth: 1.5` (transparent when there's no error) so toggling the error state never shifts layout.
+- `components/ui/formField.tsx` — label + `Input` + inline error message below the field (`error?: string | null`). The default field for most forms.
+- `components/auth/auth-input.tsx` / `components/auth/auth-form-field.tsx` — the auth-screen variant (recessed `ink` fill, `primary` focus border, `error` overrides the focus border to `colors.error`). Same error-message-below pattern as `FormField`, kept as a separate component because its visual treatment is a real, pre-existing, legitimate difference from the default field — not a duplicate.
+- `components/form/ControlledFormField.tsx` / `components/form/ControlledAuthField.tsx` — thin `react-hook-form` `Controller` adapters. They own zero validation logic themselves; they just wire a `control`/`name` pair to the visual component above (`value`, `onChangeText`, `onBlur`, and the resolved `error.message`).
+
+**Validation schemas** live in `validation/*Schemas.ts` (one file per form/feature: `authSchemas.ts`, `profileSchemas.ts`, `challengeSchemas.ts`, `routineSchemas.ts`, `spaceSchemas.ts`), each exporting a `createXSchema(t: TFunction)` factory (plus the `z.infer` type). Validation logic lives entirely in these files, not in components — passing the current `t` in means every error message is translated and stays in sync with the active language, same as any other `t()` call in the app. A screen builds its schema with `useMemo(() => createXSchema(t), [t])` and passes it to `useForm`'s `resolver: zodResolver(schema)`.
+
+**Implementing a new form:**
+1. Add a `createXSchema(t)` factory in `validation/` (or extend an existing one) using `zod`. Reuse `common.validation.required`/`common.validation.emailInvalid` for generic messages (`t('common.validation.required', { field: t('common.fields.x') })`), or add a screen-specific key next to the field's own label if the copy needs to be more specific (see `routineCreate.alerts.nameRequiredMessage`, `spaces.nameRequiredError` for precedent) — add the key to **both** `en.ts` and `es.ts`.
+2. In the screen/component: `const schema = useMemo(() => createXSchema(t), [t]); const { control, handleSubmit } = useForm({ resolver: zodResolver(schema), defaultValues: {...} });`.
+3. Render each field as `<ControlledFormField control={control} name="fieldName" label={...} .../>` (or `ControlledAuthField` on an auth screen). Don't pass `value`/`onChangeText`/`error` yourself — the controller supplies them.
+4. Wrap the submit handler in `handleSubmit(async (values) => {...})`.
+5. Keep `Alert.alert` only for errors that aren't attributable to one on-screen field — a failed network request, a server-side auth failure, a destructive confirmation, or a step whose "fields" are non-text selections (pill grids, day lists, visibility cards) rather than `Input`s.
+
+**Zustand-backed fields (multi-step builders):** when a field's value lives in a Zustand store shared across steps/screens (e.g. `challengeBuilderStore.title`, `routineBuilderStore.routineName`), `react-hook-form` still owns the validation/error state, but the store stays the source of truth for the value itself — see `hooks/useCreateChallengeFlow.ts` (`title`/`titleError`/`onBlurTitle`) and `app/challenge/routine/create.tsx` for the pattern: the field's `onChangeText` calls both the store setter and `setValue(name, value, { shouldValidate: hasExistingError })`, and validation is triggered explicitly (on blur, and again before advancing past that step) via `trigger(name)`.
+
+## 15. Future AI Task Checklist
 - Read this guide.
 - Inspect relevant files.
 - Identify the correct route.

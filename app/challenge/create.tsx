@@ -44,6 +44,8 @@ export default function CreateChallenge() {
     isSubmitting,
     hasRoutineForEveryDay,
     setTitle,
+    titleError,
+    onBlurTitle,
     setDescription,
     addCycleDay,
     removeCycleDay,
@@ -99,6 +101,8 @@ export default function CreateChallenge() {
             description={description}
             onChangeTitle={setTitle}
             onChangeDescription={setDescription}
+            titleError={titleError}
+            onBlurTitle={onBlurTitle}
           />
         );
 

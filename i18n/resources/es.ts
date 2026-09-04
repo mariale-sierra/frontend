@@ -13,6 +13,10 @@ const es = {
       username: 'Usuario',
       password: 'Contraseña',
     },
+    validation: {
+      required: '{{field}} es obligatorio',
+      emailInvalid: 'Ingresa un correo válido',
+    },
     errors: {
       genericTitle: 'Error',
       genericMessage: 'Ha ocurrido un error desconocido. Intenta nuevamente.',
@@ -229,6 +233,7 @@ const es = {
     fields: {
       challengeName: 'Nombre del reto',
       namePlaceholder: 'ej. 75 Hard Summer',
+      nameRequired: 'Ponle un nombre a tu reto',
       description: 'Descripción',
       optional: 'Opcional',
       descriptionPlaceholder: '¿De qué trata este reto? ¿Para quién es?',
@@ -454,6 +459,15 @@ const es = {
     streakDays: '{{count}} días',
     emptyStreaksMessage: 'Aún no hay rachas de amigos',
     streaksErrorMessage: 'No se pudieron cargar las rachas de amigos',
+  },
+  navigation: {
+    tabs: {
+      home: 'Inicio',
+      search: 'Buscar',
+      challenges: 'Retos',
+      profile: 'Perfil',
+    },
+    addButtonA11y: 'Registrar progreso',
   },
   streaksScreen: {
     title: 'Rachas',

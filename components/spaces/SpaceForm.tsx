@@ -1,9 +1,12 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { FormField } from '../ui/formField';
+import { ControlledFormField } from '../form/ControlledFormField';
 import { Row } from '../layout/row';
 import { colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
@@ -14,6 +17,7 @@ import { activityColors } from '../../constants/theme';
 import { findCategoryForActivityType } from '../../services/adapters/spaceAdapter';
 import type { ActivityType } from '../../types/activity';
 import type { CreateSpacePayload, SpaceVisibility } from '../../types/space';
+import { createSpaceNameSchema, type SpaceNameFormValues } from '../../validation/spaceSchemas';
 
 const ACTIVITY_TYPES: ActivityType[] = [
   'strength',
@@ -75,14 +79,19 @@ export const SpaceForm = forwardRef<SpaceFormHandle, SpaceFormProps>(function Sp
   ref,
 ) {
   const { t } = useTranslation();
-  const [name, setName] = useState(initialValues?.name ?? '');
   const [description, setDescription] = useState(initialValues?.description ?? '');
   const [visibility, setVisibility] = useState<SpaceVisibility>(initialValues?.visibility ?? 'public');
   const [activityType, setActivityType] = useState<ActivityType | null>(
     initialValues?.activityType ?? null,
   );
   const [categories, setCategories] = useState<ExerciseCategory[]>([]);
-  const [nameError, setNameError] = useState<string | null>(null);
+
+  const nameSchema = useMemo(() => createSpaceNameSchema(t), [t]);
+  const { control, handleSubmit: handleFormSubmit, watch } = useForm<SpaceNameFormValues>({
+    resolver: zodResolver(nameSchema),
+    defaultValues: { name: initialValues?.name ?? '' },
+  });
+  const name = watch('name');
 
   useEffect(() => {
     getExerciseCategories()
@@ -101,13 +110,8 @@ export const SpaceForm = forwardRef<SpaceFormHandle, SpaceFormProps>(function Sp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accentColor]);
 
-  async function handleSubmit() {
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      setNameError(t('spaces.nameRequiredError'));
-      return;
-    }
-    setNameError(null);
+  const handleSubmit = handleFormSubmit(async ({ name: submittedName }) => {
+    const trimmedName = submittedName.trim();
 
     // Real, reported bug: `categories` loads asynchronously on mount
     // (GET /exercises/categories) — a user who picks a color swatch and
@@ -136,21 +140,20 @@ export const SpaceForm = forwardRef<SpaceFormHandle, SpaceFormProps>(function Sp
       visibility,
       activityCategoryId,
     });
-  }
+  });
 
   useImperativeHandle(ref, () => ({ submit: handleSubmit }));
 
   return (
     <View style={styles.container}>
-      <FormField
+      <ControlledFormField
+        control={control}
+        name="name"
         label={t('spaces.nameLabel')}
         labelVariant="header"
         placeholder={t('spaces.namePlaceholder')}
         placeholderVariant="caption"
-        value={name}
-        onChangeText={setName}
         maxLength={150}
-        error={nameError}
       />
 
       <View>

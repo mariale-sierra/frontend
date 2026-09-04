@@ -2,6 +2,8 @@ import { router } from 'expo-router';
 import { safeBack } from '../utils/navigation';
 import { Alert } from 'react-native';
 import { useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { buildCreateChallengePayload } from '../services/adapters/index';
 import { createChallenge } from '../services/challenge/challenge.service';
 import type { ChallengeVisibility } from '../types/challenge';
@@ -11,6 +13,7 @@ import { colors, activityColors } from '../constants/theme';
 import { CATEGORY_TO_ACTIVITY, ACTIVITY_TO_CATEGORY } from '../constants/challengeFilters';
 import type { ActivityType } from '../types/activity';
 import { useTranslation } from 'react-i18next';
+import { createChallengeNameSchema, type ChallengeNameFormValues } from '../validation/challengeSchemas';
 
 export type CreateStep =
   | { kind: 'name'; title: string; description: string }
@@ -84,6 +87,31 @@ export function useCreateChallengeFlow() {
   const resetRoutineBuilder = useRoutineBuilder((state) => state.resetBuilder);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Name step's title field: the only text input in this whole multi-step
+  // flow (the other steps are pill grids / day lists / cards, not text
+  // fields — they keep the existing step-level Alert summary below). `title`
+  // itself still lives in challengeBuilderStore (shared across steps/screens
+  // in this flow); this form only owns the zod validation + inline error,
+  // synced to the store on every change.
+  const nameSchema = useMemo(() => createChallengeNameSchema(t), [t]);
+  const {
+    setValue: setTitleFormValue,
+    trigger: triggerTitleValidation,
+    formState: { errors: titleErrors },
+  } = useForm<ChallengeNameFormValues>({
+    resolver: zodResolver(nameSchema),
+    defaultValues: { title },
+  });
+
+  function handleChangeTitle(value: string) {
+    setTitle(value);
+    setTitleFormValue('title', value, { shouldValidate: Boolean(titleErrors.title) });
+  }
+
+  function handleBlurTitle() {
+    triggerTitleValidation('title');
+  }
 
   const validationLabels = useMemo<ValidationLabels>(() => ({
     challengeName: t('challengeCreate.validation.challengeName'),
@@ -231,7 +259,18 @@ export function useCreateChallengeFlow() {
     setCurrentStep(currentStep - 1);
   }
 
-  function handleNext() {
+  async function handleNext() {
+    // The name step's title is a real text field now validated inline
+    // (see nameSchema/titleErrors above) rather than through the step-level
+    // Alert — every other step stays on the Alert summary below, since none
+    // of them are text inputs the shared field system covers.
+    if (activeStep.kind === 'name') {
+      const valid = await triggerTitleValidation('title');
+      if (!valid) return;
+      setCurrentStep(Math.min(currentStep + 1, steps.length - 1));
+      return;
+    }
+
     if (activeStepErrors.length > 0) {
       const bulletList = activeStepErrors.map((item) => `• ${item}`).join('\n');
       Alert.alert(
@@ -445,7 +484,9 @@ export function useCreateChallengeFlow() {
     activeStepErrors,
     isFormComplete,
     missingConfigurationFields,
-    setTitle,
+    setTitle: handleChangeTitle,
+    titleError: titleErrors.title?.message,
+    onBlurTitle: handleBlurTitle,
     setDescription,
     addCycleDay,
     removeCycleDay,

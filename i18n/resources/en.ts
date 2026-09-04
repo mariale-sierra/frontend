@@ -13,6 +13,10 @@ const en = {
       username: 'Username',
       password: 'Password',
     },
+    validation: {
+      required: '{{field}} is required',
+      emailInvalid: 'Enter a valid email address',
+    },
     errors: {
       genericTitle: 'Error',
       genericMessage: 'An unknown error occurred. Please try again.',
@@ -232,6 +236,7 @@ const en = {
     fields: {
       challengeName: 'Challenge name',
       namePlaceholder: 'e.g. 75 Hard Summer',
+      nameRequired: 'Give your challenge a name',
       description: 'Description',
       optional: 'Optional',
       descriptionPlaceholder: 'What is this challenge about? Who is it for?',
@@ -457,6 +462,15 @@ const en = {
     streakDays: '{{count}} days',
     emptyStreaksMessage: 'No friend streaks yet',
     streaksErrorMessage: 'Could not load friend streaks',
+  },
+  navigation: {
+    tabs: {
+      home: 'Home',
+      search: 'Search',
+      challenges: 'Challenges',
+      profile: 'Profile',
+    },
+    addButtonA11y: 'Log progress',
   },
   streaksScreen: {
     title: 'Streaks',
