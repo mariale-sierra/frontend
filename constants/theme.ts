@@ -41,10 +41,10 @@ export const colors = {
   ink: '#080906',
   surface: '#191A13', // elevated surface (cards, nav, tab tracks) — confirmed correct as-is, don't touch
   paper: '#FFFFFF', // primary text on dark backgrounds / light-theme background — swapped with `primary`, see note above
-  success: '#4ADE80', // test tweak — was #37E0A4 → #1E9E70 → #4ADE80 → #76EAA0 → back to #4ADE80 (current), a brighter teal-green originally
-  warning: '#FB923C', // test tweak — was #F2A93B amber → #C9540F → #FB923C → #F9B176 → back to #FB923C (current). Still no confirmed use case — see Open Items Tracker
-  error: '#EF4444', // test tweak — was #DE2B2B → #A31E1E → #EF4444 → #F67575 → back to #EF4444 (current)
-  rest: '#B399FF', // test tweak — was #B49BFF → #B399FF → #C9B6FF → back to #B399FF (current), per explicit request each time. Rest/recovery states, day-level only — "no activity today". Never a whole challenge's identity color, even for a mostly-rest-day challenge.
+  success: '#5DCB85', // re-saturated slightly 2026-09-04, per explicit "a tiny more saturated" follow-up (was desaturated to ~43% of original S earlier the same day, now ~56%) — was #37E0A4 → #1E9E70 → #4ADE80 → #76EAA0 → #4ADE80 → #66C288 → #5DCB85 (current), a brighter teal-green originally
+  warning: '#E39454', // re-saturated slightly 2026-09-04 (S now ~72% of original, was ~60%) — was #F2A93B amber → #C9540F → #FB923C → #F9B176 → #FB923C → #D79660 → #E39454 (current). Still no confirmed use case — see Open Items Tracker
+  error: '#DA5959', // re-saturated slightly 2026-09-04 (S now ~63% of original, was ~52%) — was #DE2B2B → #A31E1E → #EF4444 → #F67575 → #EF4444 → #CF6464 → #DA5959 (current)
+  rest: '#B9A6F2', // re-saturated slightly 2026-09-04 (S now ~75% of original, was ~62%) — was #B49BFF → #B399FF → #C9B6FF → #B399FF → #BDACEC → #B9A6F2 (current), per explicit request each time. Rest/recovery states, day-level only — "no activity today". Never a whole challenge's identity color, even for a mostly-rest-day challenge.
   neutral: '#8A8C82', // paused/inactive states — positive/neutral, not a problem
 } as const;
 
@@ -67,12 +67,17 @@ export type ColorToken = keyof Colors;
  * confirmed 6:1+ contrast pairing.
  */
 export const activityColors: Record<ActivityType, string> = {
-  strength: '#DEE027', // true lime, slightly more yellow (power/alertness) — was #F2653A → #DEE027 → #E9EB54 → back to #DEE027 (current)
-  cardioIntense: '#F0BC33', // golden-orange (fast/electric energy) — was #F0B429 → #F0BC33 → #F7CF64 → back to #F0BC33 (current)
-  cardioLow: '#1BDCC4', // aqua-turquoise (steady/calm endurance) — was #5CD97A → #9ADB4F → #1BDCC4 → #43EDD7 → back to #1BDCC4 (current)
-  flexibility: '#588AEE', // electric blue (open/breath) — was #3DDBEE → #588AEE → #88ADF6 → back to #588AEE (current)
-  mindBody: '#EE58D5', // magenta-pink (calm/balance) — was #F17FE0 → #EE58D5 → #F688E4 → back to #EE58D5 (current)
-  functional: '#33BDEB', // sky blue (versatile/utility) — was #D8EE3C → #33BDEB → #63CFF3 → back to #33BDEB (current)
+  // Re-saturated slightly 2026-09-04, per explicit "a tiny more saturated"
+  // follow-up (each was desaturated to ~62% of its original saturation
+  // earlier the same day, now ~75% — still muted relative to the original,
+  // just less so). Same hue and lightness throughout both passes — every
+  // entry's own trailing hex is the prior value this replaced.
+  strength: '#C7C93E', // muted lime, slightly more yellow (power/alertness) — was #F2653A → #DEE027 → #E9EB54 → #DEE027 → #BCBD4A → #C7C93E (current)
+  cardioIntense: '#D8B14B', // muted golden-orange (fast/electric energy) — was #F0B429 → #F0BC33 → #F7CF64 → #F0BC33 → #CCAC57 → #D8B14B (current)
+  cardioLow: '#33C4B2', // muted aqua-turquoise (steady/calm endurance) — was #5CD97A → #9ADB4F → #1BDCC4 → #43EDD7 → #1BDCC4 → #40B7A8 → #33C4B2 (current)
+  flexibility: '#6B90DB', // muted electric blue (open/breath) — was #3DDBEE → #588AEE → #88ADF6 → #588AEE → #7493D2 → #6B90DB (current)
+  mindBody: '#DB6BC8', // muted magenta-pink (calm/balance) — was #F17FE0 → #EE58D5 → #F688E4 → #EE58D5 → #D274C2 → #DB6BC8 (current)
+  functional: '#4AB2D4', // muted sky blue (versatile/utility) — was #D8EE3C → #33BDEB → #63CFF3 → #33BDEB → #56ACC8 → #4AB2D4 (current)
 } as const;
 
 /**
