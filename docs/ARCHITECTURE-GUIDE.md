@@ -50,7 +50,7 @@ No `lib/` folder currently exists.
 ## 5. Routing Architecture
 Routing is Expo Router-based. The app entry in `package.json` is `expo-router/entry`; `App.tsx` and `index.ts` still exist as legacy starter files but routing is driven by `app/`.
 
-- Root layout: `app/_layout.tsx` wraps the app in `ThemeProvider` and `AuthProvider`, restores auth, redirects unauthenticated users to `/(auth)/login`, and registers stack screens.
+- Root layout: `app/_layout.tsx` wraps the app in `ThemeProvider` and `AuthProvider`, restores auth, redirects unauthenticated users to `/(auth)/login`, and registers only its direct stack children. Nested challenge routes are registered by their own layouts, so they must not be declared again from the root stack.
 - Root index: `app/index.tsx` redirects to `/(auth)/login` or `/(tabs)` based on auth state.
 - Auth group: `app/(auth)/` contains login, register, recover password, and onboarding routes.
 - Tabs group: `app/(tabs)/` contains `index`, `search`, `add`, `challenges`, and `profile`.
