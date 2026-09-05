@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
-    "start": "expo start",
+    "start": "node scripts/dev-server.js && expo start",
     "start:local": "node scripts/dev-local.js && expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
+    "start:server": "node scripts/dev-server.js && expo start",
+    "android": "node scripts/dev-server.js && expo start --android",
+    "ios": "node scripts/dev-server.js && expo start --ios",
+    "web": "node scripts/dev-server.js && expo start --web",
     "test": "jest",
     "typecheck": "tsc --noEmit"
   },
