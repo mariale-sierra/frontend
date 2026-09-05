@@ -28,7 +28,6 @@ import {
 } from '../../constants/bottomNav';
 import { settleBottomNavIndicator, useBottomNavContext } from './bottomNavContext';
 
-const AnimatedIonicons = Animated.createAnimatedComponent(Ionicons);
 const AnimatedText = Animated.createAnimatedComponent(RNText);
 
 export const BOTTOM_NAV_INACTIVE_ICON_COLOR = withAlpha(colors.paper, 0.48);
@@ -225,7 +224,6 @@ export function BottomNavTabButton({
 
     return {
       opacity: 1 - progress,
-      color: interpolateColor(progress, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]),
     };
   });
   const iconFilledStyle = useAnimatedStyle(() => {
@@ -233,7 +231,6 @@ export function BottomNavTabButton({
 
     return {
       opacity: progress,
-      color: interpolateColor(progress, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]),
     };
   });
   const labelStyle = useAnimatedStyle(() => {
@@ -278,16 +275,19 @@ export function BottomNavTabButton({
         style={[style, styles.button, pressStyle]}
       >
         <View style={styles.iconSlot} collapsable={false}>
-          <AnimatedIonicons
-            name={iconName}
-            size={BOTTOM_NAV_ICON_SIZE}
-            style={[styles.iconLayer, iconOutlineStyle]}
-          />
-          <AnimatedIonicons
-            name={iconNameFocused}
-            size={BOTTOM_NAV_ICON_SIZE}
-            style={[styles.iconLayer, iconFilledStyle]}
-          />
+          {/* `Ionicons` is a PureComponent that builds a nested Text. On
+              Fabric, animating the icon component's own style can land a
+              frame after the selector even when `activeIndex` is current.
+              Keep each glyph static and animate its native wrapper instead:
+              opacity then applies directly to a real View on the UI thread,
+              just like the selector transform, with no React render or
+              animated icon-prop reconciliation in between. */}
+          <Animated.View collapsable={false} style={[styles.iconLayer, iconOutlineStyle]}>
+            <Ionicons name={iconName} size={BOTTOM_NAV_ICON_SIZE} color={BOTTOM_NAV_INACTIVE_ICON_COLOR} />
+          </Animated.View>
+          <Animated.View collapsable={false} style={[styles.iconLayer, iconFilledStyle]}>
+            <Ionicons name={iconNameFocused} size={BOTTOM_NAV_ICON_SIZE} color={ACTIVE_ICON_COLOR} />
+          </Animated.View>
         </View>
         {BOTTOM_NAV_SHOW_LABELS ? (
           <AnimatedText style={[styles.label, labelStyle]} numberOfLines={1}>
@@ -324,6 +324,10 @@ const styles = StyleSheet.create({
   },
   iconLayer: {
     position: 'absolute',
+    width: BOTTOM_NAV_ICON_SIZE,
+    height: BOTTOM_NAV_ICON_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
     fontFamily: typography.fontFamily.medium,
