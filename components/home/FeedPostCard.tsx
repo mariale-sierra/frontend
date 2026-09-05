@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +14,12 @@ interface FeedPostCardProps {
   post: FeedPostViewModel;
 }
 
-export function FeedPostCard({ post }: FeedPostCardProps) {
+// `memo`: its only prop is `post`, which keeps a stable reference in
+// app/(tabs)/index.tsx's `feedPosts` state unless the underlying data
+// actually changes — so a re-render triggered by an unrelated section of
+// the Home screen (friend streaks resolving, the header re-rendering) no
+// longer has to re-render every already-visible feed card too.
+export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardProps) {
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -65,7 +71,7 @@ export function FeedPostCard({ post }: FeedPostCardProps) {
       </Row>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

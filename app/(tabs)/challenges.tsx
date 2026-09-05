@@ -98,7 +98,15 @@ export default function Challenges() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      setLoading(true);
+      // No `setLoading(true)` here on purpose: this effect re-runs on every
+      // re-focus (switching back to this tab), not just first mount. Doing
+      // that flip unmounted the FlatList and swapped in
+      // ChallengesContentSkeleton on every single visit — a full
+      // render-everything-from-scratch every tab switch, even though the
+      // previous list was still perfectly valid on screen. The initial
+      // `useState(true)` above still covers the real first load; every
+      // focus after that updates `mineChallenges`/`exploreChallenges` in
+      // place, in the background, once the request resolves.
       Promise.all([getMyChallenges(), getChallenges(), getMyProgressPhotos()])
         .then(([enrolledRaw, all, myPhotos]) => {
           if (!active) return;
@@ -145,9 +153,13 @@ export default function Challenges() {
     }, [t, showCompletion, shownCompletionsLoaded]),
   );
 
-  const handleCreateChallenge = () => router.push('/challenge/create');
-  const handleOpenMineChallenge = (id: string) => router.push(`/challenge/${id}/progress`);
-  const handleOpenExploreChallenge = (id: string) => router.push(`/challenge/${id}`);
+  // `useCallback` on all of these — they're read by the FlatLists'
+  // `renderItem` below, so a stable reference here lets a stable per-item
+  // renderItem avoid recreating closures (and re-rendering already-visible
+  // rows) on every unrelated re-render of this screen.
+  const handleCreateChallenge = useCallback(() => router.push('/challenge/create'), [router]);
+  const handleOpenMineChallenge = useCallback((id: string) => router.push(`/challenge/${id}/progress`), [router]);
+  const handleOpenExploreChallenge = useCallback((id: string) => router.push(`/challenge/${id}`), [router]);
   // Added 2026-08-29, per explicit request: the card's own "Add photo"
   // square shortcuts straight into logging THIS challenge's progress today,
   // instead of just opening its progress screen like the rest of the card.
@@ -155,7 +167,29 @@ export default function Challenges() {
   // directly (the same way log.tsx's challenge-picker flow lands here), so
   // this is a normal push, not something that needs to go through that
   // picker first.
-  const handleAddPhoto = (id: string) => router.push(`/(add)/metrics?challengeId=${id}`);
+  const handleAddPhoto = useCallback((id: string) => router.push(`/(add)/metrics?challengeId=${id}`), [router]);
+
+  const renderMineItem = useCallback(
+    ({ item }: { item: ChallengeMineCardViewModel }) => (
+      <View style={styles.itemWrap}>
+        <ChallengeStatusCard
+          challenge={item}
+          onPress={() => handleOpenMineChallenge(item.challengeId)}
+          onPressAddPhoto={() => handleAddPhoto(item.challengeId)}
+        />
+      </View>
+    ),
+    [handleOpenMineChallenge, handleAddPhoto],
+  );
+
+  const renderExploreItem = useCallback(
+    ({ item }: { item: ExploreChallengeViewModel }) => (
+      <View style={styles.itemWrap}>
+        <ExploreChallengeCard challenge={item} onPress={() => handleOpenExploreChallenge(item.challengeId)} />
+      </View>
+    ),
+    [handleOpenExploreChallenge],
+  );
 
   const listHeader = (
     <View style={styles.listHeader}>
@@ -218,15 +252,7 @@ export default function Challenges() {
         <FlatList
           data={mineChallenges}
           keyExtractor={(item) => item.challengeId}
-          renderItem={({ item }) => (
-            <View style={styles.itemWrap}>
-              <ChallengeStatusCard
-                challenge={item}
-                onPress={() => handleOpenMineChallenge(item.challengeId)}
-                onPressAddPhoto={() => handleAddPhoto(item.challengeId)}
-              />
-            </View>
-          )}
+          renderItem={renderMineItem}
           ListHeaderComponent={listHeader}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           ListEmptyComponent={
@@ -243,11 +269,7 @@ export default function Challenges() {
         <FlatList
           data={exploreChallenges}
           keyExtractor={(item) => item.challengeId}
-          renderItem={({ item }) => (
-            <View style={styles.itemWrap}>
-              <ExploreChallengeCard challenge={item} onPress={() => handleOpenExploreChallenge(item.challengeId)} />
-            </View>
-          )}
+          renderItem={renderExploreItem}
           ListHeaderComponent={listHeader}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
           ListEmptyComponent={

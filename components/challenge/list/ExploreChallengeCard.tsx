@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../../ui/icon';
@@ -13,7 +14,7 @@ interface ExploreChallengeCardProps {
   onPress?: () => void;
 }
 
-export function ExploreChallengeCard({ challenge, onPress }: ExploreChallengeCardProps) {
+export const ExploreChallengeCard = memo(function ExploreChallengeCard({ challenge, onPress }: ExploreChallengeCardProps) {
   const { t } = useTranslation();
   // Activity Color System v2 — falls back to colors.primary when this
   // challenge has no dominant category yet.
@@ -80,7 +81,7 @@ export function ExploreChallengeCard({ challenge, onPress }: ExploreChallengeCar
       </View>
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   pressed: {
