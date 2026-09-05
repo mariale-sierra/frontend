@@ -34,7 +34,7 @@ export function ChallengeProgressRing({ ticks, children }: ChallengeProgressRing
       {ticks.map((color, index) => {
         const angle = count > 0 ? (index / count) * 360 : 0;
         return (
-          <View key={index} style={[StyleSheet.absoluteFillObject, { transform: [{ rotate: `${angle}deg` }] }]}>
+          <View key={index} style={[StyleSheet.absoluteFill, { transform: [{ rotate: `${angle}deg` }] }]}>
             <View style={[styles.tick, { backgroundColor: color }]} />
           </View>
         );
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     borderRadius: TICK_WIDTH / 2,
   },
   center: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 2,

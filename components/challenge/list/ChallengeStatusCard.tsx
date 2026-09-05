@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../../ui/icon';
@@ -45,7 +46,7 @@ const STATE_ICON: Record<ChallengeMineCardViewModel['state'], IconName> = {
   left: 'log-out-outline',
 };
 
-export function ChallengeStatusCard({ challenge, onPress, onPressAddPhoto }: ChallengeStatusCardProps) {
+export const ChallengeStatusCard = memo(function ChallengeStatusCard({ challenge, onPress, onPressAddPhoto }: ChallengeStatusCardProps) {
   const { t } = useTranslation();
   const accentColor = getChallengeCardColor(challenge.state, challenge.dominantActivityCategory);
   const progress = challenge.totalDays > 0 ? Math.min(challenge.currentDay / challenge.totalDays, 1) : 0;
@@ -115,7 +116,7 @@ export function ChallengeStatusCard({ challenge, onPress, onPressAddPhoto }: Cha
       </View>
     </Pressable>
   );
-}
+});
 
 const SIDE_PANEL_WIDTH = 114;
 const SIDE_PANEL_HEIGHT = 152;

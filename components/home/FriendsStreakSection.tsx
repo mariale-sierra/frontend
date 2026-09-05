@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../ui/text';
@@ -18,13 +19,22 @@ function SkeletonCard() {
   return <View style={styles.skeletonCard} />;
 }
 
-export function FriendsStreakSection({
+function FriendSeparator() {
+  return <View style={styles.separator} />;
+}
+
+export const FriendsStreakSection = memo(function FriendsStreakSection({
   friends,
   loading = false,
   error = false,
   onSeeMore,
 }: FriendsStreakSectionProps) {
   const { t } = useTranslation();
+
+  const renderItem = useCallback(
+    ({ item }: { item: FriendStreakViewModel }) => <FriendStreakCard friend={item} />,
+    [],
+  );
 
   return (
     <View>
@@ -58,13 +68,13 @@ export function FriendsStreakSection({
           showsHorizontalScrollIndicator={false}
           keyExtractor={(item) => item.userId}
           contentContainerStyle={styles.listContent}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          renderItem={({ item }) => <FriendStreakCard friend={item} />}
+          ItemSeparatorComponent={FriendSeparator}
+          renderItem={renderItem}
         />
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   header: {

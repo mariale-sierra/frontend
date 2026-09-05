@@ -24,7 +24,7 @@ export function Loader({ visible, overlayStyle }: LoaderProps) {
 
 const styles = StyleSheet.create({
 	overlay: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		backgroundColor: withAlpha(colors.ink, fillOpacity.dim),
 		justifyContent: 'center',
 		alignItems: 'center',

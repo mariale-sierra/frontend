@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { StyleSheet, Text as RNText, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarButtonProps } from 'expo-router/tabs';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
@@ -28,7 +28,6 @@ import {
 } from '../../constants/bottomNav';
 import { settleBottomNavIndicator, useBottomNavContext } from './bottomNavContext';
 
-const AnimatedIonicons = Animated.createAnimatedComponent(Ionicons);
 const AnimatedText = Animated.createAnimatedComponent(RNText);
 
 export const BOTTOM_NAV_INACTIVE_ICON_COLOR = withAlpha(colors.paper, 0.48);
@@ -37,6 +36,19 @@ export const BOTTOM_NAV_INACTIVE_ICON_COLOR = withAlpha(colors.paper, 0.48);
 // bright solid fill, so a light icon reads correctly on top of it instead
 // of needing a dark one for contrast.
 const ACTIVE_ICON_COLOR = colors.paper;
+
+/**
+ * The indicator and every tab read `activeIndex` directly on the UI thread.
+ * Keep this as a worklet helper rather than an intermediate DerivedValue:
+ * Reanimated can update the selector and the icon/label styles from the same
+ * source update in one mapper pass, even while a pan writes a new position
+ * every frame.
+ */
+function getTabVisualProgress(selectorPosition: number, tabIndex: number) {
+  'worklet';
+
+  return 1 - Math.min(Math.abs(selectorPosition - tabIndex), 1);
+}
 
 function triggerLightHaptic() {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -202,17 +214,31 @@ export function BottomNavTabButton({
 
   const gesture = useMemo(() => Gesture.Race(pan, tap), [pan, tap]);
 
+  // No React state, route index, or intermediate shared value participates
+  // in these visuals. The selector's translation in BottomNavIndicator and
+  // all three tab styles below read the exact same `activeIndex` update, so
+  // the outgoing and incoming tabs blend continuously during both springs
+  // and live drags.
   const iconOutlineStyle = useAnimatedStyle(() => {
-    const progress = 1 - Math.min(Math.abs(activeIndex.value - index), 1);
-    return { opacity: 1 - progress };
+    const progress = getTabVisualProgress(activeIndex.value, index);
+
+    return {
+      opacity: 1 - progress,
+    };
   });
   const iconFilledStyle = useAnimatedStyle(() => {
-    const progress = 1 - Math.min(Math.abs(activeIndex.value - index), 1);
-    return { opacity: progress };
+    const progress = getTabVisualProgress(activeIndex.value, index);
+
+    return {
+      opacity: progress,
+    };
   });
-  const tintStyle = useAnimatedStyle(() => {
-    const progress = 1 - Math.min(Math.abs(activeIndex.value - index), 1);
-    return { color: interpolateColor(progress, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]) };
+  const labelStyle = useAnimatedStyle(() => {
+    const progress = getTabVisualProgress(activeIndex.value, index);
+
+    return {
+      color: interpolateColor(progress, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]),
+    };
   });
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: pressScale.value }] }));
 
@@ -236,22 +262,35 @@ export function BottomNavTabButton({
         }}
         onAccessibilityTap={handleAccessibilityActivate}
         testID={testID}
+        // `collapsable={false}`: this view has no paint properties of its
+        // own (no backgroundColor/border), which makes it a Fabric
+        // view-flattening candidate — and it's both a gesture target (RNGH)
+        // and the thing Reanimated mutates every frame for the press-scale
+        // style. Newer RN/Fabric versions flatten more aggressively than
+        // when this was last verified on device (RN 0.81), which can make
+        // per-frame native prop updates land inconsistently. Opting out of
+        // flattening here is the documented fix for exactly that class of
+        // symptom and changes nothing visually.
+        collapsable={false}
         style={[style, styles.button, pressStyle]}
       >
-        <View style={styles.iconSlot}>
-          <AnimatedIonicons
-            name={iconName}
-            size={BOTTOM_NAV_ICON_SIZE}
-            style={[styles.iconLayer, tintStyle, iconOutlineStyle]}
-          />
-          <AnimatedIonicons
-            name={iconNameFocused}
-            size={BOTTOM_NAV_ICON_SIZE}
-            style={[styles.iconLayer, tintStyle, iconFilledStyle]}
-          />
+        <View style={styles.iconSlot} collapsable={false}>
+          {/* `Ionicons` is a PureComponent that builds a nested Text. On
+              Fabric, animating the icon component's own style can land a
+              frame after the selector even when `activeIndex` is current.
+              Keep each glyph static and animate its native wrapper instead:
+              opacity then applies directly to a real View on the UI thread,
+              just like the selector transform, with no React render or
+              animated icon-prop reconciliation in between. */}
+          <Animated.View collapsable={false} style={[styles.iconLayer, iconOutlineStyle]}>
+            <Ionicons name={iconName} size={BOTTOM_NAV_ICON_SIZE} color={BOTTOM_NAV_INACTIVE_ICON_COLOR} />
+          </Animated.View>
+          <Animated.View collapsable={false} style={[styles.iconLayer, iconFilledStyle]}>
+            <Ionicons name={iconNameFocused} size={BOTTOM_NAV_ICON_SIZE} color={ACTIVE_ICON_COLOR} />
+          </Animated.View>
         </View>
         {BOTTOM_NAV_SHOW_LABELS ? (
-          <AnimatedText style={[styles.label, tintStyle]} numberOfLines={1}>
+          <AnimatedText style={[styles.label, labelStyle]} numberOfLines={1}>
             {label}
           </AnimatedText>
         ) : null}
@@ -285,6 +324,10 @@ const styles = StyleSheet.create({
   },
   iconLayer: {
     position: 'absolute',
+    width: BOTTOM_NAV_ICON_SIZE,
+    height: BOTTOM_NAV_ICON_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
     fontFamily: typography.fontFamily.medium,
