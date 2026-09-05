@@ -9,7 +9,6 @@ import Animated, {
   interpolateColor,
   runOnJS,
   useAnimatedStyle,
-  useDerivedValue,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
@@ -38,6 +37,19 @@ export const BOTTOM_NAV_INACTIVE_ICON_COLOR = withAlpha(colors.paper, 0.48);
 // bright solid fill, so a light icon reads correctly on top of it instead
 // of needing a dark one for contrast.
 const ACTIVE_ICON_COLOR = colors.paper;
+
+/**
+ * The indicator and every tab read `activeIndex` directly on the UI thread.
+ * Keep this as a worklet helper rather than an intermediate DerivedValue:
+ * Reanimated can update the selector and the icon/label styles from the same
+ * source update in one mapper pass, even while a pan writes a new position
+ * every frame.
+ */
+function getTabVisualProgress(selectorPosition: number, tabIndex: number) {
+  'worklet';
+
+  return 1 - Math.min(Math.abs(selectorPosition - tabIndex), 1);
+}
 
 function triggerLightHaptic() {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -203,29 +215,34 @@ export function BottomNavTabButton({
 
   const gesture = useMemo(() => Gesture.Race(pan, tap), [pan, tap]);
 
-  // Single canonical read of `activeIndex` per tab — one `useDerivedValue`
-  // instead of three separate `useAnimatedStyle`s each re-deriving the same
-  // number from scratch. Every visual property below (icon opacity ×2,
-  // icon/label color) now reads this ONE value, so there is exactly one
-  // place that can ever be "out of sync" with the selector instead of three.
-  const progress = useDerivedValue(() => 1 - Math.min(Math.abs(activeIndex.value - index), 1));
+  // No React state, route index, or intermediate shared value participates
+  // in these visuals. The selector's translation in BottomNavIndicator and
+  // all three tab styles below read the exact same `activeIndex` update, so
+  // the outgoing and incoming tabs blend continuously during both springs
+  // and live drags.
+  const iconOutlineStyle = useAnimatedStyle(() => {
+    const progress = getTabVisualProgress(activeIndex.value, index);
 
-  // Each icon layer owns ONE combined animated style (opacity + color
-  // together) instead of composing two separately-evaluated style objects
-  // (`tintStyle` + a per-layer opacity style) onto the same native view —
-  // fewer independent animated props for Reanimated/Fabric to reconcile per
-  // frame on the same view.
-  const iconOutlineStyle = useAnimatedStyle(() => ({
-    opacity: 1 - progress.value,
-    color: interpolateColor(progress.value, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]),
-  }));
-  const iconFilledStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    color: interpolateColor(progress.value, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]),
-  }));
-  const labelStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(progress.value, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]),
-  }));
+    return {
+      opacity: 1 - progress,
+      color: interpolateColor(progress, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]),
+    };
+  });
+  const iconFilledStyle = useAnimatedStyle(() => {
+    const progress = getTabVisualProgress(activeIndex.value, index);
+
+    return {
+      opacity: progress,
+      color: interpolateColor(progress, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]),
+    };
+  });
+  const labelStyle = useAnimatedStyle(() => {
+    const progress = getTabVisualProgress(activeIndex.value, index);
+
+    return {
+      color: interpolateColor(progress, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]),
+    };
+  });
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: pressScale.value }] }));
 
   function handleAccessibilityActivate() {

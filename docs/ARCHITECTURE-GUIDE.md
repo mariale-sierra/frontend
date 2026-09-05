@@ -6,10 +6,10 @@ Havit is a React Native mobile app built with Expo and Expo Router. The frontend
 The app currently includes authentication, bottom tabs, challenge discovery/detail/create flows, routine creation, workout metrics logging, uploads, profile, messaging, notifications, and onboarding routes.
 
 ## 2. Tech Stack
-- Expo `~54.0.34`
-- React `19.1.0`
-- React Native `0.81.5`
-- Expo Router `~6.0.23`
+- Expo SDK `57`
+- React `19.2.3`
+- React Native `0.86.3`
+- Expo Router `~57.0.19`
 - TypeScript `~5.9.2` with `strict: true`
 - Axios for API requests
 - `@react-native-async-storage/async-storage` for persisted auth/session values
@@ -29,8 +29,8 @@ Scripts found in `package.json`:
 - iOS: `npm run ios` runs `expo start --ios`.
 - Web: `npm run web` runs `expo start --web`.
 - Lint: no script exists.
-- Typecheck: no script exists.
-- Test: no script exists.
+- Typecheck: `npm run typecheck` (`tsc --noEmit`).
+- Test: `npm test` (Jest).
 
 ## 4. Root Folder Map
 - `app/`: Expo Router file-based routes, route groups, layouts, tabs, modals, dynamic challenge routes, auth screens, and add/metrics flows.
@@ -73,7 +73,7 @@ The navbar implementation is deliberately split across:
 - `components/navigation/bottomNavContext.tsx`: shared visual state and the UI-thread spring/stretch sequence.
 - `constants/bottomNav.ts`: geometry, icon/label/FAB presentation settings, and motion settings used by both the drawing and interactive layers.
 
-`activeIndex` is a Reanimated `SharedValue` representing only the visual position (continuous from 0 through 3), not React Navigation's discrete route state. A drag writes this value on the UI thread, bounds it to the first/last tab, then rounds and springs to the nearest slot on release before a single JS bridge requests navigation. A tap starts that same spring before navigation. Route selection is only a fallback synchronizer for external navigation; a matching route update from the gesture is ignored so it cannot reset or restart an in-flight animation. `BOTTOM_NAV_HEIGHT` is the single shared outer-height source: the capsule uses it directly and the FAB derives both width and height from it, with half-height radii so the pair remains aligned as a capsule and a true circle. Its labels use a local compact treatment so their visual weight remains balanced in the taller capsule. `BOTTOM_NAV_INDICATOR_EXTRA_WIDTH` widens the selector while recalculating the four tab slots and their outer insets from the same geometry: icons and selector centers remain aligned, including Home and Profile. It never changes route state or spring behavior.
+`activeIndex` is a Reanimated `SharedValue` representing only the visual position (continuous from 0 through 3), not React Navigation's discrete route state. The selector, outline/filled icon opacity, icon color, and label color all derive directly from that same shared value on the UI thread, with no React-state or intermediate-derived visual state. A drag writes this value on the UI thread, bounds it to the first/last tab, then rounds and springs to the nearest slot on release before a single JS bridge requests navigation. A tap starts that same spring before navigation. Route selection is only a fallback synchronizer for external navigation; a matching route update from the gesture is ignored so it cannot reset or restart an in-flight animation. Tab option render props are memoized and inactive screens use `freezeOnBlur` so opening a screen does not also reconcile inactive tab content. `BOTTOM_NAV_HEIGHT` is the single shared outer-height source: the capsule uses it directly and the FAB derives both width and height from it, with half-height radii so the pair remains aligned as a capsule and a true circle. Its labels use a local compact treatment so their visual weight remains balanced in the taller capsule. `BOTTOM_NAV_INDICATOR_EXTRA_WIDTH` widens the selector while recalculating the four tab slots and their outer insets from the same geometry: icons and selector centers remain aligned, including Home and Profile. It never changes route state or spring behavior.
 
 Do not set `tabBarStyle` or use a fully custom `tabBar`: on iOS with Fabric enabled, both have historically made the whole bar unresponsive. Preserve the existing `tabBarBackground` plus custom `tabBarButton` extension points. To change tab metadata, icons, ordering, or behavior, edit `app/(tabs)/_layout.tsx`; keep geometry and indicator motion synchronized through `constants/bottomNav.ts` rather than duplicating values.
 

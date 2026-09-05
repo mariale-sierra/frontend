@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +29,10 @@ import { getFollowingStreaks } from '../../services/follow/follow.service';
 import { toFriendStreakViewModels } from '../../services/adapters/followAdapter';
 import { colors, spacing } from '../../constants/theme';
 import { formatTodayLabel, hoursUntilMidnight } from '../../utils/time';
+
+function FeedSeparator() {
+  return <View style={styles.separator} />;
+}
 
 export default function Home() {
   const { username } = useAuth();
@@ -169,8 +173,9 @@ export default function Home() {
   // fetch happens to resolve. See HomeContentSkeleton.
   const isReady = !challengeLoading && !feedLoading && !friendStreaksLoading;
 
-  const listHeader = (
-    <View style={styles.listHeader}>
+  const listHeader = useMemo(
+    () => (
+      <View style={styles.listHeader}>
       <Row justify="space-between" align="flex-start">
         <View style={styles.greetingBlock}>
           <Text variant="caption" tone="secondary" style={styles.dateLabel}>
@@ -217,7 +222,17 @@ export default function Home() {
           <Divider style={styles.divider} />
         </>
       )}
-    </View>
+      </View>
+    ),
+    [challenges, friendStreaks, friendStreaksError, hoursLeft, isReady, router, t, username],
+  );
+  const listEmptyComponent = useMemo(
+    () => (!isReady ? null : feedError ? <FeedErrorState /> : <EmptyFeed />),
+    [feedError, isReady],
+  );
+  const listContentStyle = useMemo(
+    () => [styles.listContent, { paddingBottom: insets.bottom + spacing['2xl'] }],
+    [insets.bottom],
   );
 
   return (
@@ -227,8 +242,8 @@ export default function Home() {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ListHeaderComponent={listHeader}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        ListEmptyComponent={!isReady ? null : feedError ? <FeedErrorState /> : <EmptyFeed />}
+        ItemSeparatorComponent={FeedSeparator}
+        ListEmptyComponent={listEmptyComponent}
         ListFooterComponent={
           feedLoadingMore ? (
             <View style={styles.feedFooterLoading}>
@@ -238,11 +253,11 @@ export default function Home() {
         }
         onEndReached={loadMoreFeed}
         onEndReachedThreshold={0.4}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={5}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + spacing['2xl'] },
-        ]}
+        contentContainerStyle={listContentStyle}
       />
     </ScreenBackground>
   );

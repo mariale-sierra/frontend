@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +27,10 @@ import { storage } from '../../utils/storage';
 // so the SAME "you finished it!" popup re-appeared every day the user
 // reopened the app, for every already-won challenge, forever. Fixed 2026-08-28.
 const SHOWN_COMPLETIONS_KEY = 'shown_challenge_completions';
+
+function ChallengeListSeparator() {
+  return <View style={styles.separator} />;
+}
 
 export default function Challenges() {
   const router = useRouter();
@@ -191,8 +195,9 @@ export default function Challenges() {
     [handleOpenExploreChallenge],
   );
 
-  const listHeader = (
-    <View style={styles.listHeader}>
+  const listHeader = useMemo(
+    () => (
+      <View style={styles.listHeader}>
       <Row justify="space-between" align="center">
         <Text variant="title">{t('challenges.screenTitle')}</Text>
         {/* Bespoke pill, not the shared Button — this wireframe wants 14px
@@ -219,7 +224,9 @@ export default function Challenges() {
         mineLabel={t('challenges.mineTab')}
         exploreLabel={t('challenges.exploreTab')}
       />
-    </View>
+      </View>
+    ),
+    [handleCreateChallenge, t, view],
   );
 
   if (loading) {
@@ -254,7 +261,7 @@ export default function Challenges() {
           keyExtractor={(item) => item.challengeId}
           renderItem={renderMineItem}
           ListHeaderComponent={listHeader}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ItemSeparatorComponent={ChallengeListSeparator}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Text variant="body" tone="secondary" align="center">
@@ -263,6 +270,9 @@ export default function Challenges() {
             </View>
           }
           contentContainerStyle={styles.listContent}
+          initialNumToRender={3}
+          maxToRenderPerBatch={3}
+          windowSize={5}
           showsVerticalScrollIndicator={false}
         />
       ) : (
@@ -271,7 +281,7 @@ export default function Challenges() {
           keyExtractor={(item) => item.challengeId}
           renderItem={renderExploreItem}
           ListHeaderComponent={listHeader}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          ItemSeparatorComponent={ChallengeListSeparator}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Text variant="body" tone="secondary" align="center">
@@ -280,6 +290,9 @@ export default function Challenges() {
             </View>
           }
           contentContainerStyle={styles.listContent}
+          initialNumToRender={3}
+          maxToRenderPerBatch={3}
+          windowSize={5}
           showsVerticalScrollIndicator={false}
         />
       )}
