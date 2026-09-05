@@ -9,6 +9,7 @@ import Animated, {
   interpolateColor,
   runOnJS,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
@@ -202,18 +203,29 @@ export function BottomNavTabButton({
 
   const gesture = useMemo(() => Gesture.Race(pan, tap), [pan, tap]);
 
-  const iconOutlineStyle = useAnimatedStyle(() => {
-    const progress = 1 - Math.min(Math.abs(activeIndex.value - index), 1);
-    return { opacity: 1 - progress };
-  });
-  const iconFilledStyle = useAnimatedStyle(() => {
-    const progress = 1 - Math.min(Math.abs(activeIndex.value - index), 1);
-    return { opacity: progress };
-  });
-  const tintStyle = useAnimatedStyle(() => {
-    const progress = 1 - Math.min(Math.abs(activeIndex.value - index), 1);
-    return { color: interpolateColor(progress, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]) };
-  });
+  // Single canonical read of `activeIndex` per tab — one `useDerivedValue`
+  // instead of three separate `useAnimatedStyle`s each re-deriving the same
+  // number from scratch. Every visual property below (icon opacity ×2,
+  // icon/label color) now reads this ONE value, so there is exactly one
+  // place that can ever be "out of sync" with the selector instead of three.
+  const progress = useDerivedValue(() => 1 - Math.min(Math.abs(activeIndex.value - index), 1));
+
+  // Each icon layer owns ONE combined animated style (opacity + color
+  // together) instead of composing two separately-evaluated style objects
+  // (`tintStyle` + a per-layer opacity style) onto the same native view —
+  // fewer independent animated props for Reanimated/Fabric to reconcile per
+  // frame on the same view.
+  const iconOutlineStyle = useAnimatedStyle(() => ({
+    opacity: 1 - progress.value,
+    color: interpolateColor(progress.value, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]),
+  }));
+  const iconFilledStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    color: interpolateColor(progress.value, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]),
+  }));
+  const labelStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(progress.value, [0, 1], [BOTTOM_NAV_INACTIVE_ICON_COLOR, ACTIVE_ICON_COLOR]),
+  }));
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: pressScale.value }] }));
 
   function handleAccessibilityActivate() {
@@ -252,16 +264,16 @@ export function BottomNavTabButton({
           <AnimatedIonicons
             name={iconName}
             size={BOTTOM_NAV_ICON_SIZE}
-            style={[styles.iconLayer, tintStyle, iconOutlineStyle]}
+            style={[styles.iconLayer, iconOutlineStyle]}
           />
           <AnimatedIonicons
             name={iconNameFocused}
             size={BOTTOM_NAV_ICON_SIZE}
-            style={[styles.iconLayer, tintStyle, iconFilledStyle]}
+            style={[styles.iconLayer, iconFilledStyle]}
           />
         </View>
         {BOTTOM_NAV_SHOW_LABELS ? (
-          <AnimatedText style={[styles.label, tintStyle]} numberOfLines={1}>
+          <AnimatedText style={[styles.label, labelStyle]} numberOfLines={1}>
             {label}
           </AnimatedText>
         ) : null}
