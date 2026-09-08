@@ -454,11 +454,22 @@ const es = {
     emptyFeedMessage: 'Aún no hay publicaciones. ¡Sé el primero en compartir!',
     feedErrorMessage: 'No se pudo cargar el feed. Intenta de nuevo más tarde.',
     sendMessage: 'Enviar un mensaje',
+    reactionA11y: 'Reaccionar a esta publicación',
+    commentsA11y: 'Ver comentarios',
     streaksTitle: 'Rachas de hoy',
     seeMore: 'Ver todo',
     streakDays: '{{count}} días',
     emptyStreaksMessage: 'Aún no hay rachas de amigos',
     streaksErrorMessage: 'No se pudieron cargar las rachas de amigos',
+  },
+  comments: {
+    title: 'Comentarios',
+    placeholder: 'Agrega un comentario...',
+    emptyMessage: 'Aún no hay comentarios',
+    errorMessage: 'No se pudieron cargar los comentarios. Intenta de nuevo más tarde.',
+    deleteConfirmTitle: '¿Eliminar este comentario?',
+    deleteConfirmCta: 'Eliminar',
+    cancelCta: 'Cancelar',
   },
   navigation: {
     tabs: {

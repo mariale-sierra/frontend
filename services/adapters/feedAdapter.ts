@@ -16,6 +16,8 @@ export interface FeedPostViewModel {
   caption?: string;
   postedAt: string;
   likesCount: number;
+  likedByMe: boolean;
+  commentsCount: number;
 }
 
 const ACTIVITY_MAP: Record<string, ActivityType> = {
@@ -46,6 +48,8 @@ export function toFeedPostViewModel(post: FeedPostContract): FeedPostViewModel {
     caption: post.caption,
     postedAt: formatRelativeTime(post.posted_at),
     likesCount: post.likes_count ?? 0,
+    likedByMe: post.liked_by_me ?? false,
+    commentsCount: post.comments_count ?? 0,
   };
 }
 
