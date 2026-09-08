@@ -14,7 +14,7 @@ export function useConversations() {
   const load = useCallback(() => {
     setLoading(true);
     setError(false);
-    getConversations()
+    return getConversations()
       .then(setConversations)
       .catch(() => setError(true))
       .finally(() => setLoading(false));

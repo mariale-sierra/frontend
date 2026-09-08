@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { Row } from '../../components/layout/row';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
@@ -97,6 +98,58 @@ export default function Challenges() {
     };
   }, []);
 
+  // Shared fetch used both by the focus-refetch effect below and by
+  // pull-to-refresh — `isActive` mirrors the effect's own `active` closure
+  // (defaults to "always active" for the pull-to-refresh caller, which only
+  // ever runs while this screen is mounted and focused).
+  const loadChallenges = useCallback(
+    async (isActive: () => boolean = () => true) => {
+      try {
+        const [enrolledRaw, all, myPhotos] = await Promise.all([
+          getMyChallenges(),
+          getChallenges(),
+          getMyProgressPhotos(),
+        ]);
+        if (!isActive()) return;
+        const enrolled = enrolledRaw ?? [];
+        const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(myPhotos ?? []);
+        const mineViewModels = toChallengeMineViewModels(enrolled, latestPhotoByChallengeId);
+        setMineChallenges(mineViewModels);
+
+        if (shownCompletionsLoaded) {
+          for (const challenge of mineViewModels) {
+            if (challenge.state === 'won' && !shownCompletions.current.has(challenge.challengeId)) {
+              shownCompletions.current.add(challenge.challengeId);
+              storage.setItem(SHOWN_COMPLETIONS_KEY, JSON.stringify(Array.from(shownCompletions.current)));
+              showCompletion({
+                challengeId: challenge.challengeId,
+                challengeName: challenge.title,
+                totalDays: challenge.totalDays,
+              });
+            }
+          }
+        }
+
+        // GET /challenges (getChallenges) returns every challenge, joined
+        // or not — Explore is meant to be "what you could join," so any
+        // challenge already in Mine (joined, or created — creating one
+        // enrolls you immediately) has to be excluded here, same filter
+        // app/(tabs)/search.tsx already does. Without this, a challenge
+        // you're already in showed up in both tabs at once.
+        const enrolledIds = new Set(enrolled.map((c) => String(c.id)));
+        const explorable = (all ?? []).filter((c) => !enrolledIds.has(String(c.id)));
+        setExploreChallenges(toExploreChallengeViewModels(explorable));
+        setError(null);
+      } catch (err) {
+        if (!isActive()) return;
+        const e = err as { response?: { status?: number; data?: unknown }; message?: string };
+        console.error('[challenges] load failed:', e?.response?.status, e?.response?.data ?? e?.message ?? e);
+        setError(t('challenges.loadError'));
+      }
+    },
+    [t, showCompletion, shownCompletionsLoaded],
+  );
+
   // Refetches on focus (not just on mount) so joining/leaving/completing a
   // challenge elsewhere and coming back here shows the current state.
   useFocusEffect(
@@ -111,51 +164,19 @@ export default function Challenges() {
       // `useState(true)` above still covers the real first load; every
       // focus after that updates `mineChallenges`/`exploreChallenges` in
       // place, in the background, once the request resolves.
-      Promise.all([getMyChallenges(), getChallenges(), getMyProgressPhotos()])
-        .then(([enrolledRaw, all, myPhotos]) => {
-          if (!active) return;
-          const enrolled = enrolledRaw ?? [];
-          const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(myPhotos ?? []);
-          const mineViewModels = toChallengeMineViewModels(enrolled, latestPhotoByChallengeId);
-          setMineChallenges(mineViewModels);
-
-          if (shownCompletionsLoaded) {
-            for (const challenge of mineViewModels) {
-              if (challenge.state === 'won' && !shownCompletions.current.has(challenge.challengeId)) {
-                shownCompletions.current.add(challenge.challengeId);
-                storage.setItem(SHOWN_COMPLETIONS_KEY, JSON.stringify(Array.from(shownCompletions.current)));
-                showCompletion({
-                  challengeId: challenge.challengeId,
-                  challengeName: challenge.title,
-                  totalDays: challenge.totalDays,
-                });
-              }
-            }
-          }
-
-          // GET /challenges (getChallenges) returns every challenge, joined
-          // or not — Explore is meant to be "what you could join," so any
-          // challenge already in Mine (joined, or created — creating one
-          // enrolls you immediately) has to be excluded here, same filter
-          // app/(tabs)/search.tsx already does. Without this, a challenge
-          // you're already in showed up in both tabs at once.
-          const enrolledIds = new Set(enrolled.map((c) => String(c.id)));
-          const explorable = (all ?? []).filter((c) => !enrolledIds.has(String(c.id)));
-          setExploreChallenges(toExploreChallengeViewModels(explorable));
-          setError(null);
-        })
-        .catch((err) => {
-          console.error('[challenges] load failed:', err?.response?.status, err?.response?.data ?? err?.message ?? err);
-          if (active) setError(t('challenges.loadError'));
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
+      loadChallenges(() => active).finally(() => {
+        if (active) setLoading(false);
+      });
       return () => {
         active = false;
       };
-    }, [t, showCompletion, shownCompletionsLoaded]),
+    }, [loadChallenges]),
   );
+
+  // Pull-to-refresh: same fetch as the focus effect above, minus the
+  // `loading` flag flip — by the time the user can pull to refresh the
+  // initial skeleton is long gone, RefreshControl's own spinner is enough.
+  const { refreshing, onRefresh } = usePullToRefresh(useCallback(() => loadChallenges(), [loadChallenges]));
 
   // `useCallback` on all of these — they're read by the FlatLists'
   // `renderItem` below, so a stable reference here lets a stable per-item
@@ -274,6 +295,7 @@ export default function Challenges() {
           maxToRenderPerBatch={3}
           windowSize={5}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         />
       ) : (
         <FlatList
@@ -294,6 +316,7 @@ export default function Challenges() {
           maxToRenderPerBatch={3}
           windowSize={5}
           showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         />
       )}
 

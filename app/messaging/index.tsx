@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { FlatList, Modal, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -21,6 +21,7 @@ import { useSpaces } from '../../hooks/useSpaces';
 import { useSpaceThreadPreviews } from '../../hooks/useSpaceThreadPreviews';
 import type { SpaceThreadPreview } from '../../hooks/useSpaceThreadPreviews';
 import { useAuth } from '../../hooks/useAuth';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { joinSpace } from '../../services/spaces/spaces.service';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
@@ -108,6 +109,15 @@ export default function Messaging() {
     }));
     return [...conversationRows, ...spaceRows].sort((a, b) => b.timestamp - a.timestamp);
   }, [filteredConversations, filteredSpaceThreadPreviews]);
+
+  // reload()/reloadSpaces() both flip their own `loading` flag true, which
+  // also briefly swaps the list to its skeleton (same as this screen already
+  // does on every tab re-focus, via useConversations/useSpaces' own
+  // useFocusEffect) — accepted here as consistent with that existing
+  // behavior, rather than adding a silent-reload mode purely for this.
+  const { refreshing, onRefresh } = usePullToRefresh(
+    useCallback(() => Promise.all([reload(), reloadSpaces()]), [reload, reloadSpaces]),
+  );
 
   const messagesLoading = loading || (joinedSpaces.length > 0 && spaceThreadsLoading);
   // One shared flag for BOTH sections — real, reported "loads by parts"
@@ -234,6 +244,7 @@ export default function Messaging() {
             />
           )
         }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         ItemSeparatorComponent={() => <Divider marginVertical="xs" />}
         ListEmptyComponent={
           initialLoading ? (

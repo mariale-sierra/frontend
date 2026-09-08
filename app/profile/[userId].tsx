@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -11,6 +11,7 @@ import type { PublicProfileContract } from '../../types/user';
 import { ProfileHeader, FollowButton, UserPostsGrid, ProfilePhotoModal } from '../../components/profile';
 import type { ChallengePhoto } from '../../types/challenge';
 import { useAuth } from '../../hooks/useAuth';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 /**
  * Another user's profile — GET /users/:userId/profile plus their visible
@@ -78,6 +79,23 @@ export default function UserProfile() {
     }
   }, [isOwnProfile, router]);
 
+  // UserPostsGrid fetches its own photos internally — bumping this signal is
+  // the only way this screen's pull-to-refresh can also force it to refetch,
+  // alongside this screen's own profile data.
+  const [postsRefreshSignal, setPostsRefreshSignal] = useState(0);
+  const refreshUserProfile = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const data = await getPublicProfile(userId);
+      setProfile(data);
+      setError(false);
+    } catch {
+      setError(true);
+    }
+    setPostsRefreshSignal((n) => n + 1);
+  }, [userId]);
+  const { refreshing, onRefresh } = usePullToRefresh(refreshUserProfile);
+
   if (isOwnProfile) {
     return null;
   }
@@ -87,7 +105,10 @@ export default function UserProfile() {
       <View style={styles.header}>
         <BackButton />
       </View>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+      >
         {loading ? (
           <View style={styles.center}>
             <ActivityIndicator color={colors.primary} />
@@ -125,7 +146,7 @@ export default function UserProfile() {
                 </View>
               }
             />
-            <UserPostsGrid userId={profile.id} onPhotoPress={setSelectedPhoto} />
+            <UserPostsGrid userId={profile.id} onPhotoPress={setSelectedPhoto} refreshSignal={postsRefreshSignal} />
           </>
         )}
       </ScrollView>
