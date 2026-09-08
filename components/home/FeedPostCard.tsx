@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useRef, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -33,8 +33,13 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
   const [liked, setLiked] = useState(post.likedByMe);
   const [likesCount, setLikesCount] = useState(post.likesCount);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount);
-  const [reacting, setReacting] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  // A ref, not state, for the in-flight guard below — two taps fired back to
+  // back (before React has committed a re-render) would both read the same
+  // stale `false` from a state variable's closure, letting both through.
+  // `useRef` updates are visible immediately, synchronously, so the second
+  // tap's check always sees the first tap's write.
+  const reactingRef = useRef(false);
 
   // Fixed 2026-08-31, real bug — was `router.push(\`/messaging/${post.userId}\`)`,
   // treating the OTHER user's id as if it were a conversationId (the
@@ -49,12 +54,12 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
 
   // Optimistic toggle, reverted on failure — the global axios interceptor
   // already surfaces an error toast, so the catch here only has to restore
-  // the pre-tap state. `reacting` guards against a double-tap firing two
+  // the pre-tap state. `reactingRef` guards against a double-tap firing two
   // in-flight requests for opposite actions before the first resolves.
   async function handleToggleReaction() {
-    if (reacting) return;
+    if (reactingRef.current) return;
+    reactingRef.current = true;
     const wasLiked = liked;
-    setReacting(true);
     setLiked(!wasLiked);
     setLikesCount((count) => count + (wasLiked ? -1 : 1));
     try {
@@ -67,7 +72,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
       setLiked(wasLiked);
       setLikesCount((count) => count + (wasLiked ? 1 : -1));
     } finally {
-      setReacting(false);
+      reactingRef.current = false;
     }
   }
 
