@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
@@ -8,6 +8,11 @@ import type { ChallengePhoto } from '../../types/challenge';
 interface PostsGridProps {
   view: 'posts' | 'photos';
   onPhotoPress?: (photo: ChallengePhoto) => void;
+  /** Bumped by the parent screen's pull-to-refresh (a value change, any
+   * value) to force a refetch outside the normal focus-effect cycle — this
+   * component owns its own fetch, so a parent-level refresh has no other way
+   * to reach it. */
+  refreshSignal?: number;
 }
 
 function haveSamePhotos(current: ChallengePhoto[], next: ChallengePhoto[]) {
@@ -34,7 +39,7 @@ function haveSamePhotos(current: ChallengePhoto[], next: ChallengePhoto[]) {
   );
 }
 
-export const PostsGrid = memo(function PostsGrid({ view, onPhotoPress }: PostsGridProps) {
+export const PostsGrid = memo(function PostsGrid({ view, onPhotoPress, refreshSignal }: PostsGridProps) {
   const { t } = useTranslation();
   const [photos, setPhotos] = useState<ChallengePhoto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +74,24 @@ export const PostsGrid = memo(function PostsGrid({ view, onPhotoPress }: PostsGr
       };
     }, []),
   );
+
+  // Parent's pull-to-refresh — outside the normal focus cycle above, so it
+  // needs its own effect. No loading-flag flip here either, same reasoning.
+  useEffect(() => {
+    if (refreshSignal === undefined) return;
+    let active = true;
+    getMyProgressPhotos()
+      .then((data) => {
+        if (active) setPhotos((current) => (haveSamePhotos(current, data) ? current : data));
+      })
+      .catch(() => {
+        // Leave the currently displayed photos as-is on a failed refresh.
+      });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshSignal]);
 
   // 'posts' = only photos visible to followers; 'photos' = everything,
   // including private ones (only the owner ever hits this screen).

@@ -99,6 +99,7 @@ Future services should reuse `services/api.ts`, avoid creating another Axios cli
 - `hooks/useCreateChallengeFlow.ts`: orchestrates challenge creation state, validation, payload building, backend submit, and navigation.
 - `hooks/useMetricsScreen.ts`: coordinates enrolled challenges, today's routine, workout log creation, metric submit, loading/error state, and navigation.
 - `hooks/useFilteredExercises.ts`: filters exercise candidates for routine exercise selection.
+- `hooks/usePullToRefresh.ts`: generic `{ refreshing, onRefresh }` pair for a `RefreshControl` — wraps a screen's own reload function with the refreshing-flag toggle so each screen doesn't hand-roll it. Used by Home, Challenges, Profile (own/other), and Messaging; a component that fetches its own data internally (e.g. `PostsGrid`, `UserPostsGrid`) instead takes a `refreshSignal` prop the parent screen bumps on refresh.
 - Zustand stores in `store/`: hold multi-screen local builder state for challenges, routines, and metrics.
 
 Prefer hooks for screens that coordinate services, stores, translations, routing, alerts, loading, and errors. Direct service calls are acceptable in small screens, but shared or multi-step behavior should move into a hook or store following existing patterns.

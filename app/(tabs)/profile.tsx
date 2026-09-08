@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -14,6 +14,7 @@ import type { PostsView } from '../../components/profile';
 import type { ChallengePhoto } from '../../types/challenge';
 import { Row } from '../../components/layout/row';
 import { useAuth } from '../../hooks/useAuth';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 /**
  * Profile tab. Structured so future sections (followers, stats) can slot in
@@ -74,6 +75,19 @@ export default function Profile() {
     }, []),
   );
 
+  // PostsGrid fetches its own photos internally (see components/profile/PostsGrid.tsx)
+  // — bumping this signal is the only way this screen's pull-to-refresh can
+  // also force it to refetch, alongside this screen's own profile/invites data.
+  const [postsRefreshSignal, setPostsRefreshSignal] = useState(0);
+  const refreshProfile = useCallback(async () => {
+    await Promise.allSettled([
+      getMyProfile().then(setProfile),
+      getPendingInvites().then((invites) => setHasPendingInvites(invites.length > 0)),
+    ]);
+    setPostsRefreshSignal((n) => n + 1);
+  }, []);
+  const { refreshing, onRefresh } = usePullToRefresh(refreshProfile);
+
   const displayName = profile?.display_name ?? sessionUsername ?? 'User name';
   const username = profile?.username ?? sessionUsername ?? 'username';
 
@@ -112,7 +126,10 @@ export default function Profile() {
   return (
     <ScreenBackground variant="default">
       {topBar}
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+      >
         {loading ? (
           <ProfileContentSkeleton />
         ) : error ? (
@@ -133,7 +150,7 @@ export default function Profile() {
               onPressFollowing={() => router.push('/profile/following')}
             />
             <PostsViewToggle view={view} onViewChange={setView} />
-            <PostsGrid view={view} onPhotoPress={setSelectedPhoto} />
+            <PostsGrid view={view} onPhotoPress={setSelectedPhoto} refreshSignal={postsRefreshSignal} />
             <Pressable onPress={() => router.push('/profile/about')} style={styles.aboutLink}>
               <Text variant="caption" tone="secondary">{t('about.title')}</Text>
             </Pressable>

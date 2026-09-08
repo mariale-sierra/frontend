@@ -11,7 +11,7 @@ export function useSpaces() {
   const load = useCallback(() => {
     setLoading(true);
     setError(false);
-    getSpaces()
+    return getSpaces()
       .then(setSpaces)
       .catch(() => setError(true))
       .finally(() => setLoading(false));

@@ -1,9 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
+import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Divider } from '../../components/ui/divider';
 import { Icon } from '../../components/ui/icon';
@@ -144,6 +145,43 @@ export default function Home() {
     }, []),
   );
 
+  // Pull-to-refresh: re-fetches all three sections at once, independently of
+  // each other (one failing doesn't block the other two from updating) —
+  // same per-section error flags the focus effects above already maintain.
+  // Doesn't touch `challengeLoading`/`feedLoading`/`friendStreaksLoading` on
+  // purpose: those gate the full-screen skeleton (see `isReady` below), and
+  // by the time the user can pull to refresh that skeleton is long gone —
+  // RefreshControl's own spinner is the only loading indicator this needs.
+  const refreshHome = useCallback(async () => {
+    const [challengesResult, feedResult, streaksResult] = await Promise.allSettled([
+      Promise.all([getMyChallenges(), getMyProgressPhotos()]),
+      getHomeFeed(),
+      getFollowingStreaks(),
+    ]);
+
+    if (challengesResult.status === 'fulfilled') {
+      const [data, myPhotos] = challengesResult.value;
+      const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(myPhotos ?? []);
+      setChallenges(getHomeChallengesSorted(data ?? [], latestPhotoByChallengeId));
+    }
+
+    if (feedResult.status === 'fulfilled') {
+      setFeedPosts(toFeedPostViewModels(feedResult.value.posts));
+      setFeedNextCursor(feedResult.value.nextCursor);
+      setFeedError(false);
+    } else {
+      setFeedError(true);
+    }
+
+    if (streaksResult.status === 'fulfilled') {
+      setFriendStreaks(toFriendStreakViewModels(streaksResult.value));
+      setFriendStreaksError(false);
+    } else {
+      setFriendStreaksError(true);
+    }
+  }, []);
+  const { refreshing, onRefresh } = usePullToRefresh(refreshHome);
+
   const loadMoreFeed = useCallback(() => {
     if (feedLoadingMore || feedLoading || !feedNextCursor) return;
     setFeedLoadingMore(true);
@@ -258,6 +296,7 @@ export default function Home() {
         windowSize={5}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={listContentStyle}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       />
     </ScreenBackground>
   );
