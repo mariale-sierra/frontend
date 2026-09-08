@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     borderColor: withAlpha(colors.paper, 0.08),
   },
   navCapsuleTint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: withAlpha(colors.surface, 0.72),
   },
 });

@@ -71,7 +71,7 @@ export function BottomSheetModal({ visible, onClose, children, maxHeight = '70%'
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: withAlpha('#000000', 0.5),
   },
   sheet: {

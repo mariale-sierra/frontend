@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { Tabs, useRouter } from "expo-router";
+import type { BottomTabBarButtonProps } from 'expo-router/tabs';
 import { useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { Ionicons } from "@expo/vector-icons";
@@ -83,6 +84,8 @@ const ROUTE_INDEX: Record<string, number> = {
   profile: 3,
 };
 
+const renderBottomNavBackground = () => <BottomNavBackground />;
+
 export default function TabsLayout() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -121,84 +124,118 @@ export default function TabsLayout() {
     }),
     [],
   );
+  const handleFabPress = useCallback(() => router.push('/log'), [router]);
+
+  // Keep the navigator's option and render-prop identities stable across a
+  // route change. React Navigation otherwise replaces all four tab button
+  // descriptors while a new screen mounts, needlessly asking the navbar to
+  // reconcile its gesture targets in the same frame as the selector spring.
+  const screenOptions = useMemo(
+    () => ({
+      headerShown: false,
+      tabBarShowLabel: false,
+      tabBarBackground: renderBottomNavBackground,
+      // Inactive tabs can still receive context/state updates while another
+      // tab is being opened. Suspending their React renders keeps that work
+      // away from the active tab and the UI-thread navbar animation.
+      freezeOnBlur: true,
+    }),
+    [],
+  );
+  const homeOptions = useMemo(
+    () => ({
+      title: 'Home',
+      tabBarItemStyle: firstTabItemStyle,
+      tabBarButton: (props: BottomTabBarButtonProps) => (
+        <BottomNavTabButton
+          {...props}
+          index={ROUTE_INDEX.index}
+          tabSlotWidth={tabSlotWidth}
+          iconName={ROUTE_ICON.index}
+          iconNameFocused={ROUTE_ICON_FOCUSED.index}
+          labelKey={ROUTE_LABEL_KEY.index}
+        />
+      ),
+    }),
+    [firstTabItemStyle, tabSlotWidth],
+  );
+  const searchOptions = useMemo(
+    () => ({
+      title: 'Search',
+      tabBarItemStyle: tabItemStyle,
+      tabBarButton: (props: BottomTabBarButtonProps) => (
+        <BottomNavTabButton
+          {...props}
+          index={ROUTE_INDEX.search}
+          tabSlotWidth={tabSlotWidth}
+          iconName={ROUTE_ICON.search}
+          iconNameFocused={ROUTE_ICON_FOCUSED.search}
+          labelKey={ROUTE_LABEL_KEY.search}
+        />
+      ),
+    }),
+    [tabItemStyle, tabSlotWidth],
+  );
+  const challengesOptions = useMemo(
+    () => ({
+      title: 'Challenges',
+      tabBarItemStyle: tabItemStyle,
+      tabBarButton: (props: BottomTabBarButtonProps) => (
+        <BottomNavTabButton
+          {...props}
+          index={ROUTE_INDEX.challenges}
+          tabSlotWidth={tabSlotWidth}
+          iconName={ROUTE_ICON.challenges}
+          iconNameFocused={ROUTE_ICON_FOCUSED.challenges}
+          labelKey={ROUTE_LABEL_KEY.challenges}
+        />
+      ),
+    }),
+    [tabItemStyle, tabSlotWidth],
+  );
+  const profileOptions = useMemo(
+    () => ({
+      title: 'Profile',
+      tabBarItemStyle: lastTabItemStyle,
+      tabBarButton: (props: BottomTabBarButtonProps) => (
+        <BottomNavTabButton
+          {...props}
+          index={ROUTE_INDEX.profile}
+          tabSlotWidth={tabSlotWidth}
+          iconName={ROUTE_ICON.profile}
+          iconNameFocused={ROUTE_ICON_FOCUSED.profile}
+          labelKey={ROUTE_LABEL_KEY.profile}
+        />
+      ),
+    }),
+    [lastTabItemStyle, tabSlotWidth],
+  );
+  const addOptions = useMemo(
+    () => ({
+      title: 'Add',
+      tabBarItemStyle: fabItemStyle,
+      tabBarButton: () => (
+        <BottomNavFab onPress={handleFabPress} accessibilityLabel={t('navigation.addButtonA11y')} />
+      ),
+    }),
+    [fabItemStyle, handleFabPress, t],
+  );
+  const preventAddTabPress = useMemo(
+    () => ({
+      tabPress: (e: { preventDefault: () => void }) => {
+        e.preventDefault();
+      },
+    }),
+    [],
+  );
 
   return (
     <BottomNavProvider initialIndex={0}>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarShowLabel: false,
-          tabBarBackground: () => <BottomNavBackground />,
-        }}
-      >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: "Home",
-            tabBarItemStyle: firstTabItemStyle,
-            tabBarButton: (props) => (
-              <BottomNavTabButton
-                {...props}
-                index={ROUTE_INDEX.index}
-                tabSlotWidth={tabSlotWidth}
-                iconName={ROUTE_ICON.index}
-                iconNameFocused={ROUTE_ICON_FOCUSED.index}
-                labelKey={ROUTE_LABEL_KEY.index}
-              />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="search"
-          options={{
-            title: "Search",
-            tabBarItemStyle: tabItemStyle,
-            tabBarButton: (props) => (
-              <BottomNavTabButton
-                {...props}
-                index={ROUTE_INDEX.search}
-                tabSlotWidth={tabSlotWidth}
-                iconName={ROUTE_ICON.search}
-                iconNameFocused={ROUTE_ICON_FOCUSED.search}
-                labelKey={ROUTE_LABEL_KEY.search}
-              />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="challenges"
-          options={{
-            title: "Challenges",
-            tabBarItemStyle: tabItemStyle,
-            tabBarButton: (props) => (
-              <BottomNavTabButton
-                {...props}
-                index={ROUTE_INDEX.challenges}
-                tabSlotWidth={tabSlotWidth}
-                iconName={ROUTE_ICON.challenges}
-                iconNameFocused={ROUTE_ICON_FOCUSED.challenges}
-                labelKey={ROUTE_LABEL_KEY.challenges}
-              />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="profile"
-          options={{
-            title: "Profile",
-            tabBarItemStyle: lastTabItemStyle,
-            tabBarButton: (props) => (
-              <BottomNavTabButton
-                {...props}
-                index={ROUTE_INDEX.profile}
-                tabSlotWidth={tabSlotWidth}
-                iconName={ROUTE_ICON.profile}
-                iconNameFocused={ROUTE_ICON_FOCUSED.profile}
-                labelKey={ROUTE_LABEL_KEY.profile}
-              />
-            ),
-          }}
-        />
+      <Tabs screenOptions={screenOptions}>
+        <Tabs.Screen name="index" options={homeOptions} />
+        <Tabs.Screen name="search" options={searchOptions} />
+        <Tabs.Screen name="challenges" options={challengesOptions} />
+        <Tabs.Screen name="profile" options={profileOptions} />
 
         {/* FAB — not a real tab destination, and (per this redesign) no
             longer positioned between other tabs: it's declared LAST so it
@@ -209,18 +246,8 @@ export default function TabsLayout() {
             /log, exactly as before; only where/how it's drawn changed. */}
         <Tabs.Screen
           name="add"
-          options={{
-            title: "Add",
-            tabBarItemStyle: fabItemStyle,
-            tabBarButton: () => (
-              <BottomNavFab onPress={() => router.push("/log")} accessibilityLabel={t("navigation.addButtonA11y")} />
-            ),
-          }}
-          listeners={{
-            tabPress: (e) => {
-              e.preventDefault();
-            },
-          }}
+          options={addOptions}
+          listeners={preventAddTabPress}
         />
       </Tabs>
     </BottomNavProvider>

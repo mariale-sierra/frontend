@@ -120,7 +120,7 @@ export default function SelectRoutineScreen() {
 
   return (
     <Animated.View style={[styles.screen, { backgroundColor: screenBg }]}>
-      <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: workoutGlowOpacity }]} pointerEvents="none">
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: workoutGlowOpacity }]} pointerEvents="none">
         <Svg width="100%" height="100%">
           <Defs>
             <RadialGradient id="glowPrimary" cx="15%" cy="0%" r="85%">
@@ -139,7 +139,7 @@ export default function SelectRoutineScreen() {
         </Svg>
       </Animated.View>
 
-      <Animated.View style={[StyleSheet.absoluteFillObject, { opacity: restHighlightOpacity }]} pointerEvents="none">
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: restHighlightOpacity }]} pointerEvents="none">
         <Svg width="100%" height="100%">
           <Defs>
             <RadialGradient id="restHighlight" cx="50%" cy="0%" r="60%">
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backIconLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

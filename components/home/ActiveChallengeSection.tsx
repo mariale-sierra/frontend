@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Dimensions, FlatList, NativeScrollEvent, NativeSyntheticEvent, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -44,7 +44,7 @@ function StatusPill({
   );
 }
 
-function ChallengeItem({ challenge, hoursLeft }: ItemProps) {
+const ChallengeItem = memo(function ChallengeItem({ challenge, hoursLeft }: ItemProps) {
   const { t } = useTranslation();
   const router = useRouter();
   // Per explicit request: tapping the card jumps straight into logging
@@ -112,15 +112,24 @@ function ChallengeItem({ challenge, hoursLeft }: ItemProps) {
       </View>
     </Pressable>
   );
+});
+
+function ChallengeSeparator() {
+  return <View style={styles.separator} />;
 }
 
-export function ActiveChallengeSection({ challenges, hoursLeft }: Props) {
+export const ActiveChallengeSection = memo(function ActiveChallengeSection({ challenges, hoursLeft }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
 
   function handleScrollEnd(event: NativeSyntheticEvent<NativeScrollEvent>) {
     const index = Math.round(event.nativeEvent.contentOffset.x / SNAP_INTERVAL);
     setActiveIndex(Math.max(0, Math.min(index, challenges.length - 1)));
   }
+
+  const renderItem = useCallback(
+    ({ item }: { item: HomeActiveChallengeViewModel }) => <ChallengeItem challenge={item} hoursLeft={hoursLeft} />,
+    [hoursLeft],
+  );
 
   return (
     <View>
@@ -130,15 +139,13 @@ export function ActiveChallengeSection({ challenges, hoursLeft }: Props) {
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.challengeId}
         contentContainerStyle={styles.listContent}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        ItemSeparatorComponent={ChallengeSeparator}
         snapToInterval={SNAP_INTERVAL}
         snapToAlignment="start"
         decelerationRate="fast"
         disableIntervalMomentum
         onMomentumScrollEnd={handleScrollEnd}
-        renderItem={({ item }) => (
-          <ChallengeItem challenge={item} hoursLeft={hoursLeft} />
-        )}
+        renderItem={renderItem}
       />
 
       {challenges.length > 1 && (
@@ -153,7 +160,7 @@ export function ActiveChallengeSection({ challenges, hoursLeft }: Props) {
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   listContent: {

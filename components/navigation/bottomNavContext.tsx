@@ -119,6 +119,20 @@ export function BottomNavProvider({
   const navigateToIndex = useCallback((index: number) => {
     pendingNavigationIndex.current = index;
     onPressByIndex.current[index]?.();
+    // Safety net for a real edge case: tapping/dragging back onto the tab
+    // that's ALREADY active is a no-op for React Navigation — `aria-selected`
+    // for that tab never flips, so the `focusTab` effect that would normally
+    // clear this flag (see above) never runs, and it would otherwise stay
+    // "stuck" pointing at `index` forever. A stale flag here would then
+    // incorrectly suppress a LATER, genuinely external route sync (e.g. a
+    // deep link straight into this same tab) from animating the indicator
+    // to match, leaving it visually stuck on the wrong tab. This only ever
+    // fires when nothing already cleared the flag in the meantime.
+    setTimeout(() => {
+      if (pendingNavigationIndex.current === index) {
+        pendingNavigationIndex.current = null;
+      }
+    }, 400);
   }, []);
 
   const value = useMemo<BottomNavContextValue>(

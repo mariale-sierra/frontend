@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +29,10 @@ import { getFollowingStreaks } from '../../services/follow/follow.service';
 import { toFriendStreakViewModels } from '../../services/adapters/followAdapter';
 import { colors, spacing } from '../../constants/theme';
 import { formatTodayLabel, hoursUntilMidnight } from '../../utils/time';
+
+function FeedSeparator() {
+  return <View style={styles.separator} />;
+}
 
 export default function Home() {
   const { username } = useAuth();
@@ -82,7 +86,15 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      setFeedLoading(true);
+      // No `setFeedLoading(true)` here on purpose: this effect also fires on
+      // every re-focus (tab switch back to Home), not just first mount. Doing
+      // that flip forced `isReady` back to false on every visit, swapping the
+      // whole header + feed out for HomeContentSkeleton and emptying the
+      // FlatList's data even though we already had a perfectly good list on
+      // screen — the exact "re-renders everything from scratch" heaviness
+      // reported when switching tabs. The initial `useState(true)` above
+      // still covers the real first load; every focus after that refreshes
+      // `feedPosts` silently in place once the request resolves.
       getHomeFeed()
         .then(({ posts, nextCursor }) => {
           if (!active) return;
@@ -110,7 +122,8 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      setFriendStreaksLoading(true);
+      // Same reasoning as the feed effect above — no loading-flag reset on
+      // every re-focus, only the real first load (initial `useState(true)`).
       getFollowingStreaks()
         .then((rows) => {
           if (!active) return;
@@ -147,9 +160,12 @@ export default function Home() {
       .finally(() => setFeedLoadingMore(false));
   }, [feedLoadingMore, feedLoading, feedNextCursor]);
 
-  function renderItem({ item }: { item: FeedPostViewModel }) {
-    return <FeedPostCard post={item} />;
-  }
+  // `useCallback` (not a plain function declaration) so FlatList sees a
+  // stable `renderItem` reference across re-renders — a new function
+  // identity every render defeats FlatList's own cell-level memoization and
+  // forces every visible row to re-render even when its own data hasn't
+  // changed (e.g. while the friend-streaks section resolves independently).
+  const renderItem = useCallback(({ item }: { item: FeedPostViewModel }) => <FeedPostCard post={item} />, []);
 
   // One combined gate instead of three independent loading flags each
   // rendering their own fallback — the screen reveals once, fully populated,
@@ -157,8 +173,9 @@ export default function Home() {
   // fetch happens to resolve. See HomeContentSkeleton.
   const isReady = !challengeLoading && !feedLoading && !friendStreaksLoading;
 
-  const listHeader = (
-    <View style={styles.listHeader}>
+  const listHeader = useMemo(
+    () => (
+      <View style={styles.listHeader}>
       <Row justify="space-between" align="flex-start">
         <View style={styles.greetingBlock}>
           <Text variant="caption" tone="secondary" style={styles.dateLabel}>
@@ -205,7 +222,17 @@ export default function Home() {
           <Divider style={styles.divider} />
         </>
       )}
-    </View>
+      </View>
+    ),
+    [challenges, friendStreaks, friendStreaksError, hoursLeft, isReady, router, t, username],
+  );
+  const listEmptyComponent = useMemo(
+    () => (!isReady ? null : feedError ? <FeedErrorState /> : <EmptyFeed />),
+    [feedError, isReady],
+  );
+  const listContentStyle = useMemo(
+    () => [styles.listContent, { paddingBottom: insets.bottom + spacing['2xl'] }],
+    [insets.bottom],
   );
 
   return (
@@ -215,8 +242,8 @@ export default function Home() {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ListHeaderComponent={listHeader}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        ListEmptyComponent={!isReady ? null : feedError ? <FeedErrorState /> : <EmptyFeed />}
+        ItemSeparatorComponent={FeedSeparator}
+        ListEmptyComponent={listEmptyComponent}
         ListFooterComponent={
           feedLoadingMore ? (
             <View style={styles.feedFooterLoading}>
@@ -226,11 +253,11 @@ export default function Home() {
         }
         onEndReached={loadMoreFeed}
         onEndReachedThreshold={0.4}
+        initialNumToRender={4}
+        maxToRenderPerBatch={4}
+        windowSize={5}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + spacing['2xl'] },
-        ]}
+        contentContainerStyle={listContentStyle}
       />
     </ScreenBackground>
   );

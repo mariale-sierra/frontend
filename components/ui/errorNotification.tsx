@@ -62,7 +62,7 @@ const TOAST_HIGHLIGHT_PEAK_OPACITY = 0.22;
  * per the explicit "way more subtle" follow-up. */
 function ToastHighlight() {
   return (
-    <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <Svg width="100%" height="100%">
         <Defs>
           <RadialGradient id="toastHighlight" cx="25%" cy="0%" r={TOAST_HIGHLIGHT_RADIUS}>

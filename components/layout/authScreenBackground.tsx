@@ -20,7 +20,7 @@ interface AuthScreenBackgroundProps extends ViewProps {
  *
  * Uses `ImageBackground` (not a manually absolute-positioned `Image`
  * sibling) — that first version only ever showed one corner of the image,
- * because a plain `Image` with `StyleSheet.absoluteFillObject` needs its
+ * because a plain `Image` with `StyleSheet.absoluteFill` needs its
  * parent to have already resolved a concrete size before `resizeMode="cover"`
  * can compute the right scale, which isn't guaranteed through a deep
  * nested-flex chain. `ImageBackground` manages that itself and is the React

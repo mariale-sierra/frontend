@@ -1,3 +1,4 @@
+import { memo, useRef, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -5,17 +6,40 @@ import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 import { Row } from '../layout/row';
+import { CommentsSheet } from './CommentsSheet';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
+import { reactToPost, unreactToPost } from '../../services/workout-posts/workout-posts.service';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
 
 interface FeedPostCardProps {
   post: FeedPostViewModel;
 }
 
-export function FeedPostCard({ post }: FeedPostCardProps) {
+// `memo`: its only prop is `post`, which keeps a stable reference in
+// app/(tabs)/index.tsx's `feedPosts` state unless the underlying data
+// actually changes — so a re-render triggered by an unrelated section of
+// the Home screen (friend streaks resolving, the header re-rendering) no
+// longer has to re-render every already-visible feed card too.
+export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardProps) {
   const router = useRouter();
   const { t } = useTranslation();
+
+  // Local, optimistic copies of the server-seeded reaction/comment state —
+  // `post` itself never changes after the initial feed fetch (Home doesn't
+  // re-fetch on every interaction), so this card owns its own count/liked
+  // state after the first render, same as any other optimistic-update UI in
+  // this app.
+  const [liked, setLiked] = useState(post.likedByMe);
+  const [likesCount, setLikesCount] = useState(post.likesCount);
+  const [commentsCount, setCommentsCount] = useState(post.commentsCount);
+  const [commentsVisible, setCommentsVisible] = useState(false);
+  // A ref, not state, for the in-flight guard below — two taps fired back to
+  // back (before React has committed a re-render) would both read the same
+  // stale `false` from a state variable's closure, letting both through.
+  // `useRef` updates are visible immediately, synchronously, so the second
+  // tap's check always sees the first tap's write.
+  const reactingRef = useRef(false);
 
   // Fixed 2026-08-31, real bug — was `router.push(\`/messaging/${post.userId}\`)`,
   // treating the OTHER user's id as if it were a conversationId (the
@@ -26,6 +50,30 @@ export function FeedPostCard({ post }: FeedPostCardProps) {
   // thread screen — see app/messaging/new.tsx's own doc comment.
   function handleSendMessage() {
     router.push({ pathname: '/messaging/new', params: { recipientUserId: post.userId } });
+  }
+
+  // Optimistic toggle, reverted on failure — the global axios interceptor
+  // already surfaces an error toast, so the catch here only has to restore
+  // the pre-tap state. `reactingRef` guards against a double-tap firing two
+  // in-flight requests for opposite actions before the first resolves.
+  async function handleToggleReaction() {
+    if (reactingRef.current) return;
+    reactingRef.current = true;
+    const wasLiked = liked;
+    setLiked(!wasLiked);
+    setLikesCount((count) => count + (wasLiked ? -1 : 1));
+    try {
+      if (wasLiked) {
+        await unreactToPost(post.id);
+      } else {
+        await reactToPost(post.id);
+      }
+    } catch {
+      setLiked(wasLiked);
+      setLikesCount((count) => count + (wasLiked ? 1 : -1));
+    } finally {
+      reactingRef.current = false;
+    }
   }
 
   return (
@@ -53,19 +101,45 @@ export function FeedPostCard({ post }: FeedPostCardProps) {
       ) : null}
 
       <Row justify="space-between" align="center">
-        <Row gap="xs">
-          <Icon name="heart-outline" size={20} color={colors.paper} />
-          <Text variant="caption">{post.likesCount}</Text>
+        <Row gap="lg" justify="flex-start">
+          <Row
+            pressable
+            onPress={handleToggleReaction}
+            gap="xs"
+            accessibilityRole="button"
+            accessibilityLabel={t('home.reactionA11y')}
+          >
+            <Icon name="heart-outline" size={20} color={liked ? colors.accent : colors.paper} />
+            <Text variant="caption">{likesCount}</Text>
+          </Row>
+
+          <Row
+            pressable
+            onPress={() => setCommentsVisible(true)}
+            gap="xs"
+            accessibilityRole="button"
+            accessibilityLabel={t('home.commentsA11y')}
+          >
+            <Icon name="chatbubble-outline" size={20} color={colors.paper} />
+            <Text variant="caption">{commentsCount}</Text>
+          </Row>
         </Row>
 
         <Row pressable onPress={handleSendMessage} gap="xs">
-          <Icon name="chatbubble-outline" size={20} color={colors.paper} />
+          <Icon name="paper-plane-outline" size={20} color={colors.paper} />
           <Text variant="caption" tone="secondary">{t('home.sendMessage')}</Text>
         </Row>
       </Row>
+
+      <CommentsSheet
+        visible={commentsVisible}
+        postId={post.id}
+        onClose={() => setCommentsVisible(false)}
+        onCommentsCountChange={setCommentsCount}
+      />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

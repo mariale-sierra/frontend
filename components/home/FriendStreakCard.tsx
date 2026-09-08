@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
@@ -10,7 +11,7 @@ interface FriendStreakCardProps {
 
 const AVATAR_SIZE = 58;
 
-export function FriendStreakCard({ friend }: FriendStreakCardProps) {
+export const FriendStreakCard = memo(function FriendStreakCard({ friend }: FriendStreakCardProps) {
   // Confirmed rule (see havit-design-system-SKILL.md Open Items): `success`
   // badge when this friend logged a workout today, dark `surface` otherwise.
   const badgeColor = friend.loggedToday ? colors.success : colors.surface;
@@ -30,7 +31,7 @@ export function FriendStreakCard({ friend }: FriendStreakCardProps) {
       </Text>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

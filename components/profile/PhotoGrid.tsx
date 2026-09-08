@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
 import { colors, fillOpacity, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
@@ -7,21 +7,19 @@ import type { ChallengePhoto } from '../../types/challenge';
 
 const SKELETON_COUNT = 8;
 
-// Real, reported bug: the skeleton used to leave as soon as the photo
-// LIST loaded (the `loading` prop below, backed by one fast metadata
-// fetch), but each tile's actual `<Image>` still had to download
-// separately after that — so tiles popped in one by one instead of
-// together, looking broken rather than "still loading." Prefetching every
-// visible photo's URL first (populating RN's native image cache) and only
-// leaving the skeleton once ALL of them have settled means the swap to
-// real content happens all at once, and the `<Image>` renders below then
-// read from cache instead of re-downloading.
-//
-// Capped so one slow/broken URL can't hang the skeleton forever — past
-// this, whatever hasn't finished just loads in normally (RN's own
-// default per-`<Image>` behavior), which is a reasonable degrade, not a
-// regression from the pre-preload behavior.
+// On the initial profile load, wait for the first visible row's images so
+// it does not immediately pop from metadata skeletons to empty tiles. Do
+// not prefetch an entire history or reset an already visible grid on every
+// focus refresh: both operations create avoidable JS work during tab
+// navigation. Remaining tiles use React Native's normal native Image
+// loading behavior, and the timeout prevents one broken URL from holding
+// the first render indefinitely.
 const IMAGE_PRELOAD_TIMEOUT_MS = 6000;
+// Only the first row needs to be resident before the initial grid appears.
+// Starting a native prefetch promise for an entire photo history on the JS
+// thread made the Profile tab's first focus compete with the navbar motion.
+// Remaining tiles keep their normal native Image loading behavior.
+const INITIAL_IMAGE_PRELOAD_COUNT = 4;
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -34,11 +32,17 @@ interface PhotoGridProps {
   onPhotoPress?: (photo: ChallengePhoto) => void;
 }
 
-function PhotoTile({ photo, onPress }: { photo: ChallengePhoto; onPress?: () => void }) {
+const PhotoTile = memo(function PhotoTile({
+  photo,
+  onPhotoPress,
+}: {
+  photo: ChallengePhoto;
+  onPhotoPress?: (photo: ChallengePhoto) => void;
+}) {
   return (
     <Pressable
       style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
-      onPress={onPress}
+      onPress={() => onPhotoPress?.(photo)}
     >
       {photo.imageUrl ? (
         <Image source={{ uri: photo.imageUrl }} style={styles.image} resizeMode="cover" />
@@ -47,37 +51,59 @@ function PhotoTile({ photo, onPress }: { photo: ChallengePhoto; onPress?: () => 
       )}
     </Pressable>
   );
-}
+});
 
 /** Presentational tile grid shared by PostsGrid (own posts) and other-user
  * profile screens — pure rendering, callers own fetching/filtering. */
-export function PhotoGrid({ photos, loading, emptyLabel, onPhotoPress }: PhotoGridProps) {
+export const PhotoGrid = memo(function PhotoGrid({ photos, loading, emptyLabel, onPhotoPress }: PhotoGridProps) {
   const [imagesReady, setImagesReady] = useState(false);
+  const hasRenderedContent = useRef(false);
+
+  const preloadInitialImages = useCallback((urls: string[]) => {
+    const preload = Promise.allSettled(
+      urls.slice(0, INITIAL_IMAGE_PRELOAD_COUNT).map((url) => Image.prefetch(url)),
+    );
+
+    return Promise.race([preload, delay(IMAGE_PRELOAD_TIMEOUT_MS)]);
+  }, []);
 
   useEffect(() => {
     if (loading) {
-      setImagesReady(false);
+      if (!hasRenderedContent.current) {
+        setImagesReady(false);
+      }
       return;
     }
     if (photos.length === 0) {
+      hasRenderedContent.current = true;
       setImagesReady(true);
       return;
     }
 
     let cancelled = false;
+    const urls = photos.map((photo) => photo.imageUrl).filter((url): url is string => Boolean(url));
+
+    // Once a grid is already on screen, a background refresh must not swap
+    // it back to skeletons. The updated cells render immediately and native
+    // image loading fills any genuinely new URI; existing cells stay intact.
+    if (hasRenderedContent.current) {
+      void preloadInitialImages(urls);
+      return;
+    }
+
     setImagesReady(false);
 
-    const urls = photos.map((photo) => photo.imageUrl).filter((url): url is string => Boolean(url));
-    const preload = Promise.allSettled(urls.map((url) => Image.prefetch(url)));
-
-    Promise.race([preload, delay(IMAGE_PRELOAD_TIMEOUT_MS)]).finally(() => {
-      if (!cancelled) setImagesReady(true);
+    preloadInitialImages(urls).finally(() => {
+      if (!cancelled) {
+        hasRenderedContent.current = true;
+        setImagesReady(true);
+      }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [loading, photos]);
+  }, [loading, photos, preloadInitialImages]);
 
   if (loading || !imagesReady) {
     return (
@@ -106,11 +132,11 @@ export function PhotoGrid({ photos, loading, emptyLabel, onPhotoPress }: PhotoGr
   return (
     <View style={styles.grid}>
       {photos.map((photo) => (
-        <PhotoTile key={photo.id} photo={photo} onPress={() => onPhotoPress?.(photo)} />
+        <PhotoTile key={photo.id} photo={photo} onPhotoPress={onPhotoPress} />
       ))}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   grid: {

@@ -19,12 +19,10 @@ function RootNavigator() {
   const { isAuthenticated, isRestoring } = useAuth();
 
   useEffect(() => {
-    console.log('[router] auth loading:', isRestoring, '| auth user exists:', isAuthenticated);
     if (isRestoring) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     if (!isAuthenticated && !inAuthGroup) {
-      console.log('[router] redirecting to login from:', segments.join('/') || 'root');
       router.replace('/(auth)/login');
       return;
     }
@@ -78,15 +76,6 @@ function RootNavigator() {
       />
       <Stack.Screen name="(add)" options={{ presentation: 'fullScreenModal', headerShown: false }} />
       <Stack.Screen name="challenge" options={{ headerShown: false }} />
-      <Stack.Screen name="challenge/create" options={{ headerShown: false }} />
-      <Stack.Screen name="challenge/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="challenge/[id]/progress" options={{ headerShown: false }} />
-      <Stack.Screen name="challenge/[id]/invite" options={{ headerShown: false }} />
-      <Stack.Screen name="challenge/[id]/routine/[day]" options={{ headerShown: false }} />
-      <Stack.Screen name="challenge/routine" options={{ headerShown: false }} />
-      <Stack.Screen name="challenge/routine/select" options={{ headerShown: false }} />
-      <Stack.Screen name="challenge/routine/create" options={{ headerShown: false }} />
-      <Stack.Screen name="challenge/routine/exercises" options={{ headerShown: false }} />
     </Stack>
   );
 }

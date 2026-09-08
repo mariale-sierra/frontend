@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     height: 96,
   },
   photoOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     // Matches UserAvatar's own corner radius (always the flat `big` token,
     // not size/2 — see userAvatar.tsx) so the loading dim doesn't bleed past
     // the avatar's actual squircle shape.

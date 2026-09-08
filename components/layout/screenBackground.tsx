@@ -35,7 +35,7 @@ export default function ScreenBackground({
 
   return (
     <View style={[styles.container, style]} {...props}>
-      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <Svg width="100%" height="100%">
           <Defs>
             <RadialGradient id="glowPrimary" cx="15%" cy="0%" r="85%">

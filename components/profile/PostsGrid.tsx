@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
@@ -10,7 +10,31 @@ interface PostsGridProps {
   onPhotoPress?: (photo: ChallengePhoto) => void;
 }
 
-export function PostsGrid({ view, onPhotoPress }: PostsGridProps) {
+function haveSamePhotos(current: ChallengePhoto[], next: ChallengePhoto[]) {
+  return (
+    current.length === next.length &&
+    current.every((photo, index) => {
+      const candidate = next[index];
+
+      return (
+        photo.id === candidate.id &&
+        photo.challengeId === candidate.challengeId &&
+        photo.userName === candidate.userName &&
+        photo.imageUrl === candidate.imageUrl &&
+        photo.day === candidate.day &&
+        photo.visibility === candidate.visibility &&
+        photo.description === candidate.description &&
+        photo.metrics.length === candidate.metrics.length &&
+        photo.metrics.every(
+          (metric, metricIndex) =>
+            metric.label === candidate.metrics[metricIndex].label && metric.value === candidate.metrics[metricIndex].value,
+        )
+      );
+    })
+  );
+}
+
+export const PostsGrid = memo(function PostsGrid({ view, onPhotoPress }: PostsGridProps) {
   const { t } = useTranslation();
   const [photos, setPhotos] = useState<ChallengePhoto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,13 +44,22 @@ export function PostsGrid({ view, onPhotoPress }: PostsGridProps) {
   useFocusEffect(
     useCallback(() => {
       let active = true;
-      setLoading(true);
+      // Keep the previously rendered grid while a focus refresh is in
+      // flight. Resetting this flag on every tab switch unmounted every
+      // image tile, re-mounted the skeleton, and restarted image prefetches
+      // even when the server returned the same photos.
       getMyProgressPhotos()
         .then((data) => {
-          if (active) setPhotos(data);
+          if (!active) return;
+
+          // Service responses contain fresh object identities on every
+          // request. Preserve the existing array when its visible content
+          // did not change so PhotoGrid's memoized tiles and image cache do
+          // not redo work just because this tab was focused again.
+          setPhotos((current) => (haveSamePhotos(current, data) ? current : data));
         })
         .catch(() => {
-          if (active) setPhotos([]);
+          if (active) setPhotos((current) => (current.length === 0 ? current : []));
         })
         .finally(() => {
           if (active) setLoading(false);
@@ -39,7 +72,10 @@ export function PostsGrid({ view, onPhotoPress }: PostsGridProps) {
 
   // 'posts' = only photos visible to followers; 'photos' = everything,
   // including private ones (only the owner ever hits this screen).
-  const visiblePhotos = view === 'posts' ? photos.filter((photo) => photo.visibility === 'public') : photos;
+  const visiblePhotos = useMemo(
+    () => (view === 'posts' ? photos.filter((photo) => photo.visibility === 'public') : photos),
+    [photos, view],
+  );
 
   return (
     <PhotoGrid
@@ -49,4 +85,4 @@ export function PostsGrid({ view, onPhotoPress }: PostsGridProps) {
       onPhotoPress={onPhotoPress}
     />
   );
-}
+});

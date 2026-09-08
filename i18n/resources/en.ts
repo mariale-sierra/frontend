@@ -457,11 +457,22 @@ const en = {
     emptyFeedMessage: 'No posts yet. Be the first to share!',
     feedErrorMessage: 'Could not load the feed. Try again later.',
     sendMessage: 'Send a message',
+    reactionA11y: 'Like this post',
+    commentsA11y: 'View comments',
     streaksTitle: 'Streaks today',
     seeMore: 'See all',
     streakDays: '{{count}} days',
     emptyStreaksMessage: 'No friend streaks yet',
     streaksErrorMessage: 'Could not load friend streaks',
+  },
+  comments: {
+    title: 'Comments',
+    placeholder: 'Add a comment...',
+    emptyMessage: 'No comments yet',
+    errorMessage: 'Could not load comments. Try again later.',
+    deleteConfirmTitle: 'Delete this comment?',
+    deleteConfirmCta: 'Delete',
+    cancelCta: 'Cancel',
   },
   navigation: {
     tabs: {
