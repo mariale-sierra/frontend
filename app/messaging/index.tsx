@@ -75,6 +75,18 @@ export default function Messaging() {
   const joinedSpaces = useMemo(() => spaces.filter((space) => space.isMember), [spaces]);
   const { previews: spaceThreadPreviews, loading: spaceThreadsLoading } = useSpaceThreadPreviews(joinedSpaces);
 
+  // Real, reported bug: the search bar up top sits above BOTH the "Spaces"
+  // (explore) section and "Messages" below, but used to only filter
+  // Messages — typing a query left the Spaces cards exactly as they were,
+  // so the same search looked like it "worked" for one section and did
+  // nothing for the other. Filtering both consistently, same pattern as
+  // filteredConversations/filteredSpaceThreadPreviews below.
+  const filteredExploreSpaces = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return exploreSpaces;
+    return exploreSpaces.filter((space) => space.name.toLowerCase().includes(q));
+  }, [exploreSpaces, query]);
+
   const filteredConversations = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return conversations;
@@ -127,7 +139,7 @@ export default function Messaging() {
   // reveal. Neither section shows real content until EVERYTHING has
   // loaded; they flip together.
   const initialLoading = spacesLoading || messagesLoading;
-  const spacesPreview = exploreSpaces.slice(0, SPACES_PREVIEW_COUNT);
+  const spacesPreview = filteredExploreSpaces.slice(0, SPACES_PREVIEW_COUNT);
 
   async function handleJoinSpace(space: SpaceContract) {
     setJoiningSpaceId(space.id);
@@ -187,6 +199,12 @@ export default function Messaging() {
                   {t('chats.spacesEmptyState')}
                 </Text>
               </View>
+            ) : filteredExploreSpaces.length === 0 ? (
+              <View style={styles.spacesEmptyCard}>
+                <Text variant="body" tone="secondary" align="center">
+                  {t('spaces.noResultsForSearch')}
+                </Text>
+              </View>
             ) : (
               <View style={styles.spacesPreviewList}>
                 {spacesPreview.map((space) => (
@@ -198,7 +216,7 @@ export default function Messaging() {
                     ctaLoading={joiningSpaceId === space.id}
                   />
                 ))}
-                {exploreSpaces.length > SPACES_PREVIEW_COUNT && (
+                {filteredExploreSpaces.length > SPACES_PREVIEW_COUNT && (
                   <Pressable onPress={() => router.push('/messaging/spaces')} style={styles.seeAllRow}>
                     <Text variant="label" weight="bold">
                       {t('spaces.seeAll')}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { BottomSheetModal } from '../ui/bottomSheetModal';
 import { ConfirmationPopup } from '../ui/confirmationPopup';
@@ -134,26 +134,30 @@ export function CommentsSheet({
 
   return (
     <>
-      <BottomSheetModal visible={visible} onClose={onClose} maxHeight="80%">
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* BottomSheetModal itself tracks the keyboard and floats the whole
+          sheet up above it (see its own doc comment) — a KeyboardAvoidingView
+          in here doesn't work reliably nested inside a Modal, and would
+          double up with that anyway. */}
+      <BottomSheetModal visible={visible} onClose={onClose} height="50%">
+        <View style={styles.flexFill}>
           <Row justify="space-between" style={styles.header}>
             <Text variant="subheader">{t('comments.title')}</Text>
             <IconButton name="close-outline" onPress={onClose} />
           </Row>
 
           {loading ? (
-            <View style={styles.centered}>
+            <View style={[styles.centered, styles.flexFill]}>
               <ActivityIndicator color={colors.paper} />
             </View>
           ) : error ? (
-            <View style={styles.centered}>
+            <View style={[styles.centered, styles.flexFill]}>
               <Icon name="cloud-offline-outline" size={34} color={withAlpha(colors.paper, textOpacity.tertiary)} />
               <Text variant="body" tone="secondary" align="center">
                 {t('comments.errorMessage')}
               </Text>
             </View>
           ) : comments.length === 0 ? (
-            <View style={styles.centered}>
+            <View style={[styles.centered, styles.flexFill]}>
               <Icon name="chatbubble-outline" size={34} color={withAlpha(colors.paper, textOpacity.tertiary)} />
               <Text variant="body" tone="secondary" align="center">
                 {t('comments.emptyMessage')}
@@ -161,6 +165,7 @@ export function CommentsSheet({
             </View>
           ) : (
             <FlatList
+              style={styles.flexFill}
               data={comments}
               keyExtractor={(item) => String(item.id)}
               renderItem={({ item }) => (
@@ -197,11 +202,22 @@ export function CommentsSheet({
               iconSize={18}
               iconColor={colors.ink}
               style={[styles.sendButton, (submitting || !draft.trim()) && styles.sendButtonDisabled]}
-              onPress={handleSend}
+              // Real, reported bug: tapping Send while the keyboard was open
+              // just closed the keyboard — sending itself needed a second,
+              // separate tap. This sheet renders inside a `Modal` (a
+              // separate native window/Dialog on Android), and the first
+              // touch outside the focused input gets consumed there to
+              // dismiss the keyboard without also delivering as a click to
+              // the button underneath — a Modal-specific quirk the 1:1 chat
+              // screen doesn't hit (it's a normal full-screen route, not a
+              // Modal). `onPressIn` fires the moment the touch starts,
+              // before that ambiguity plays out, so the same tap that closes
+              // the keyboard also sends.
+              onPressIn={handleSend}
               disabled={submitting || !draft.trim()}
             />
           </Row>
-        </KeyboardAvoidingView>
+        </View>
       </BottomSheetModal>
 
       <ConfirmationPopup
@@ -232,13 +248,16 @@ function ItemSeparator() {
 }
 
 const styles = StyleSheet.create({
+  flexFill: {
+    flex: 1,
+  },
   header: {
     marginBottom: spacing.md,
   },
   centered: {
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.md,
-    paddingVertical: spacing['2xl'],
   },
   footerLoader: {
     marginVertical: spacing.md,

@@ -808,10 +808,10 @@ const en = {
     },
     categories: {
       strength: 'Strength',
-      cardio_intense: 'Cardio Intense',
-      cardio_low: 'Cardio Low',
+      'cardio-intense': 'Cardio Intense',
+      'cardio-low': 'Cardio Low',
       flexibility: 'Flexibility',
-      mind_body: 'Mind-Body',
+      'mind-body': 'Mind-Body',
       functional: 'Functional',
     },
     locations: {

@@ -4,18 +4,28 @@ import type { SpaceContract } from '../../types/space';
 import type { ExerciseCategory } from '../exercises/exercises.service';
 
 /**
- * `exercise_categories.code` (snake_case, e.g. `cardio_intense`) <-> the
+ * `exercise_categories.code` (kebab-case, e.g. `cardio-intense`) <-> the
  * frontend's `ActivityType` (camelCase, e.g. `cardioIntense`) — the same six
  * values, just cased differently on each side. Spaces reuses this exact
  * taxonomy (see `CATEGORY_OPTIONS` in `constants/challengeCreateOptions.ts`)
  * instead of inventing a parallel one.
+ *
+ * Real, reported bug (2026-09): this used underscore codes
+ * (`cardio_intense`) while the live `havit.exercise_categories.code` column
+ * actually uses hyphens (`cardio-intense`) — confirmed directly against the
+ * API. Every lookup for cardioIntense/cardioLow/mindBody silently missed, so
+ * a space using one of those three colors couldn't load its current color
+ * when reopening "Manage space" (looked unset), and picking one of those
+ * three and hitting Save silently dropped the color entirely (the other
+ * three fields still saved fine, so it read as "Save doesn't work" for only
+ * some colors).
  */
 const CODE_TO_ACTIVITY_TYPE: Record<string, ActivityType> = {
   strength: 'strength',
-  cardio_intense: 'cardioIntense',
-  cardio_low: 'cardioLow',
+  'cardio-intense': 'cardioIntense',
+  'cardio-low': 'cardioLow',
   flexibility: 'flexibility',
-  mind_body: 'mindBody',
+  'mind-body': 'mindBody',
   functional: 'functional',
 };
 

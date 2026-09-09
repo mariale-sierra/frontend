@@ -16,7 +16,7 @@ const buildSpace = (overrides: Partial<SpaceContract> = {}): SpaceContract => ({
   description: 'Sunrise 5Ks and slow jogs, every weekend rain or not.',
   imageUrl: null,
   visibility: 'public',
-  activityCategory: { id: 2, code: 'cardio_low', name: 'Cardio Low' },
+  activityCategory: { id: 2, code: 'cardio-low', name: 'Cardio Low' },
   createdBy: { id: 'owner-1', username: 'owner', displayName: null, profileImageUrl: null },
   membersCount: 50,
   isMember: false,

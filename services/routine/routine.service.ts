@@ -8,6 +8,7 @@ import type {
   RoutineExerciseTargetPayload,
   SchemaMetricValue,
 } from '../../types/routine';
+import { adaptRoutineContracts } from '../adapters/routineAdapter';
 
 export async function createRoutine(data: CreateRoutineRequest) {
   const response = await api.post<RoutineContract>('/routine', data);
@@ -65,7 +66,7 @@ export async function addExerciseToRoutine(
 
 export async function getRoutines() {
   const response = await api.get<RoutineContract[]>('/routine');
-  return response.data;
+  return adaptRoutineContracts(response.data);
 }
 
 export async function getRoutine(id: number) {

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text as RNText, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
@@ -17,6 +17,7 @@ import type { ActivityType } from '../../../types/activity';
 import { colors, radius, spacing, textOpacity, typography } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { useTranslation } from 'react-i18next';
+import { getRoutines } from '../../../services/routine/routine.service';
 
 const TRANSITION_DURATION = 380;
 const AnimatedText = Animated.createAnimatedComponent(RNText);
@@ -25,7 +26,13 @@ export default function SelectRoutineScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { day } = useLocalSearchParams<{ day: string }>();
-  const { init, savedRoutines, assignRoutineToDay, assignRestDayToDay } = useRoutineBuilder();
+  const {
+    init,
+    savedRoutines,
+    hydrateSavedRoutines,
+    assignRoutineToDay,
+    assignRestDayToDay,
+  } = useRoutineBuilder();
   const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
   const [mode, setMode] = useState<RoutineMode>('workout');
   // 0 = workout, 1 = rest — the single source every color/position on this
@@ -34,6 +41,26 @@ export default function SelectRoutineScreen() {
   const progress = useRef(new Animated.Value(0)).current;
 
   const dayNumber = Number(day ?? '1');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getRoutines()
+      .then((routines) => {
+        if (!cancelled) {
+          hydrateSavedRoutines(routines);
+        }
+      })
+      .catch((error: any) => {
+        // Keep the local demo/current-session routines usable if the account
+        // request is temporarily unavailable. A later selector mount retries.
+        console.error('[RoutineSelect] Failed to load saved routines:', error?.response?.data ?? error?.message);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrateSavedRoutines]);
 
   function handleModeChange(nextMode: RoutineMode) {
     setMode(nextMode);
@@ -65,6 +92,14 @@ export default function SelectRoutineScreen() {
     [savedRoutines, allowedActivityTypes],
   );
   const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(workoutRoutines[0]?.id ?? null);
+
+  useEffect(() => {
+    setSelectedRoutineId((currentId) => (
+      workoutRoutines.some((routine) => routine.id === currentId)
+        ? currentId
+        : workoutRoutines[0]?.id ?? null
+    ));
+  }, [workoutRoutines]);
 
   function handleCreateNew() {
     init(dayNumber);
