@@ -25,6 +25,7 @@ interface RoutineBuilderState {
   setRoutineName: (name: string) => void;
   setRoutineDescription: (description: string) => void;
   setIsRestDay: (value: boolean) => void;
+  hydrateSavedRoutines: (routines: RoutineSummary[]) => void;
   addExercise: (exercise: Omit<ExerciseEntry, 'metrics' | 'note'>, backendExerciseId?: number) => void;
   updateStrengthSet: (exerciseId: string, setIndex: number, patch: Partial<SetRow>) => void;
   addStrengthSet: (exerciseId: string) => void;
@@ -283,7 +284,22 @@ function cloneExercise(exercise: ExerciseEntry): ExerciseEntry {
   };
 }
 
-function buildRoutineSummary(id: string, name: string, description: string, isRestDay: boolean, exercises: ExerciseEntry[]): RoutineSummary {
+function getBackendExerciseIds(exercises: ExerciseEntry[]): Record<string, number> {
+  return Object.fromEntries(
+    exercises
+      .filter((exercise): exercise is ExerciseEntry & { backendExerciseId: number } => exercise.backendExerciseId != null)
+      .map((exercise) => [exercise.id, exercise.backendExerciseId]),
+  );
+}
+
+function buildRoutineSummary(
+  id: string,
+  name: string,
+  description: string,
+  isRestDay: boolean,
+  exercises: ExerciseEntry[],
+  backendId?: number,
+): RoutineSummary {
   return {
     id,
     name,
@@ -292,6 +308,7 @@ function buildRoutineSummary(id: string, name: string, description: string, isRe
     exercises: exercises.map(cloneExercise),
     primaryActivity: isRestDay ? null : getPrimaryActivityType(exercises),
     activityTypes: isRestDay ? [] : getUniqueActivityTypes(exercises),
+    backendId,
   };
 }
 
@@ -375,6 +392,7 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
         routineDescription: '',
         isRestDay: false,
         exercises: [],
+        backendExerciseIdByLocalId: {},
       });
       return;
     }
@@ -385,6 +403,7 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
       routineDescription: source.description,
       isRestDay: source.isRestDay,
       exercises: source.exercises.map(cloneExercise),
+      backendExerciseIdByLocalId: getBackendExerciseIds(source.exercises),
     });
   },
 
@@ -393,6 +412,18 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
   setRoutineDescription: (routineDescription) => set({ routineDescription }),
 
   setIsRestDay: (isRestDay) => set({ isRestDay }),
+
+  hydrateSavedRoutines: (routines) =>
+    set({
+      // Keep the existing demo routine as a local fallback while the account
+      // list is empty, but replace the old in-memory list with server data as
+      // soon as the request succeeds. The challenge builder still resets its
+      // per-challenge assignments separately in resetBuilder().
+      savedRoutines: [
+        seedRoutine,
+        ...routines.filter((routine) => routine.id !== seedRoutine.id),
+      ],
+    }),
 
   addExercise: (exercise, backendExerciseId) =>
     set((state) => ({
@@ -403,6 +434,7 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
           ...exercise,
           metrics: createDefaultMetrics(exercise.metricType),
           note: '',
+          backendExerciseId,
         },
       ],
       backendExerciseIdByLocalId:
@@ -665,7 +697,14 @@ export const useRoutineBuilder = create<RoutineBuilderState>((set, get) => ({
     set((state) => ({
       routinesByDay: {
         ...state.routinesByDay,
-        [day]: buildRoutineSummary(routine.id, routine.name, routine.description, routine.isRestDay, routine.exercises),
+        [day]: buildRoutineSummary(
+          routine.id,
+          routine.name,
+          routine.description,
+          routine.isRestDay,
+          routine.exercises,
+          routine.backendId,
+        ),
       },
     })),
 

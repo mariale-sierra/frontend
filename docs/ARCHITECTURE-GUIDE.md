@@ -88,6 +88,7 @@ Do not set `tabBarStyle` or use a fully custom `tabBar`: on iOS with Fabric enab
 - Auth context: `context/authContext.tsx` restores session using stored values and validates `/auth/me`; 401 clears session, non-401 errors preserve the stored session.
 - Service convention: services live under `services/<feature>/<feature>.service.ts`, import the shared `api`, return `response.data`, and use typed contracts from `types/`.
 - Adapters: `services/adapters/` normalize backend contracts into UI view models and payloads.
+- Routine library: `services/routine/routine.service.ts` loads the authenticated user's persisted routines from `GET /routine`; `services/adapters/routineAdapter.ts` maps the backend's `routine_exercises`/metrics relations into `RoutineSummary` before the challenge routine picker displays them.
 - Upload convention: `services/uploads/upload.service.ts` signs via the API, then uses native `fetch` for the signed URL PUT because Axios baseURL/auth headers would break pre-signed uploads.
 
 Future services should reuse `services/api.ts`, avoid creating another Axios client, preserve token logic, add typed request/response contracts under `types/`, and normalize backend shapes through adapters when UI view models differ from API contracts.
@@ -100,7 +101,7 @@ Future services should reuse `services/api.ts`, avoid creating another Axios cli
 - `hooks/useMetricsScreen.ts`: coordinates enrolled challenges, today's routine, workout log creation, metric submit, loading/error state, and navigation.
 - `hooks/useFilteredExercises.ts`: filters exercise candidates for routine exercise selection.
 - `hooks/usePullToRefresh.ts`: generic `{ refreshing, onRefresh }` pair for a `RefreshControl` — wraps a screen's own reload function with the refreshing-flag toggle so each screen doesn't hand-roll it. Used by Home, Challenges, Profile (own/other), and Messaging; a component that fetches its own data internally (e.g. `PostsGrid`, `UserPostsGrid`) instead takes a `refreshSignal` prop the parent screen bumps on refresh.
-- Zustand stores in `store/`: hold multi-screen local builder state for challenges, routines, and metrics.
+- Zustand stores in `store/`: hold multi-screen local builder state for challenges, routines, and metrics. Routine day assignments remain transient per challenge, while the routine picker hydrates its reusable routine list from the backend.
 
 Prefer hooks for screens that coordinate services, stores, translations, routing, alerts, loading, and errors. Direct service calls are acceptable in small screens, but shared or multi-step behavior should move into a hook or store following existing patterns.
 
