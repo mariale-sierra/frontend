@@ -781,10 +781,10 @@ const es = {
     },
     categories: {
       strength: 'Fuerza',
-      cardio_intense: 'Cardio Intenso',
-      cardio_low: 'Cardio Bajo',
+      'cardio-intense': 'Cardio Intenso',
+      'cardio-low': 'Cardio Bajo',
       flexibility: 'Flexibilidad',
-      mind_body: 'Mente-Cuerpo',
+      'mind-body': 'Mente-Cuerpo',
       functional: 'Funcional',
     },
     locations: {

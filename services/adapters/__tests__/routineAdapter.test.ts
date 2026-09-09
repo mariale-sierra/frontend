@@ -16,7 +16,7 @@ describe('adaptRoutineContract', () => {
             id: 22,
             name: 'Run',
             tracking_mode: 'single',
-            category_maps: [{ isPrimary: true, category: { code: 'cardio_low', name: 'Cardio Low' } }],
+            category_maps: [{ isPrimary: true, category: { code: 'cardio-low', name: 'Cardio Low' } }],
             location_maps: [{ isPrimary: true, location: { code: 'outdoor', name: 'Outdoor' } }],
           },
           targets: [

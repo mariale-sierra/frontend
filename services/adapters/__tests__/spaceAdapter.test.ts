@@ -25,8 +25,8 @@ const baseSpace = (overrides: Partial<SpaceContract> = {}): SpaceContract => ({
 
 describe('activityTypeForCategoryCode', () => {
   it('maps every known exercise_categories.code to its ActivityType', () => {
-    expect(activityTypeForCategoryCode('cardio_low')).toBe('cardioLow');
-    expect(activityTypeForCategoryCode('mind_body')).toBe('mindBody');
+    expect(activityTypeForCategoryCode('cardio-low')).toBe('cardioLow');
+    expect(activityTypeForCategoryCode('mind-body')).toBe('mindBody');
     expect(activityTypeForCategoryCode('strength')).toBe('strength');
   });
 
@@ -38,7 +38,7 @@ describe('activityTypeForCategoryCode', () => {
 describe('findCategoryForActivityType', () => {
   const categories = [
     { id: 1, code: 'strength', name: 'Strength' },
-    { id: 2, code: 'cardio_low', name: 'Cardio Low' },
+    { id: 2, code: 'cardio-low', name: 'Cardio Low' },
   ];
 
   it('finds the real category row matching an ActivityType', () => {
@@ -52,7 +52,7 @@ describe('findCategoryForActivityType', () => {
 
 describe('getSpaceAccentColor', () => {
   it('resolves the activity color for a space with a chosen category', () => {
-    const space = baseSpace({ activityCategory: { id: 1, code: 'mind_body', name: 'Mind-Body' } });
+    const space = baseSpace({ activityCategory: { id: 1, code: 'mind-body', name: 'Mind-Body' } });
     expect(getSpaceAccentColor(space)).toBe(activityColors.mindBody);
   });
 

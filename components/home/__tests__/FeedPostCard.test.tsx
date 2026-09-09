@@ -14,6 +14,10 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
 }));
 
+jest.mock('../../../hooks/useAuth', () => ({
+  useAuth: () => ({ userId: 'viewer-1' }),
+}));
+
 jest.mock('../../../services/workout-posts/workout-posts.service', () => ({
   reactToPost: jest.fn(),
   unreactToPost: jest.fn(),
@@ -44,6 +48,34 @@ const basePost = (overrides: Partial<FeedPostViewModel> = {}): FeedPostViewModel
   ...overrides,
 });
 
+describe('FeedPostCard — send message action', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('shows the "Message" action for another user\'s post', async () => {
+    const screen = await renderWithTheme(<FeedPostCard post={basePost({ userId: 'user-1' })} />);
+    expect(screen.queryByText('home.sendMessage')).toBeTruthy();
+  });
+
+  // Real, reported bug: this showed on your own posts too, and tapping it
+  // tried to open a conversation with yourself — the backend rejects that
+  // (getOrCreateConversation: "You cannot start a conversation with
+  // yourself"), so it just silently failed.
+  it('hides the "Message" action for your own post', async () => {
+    const screen = await renderWithTheme(<FeedPostCard post={basePost({ userId: 'viewer-1' })} />);
+    expect(screen.queryByText('home.sendMessage')).toBeNull();
+  });
+});
+
+// Placed after "send message action" above — the last two tests here
+// ("reverts the optimistic count"/"ignores a second tap") each leave a
+// promise continuation that lands a state update on their own
+// already-unmounted render after the test itself has finished (a
+// pre-existing "not wrapped in act()" warning, unrelated to this file's
+// actual assertions); whatever test runs immediately after inherits that
+// stray update mid-render. Keeping unrelated describe blocks ahead of this
+// one avoids being that unlucky next test.
 describe('FeedPostCard — reactions (Bloque 3)', () => {
   beforeEach(() => {
     jest.clearAllMocks();

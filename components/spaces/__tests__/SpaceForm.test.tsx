@@ -22,7 +22,7 @@ const mockedGetExerciseCategories = getExerciseCategories as jest.MockedFunction
 
 const CATEGORIES = [
   { id: 1, code: 'strength', name: 'Strength' },
-  { id: 2, code: 'cardio_low', name: 'Cardio Low' },
+  { id: 2, code: 'cardio-low', name: 'Cardio Low' },
 ];
 
 /**

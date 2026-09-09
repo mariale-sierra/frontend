@@ -10,6 +10,7 @@ import { CommentsSheet } from './CommentsSheet';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { reactToPost, unreactToPost } from '../../services/workout-posts/workout-posts.service';
+import { useAuth } from '../../hooks/useAuth';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
 
 interface FeedPostCardProps {
@@ -24,6 +25,11 @@ interface FeedPostCardProps {
 export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardProps) {
   const router = useRouter();
   const { t } = useTranslation();
+  const { userId } = useAuth();
+  // Real, reported bug: the "Message" action showed on your own posts too —
+  // tapping it tried to open a conversation with yourself, which the chats
+  // module doesn't support (getOrCreateConversation rejects a self-id).
+  const isOwnPost = post.userId === userId;
 
   // Local, optimistic copies of the server-seeded reaction/comment state —
   // `post` itself never changes after the initial feed fetch (Home doesn't
@@ -125,10 +131,12 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
           </Row>
         </Row>
 
-        <Row pressable onPress={handleSendMessage} gap="xs">
-          <Icon name="paper-plane-outline" size={20} color={colors.paper} />
-          <Text variant="caption" tone="secondary">{t('home.sendMessage')}</Text>
-        </Row>
+        {isOwnPost ? null : (
+          <Row pressable onPress={handleSendMessage} gap="xs">
+            <Icon name="paper-plane-outline" size={20} color={colors.paper} />
+            <Text variant="caption" tone="secondary">{t('home.sendMessage')}</Text>
+          </Row>
+        )}
       </Row>
 
       <CommentsSheet

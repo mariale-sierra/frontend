@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, Modal, Pressable, StyleSheet } from 'react-native';
+import { Animated, Dimensions, Keyboard, Modal, Platform, Pressable, StyleSheet } from 'react-native';
+import type { KeyboardEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, shadows, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
@@ -11,8 +12,17 @@ interface BottomSheetModalProps {
   visible: boolean;
   onClose: () => void;
   children: ReactNode;
-  /** Passed straight through to the sheet's own `maxHeight` style. */
+  /** Passed straight through to the sheet's own `maxHeight` style. Content
+   * shorter than this sizes down to fit — fine for the exercise filter
+   * sheets (categories/locations/muscles), which want to hug their content. */
   maxHeight?: `${number}%`;
+  /** Pins the sheet to exactly this height instead of sizing to content.
+   * CommentsSheet needs this — with only `maxHeight`, a post with just one
+   * or two comments rendered as a short strip hugging the bottom edge
+   * instead of a real panel, and left no room above the keyboard for the
+   * composer to rise into (real, reported bug: "displays at the bottom,
+   * not up to half the screen"). */
+  height?: `${number}%`;
 }
 
 /** Shared bottom-sheet shell for the exercise filter sheets (categories,
@@ -23,10 +33,45 @@ interface BottomSheetModalProps {
  * together, which visibly dragged the backdrop up from the bottom along
  * with the sheet (real reported bug). Both layers are absolutely
  * positioned so neither depends on Modal's default flex stacking. */
-export function BottomSheetModal({ visible, onClose, children, maxHeight = '70%' }: BottomSheetModalProps) {
+export function BottomSheetModal({ visible, onClose, children, maxHeight = '70%', height }: BottomSheetModalProps) {
   const insets = useSafeAreaInsets();
   const [mounted, setMounted] = useState(visible);
   const progress = useRef(new Animated.Value(0)).current;
+  // Real, reported bug: a `KeyboardAvoidingView` inside this sheet's own
+  // content didn't budge when the keyboard opened — RN's `Modal` presents in
+  // its own native layer, and `KeyboardAvoidingView`'s automatic
+  // `measureInWindow`-based sizing doesn't reliably track the keyboard from
+  // inside one (a known RN/Modal limitation, not something padding/behavior
+  // tuning fixes). Tracked here instead, driven straight off native keyboard
+  // show/hide events, and folded into the sheet's own translateY below —
+  // the whole sheet floats up bodily to stay above the keyboard, the same
+  // way CommentsSheet wants its composer to "sit on top of the keyboard".
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const animateTo = (toValue: number, duration?: number) => {
+      Animated.timing(keyboardOffset, {
+        toValue,
+        duration: duration ?? 220,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const showSub = Keyboard.addListener(showEvent, (e: KeyboardEvent) => {
+      animateTo(e.endCoordinates.height, e.duration);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, (e: KeyboardEvent) => {
+      animateTo(0, e.duration);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardOffset]);
 
   useEffect(() => {
     if (visible) {
@@ -51,13 +96,17 @@ export function BottomSheetModal({ visible, onClose, children, maxHeight = '70%'
           styles.sheet,
           {
             maxHeight,
+            ...(height ? { height } : null),
             paddingBottom: Math.max(insets.bottom, spacing.lg),
             transform: [
               {
-                translateY: progress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [SCREEN_HEIGHT, 0],
-                }),
+                translateY: Animated.add(
+                  progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [SCREEN_HEIGHT, 0],
+                  }),
+                  Animated.multiply(keyboardOffset, -1),
+                ),
               },
             ],
           },
