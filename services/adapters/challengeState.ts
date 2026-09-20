@@ -75,6 +75,23 @@ export function getChallengeCardColor(
 }
 
 /**
+ * The color a glow challenge card's light and outline take (Challenges-Mine and
+ * Home's hero card): the state's own color on a `rest` day (lavender) and once
+ * today is `completed` (green) — the two states a card is there to tell you
+ * about — and the challenge's own activity color otherwise, including for a
+ * finished or left challenge. (The card's *badge* always takes the state's
+ * color; see `getChallengeCardColor`.)
+ */
+export function getChallengeGlowColor(
+  state: ChallengeCardState,
+  dominantActivityCategory: ActivityType | null | undefined,
+): string {
+  return state === 'rest' || state === 'completed'
+    ? STATE_COLOR[state]
+    : getChallengeAccentColor(dominantActivityCategory);
+}
+
+/**
  * challenge_user_map.status, normalized. `completed`/`left` are explicit
  * backend state transitions — POST /challenges/:id/complete and
  * /challenges/:id/leave (ChallengesService.completeChallenge/leaveChallenge)

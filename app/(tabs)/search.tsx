@@ -7,7 +7,7 @@ import ScreenBackground from '../../components/layout/screenBackground';
 import { Row } from '../../components/layout/row';
 import { Text } from '../../components/ui/text';
 import { SearchBar } from '../../components/ui/searchBar';
-import { ExploreChallengeCard } from '../../components/challenge/list/ExploreChallengeCard';
+import { ExploreCard } from '../../components/challenge/list/challengeCards';
 import { SearchUserRow } from '../../components/search';
 import { getChallenges } from '../../services/challenge/challenge.service';
 import { getMyChallenges, searchUsers } from '../../services/user/user.service';
@@ -111,7 +111,7 @@ export default function Search() {
   const hasNoResults = hasQuery && !isSearching && matchedChallenges.length === 0 && people.length === 0;
 
   return (
-    <ScreenBackground variant="default" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
+    <ScreenBackground variant="default" gradientBackground applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + spacing['2xl'] }}>
         <View style={styles.titleWrap}>
           <Text variant="title" align="center">{t('search.screenTitle')}</Text>
@@ -145,7 +145,7 @@ export default function Search() {
                 </Row>
                 <View style={styles.challengeList}>
                   {visibleChallenges.map((challenge) => (
-                    <ExploreChallengeCard
+                    <ExploreCard
                       key={challenge.challengeId}
                       challenge={challenge}
                       onPress={() => router.push(`/challenge/${challenge.challengeId}`)}

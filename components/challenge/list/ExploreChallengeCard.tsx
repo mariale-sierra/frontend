@@ -7,12 +7,7 @@ import { Row } from '../../layout/row';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { formatCount } from '../../../utils/format';
 import { getChallengeAccentColor } from '../../../services/adapters/challengeState';
-import type { ExploreChallengeViewModel } from './challengeListSections';
-
-interface ExploreChallengeCardProps {
-  challenge: ExploreChallengeViewModel;
-  onPress?: () => void;
-}
+import type { ExploreChallengeCardProps } from './challengeListSections';
 
 export const ExploreChallengeCard = memo(function ExploreChallengeCard({ challenge, onPress }: ExploreChallengeCardProps) {
   const { t } = useTranslation();
@@ -24,26 +19,18 @@ export const ExploreChallengeCard = memo(function ExploreChallengeCard({ challen
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
       <View style={styles.card}>
         <View style={styles.top}>
-          <View style={[styles.durationBadge, { backgroundColor: accentColor }]}>
-            <Icon name="calendar-outline" size={14} color={colors.ink} />
-            <Text variant="caption" weight="bold" style={styles.durationText}>
+          <Text variant="subheader" numberOfLines={1}>
+            {challenge.title}
+          </Text>
+          {/* How long the challenge lasts — sits where the "n rest days"
+              summary used to (2026-09-19, explicit request), replacing the
+              accent "n days" badge that used to sit above the title. */}
+          <Row gap="xs" justify="flex-start">
+            <Icon name="calendar-outline" size={14} color={colors.paper} />
+            <Text variant="caption" tone="secondary">
               {t('challenges.durationDaysLabel', { count: challenge.durationDays })}
             </Text>
-          </View>
-
-          <View style={styles.titleBlock}>
-            <Text variant="body" size="xl" weight="bold" numberOfLines={1}>
-              {challenge.title}
-            </Text>
-            <Text variant="caption" tone="secondary">
-              {challenge.restDaysCount > 0
-                ? t('challenges.cycleSummary', {
-                    cycle: challenge.cycleLengthDays,
-                    count: challenge.restDaysCount,
-                  })
-                : t('challenges.noRestDays')}
-            </Text>
-          </View>
+          </Row>
         </View>
 
         <View style={styles.bottom}>
@@ -87,37 +74,23 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.9,
   },
+  // Content sits 20px from every edge: `base` (16) card padding + the `xs` (4)
+  // inset each content group adds — as roomy as Mine's `ChallengeStatusCard`.
+  // `gap` is only the minimum space between the two groups (the rest is
+  // distributed by `space-between`).
   card: {
     width: '100%',
     height: 176,
     borderRadius: radius.big,
     backgroundColor: colors.surface,
-    padding: spacing.md,
+    padding: spacing.base,
     justifyContent: 'space-between',
-    gap: spacing.base,
+    gap: spacing.sm,
   },
   top: {
-    gap: spacing.sm,
+    gap: 2,
     paddingHorizontal: spacing.xs,
     paddingTop: spacing.xs,
-  },
-  durationBadge: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.small,
-    // backgroundColor set inline — this challenge's own accent color, see accentColor above.
-  },
-  durationText: {
-    color: colors.ink,
-    textTransform: 'uppercase',
-    opacity: 1,
-  },
-  titleBlock: {
-    gap: 2,
   },
   bottom: {
     gap: spacing.sm,

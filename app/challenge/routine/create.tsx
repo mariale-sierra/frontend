@@ -123,7 +123,7 @@ export default function CreateRoutineScreen() {
   }
 
   return (
-    <ScreenBackground variant="top">
+    <ScreenBackground variant="top" gradientBackground>
       <Row justify="space-between" align="center" style={styles.topBar}>
         <Pressable onPress={() => safeBack()} hitSlop={12} style={styles.iconButton}>
           <Icon

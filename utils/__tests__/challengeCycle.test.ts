@@ -1,4 +1,4 @@
-import { buildRingTicks, classifyDay, computeConsistencyPercents, dayInCycle, findCycleDayFor, isRestDay } from '../challengeCycle';
+import { buildRingTicks, classifyDay, computeConsistencyPercents, dayInCycle, findCycleDayFor, getProgressFraction, isRestDay } from '../challengeCycle';
 import type { ChallengeCycleDayContract } from '../../types/challenge';
 
 const CYCLE: ChallengeCycleDayContract[] = [
@@ -182,5 +182,20 @@ describe('buildRingTicks', () => {
 
   it('returns an empty array for a non-positive segment count', () => {
     expect(buildRingTicks({ segmentCount: 0, photoPercent: 0.5, restPercent: 0.5, photoColor: 'A', restColor: 'B', trackColor: 'C' })).toEqual([]);
+  });
+});
+
+describe('getProgressFraction', () => {
+  it('is the share of the challenge that has been reached', () => {
+    expect(getProgressFraction(12, 24)).toBe(0.5);
+    expect(getProgressFraction(1, 4)).toBe(0.25);
+  });
+
+  it('never goes past 1', () => {
+    expect(getProgressFraction(30, 21)).toBe(1);
+  });
+
+  it('is 0 for a challenge with no length', () => {
+    expect(getProgressFraction(3, 0)).toBe(0);
   });
 });

@@ -342,7 +342,7 @@ export default function ExercisesScreen() {
   );
 
   return (
-    <ScreenBackground variant="top">
+    <ScreenBackground variant="top" gradientBackground>
       <Row justify="space-between" align="center" style={styles.topBar}>
         <BackButton style={styles.backButton} />
         <Text variant="body" weight="bold" align="center" style={styles.headerTitle}>

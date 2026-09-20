@@ -137,3 +137,12 @@ export function buildRingTicks(params: {
   });
 }
 
+
+/**
+ * How far along a challenge is, as a share of its length (0 to 1) — the fill of
+ * a card's progress bar. 0 for a challenge with no length yet, and never past 1
+ * (a challenge on its last-plus day still reads as complete, not overflowing).
+ */
+export function getProgressFraction(currentDay: number, totalDays: number): number {
+  return totalDays > 0 ? Math.min(currentDay / totalDays, 1) : 0;
+}

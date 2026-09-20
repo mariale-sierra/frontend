@@ -1,12 +1,13 @@
 import { memo, useCallback, useState } from 'react';
 import { Dimensions, FlatList, NativeScrollEvent, NativeSyntheticEvent, Pressable, StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
+import { ActiveChallengeItemV2 } from './ActiveChallengeItemV2';
+import { useHomeChallengeCard } from './useHomeChallengeCard';
 import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
+import { USE_GLOW_CHALLENGE_CARDS } from '../../constants/challengeCards';
 import { withAlpha } from '../../utils/color';
-import { getChallengeCardColor } from '../../services/adapters/challengeState';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
 
 const ITEM_WIDTH = Dimensions.get('window').width - spacing.lg * 2;
@@ -44,62 +45,33 @@ function StatusPill({
   );
 }
 
+// The classic Home hero card: a solid full-color card. Its logic (where a tap
+// goes, which state pill shows, how far along it is) lives in
+// `useHomeChallengeCard`, shared with the newer `ActiveChallengeItemV2`.
 const ChallengeItem = memo(function ChallengeItem({ challenge, hoursLeft }: ItemProps) {
   const { t } = useTranslation();
-  const router = useRouter();
-  // Per explicit request: tapping the card jumps straight into logging
-  // today's progress for THIS challenge (skipping the challenge-picker
-  // sheet, same `/(add)/metrics?challengeId=` shortcut Challenges-Mine's
-  // own "Add photo" square already uses) — but only when there's actually
-  // something to log today. `rest`/`completed` have nothing to log (no
-  // routine today / already logged today), so those go to the challenge's
-  // own progress screen instead, same destination Challenges-Mine's card
-  // itself opens on a normal tap (`/challenge/:id/progress`).
-  function handlePress() {
-    if (challenge.state === 'active') {
-      router.push(`/(add)/metrics?challengeId=${challenge.challengeId}`);
-    } else {
-      router.push(`/challenge/${challenge.challengeId}/progress`);
-    }
-  }
-  // Card background signals state — same shared getChallengeCardColor()
-  // (challengeState.ts) used by Challenges-Mine's status card and the
-  // progress-ring eyebrow. `rest`/`completed` keep their own fixed meaning
-  // (purple/green) unchanged; only `active` resolves to the challenge's own
-  // dominant-activity color now (Activity Color System v2), falling back to
-  // `colors.primary` (white) when the challenge has no dominant category
-  // yet. `completed` means TODAY has a logged photo, not "the whole
-  // challenge is done" (a genuinely finished/left challenge never reaches
-  // this component at all — getHomeChallengesSorted excludes those, see
-  // homeAdapter.ts).
-  const accentColor = getChallengeCardColor(challenge.state, challenge.dominantActivityCategory);
-  const showTimeBadge = challenge.state === 'active' && hoursLeft > 0;
-  const progress = challenge.totalDays > 0 ? Math.min(challenge.currentDay / challenge.totalDays, 1) : 0;
+  const {
+    stateColor: accentColor,
+    status,
+    progress,
+    accessibilityLabel,
+    onPress: handlePress,
+  } = useHomeChallengeCard(challenge, hoursLeft);
 
   return (
     <Pressable
       onPress={handlePress}
       style={({ pressed }) => [styles.card, { backgroundColor: accentColor }, pressed && styles.pressed]}
       accessibilityRole="button"
-      accessibilityLabel={
-        challenge.state === 'active'
-          ? t('home.logProgressA11y', { name: challenge.title })
-          : t('home.openChallengeA11y', { name: challenge.title })
-      }
+      accessibilityLabel={accessibilityLabel}
     >
       <View style={styles.topRow}>
         <Text variant="header" inverse tone="secondary">{t('home.activeChallenge')}</Text>
 
-        {challenge.state === 'completed' ? (
-          <StatusPill icon="checkmark-outline" label={t('home.completed')} accentColor={accentColor} />
-        ) : challenge.state === 'rest' ? (
-          <StatusPill icon="moon-outline" label={t('home.restDay')} accentColor={accentColor} />
-        ) : showTimeBadge ? (
-          <StatusPill icon="flame-outline" label={t('home.hoursLeft', { hours: hoursLeft })} accentColor={accentColor} />
-        ) : null}
+        {status ? <StatusPill icon={status.icon} label={status.label} accentColor={accentColor} /> : null}
       </View>
 
-      <Text variant="body" size="xl" weight="bold" inverse>{challenge.title}</Text>
+      <Text variant="subheader" inverse>{challenge.title}</Text>
 
       <View style={styles.progressArea}>
         <View style={styles.progressTrack}>
@@ -126,8 +98,18 @@ export const ActiveChallengeSection = memo(function ActiveChallengeSection({ cha
     setActiveIndex(Math.max(0, Math.min(index, challenges.length - 1)));
   }
 
+  // Which hero card design to show — see `constants/challengeCards.ts`. The
+  // newer card fills whatever it's put in, so it gets the carousel's item width
+  // from this wrapper; the classic card carries its own width.
   const renderItem = useCallback(
-    ({ item }: { item: HomeActiveChallengeViewModel }) => <ChallengeItem challenge={item} hoursLeft={hoursLeft} />,
+    ({ item }: { item: HomeActiveChallengeViewModel }) =>
+      USE_GLOW_CHALLENGE_CARDS ? (
+        <View style={styles.glowItem}>
+          <ActiveChallengeItemV2 challenge={item} hoursLeft={hoursLeft} />
+        </View>
+      ) : (
+        <ChallengeItem challenge={item} hoursLeft={hoursLeft} />
+      ),
     [hoursLeft],
   );
 
@@ -168,6 +150,9 @@ const styles = StyleSheet.create({
   },
   separator: {
     width: SEPARATOR_WIDTH,
+  },
+  glowItem: {
+    width: ITEM_WIDTH,
   },
   card: {
     width: ITEM_WIDTH,

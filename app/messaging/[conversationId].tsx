@@ -15,7 +15,7 @@ import ScreenBackground from '../../components/layout/screenBackground';
 import { BackButton } from '../../components/ui/backButton';
 import { Text } from '../../components/ui/text';
 import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
+import { GlassInput } from '../../components/ui/glassInput';
 import { IconButton } from '../../components/ui/iconButton';
 import { UserAvatar } from '../../components/ui/userAvatar';
 import { ConfirmationPopup } from '../../components/ui/confirmationPopup';
@@ -278,7 +278,7 @@ export default function Chat() {
                   is tiny/doesn't work" bug, not a cosmetic one. */}
               <Row align="center" gap="sm" justify="flex-start">
                 <View style={styles.inputWrapper}>
-                  <Input
+                  <GlassInput
                     containerStyle={styles.input}
                     style={styles.inputText}
                     placeholderVariant="caption"
@@ -382,8 +382,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.md,
   },
+  // Transparent on purpose (2026-09-19): the message field is frosted glass
+  // (`GlassInput`), and glass over a solid `surface` bar would vanish into it.
   inputBar: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: withAlpha(colors.paper, 0.08),
     paddingHorizontal: spacing.lg,
@@ -392,10 +394,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   // Message request (Instagram-style) — replaces inputBar entirely while
-  // `isPending`, same surface/border chrome so the footer reads as one
+  // `isPending`, same transparent/border chrome so the footer reads as one
   // consistent "bottom bar" family either way.
   requestBar: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: withAlpha(colors.paper, 0.08),
     paddingHorizontal: spacing.lg,
@@ -438,9 +440,8 @@ const styles = StyleSheet.create({
     // breathing room, rather than a raw pixel value.
     paddingLeft: spacing.xs,
   },
+  // The glass fill, radius and rim come from `GlassInput` itself.
   input: {
-    backgroundColor: colors.ink,
-    borderRadius: radius.big,
     // Tightened from Input's own default `spacing.md`, per explicit "row is
     // too tall" request — paired with the smaller `sendButton` below so the
     // pill and the button land on close to the same height.

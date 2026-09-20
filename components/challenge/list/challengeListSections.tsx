@@ -26,3 +26,9 @@ export interface ExploreChallengeViewModel {
    * `challengeState.ts`'s `getChallengeAccentColor()`. */
   dominantActivityCategory: ActivityType | null;
 }
+
+/** The props of a Challenges-Explore card — the same for every design of it. */
+export interface ExploreChallengeCardProps {
+  challenge: ExploreChallengeViewModel;
+  onPress?: () => void;
+}

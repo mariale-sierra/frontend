@@ -1,4 +1,10 @@
-import { deriveChallengeCardState, groupLatestPhotoByChallengeId, pickChallengeStatus } from '../challengeState';
+import {
+  deriveChallengeCardState,
+  getChallengeGlowColor,
+  groupLatestPhotoByChallengeId,
+  pickChallengeStatus,
+} from '../challengeState';
+import { activityColors, colors } from '../../../constants/theme';
 import type { ChallengeContract, ChallengePhoto } from '../../../types/challenge';
 
 describe('deriveChallengeCardState', () => {
@@ -108,5 +114,30 @@ describe('groupLatestPhotoByChallengeId', () => {
 
   it('returns an empty map for no photos', () => {
     expect(groupLatestPhotoByChallengeId([]).size).toBe(0);
+  });
+});
+
+describe('getChallengeGlowColor', () => {
+  it('is lavender on a rest day, whatever the activity', () => {
+    expect(getChallengeGlowColor('rest', 'strength')).toBe(colors.rest);
+    expect(getChallengeGlowColor('rest', null)).toBe(colors.rest);
+  });
+
+  it('is green once today is completed, whatever the activity', () => {
+    expect(getChallengeGlowColor('completed', 'mindBody')).toBe(colors.success);
+    expect(getChallengeGlowColor('completed', null)).toBe(colors.success);
+  });
+
+  it('is the activity color on a train day', () => {
+    expect(getChallengeGlowColor('active', 'cardioLow')).toBe(activityColors.cardioLow);
+  });
+
+  it('stays the activity color for a finished or left challenge', () => {
+    expect(getChallengeGlowColor('won', 'flexibility')).toBe(activityColors.flexibility);
+    expect(getChallengeGlowColor('left', 'flexibility')).toBe(activityColors.flexibility);
+  });
+
+  it('falls back to the neutral primary when there is no dominant category yet', () => {
+    expect(getChallengeGlowColor('active', null)).toBe(colors.primary);
   });
 });

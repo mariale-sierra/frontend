@@ -79,6 +79,8 @@ const es = {
     addPhoto: 'Agregar foto',
     durationDaysLabel_one: '{{count}} día',
     durationDaysLabel_other: '{{count}} días',
+    daysUnit_one: 'día',
+    daysUnit_other: 'días',
     cycleSummary_one: 'Ciclo de {{cycle}} días · {{count}} día de descanso',
     cycleSummary_other: 'Ciclo de {{cycle}} días · {{count}} días de descanso',
     noRestDays: 'sin días de descanso',

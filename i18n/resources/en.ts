@@ -79,6 +79,8 @@ const en = {
     addPhoto: 'Add photo',
     durationDaysLabel_one: '{{count}} day',
     durationDaysLabel_other: '{{count}} days',
+    daysUnit_one: 'day',
+    daysUnit_other: 'days',
     cycleSummary_one: '{{cycle}}-day cycle · {{count}} rest day',
     cycleSummary_other: '{{cycle}}-day cycle · {{count}} rest days',
     noRestDays: 'no rest days',

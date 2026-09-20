@@ -9,6 +9,7 @@ import { Row } from '../../../../components/layout/row';
 import { BackButton } from '../../../../components/ui/backButton';
 import { Icon } from '../../../../components/ui/icon';
 import { Text } from '../../../../components/ui/text';
+import { ChallengeAccentBackdrop } from '../../../../components/challenge/challengeAccentBackdrop';
 import { colors, radius, spacing, textOpacity } from '../../../../constants/theme';
 import { withAlpha } from '../../../../utils/color';
 import { toTitleCase } from '../../../../utils/format';
@@ -258,6 +259,10 @@ export default function RoutineDayDetail() {
   if (!view || !selectedDay || selectedDay.isRestDay) {
     return (
       <ScreenBackground variant="default" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
+        {/* A rest day is still part of this challenge — keep its backdrop so
+            stepping through "Next in the cycle" doesn't flip the look. Skipped
+            when there's no challenge to take a color from (load error). */}
+        {challenge && <ChallengeAccentBackdrop color={accentColor} />}
         <Row justify="space-between" align="center" style={styles.topBar}>
           <BackButton style={styles.backButton} />
           <View style={styles.iconButton} />
@@ -276,6 +281,8 @@ export default function RoutineDayDetail() {
 
   return (
     <ScreenBackground variant="default" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
+      <ChallengeAccentBackdrop color={accentColor} />
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: membershipStatus === 'none' ? spacing['2xl'] : insets.bottom + spacing.xl }}

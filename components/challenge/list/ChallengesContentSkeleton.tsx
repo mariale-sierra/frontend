@@ -1,11 +1,13 @@
 import { Skeleton } from '../../ui/skeleton';
 import { Stack } from '../../layout/stack';
+import { CHALLENGE_CARD_HEIGHT } from '../card/ChallengeCard';
 import { radius } from '../../../constants/theme';
 
 const CARD_COUNT = 3;
-// Both card shapes (ChallengeStatusCard, ExploreChallengeCard) land on
-// ~176px tall in practice, so one skeleton height covers either tab.
-const CARD_HEIGHT = 176;
+// Every card design (the glow cards fix their height at
+// `CHALLENGE_CARD_HEIGHT`; the classic ones land on the same ~176px in
+// practice) is this tall, so one skeleton height covers either tab.
+const CARD_HEIGHT = CHALLENGE_CARD_HEIGHT;
 
 /** Mirrors a handful of list-row cards (Mine's `ChallengeStatusCard` or
  * Explore's `ExploreChallengeCard`, both ~176px tall) — shown while the

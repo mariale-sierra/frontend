@@ -188,7 +188,7 @@ export default function CreateChallenge() {
   }
 
   return (
-    <ScreenBackground variant="top">
+    <ScreenBackground variant="top" gradientBackground>
       <ScrollView contentContainerStyle={styles.container}>
         <Stack gap="lg">
           <CreateFlowProgressHeader

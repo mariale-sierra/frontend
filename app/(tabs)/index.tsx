@@ -274,7 +274,7 @@ export default function Home() {
   );
 
   return (
-    <ScreenBackground variant="default">
+    <ScreenBackground variant="default" gradientBackground>
       <FlatList
         data={isReady ? feedPosts : []}
         keyExtractor={(item) => item.id}

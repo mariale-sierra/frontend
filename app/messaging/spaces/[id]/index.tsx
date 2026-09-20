@@ -17,7 +17,7 @@ import { IconButton } from '../../../../components/ui/iconButton';
 import { Icon } from '../../../../components/ui/icon';
 import { Text } from '../../../../components/ui/text';
 import { Button } from '../../../../components/ui/button';
-import { Input } from '../../../../components/ui/input';
+import { GlassInput } from '../../../../components/ui/glassInput';
 import { ConfirmationPopup } from '../../../../components/ui/confirmationPopup';
 import { Row } from '../../../../components/layout/row';
 import { IconStack } from '../../../../components/layout/iconStack';
@@ -449,7 +449,7 @@ function SpaceThread({ space, accentColor, isOwner, onLeavePress }: SpaceThreadP
           <View style={styles.inputBar}>
             <Row align="center" gap="sm" justify="flex-start">
               <View style={styles.inputWrapper}>
-                <Input
+                <GlassInput
                   containerStyle={styles.input}
                   style={styles.inputText}
                   placeholderVariant="caption"
@@ -613,8 +613,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: spacing.md,
   },
+  // Transparent on purpose (2026-09-19): the message field is frosted glass
+  // (`GlassInput`), and glass over a solid `surface` bar would vanish into it.
   inputBar: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: withAlpha(colors.paper, 0.08),
     paddingHorizontal: spacing.lg,
@@ -629,9 +631,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xs,
     paddingLeft: spacing.xs,
   },
+  // The glass fill, radius and rim come from `GlassInput` itself.
   input: {
-    backgroundColor: colors.ink,
-    borderRadius: radius.big,
     paddingVertical: spacing.sm,
   },
   sendButton: {

@@ -124,7 +124,7 @@ export default function Profile() {
   );
 
   return (
-    <ScreenBackground variant="default">
+    <ScreenBackground variant="default" gradientBackground>
       {topBar}
       <ScrollView
         contentContainerStyle={styles.container}

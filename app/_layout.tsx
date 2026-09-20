@@ -3,7 +3,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
-import { BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
+import { InterTight_700Bold } from '@expo-google-fonts/inter-tight';
 import { AuthProvider } from '../context/authContext';
 import { ThemeProvider } from '../context/themeContext';
 import { useAuth } from '../hooks/useAuth';
@@ -88,13 +88,13 @@ export default function RootLayout() {
   // app/(tabs)/_layout.tsx) was React Navigation's `tabBarStyle` option
   // itself, unrelated to font loading. This still not gating first paint on
   // fonts is kept anyway on its own merits — it avoids a blank screen while
-  // fonts load, letting the UI render with fallback fonts and pop in Bebas
-  // Neue/DM Sans once ready instead.
+  // fonts load, letting the UI render with fallback fonts and pop in Inter
+  // Tight/DM Sans once ready instead.
   useFonts({
     DMSans_400Regular,
     DMSans_500Medium,
     DMSans_700Bold,
-    BebasNeue_400Regular,
+    InterTight_700Bold,
   });
 
   // i18n itself initializes synchronously at import time using only the

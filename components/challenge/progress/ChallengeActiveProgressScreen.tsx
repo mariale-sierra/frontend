@@ -11,7 +11,7 @@ import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
 import { getChallengeAccentColor } from '../../../services/adapters/challengeState';
 import { leaveChallenge } from '../../../services/challenge/challenge.service';
 import ScreenBackground from '../../layout/screenBackground';
-import { ChallengeAccentGlow } from '../challengeAccentGlow';
+import { ChallengeAccentBackdrop } from '../challengeAccentBackdrop';
 import { ChallengeProgressHeader } from './ChallengeProgressHeader';
 import { ChallengePhotoGalleryModal } from './ChallengePhotoGalleryModal';
 import { ChallengePhotoMosaicSkeleton } from './ChallengePhotoMosaicSkeleton';
@@ -97,7 +97,7 @@ export function ChallengeActiveProgressScreen() {
 
   return (
     <ScreenBackground variant="challenges" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
-      <ChallengeAccentGlow color={accentColor} />
+      <ChallengeAccentBackdrop color={accentColor} />
 
       {/* The whole screen scrolls as one — the grid/calendar below are plain
           content Views, not their own independently-scrolling pager pages,

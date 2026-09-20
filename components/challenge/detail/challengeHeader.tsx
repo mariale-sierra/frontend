@@ -22,8 +22,8 @@ interface ChallengeHeaderProps {
   accentColor: string;
 }
 
-/** Title + info-rows block at the top of Challenge-Info — left-aligned Bebas
- * Neue title, then icon/label/value rows each hairline-separated (all four,
+/** Title + info-rows block at the top of Challenge-Info — left-aligned display-font
+ * title, then icon/label/value rows each hairline-separated (all four,
  * including the last, per the wireframe). Replaces the old centered
  * giant-day-count/location-icon-grid/activity-badge-chip layout, which
  * doesn't appear in this wireframe at all. */

@@ -8,9 +8,9 @@ import { Text } from '../ui/text';
 import { FormField } from '../ui/formField';
 import { ControlledFormField } from '../form/ControlledFormField';
 import { Row } from '../layout/row';
+import { SpaceCardView } from './SpaceCardView';
 import { colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
-import { formatCount } from '../../utils/format';
 import { getExerciseCategories } from '../../services/exercises/exercises.service';
 import type { ExerciseCategory } from '../../services/exercises/exercises.service';
 import { activityColors } from '../../constants/theme';
@@ -224,31 +224,14 @@ export const SpaceForm = forwardRef<SpaceFormHandle, SpaceFormProps>(function Sp
         <Text variant="header" tone="secondary">
           {t('spaces.previewLabel')}
         </Text>
-        <View style={[stylesPreview.card, { borderLeftColor: accentColor }]}>
-          {selectedCategory && (
-            <View style={[stylesPreview.badge, { backgroundColor: accentColor }]}>
-              <Text variant="caption" weight="bold" style={stylesPreview.badgeText}>
-                {selectedCategory.name}
-              </Text>
-            </View>
-          )}
-          <Text variant="body" size="lg" weight="bold" numberOfLines={1}>
-            {name.trim() || t('spaces.namePlaceholder')}
-          </Text>
-          {description.trim() ? (
-            <Text variant="body" tone="secondary" numberOfLines={2}>
-              {description.trim()}
-            </Text>
-          ) : null}
-          <Row gap="xs" justify="flex-start">
-            <Icon name="people-outline" size={16} color={colors.paper} />
-            <Text variant="caption" tone="secondary">
-              {t('spaces.membersCount', {
-                count: previewMembersCount ?? 1,
-                formattedCount: formatCount(previewMembersCount ?? 1),
-              })}
-            </Text>
-          </Row>
+        <View style={styles.preview}>
+          <SpaceCardView
+            name={name.trim() || t('spaces.namePlaceholder')}
+            description={description.trim()}
+            categoryName={selectedCategory?.name}
+            membersCount={previewMembersCount ?? 1}
+            accentColor={accentColor}
+          />
         </View>
       </View>
 
@@ -293,6 +276,10 @@ export const SpaceForm = forwardRef<SpaceFormHandle, SpaceFormProps>(function Sp
 });
 
 const styles = StyleSheet.create({
+  // The live preview: the space as its card, a little below its "Preview" label.
+  preview: {
+    marginTop: spacing.md,
+  },
   container: {
     gap: spacing.lg,
   },
@@ -366,26 +353,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.big,
     borderWidth: 1.5,
     borderColor: withAlpha(colors.paper, 0.3),
-  },
-});
-
-const stylesPreview = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.big,
-    borderLeftWidth: 4,
-    padding: spacing.md,
-    gap: spacing.xs,
-    marginTop: spacing.md,
-  },
-  badge: {
-    alignSelf: 'flex-start',
-    borderRadius: radius.small,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  badgeText: {
-    color: colors.ink,
-    opacity: 1,
   },
 });

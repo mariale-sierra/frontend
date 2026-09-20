@@ -7,8 +7,7 @@ import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { Row } from '../../components/layout/row';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
-import { ChallengeStatusCard } from '../../components/challenge/list/ChallengeStatusCard';
-import { ExploreChallengeCard } from '../../components/challenge/list/ExploreChallengeCard';
+import { ExploreCard, MineCard } from '../../components/challenge/list/challengeCards';
 import { ChallengesViewToggle } from '../../components/challenge/list/ChallengesViewToggle';
 import { ChallengesContentSkeleton } from '../../components/challenge/list/ChallengesContentSkeleton';
 import type { ChallengesView } from '../../components/challenge/list/ChallengesViewToggle';
@@ -197,7 +196,7 @@ export default function Challenges() {
   const renderMineItem = useCallback(
     ({ item }: { item: ChallengeMineCardViewModel }) => (
       <View style={styles.itemWrap}>
-        <ChallengeStatusCard
+        <MineCard
           challenge={item}
           onPress={() => handleOpenMineChallenge(item.challengeId)}
           onPressAddPhoto={() => handleAddPhoto(item.challengeId)}
@@ -210,7 +209,7 @@ export default function Challenges() {
   const renderExploreItem = useCallback(
     ({ item }: { item: ExploreChallengeViewModel }) => (
       <View style={styles.itemWrap}>
-        <ExploreChallengeCard challenge={item} onPress={() => handleOpenExploreChallenge(item.challengeId)} />
+        <ExploreCard challenge={item} onPress={() => handleOpenExploreChallenge(item.challengeId)} />
       </View>
     ),
     [handleOpenExploreChallenge],
@@ -252,7 +251,7 @@ export default function Challenges() {
 
   if (loading) {
     return (
-      <ScreenBackground variant="default">
+      <ScreenBackground variant="default" gradientBackground>
         {listHeader}
         <View style={styles.skeletonWrap}>
           <ChallengesContentSkeleton />
@@ -264,7 +263,7 @@ export default function Challenges() {
 
   if (error) {
     return (
-      <ScreenBackground variant="default">
+      <ScreenBackground variant="default" gradientBackground>
         {listHeader}
         <View style={styles.center}>
           <Text tone="secondary">{error}</Text>
@@ -275,7 +274,7 @@ export default function Challenges() {
   }
 
   return (
-    <ScreenBackground variant="default">
+    <ScreenBackground variant="default" gradientBackground>
       {view === 'mine' ? (
         <FlatList
           data={mineChallenges}

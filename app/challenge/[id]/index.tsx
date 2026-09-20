@@ -10,7 +10,7 @@ import { BackButton } from '../../../components/ui/backButton';
 import { Icon } from '../../../components/ui/icon';
 import { Text } from '../../../components/ui/text';
 import { ChallengeHeader, ChallengeAboutSection, ChallengeRoutineList, ChallengeInfoContentSkeleton } from '../../../components/challenge/detail';
-import { ChallengeAccentGlow } from '../../../components/challenge/challengeAccentGlow';
+import { ChallengeAccentBackdrop } from '../../../components/challenge/challengeAccentBackdrop';
 import type { ChallengeInfoRow } from '../../../components/challenge/detail';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
@@ -155,7 +155,7 @@ export default function ChallengeDetail() {
 
   return (
     <ScreenBackground variant="default" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
-      <ChallengeAccentGlow color={accentColor} />
+      <ChallengeAccentBackdrop color={accentColor} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
