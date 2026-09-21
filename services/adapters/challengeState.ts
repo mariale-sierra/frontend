@@ -114,14 +114,23 @@ export function getChallengeGlowColor(
 }
 
 /**
- * challenge_user_map.status, normalized. `completed`/`left` are explicit
- * backend state transitions — POST /challenges/:id/complete and
- * /challenges/:id/leave (ChallengesService.completeChallenge/leaveChallenge)
- * — not something derived from progress percentage or calendar time. The
- * real status string is checked first for that reason.
+ * challenge_user_map.status, normalized from a raw (untrusted) value.
+ * `completed`/`left` are explicit backend state transitions — POST
+ * /challenges/:id/complete and /challenges/:id/leave
+ * (ChallengesService.completeChallenge/leaveChallenge) — not something
+ * derived from progress percentage or calendar time.
+ *
+ * Shared by `pickChallengeStatus` below (reading a merged
+ * challenge-plus-relation object, e.g. GET /users/me/challenges) and by the
+ * Consistency/progress screen (`useChallengeActiveProgress.ts`), which reads
+ * the SAME relation status from a differently-named field
+ * (`ChallengeProgressContract.relationStatus`, GET /challenges/progress) —
+ * that screen's `fullChallenge` (GET /challenges/:id) has no relation status
+ * on it at all, only the challenge's own unrelated 'open'/'closed' field, so
+ * it must never be passed to `pickChallengeStatus` directly.
  */
-export function pickChallengeStatus(challenge: ChallengeContract): NormalizedChallengeStatus {
-  const statusStr = asString(challenge.status ?? challenge.challenge_status).toLowerCase();
+export function normalizeChallengeStatus(rawStatus: unknown): NormalizedChallengeStatus {
+  const statusStr = asString(rawStatus).toLowerCase();
   // `left`-family checked FIRST: 'abandoned' contains the substring 'doned',
   // which contains 'done' — with 'completed' checked first, that
   // mis-classified every abandoned challenge as completed (caught by
@@ -135,6 +144,14 @@ export function pickChallengeStatus(challenge: ChallengeContract): NormalizedCha
     return 'completed';
   }
   return 'active';
+}
+
+/** `normalizeChallengeStatus`, reading the field off a merged
+ * challenge-plus-relation object (GET /users/me/challenges,
+ * GET /challenges — NOT the raw GET /challenges/:id shape, see the doc
+ * comment on `normalizeChallengeStatus`). */
+export function pickChallengeStatus(challenge: ChallengeContract): NormalizedChallengeStatus {
+  return normalizeChallengeStatus(challenge.status ?? challenge.challenge_status);
 }
 
 export interface DeriveChallengeStateInput {

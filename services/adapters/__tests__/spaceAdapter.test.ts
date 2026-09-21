@@ -25,10 +25,18 @@ const baseSpace = (overrides: Partial<SpaceContract> = {}): SpaceContract => ({
 });
 
 describe('activityTypeForCategoryCode', () => {
-  it('maps every known exercise_categories.code to its ActivityType', () => {
+  // The real, live convention (verified directly against the API,
+  // 2026-09-21) — a space using one of these three colors couldn't load it
+  // back when this map was still keyed by the hyphenated form.
+  it("maps every known exercise_categories.code (the live, canonical underscored form) to its ActivityType", () => {
+    expect(activityTypeForCategoryCode('cardio_low')).toBe('cardioLow');
+    expect(activityTypeForCategoryCode('mind_body')).toBe('mindBody');
+    expect(activityTypeForCategoryCode('strength')).toBe('strength');
+  });
+
+  it('also resolves a stray legacy hyphenated code, defensively', () => {
     expect(activityTypeForCategoryCode('cardio-low')).toBe('cardioLow');
     expect(activityTypeForCategoryCode('mind-body')).toBe('mindBody');
-    expect(activityTypeForCategoryCode('strength')).toBe('strength');
   });
 
   it('returns null for an unknown code instead of throwing', () => {

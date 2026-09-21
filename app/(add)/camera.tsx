@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { safeBack, safeBackTimes } from '../../utils/navigation';
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +31,34 @@ import { getChallenge, isChallengeOwner } from '../../services/challenge/challen
 import { TagParticipantsSheet } from '../../components/challenge/TagParticipantsSheet';
 import type { ChallengeContract } from '../../types/challenge';
 
+const CHIP_ICON_SIZE = 19;
+
+/** A chip over the captured photo — an icon and a label in a dark, rimmed pill: the
+ * visibility toggle (top right) and, for a challenge's owner, the tag picker (top left)
+ * are both this one, so they cannot drift apart. `style` places it; `scale` lets it pulse. */
+function CameraChip({
+  icon,
+  label,
+  onPress,
+  style,
+  scale,
+}: {
+  icon: React.ComponentProps<typeof Icon>['name'];
+  label: string;
+  onPress: () => void;
+  style: StyleProp<ViewStyle>;
+  scale?: Animated.Value;
+}) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [style, pressed && styles.pressed]} hitSlop={8}>
+      <Animated.View style={[styles.chipInner, scale && { transform: [{ scale }] }]}>
+        <Icon name={icon} size={CHIP_ICON_SIZE} color={colors.paper} />
+        <Text style={styles.chipLabel}>{label}</Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 function VisibilityToggle({
   visibility,
   anim,
@@ -42,22 +71,13 @@ function VisibilityToggle({
   const { t } = useTranslation();
   const isFollowers = visibility === 'followers';
   return (
-    <Pressable
+    <CameraChip
+      icon={isFollowers ? 'eye-outline' : 'eye-off-outline'}
+      label={isFollowers ? t('camera.visibilityFollowers') : t('camera.visibilityPrivate')}
       onPress={onToggle}
-      style={({ pressed }) => [styles.visibilityToggle, pressed && styles.pressed]}
-      hitSlop={8}
-    >
-      <Animated.View style={[styles.visibilityInner, { transform: [{ scale: anim }] }]}>
-        <Icon
-          name={isFollowers ? 'eye-outline' : 'eye-off-outline'}
-          size={19}
-          color={colors.paper}
-        />
-        <Text style={styles.visibilityLabel}>
-          {isFollowers ? t('camera.visibilityFollowers') : t('camera.visibilityPrivate')}
-        </Text>
-      </Animated.View>
-    </Pressable>
+      style={styles.visibilityToggle}
+      scale={anim}
+    />
   );
 }
 
@@ -85,7 +105,6 @@ export default function Camera() {
   // tagging only makes sense among people already in the challenge.
   const { userId } = useAuth();
   const [selectedChallenge, setSelectedChallenge] = useState<ChallengeContract | null>(null);
-  const { participants } = useChallengeParticipants(selectedChallengeId ?? null);
   const [taggedUserIds, setTaggedUserIds] = useState<string[]>([]);
   const [tagSheetVisible, setTagSheetVisible] = useState(false);
 
@@ -98,6 +117,10 @@ export default function Camera() {
   }, [selectedChallengeId]);
 
   const isOwner = isChallengeOwner(selectedChallenge, userId);
+  // Only the owner tags, so only the owner's camera asks for the participants — and the
+  // owner is not among the people to tag.
+  const { participants } = useChallengeParticipants(isOwner ? selectedChallengeId ?? null : null);
+  const taggable = useMemo(() => participants.filter((participant) => participant.id !== userId), [participants, userId]);
 
   const cameraRef = useRef<CameraView>(null);
   const isBusy = isTakingPicture || uploadingImage || submittingProgress;
@@ -279,20 +302,16 @@ export default function Camera() {
           <Image source={{ uri: capturedUri }} style={styles.cameraFill} resizeMode="cover" />
           <VisibilityToggle visibility={visibility} anim={visAnim} onToggle={toggleVisibility} />
           {isOwner && (
-            <Pressable
+            <CameraChip
+              icon="pricetag-outline"
+              label={
+                taggedUserIds.length > 0
+                  ? t('challengeProgress.tagParticipantsSelectedCount', { count: taggedUserIds.length })
+                  : t('challengeProgress.tagParticipantsChip')
+              }
               onPress={() => setTagSheetVisible(true)}
-              style={({ pressed }) => [styles.tagToggle, pressed && styles.pressed]}
-              hitSlop={8}
-            >
-              <View style={styles.tagToggleInner}>
-                <Icon name="pricetag-outline" size={17} color={colors.paper} />
-                <Text style={styles.visibilityLabel}>
-                  {taggedUserIds.length > 0
-                    ? t('challengeProgress.tagParticipantsSelectedCount', { count: taggedUserIds.length })
-                    : t('challengeProgress.tagParticipantsLabel')}
-                </Text>
-              </View>
-            </Pressable>
+              style={styles.tagToggle}
+            />
           )}
         </View>
 
@@ -300,6 +319,7 @@ export default function Camera() {
 
         <View style={styles.bottomBar}>
           <Pressable
+            testID="camera-confirm"
             onPress={handleConfirm}
             disabled={isBusy}
             style={({ pressed }) => [
@@ -318,7 +338,7 @@ export default function Camera() {
 
         <TagParticipantsSheet
           visible={tagSheetVisible}
-          participants={participants}
+          participants={taggable}
           selectedIds={taggedUserIds}
           onChange={setTaggedUserIds}
           onClose={() => setTagSheetVisible(false)}
@@ -355,6 +375,7 @@ export default function Camera() {
 
       <View style={styles.bottomBar}>
         <Pressable
+          testID="camera-capture"
           onPress={handleCapture}
           disabled={isBusy}
           style={({ pressed }) => [
@@ -444,23 +465,13 @@ const styles = StyleSheet.create({
     top: spacing.md,
     right: spacing.md,
   },
+  // The tag picker's chip sits at the top left, the visibility chip's mirror.
   tagToggle: {
     position: 'absolute',
     top: spacing.md,
     left: spacing.md,
   },
-  tagToggleInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingVertical: 8,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.medium,
-    backgroundColor: withAlpha(colors.ink, 0.45),
-    borderWidth: 1,
-    borderColor: withAlpha(colors.paper, 0.18),
-  },
-  visibilityInner: {
+  chipInner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -475,7 +486,7 @@ const styles = StyleSheet.create({
   // No `opacity: 1` alongside this custom color, unlike the usual rule for
   // Text custom-color overrides — kept exactly as shipped (already rendering
   // at the tone's default 85%) per an explicit "don't change this visually" request.
-  visibilityLabel: {
+  chipLabel: {
     color: colors.paper,
     fontSize: 14,
     fontWeight: '600',

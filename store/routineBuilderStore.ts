@@ -58,16 +58,21 @@ const defaultSet = (): SetRow => ({
   restSec: 0,
 });
 
-// Fallback template for a schema-kind exercise, used only until (or unless)
-// its real per-exercise metric config loads. `applyBackendMetricTemplate`
-// exists precisely to replace this with a real backend-provided template —
-// as of 2026-08-29, app/challenge/routine/exercises.tsx's handleAddSelected
-// now actually calls it (GET /exercises/:id/full) right after addExercise()
-// for every 'schema'-type exercise, so this mock is only what's briefly
-// applied before that resolves, or what's kept if the fetch fails. Before
-// that wiring landed, this WAS what genuinely got submitted for every
-// schema-kind exercise regardless of its real activity — a confirmed bug
-// (e.g. a pure-breathwork exercise showed distance+duration fields), see
+// Fallback template for a schema-kind exercise, used only for the instant
+// between addExercise() and handleAddSelected()'s own async metric
+// resolution (app/challenge/routine/exercises.tsx) — which now always
+// replaces this with either the exercise's real per-exercise metrics or,
+// far more often in practice (the RepDB-imported catalog has none), a
+// category-aware template built from ACTIVITY_METRIC_CONFIG
+// (buildActivityMetricTemplate, services/adapters/routineAdapter.ts), on
+// both the success and the failure path — so this one-size-fits-all mock is
+// never what actually gets submitted any more. It WAS, twice: first before
+// applyBackendMetricTemplate was wired up at all (2026-08-29, e.g. a
+// pure-breathwork exercise showed distance+duration fields), then again
+// after that wiring landed but only ever replaced the mock for an exercise
+// with real curated `exercise_metrics` — which excludes the entire RepDB
+// catalog (2026-09-21, e.g. a bench ankle stretch or a stair climber both
+// showed distance+duration regardless of their real category). See
 // havit-design-system-SKILL.md. Field keys must match the real backend
 // metric_type codes ('distance'/'time', not 'distanceKm'/'duration') since
 // createChallengePayloadAdapter.ts sends these keys verbatim as this

@@ -52,6 +52,12 @@ export function ChallengeActiveProgressScreen() {
     }
   }
 
+  function handlePressSettings() {
+    if (data.challengeId) {
+      router.push(`/challenge/${data.challengeId}/manage`);
+    }
+  }
+
   function handlePressMembers() {
     if (data.challengeId) {
       // `dominantActivityCategory` passed through as a route param
@@ -116,10 +122,12 @@ export function ChallengeActiveProgressScreen() {
           todayRoutineName={data.todayRoutineName}
           isTodayRestDay={data.isTodayRestDay}
           dominantActivityCategory={data.dominantActivityCategory}
+          isOwner={data.isOwner}
           onPressRoutine={handlePressRoutine}
           onPressMembers={handlePressMembers}
           onPressInfo={handlePressInfo}
           onPressLeave={leavePopup.show}
+          onPressSettings={handlePressSettings}
         />
 
         <View style={styles.consistencyHeader}>

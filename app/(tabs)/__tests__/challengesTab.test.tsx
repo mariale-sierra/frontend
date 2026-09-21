@@ -4,7 +4,14 @@ import Challenges from '../challenges';
 import { getMyChallenges } from '../../../services/user/user.service';
 import { getChallenges, getMyProgressPhotos } from '../../../services/challenge/challenge.service';
 import { hasShownCompletion, markCompletionShown } from '../../../utils/shownCompletions';
+import {
+  establishMembershipBaseline,
+  hasEstablishedMembershipBaseline,
+  hasSeenChallengeMembership,
+  markChallengeMembershipSeen,
+} from '../../../utils/seenChallengeMemberships';
 import { useChallengeFinishedStore } from '../../../store/challengeFinishedStore';
+import { useChallengeJoinApprovedStore } from '../../../store/challengeJoinApprovedStore';
 
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
@@ -31,6 +38,13 @@ jest.mock('../../../utils/shownCompletions', () => ({
   hasShownCompletion: jest.fn(),
   markCompletionShown: jest.fn(),
 }));
+jest.mock('../../../utils/seenChallengeMemberships', () => ({
+  establishMembershipBaseline: jest.fn(),
+  hasEstablishedMembershipBaseline: jest.fn(),
+  hasSeenChallengeMembership: jest.fn(),
+  markChallengeMembershipSeen: jest.fn(),
+}));
+jest.mock('../../../hooks/useAuth', () => ({ useAuth: () => ({ userId: 'owner-1' }) }));
 // A card's glow is drawn once it has been measured; there is nothing to check in it here.
 jest.mock('../../../components/ui/accentGlow', () => ({ AccentGlow: () => null }));
 
@@ -43,6 +57,7 @@ const challenge = (id: number, name: string, overrides: Record<string, unknown> 
   today_is_rest_day: false,
   today_completed: false,
   dominant_activity_category: 'strength',
+  created_by_user_id: 'owner-1',
   ...overrides,
 });
 
@@ -53,10 +68,18 @@ describe('the Challenges tab — a finished challenge', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useChallengeFinishedStore.setState({ visible: false, challenge: null });
+    useChallengeJoinApprovedStore.setState({ visible: false, challenge: null });
     (getChallenges as jest.Mock).mockResolvedValue([]);
     (getMyProgressPhotos as jest.Mock).mockResolvedValue([]);
     (hasShownCompletion as jest.Mock).mockResolvedValue(true);
     (markCompletionShown as jest.Mock).mockResolvedValue(undefined);
+    // Baseline already established, nothing new seen — keeps these
+    // existing tests' focus on the completion popup only; see the
+    // dedicated "You're in!" describe block below for its own coverage.
+    (hasEstablishedMembershipBaseline as jest.Mock).mockResolvedValue(true);
+    (hasSeenChallengeMembership as jest.Mock).mockResolvedValue(true);
+    (establishMembershipBaseline as jest.Mock).mockResolvedValue(undefined);
+    (markChallengeMembershipSeen as jest.Mock).mockResolvedValue(undefined);
   });
 
   async function renderTab(mine: unknown[]) {
@@ -109,5 +132,76 @@ describe('the Challenges tab — a finished challenge', () => {
     const screen = await renderWithProviders(<Challenges />);
 
     await waitFor(() => expect(screen.getByText('Finished Marathon')).toBeTruthy());
+  });
+});
+
+// "You're in!" — the only way a requester ever finds out their private
+// challenge join request was approved, since that happens on the OWNER's
+// own device. See utils/seenChallengeMemberships.ts.
+describe('the Challenges tab — "You\'re in!" (an approved join request)', () => {
+  const APPROVED = challenge(3, 'Iron Will', { created_by_user_id: 'someone-else' });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useChallengeFinishedStore.setState({ visible: false, challenge: null });
+    useChallengeJoinApprovedStore.setState({ visible: false, challenge: null });
+    (getChallenges as jest.Mock).mockResolvedValue([]);
+    (getMyProgressPhotos as jest.Mock).mockResolvedValue([]);
+    (hasShownCompletion as jest.Mock).mockResolvedValue(true);
+    (markCompletionShown as jest.Mock).mockResolvedValue(undefined);
+    (establishMembershipBaseline as jest.Mock).mockResolvedValue(undefined);
+    (markChallengeMembershipSeen as jest.Mock).mockResolvedValue(undefined);
+  });
+
+  it('shows it for a challenge someone else made that this device has never seen before, once a baseline exists', async () => {
+    (hasEstablishedMembershipBaseline as jest.Mock).mockResolvedValue(true);
+    (hasSeenChallengeMembership as jest.Mock).mockResolvedValue(false);
+    (getMyChallenges as jest.Mock).mockResolvedValue([GOING, APPROVED]);
+
+    const screen = await renderWithProviders(<Challenges />);
+    await waitFor(() => expect(screen.getByText('Morning Run')).toBeTruthy());
+
+    await waitFor(() => expect(useChallengeJoinApprovedStore.getState().visible).toBe(true));
+    expect(useChallengeJoinApprovedStore.getState().challenge).toMatchObject({
+      challengeId: '3',
+      challengeName: 'Iron Will',
+    });
+    expect(markChallengeMembershipSeen).toHaveBeenCalledWith('3');
+  });
+
+  it('never shows it for a challenge this user created themselves', async () => {
+    (hasEstablishedMembershipBaseline as jest.Mock).mockResolvedValue(true);
+    (hasSeenChallengeMembership as jest.Mock).mockResolvedValue(false);
+    (getMyChallenges as jest.Mock).mockResolvedValue([GOING]); // created_by_user_id: 'owner-1', same as the mocked viewer
+
+    const screen = await renderWithProviders(<Challenges />);
+    await waitFor(() => expect(screen.getByText('Morning Run')).toBeTruthy());
+
+    expect(useChallengeJoinApprovedStore.getState().visible).toBe(false);
+    expect(markChallengeMembershipSeen).not.toHaveBeenCalled();
+  });
+
+  it('never shows it for a membership already accounted for (a direct join, an accepted invite, or already shown)', async () => {
+    (hasEstablishedMembershipBaseline as jest.Mock).mockResolvedValue(true);
+    (hasSeenChallengeMembership as jest.Mock).mockResolvedValue(true);
+    (getMyChallenges as jest.Mock).mockResolvedValue([GOING, APPROVED]);
+
+    const screen = await renderWithProviders(<Challenges />);
+    await waitFor(() => expect(screen.getByText('Morning Run')).toBeTruthy());
+
+    expect(useChallengeJoinApprovedStore.getState().visible).toBe(false);
+    expect(markChallengeMembershipSeen).not.toHaveBeenCalled();
+  });
+
+  it("establishes the baseline silently on this device's first run — no popup for pre-existing memberships", async () => {
+    (hasEstablishedMembershipBaseline as jest.Mock).mockResolvedValue(false);
+    (getMyChallenges as jest.Mock).mockResolvedValue([GOING, APPROVED]);
+
+    const screen = await renderWithProviders(<Challenges />);
+    await waitFor(() => expect(screen.getByText('Morning Run')).toBeTruthy());
+
+    await waitFor(() => expect(establishMembershipBaseline).toHaveBeenCalledWith(['3']));
+    expect(useChallengeJoinApprovedStore.getState().visible).toBe(false);
+    expect(hasSeenChallengeMembership).not.toHaveBeenCalled();
   });
 });

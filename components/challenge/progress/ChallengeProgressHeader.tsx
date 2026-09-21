@@ -23,10 +23,14 @@ interface ChallengeProgressHeaderProps {
    * only `active` uses it — see `getChallengeCardColor`) and the Today's-
    * routine banner's accent (unconditional — see `getChallengeAccentColor`). */
   dominantActivityCategory: ActivityType | null;
+  /** Mutually exclusive with Leave — the challenge's creator manages it
+   * instead of leaving it (see app/challenge/[id]/manage.tsx). */
+  isOwner: boolean;
   onPressRoutine: () => void;
   onPressMembers: () => void;
   onPressInfo: () => void;
   onPressLeave: () => void;
+  onPressSettings: () => void;
 }
 
 // challenges.trainDay/restDay/finished/left — the exact same eyebrow copy
@@ -52,10 +56,12 @@ export function ChallengeProgressHeader({
   todayRoutineName,
   isTodayRestDay,
   dominantActivityCategory,
+  isOwner,
   onPressRoutine,
   onPressMembers,
   onPressInfo,
   onPressLeave,
+  onPressSettings,
 }: ChallengeProgressHeaderProps) {
   const { t } = useTranslation();
   const stateColor = getChallengeCardColor(state, dominantActivityCategory);
@@ -76,12 +82,20 @@ export function ChallengeProgressHeader({
             onPress={onPressInfo}
             accessibilityLabel={t('challengeProgress.infoA11y')}
           />
-          {state !== 'left' && (
+          {isOwner ? (
             <IconButton
-              name="log-out-outline"
-              onPress={onPressLeave}
-              accessibilityLabel={t('challengeProgress.leaveA11y')}
+              name="settings-outline"
+              onPress={onPressSettings}
+              accessibilityLabel={t('challengeProgress.manageA11y')}
             />
+          ) : (
+            state !== 'left' && (
+              <IconButton
+                name="log-out-outline"
+                onPress={onPressLeave}
+                accessibilityLabel={t('challengeProgress.leaveA11y')}
+              />
+            )
           )}
         </Row>
       </Row>

@@ -99,13 +99,23 @@ const en = {
       description: 'You finished "{{name}}".',
       cta: 'Done',
     },
+    joinApprovedPopup: {
+      title: "You're in!",
+      description: 'Your request to join "{{name}}" was approved.',
+      cta: 'Nice',
+    },
     joinConfirm: {
       title: 'Join?',
       description: 'Will you join "{{name}}"?',
       confirm: 'Join',
       cancel: 'Cancel',
       success: 'You joined "{{name}}"!',
+      // Private challenges: joining files a request for the owner to
+      // approve instead of joining directly (see the "Join requests"
+      // section of Manage).
+      requestSent: 'Your request to join "{{name}}" was sent!',
     },
+    requestPendingLabel: 'Request sent',
     leaveConfirm: {
       title: 'Leave challenge?',
       description: 'Are you sure you want to leave "{{name}}"? Your progress will be saved.',
@@ -142,6 +152,8 @@ const en = {
     focusLabel: 'Focus',
     dailyProofLabel: 'Daily proof',
     dailyProofValue: '1 photo per training day',
+    statusLabel: 'Status',
+    closedValue: 'Closed',
     restEveryCycle_one: '{{count}} rest day every {{cycleLength}}',
     restEveryCycle_other: '{{count}} rest days every {{cycleLength}}',
     aboutTitle: 'About',
@@ -196,10 +208,9 @@ const en = {
     membersSearchPlaceholder: 'Search members',
     manageA11y: 'Manage challenge',
     manageScreenTitle: 'Manage challenge',
-    manageJoinRequestsRow: 'Join requests',
     manageMembersRow: 'Members',
     removeParticipantA11y: 'Remove participant',
-    removeParticipantTitle: 'Remove this participant?',
+    removeParticipantTitle: 'Remove @{{username}}?',
     removeParticipantDescription: 'They will no longer be part of this challenge.',
     removeParticipantConfirm: 'Remove',
     removeParticipantCancel: 'Cancel',
@@ -213,8 +224,10 @@ const en = {
     closeChallengeDescription: 'No one will be able to join or log new progress once it is closed.',
     closeChallengeConfirm: 'Close challenge',
     closeChallengeCancel: 'Cancel',
-    tagParticipantsLabel: 'Tag participants (optional)',
-    tagParticipantsSearchPlaceholder: 'Search participants to tag',
+    closeChallengeSuccess: 'Challenge closed.',
+    tagParticipantsChip: 'Tag people',
+    tagParticipantsLabel: 'Tag participants',
+    tagParticipantsSearchPlaceholder: 'Search participants',
     tagParticipantsEmpty: 'No participants match your search.',
     tagParticipantsSelectedCount_one: '{{count}} tagged',
     tagParticipantsSelectedCount_other: '{{count}} tagged',
@@ -297,7 +310,11 @@ const en = {
       publicLabel: 'Public',
       privateLabel: 'Private',
       publicDescription: 'Anyone can find it and join. Photos appear in the feed.',
-      privateDescription: 'Invite only. Photos stay between members.',
+      // Matches Spaces' own visibilityPrivateDescription wording (same
+      // request-to-join mechanism) — was "Invite only," which was never
+      // actually true: there's no invite step, just a request the owner
+      // approves or rejects.
+      privateDescription: 'Only by request — you approve who joins. Photos stay between members.',
     },
     submit: {
       startChallenge: 'Start challenge',
@@ -625,6 +642,7 @@ const en = {
     banUserDescription: 'They will be deactivated and lose access to the app. This can be reverted later.',
     banUserConfirm: 'Ban',
     banUserCancel: 'Cancel',
+    banUserSuccess: 'User banned.',
     followersScreenTitle: 'Followers',
     followingScreenTitle: 'Following',
     emptyFollowers: 'No followers yet.',
@@ -843,10 +861,10 @@ const en = {
     },
     categories: {
       strength: 'Strength',
-      'cardio-intense': 'Cardio Intense',
-      'cardio-low': 'Cardio Low',
+      cardio_intense: 'Cardio Intense',
+      cardio_low: 'Cardio Low',
       flexibility: 'Flexibility',
-      'mind-body': 'Mind-Body',
+      mind_body: 'Mind-Body',
       functional: 'Functional',
     },
     locations: {

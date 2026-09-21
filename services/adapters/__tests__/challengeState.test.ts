@@ -4,6 +4,7 @@ import {
   getChallengeGlowKey,
   groupLatestPhotoByChallengeId,
   isChallengeFinished,
+  normalizeChallengeStatus,
   pickChallengeStatus,
 } from '../challengeState';
 import { activityColors, colors } from '../../../constants/theme';
@@ -81,6 +82,39 @@ describe('pickChallengeStatus', () => {
       progress_percent: 100,
     });
     expect(pickChallengeStatus(challenge)).toBe('active');
+  });
+});
+
+describe('normalizeChallengeStatus', () => {
+  it('reads the raw value directly, not off a challenge object', () => {
+    expect(normalizeChallengeStatus('completed')).toBe('completed');
+    expect(normalizeChallengeStatus('left')).toBe('left');
+    expect(normalizeChallengeStatus('active')).toBe('active');
+  });
+
+  it('recognizes common synonyms for left/abandoned', () => {
+    expect(normalizeChallengeStatus('quit')).toBe('left');
+    expect(normalizeChallengeStatus('abandoned')).toBe('left');
+    expect(normalizeChallengeStatus('dropped')).toBe('left');
+  });
+
+  it('defaults to active for anything missing or unrecognized', () => {
+    expect(normalizeChallengeStatus(undefined)).toBe('active');
+    expect(normalizeChallengeStatus(null)).toBe('active');
+    // The challenge's own unrelated 'open'/'closed' admin field must NOT be
+    // misread as a relation status — this is the exact regression
+    // (a finished/left challenge's progress screen stuck on "active")
+    // pickChallengeStatus's old direct-object-read on GET /challenges/:id
+    // caused, before useChallengeActiveProgress.ts switched to reading
+    // `progress.relationStatus` through this function instead.
+    expect(normalizeChallengeStatus('open')).toBe('active');
+    expect(normalizeChallengeStatus('closed')).toBe('active');
+  });
+
+  it('pickChallengeStatus delegates to it for the merged-object shape', () => {
+    expect(pickChallengeStatus({ id: '1', name: 'x', status: 'completed' } as any)).toBe(
+      normalizeChallengeStatus('completed'),
+    );
   });
 });
 

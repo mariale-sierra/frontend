@@ -148,6 +148,9 @@ export interface ChallengeContract {
 export interface JoinChallengeResponse {
   success?: boolean;
   message?: string;
+  /** Public: joins directly ('joined'). Private: files a pending request for
+   * the owner to approve instead ('requested') — see ChallengesService.joinChallenge. */
+  status?: 'joined' | 'requested';
   [key: string]: unknown;
 }
 
@@ -173,6 +176,10 @@ export interface ChallengeProgressContract {
   totalDays: number;
   completedToday?: boolean;
   hoursLeftToday?: number;
+  /** The CALLER's own challenge_user_map.status ('active' | 'completed' |
+   * 'left') — deliberately separate from `challenge.status` above, which is
+   * the challenge's own, unrelated 'open' | 'closed' admin field. */
+  relationStatus?: string;
   [key: string]: unknown;
 }
 

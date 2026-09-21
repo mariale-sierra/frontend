@@ -7,6 +7,7 @@ import {
   getSentInvites,
 } from '../services/invites/invite.service';
 import { invalidateChallengeProgressCache } from './useChallengeProgress';
+import { markChallengeMembershipSeen } from '../utils/seenChallengeMemberships';
 import type { ChallengeInviteContract } from '../types/invite';
 
 export type InviteAction = 'accept' | 'decline' | 'cancel';
@@ -69,9 +70,17 @@ export function useInvites() {
       setProcessingId(inviteId);
       try {
         if (action === 'accept') {
-          await acceptInvite(inviteId);
+          const accepted = await acceptInvite(inviteId);
           // Membership changed — force the challenge tabs to refetch.
           invalidateChallengeProgressCache();
+          // Accepting an invite is its own explicit, in-the-moment
+          // confirmation — mark it seen right away so the Challenges tab's
+          // "You're in!" popup (for an approval the user found out about
+          // asynchronously, with no other feedback) never also fires for
+          // this same membership.
+          if (accepted?.challengeId) {
+            void markChallengeMembershipSeen(accepted.challengeId);
+          }
         } else if (action === 'decline') {
           await declineInvite(inviteId);
         } else {

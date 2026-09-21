@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from './useAuth';
 import { useChallengeProgress } from './useChallengeProgress';
 import { useChallengeParticipants } from './useChallengeParticipants';
-import { getChallenge, getMyProgressPhotos } from '../services/challenge/challenge.service';
-import { deriveChallengeCardState, pickChallengeStatus, pickDominantActivityCategory, getChallengeAccentColor } from '../services/adapters/challengeState';
+import { getChallenge, getMyProgressPhotos, isChallengeOwner } from '../services/challenge/challenge.service';
+import { deriveChallengeCardState, normalizeChallengeStatus, pickDominantActivityCategory, getChallengeAccentColor } from '../services/adapters/challengeState';
 import type { ChallengeCardState } from '../services/adapters/challengeState';
 import { buildDayRingTicks, classifyDay, dayInCycle, findCycleDayFor, isRestDay } from '../utils/challengeCycle';
 import { colors } from '../constants/theme';
@@ -53,6 +54,10 @@ export interface ChallengeActiveProgressData {
   currentDayInCycle: number;
   /** Deterministic rest-day check for ANY day in the challenge — the calendar needs this per-cell, not just for today. */
   isDayRestDay: (challengeDay: number) => boolean;
+  /** True for the challenge's creator — gates the header's Settings icon
+   * (owner) vs. Leave icon (everyone else), mutually exclusive. Same check
+   * `app/challenge/[id]/index.tsx`'s own settings icon already uses. */
+  isOwner: boolean;
 }
 
 const RING_TRACK_COLOR = withAlpha(colors.paper, 0.12);
@@ -74,6 +79,7 @@ const RING_SEGMENT_COUNT = PROGRESS_RING.segmentCount;
  *   photos, not the challenge-wide gallery (see the doc comment above).
  */
 export function useChallengeActiveProgress(routeChallengeId: string | null): ChallengeActiveProgressData {
+  const { userId } = useAuth();
   const { challenge: backendChallenge, progress, loading: progressLoading } = useChallengeProgress(routeChallengeId);
   const challengeId = routeChallengeId ?? backendChallenge?.challengeId ?? null;
 
@@ -156,13 +162,22 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
     if (!fullChallenge) return 'active';
     const latestPhotoDay = myPhotos[0]?.day ?? null;
     return deriveChallengeCardState({
-      status: pickChallengeStatus(fullChallenge),
+      // Real, confirmed bug this fixes: a genuinely finished (or left)
+      // challenge kept showing as "active" here forever. `fullChallenge`
+      // (GET /challenges/:id) only ever carries the challenge's OWN
+      // unrelated 'open'/'closed' status — never the caller's relation
+      // status, which only `progress.relationStatus` (GET
+      // /challenges/progress) actually has. See `normalizeChallengeStatus`'s
+      // doc comment.
+      status: normalizeChallengeStatus(progress?.relationStatus),
       isRestDay: isDayRestDay(currentDay),
       currentDay,
       latestPhotoDay,
       completedToday,
     });
-  }, [fullChallenge, myPhotos, isDayRestDay, currentDay, completedToday]);
+  }, [fullChallenge, progress, myPhotos, isDayRestDay, currentDay, completedToday]);
+
+  const isOwner = isChallengeOwner(fullChallenge, userId);
 
   const dominantActivityCategory = useMemo(
     () => (fullChallenge ? pickDominantActivityCategory(fullChallenge) : null),
@@ -228,6 +243,7 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
     dominantActivityCategory,
     currentDayInCycle,
     isDayRestDay,
+    isOwner,
   };
 }
 

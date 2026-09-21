@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { BackButton } from '../../components/ui/backButton';
+import { Button } from '../../components/ui/button';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
 import { ConfirmationPopup } from '../../components/ui/confirmationPopup';
@@ -14,7 +15,10 @@ import { ProfileHeader, FollowButton, UserPostsGrid, ProfilePhotoModal } from '.
 import type { ChallengePhoto } from '../../types/challenge';
 import { useAuth } from '../../hooks/useAuth';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+
+const BAN_ICON_SIZE = 16;
 
 /**
  * Another user's profile — GET /users/:userId/profile plus their visible
@@ -42,6 +46,7 @@ export default function UserProfile() {
   const router = useRouter();
   const { userId: sessionUserId } = useAuth();
   const isAdmin = useIsAdmin();
+  const { showSuccess } = useErrorNotificationStore();
 
   const [profile, setProfile] = useState<PublicProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,6 +113,7 @@ export default function UserProfile() {
     try {
       await banUser(userId);
       setBanPopupVisible(false);
+      showSuccess({ message: t('profile.banUserSuccess') });
     } catch {
       // Global api.ts interceptor already surfaces an error toast.
     } finally {
@@ -162,18 +168,18 @@ export default function UserProfile() {
                       )
                     }
                   />
+                  {/* An admin-only action, kept quiet: the app's soft destructive button
+                      (a translucent `error` fill and rim), not a bare red link. */}
                   {isAdmin && (
-                    <Pressable
+                    <Button
+                      variant="dangerSubtle"
+                      size="sm"
+                      leftIcon={<Icon name="ban-outline" size={BAN_ICON_SIZE} color={colors.error} />}
                       onPress={() => setBanPopupVisible(true)}
-                      style={styles.banButton}
-                      accessibilityRole="button"
                       accessibilityLabel={t('profile.banUserA11y')}
                     >
-                      <Icon name="ban-outline" size={16} color={colors.error} />
-                      <Text variant="label" weight="bold" style={styles.banButtonText}>
-                        {t('profile.banUserButton')}
-                      </Text>
-                    </Pressable>
+                      {t('profile.banUserButton')}
+                    </Button>
                   )}
                 </View>
               }
@@ -187,6 +193,8 @@ export default function UserProfile() {
         visible={banPopupVisible}
         title={t('profile.banUserTitle')}
         description={t('profile.banUserDescription')}
+        icon="ban-outline"
+        iconColor={colors.error}
         onDismiss={() => !banning && setBanPopupVisible(false)}
         primaryButton={{
           label: t('profile.banUserConfirm'),
@@ -197,6 +205,7 @@ export default function UserProfile() {
         secondaryButton={{
           label: t('profile.banUserCancel'),
           onPress: () => setBanPopupVisible(false),
+          variant: 'neutral',
           disabled: banning,
         }}
       />
@@ -225,13 +234,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: spacing.sm,
     gap: spacing.sm,
-  },
-  banButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  banButtonText: {
-    color: colors.error,
   },
 });

@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, Keyboard, Modal, Platform, Pressable, StyleSheet } from 'react-native';
+import { Animated, Dimensions, Keyboard, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import type { KeyboardEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fillOpacity, radius, shadows, spacing } from '../../constants/theme';
@@ -30,6 +30,18 @@ interface BottomSheetModalProps {
    * nav bar and the toggles have, and the gradient rim along its top edge — instead of
    * an opaque `surface` card, so what is behind it shows through (the comments sheet). */
   glass?: boolean;
+  /**
+   * Renders the same backdrop+sheet as a plain absolutely-positioned overlay in the
+   * caller's own tree instead of inside RN's own `<Modal>` (a separate native
+   * window/surface). Every other use of this component is opened from an ordinary,
+   * non-modal screen, where a nested `<Modal>` is the normal, safe way to sit above
+   * everything; TagParticipantsSheet is opened from app/(add)/camera.tsx, which is
+   * ITSELF already presented as a native `fullScreenModal` route (see app/_layout.tsx)
+   * — nesting RN's `<Modal>` inside an already-modally-presented screen is a
+   * documented React Native/react-native-screens footgun, and the likely cause of a
+   * real, reported crash right when this sheet's content was interacted with. Default
+   * `false` keeps every existing caller's exact prior behavior unchanged. */
+  renderInPlace?: boolean;
 }
 
 /** Shared bottom-sheet shell for the exercise filter sheets (categories,
@@ -40,7 +52,15 @@ interface BottomSheetModalProps {
  * together, which visibly dragged the backdrop up from the bottom along
  * with the sheet (real reported bug). Both layers are absolutely
  * positioned so neither depends on Modal's default flex stacking. */
-export function BottomSheetModal({ visible, onClose, children, maxHeight = '70%', height, glass = false }: BottomSheetModalProps) {
+export function BottomSheetModal({
+  visible,
+  onClose,
+  children,
+  maxHeight = '70%',
+  height,
+  glass = false,
+  renderInPlace = false,
+}: BottomSheetModalProps) {
   const insets = useSafeAreaInsets();
   const [mounted, setMounted] = useState(visible);
   const progress = useRef(new Animated.Value(0)).current;
@@ -93,8 +113,8 @@ export function BottomSheetModal({ visible, onClose, children, maxHeight = '70%'
 
   if (!mounted) return null;
 
-  return (
-    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
+  const content = (
+    <>
       {/* A tap anywhere outside the sheet closes it. */}
       <Pressable testID="bottom-sheet-backdrop" style={StyleSheet.absoluteFill} onPress={onClose}>
         <Animated.View style={[styles.backdrop, { opacity: progress }]} />
@@ -129,6 +149,16 @@ export function BottomSheetModal({ visible, onClose, children, maxHeight = '70%'
         ) : null}
         {children}
       </Animated.View>
+    </>
+  );
+
+  if (renderInPlace) {
+    return <View style={StyleSheet.absoluteFill}>{content}</View>;
+  }
+
+  return (
+    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
+      {content}
     </Modal>
   );
 }

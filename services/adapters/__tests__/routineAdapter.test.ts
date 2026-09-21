@@ -1,4 +1,4 @@
-import { adaptRoutineContract } from '../routineAdapter';
+import { adaptRoutineContract, buildActivityMetricTemplate } from '../routineAdapter';
 import type { RoutineContract } from '../../../types/routine';
 
 describe('adaptRoutineContract', () => {
@@ -94,5 +94,58 @@ describe('adaptRoutineContract', () => {
       primaryActivity: null,
       activityTypes: [],
     });
+  });
+});
+
+// Real, confirmed bug (2026-09-21, reported live: "why does the stair
+// climber / a bench ankle stretch have distance and duration?"): the
+// RepDB-imported catalog has zero real exercise_metrics rows, so every
+// schema-kind exercise added while building a challenge fell back to the
+// SAME hardcoded distance+duration mock regardless of its real category —
+// this is the category-aware fallback that replaced it.
+describe('buildActivityMetricTemplate', () => {
+  it('is duration only for flexibility and mind-body — no distance field', () => {
+    for (const activityType of ['flexibility', 'mindBody'] as const) {
+      const template = buildActivityMetricTemplate(102, activityType);
+
+      expect(template?.fields).toEqual([
+        { key: 'time', label: 'Duration', type: 'duration', defaultMinutes: 10, defaultSeconds: 0 },
+      ]);
+    }
+  });
+
+  it('is duration + distance for cardioIntense and cardioLow', () => {
+    for (const activityType of ['cardioIntense', 'cardioLow'] as const) {
+      const template = buildActivityMetricTemplate(570, activityType);
+
+      expect(template?.fields).toEqual([
+        { key: 'time', label: 'Duration', type: 'duration', defaultMinutes: 10, defaultSeconds: 0 },
+        { key: 'distance', label: 'Distance', type: 'number', defaultValue: 5, unit: 'km', min: 0 },
+      ]);
+    }
+  });
+
+  it('is reps only for functional — no rounds field (no backend metric_type for it)', () => {
+    const template = buildActivityMetricTemplate(134, 'functional');
+
+    expect(template?.fields).toEqual([
+      { key: 'reps', label: 'Reps', type: 'number', defaultValue: 10, min: 0 },
+    ]);
+  });
+
+  it("builds a stable, per-exercise template id so it doesn't collide with the mock or a real-metrics template", () => {
+    const template = buildActivityMetricTemplate(570, 'cardioIntense');
+
+    expect(template?.id).toBe('exercise-570-activity-metrics');
+  });
+
+  it('drops the lbs column (no schema meaning outside the strength sets/reps editor) if ever asked for strength', () => {
+    // Strength exercises are always 'sets'-tracked in practice, so they
+    // never actually reach this fallback (handleAddSelected only calls it
+    // for 'schema'-type exercises) — this just documents that 'lbs' would
+    // never appear even if it somehow were.
+    const template = buildActivityMetricTemplate(11, 'strength');
+
+    expect(template?.fields.some((f) => f.key === 'lbs')).toBe(false);
   });
 });

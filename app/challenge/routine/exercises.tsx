@@ -35,8 +35,9 @@ import type {
   ExerciseCategory,
 } from '../../../services/exercises/exercises.service';
 import type { ActivityType } from '../../../types/activity';
-import { CATEGORY_TO_ACTIVITY, CATEGORY_CODE_TO_ACTIVITY } from '../../../constants/challengeFilters';
+import { CATEGORY_TO_ACTIVITY, activityTypeForCategoryCode } from '../../../constants/challengeFilters';
 import { LOCATION_OPTIONS } from '../../../constants/challengeCreateOptions';
+import { buildActivityMetricTemplate } from '../../../services/adapters/routineAdapter';
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -75,16 +76,16 @@ function toCandidate(row: ExerciseListRow, defaultLocationLabel: string): Exerci
 
 /** Converts GET /exercises/:id/full's real per-exercise `metrics[]` into the
  * raw shape `routineBuilderStore`'s `applyBackendMetricTemplate` already
- * validates and consumes — that hook existed but was never actually called
- * anywhere, so every non-'sets' exercise (cardio, flexibility, mind-body,
- * "single"-mode exercises like Guided Breathwork) got a hardcoded
- * distance+duration template regardless of what it actually tracks (real bug,
- * confirmed 2026-08-29: a pure-breathwork exercise showed distance/duration
- * fields). Only 'int'/'decimal' (-> a `number` field) and 'seconds' (-> a
- * `duration` field) map to anything the schema template UI can render today;
- * 'text'/'boolean' metrics are skipped rather than guessed. Returns null when
- * no metric maps to a renderable field, so the caller can fall back to the
- * existing mock rather than apply an empty template. */
+ * validates and consumes — the first-choice source, when an exercise
+ * actually has real `exercise_metrics` rows (curated/manually-added
+ * exercises can; the RepDB-imported catalog never does, see
+ * `buildActivityMetricTemplate`'s doc comment in routineAdapter.ts for that
+ * whole story). Only 'int'/'decimal' (-> a `number` field) and 'seconds'
+ * (-> a `duration` field) map to anything the schema template UI can render
+ * today; 'text'/'boolean' metrics are skipped rather than guessed. Returns
+ * null when no metric maps to a renderable field, so the caller falls back
+ * to `buildActivityMetricTemplate`'s category-aware template instead of
+ * applying an empty one. */
 function buildMetricTemplateFromExerciseMetrics(exerciseId: number, metrics: ExerciseMetricConfig[]): unknown | null {
   const fields = metrics
     .map((metric) => {
@@ -195,8 +196,8 @@ export default function ExercisesScreen() {
       // Each category keeps its own Activity Color System v2 color here — this
       // sheet is a legend of distinct categories, not a per-exercise badge, so
       // the "icon+name only, no per-category color" rule doesn't apply to it.
-      icon: CATEGORY_CODE_TO_ACTIVITY[c.code] ? (
-        <ActivityIcon type={CATEGORY_CODE_TO_ACTIVITY[c.code]} variant="plain" size="sm" color={activityColors[CATEGORY_CODE_TO_ACTIVITY[c.code]]} />
+      icon: activityTypeForCategoryCode(c.code) ? (
+        <ActivityIcon type={activityTypeForCategoryCode(c.code)!} variant="plain" size="sm" color={activityColors[activityTypeForCategoryCode(c.code)!]} />
       ) : undefined,
     }));
   }, [categories, allowedCategoryCodes, t]);
@@ -308,24 +309,34 @@ export default function ExercisesScreen() {
       // buildMetricTemplateFromExerciseMetrics's doc comment above).
       if (exercise.metricType !== 'schema' || backendId == null) continue;
 
+      // The category-aware fallback (see buildActivityMetricTemplate's doc
+      // comment) — computed up front, client-side, from the category the
+      // catalog list already resolved, so it's available even if the real
+      // per-exercise metrics fetch below returns nothing or fails outright.
+      const activityFallback = buildActivityMetricTemplate(backendId, exercise.activityType);
+
       try {
         const full = await getExerciseFull(backendId);
-        const template = buildMetricTemplateFromExerciseMetrics(backendId, full.metrics);
+        const template = buildMetricTemplateFromExerciseMetrics(backendId, full.metrics) ?? activityFallback;
         if (template) {
           applyBackendMetricTemplate(exercise.id, template);
         }
       } catch (error: any) {
-        // Falls back to whatever addExercise() already applied (the mock
-        // template) rather than blocking the whole add flow over one
+        // The workout was already added with the generic mock — replace it
+        // with the category-aware fallback rather than leaving a
+        // one-size-fits-all distance+duration template in place over one
         // exercise's metric lookup failing.
         console.error('[Exercises] Failed to load real metric config for', exercise.name, error?.response?.data ?? error?.message);
+        if (activityFallback) {
+          applyBackendMetricTemplate(exercise.id, activityFallback);
+        }
       }
     }
 
     safeBack();
   }
 
-  const activeCategoryActivityType = effectiveCategoryCode ? CATEGORY_CODE_TO_ACTIVITY[effectiveCategoryCode] : undefined;
+  const activeCategoryActivityType = effectiveCategoryCode ? activityTypeForCategoryCode(effectiveCategoryCode) : undefined;
   const activeCategoryPillColor = activeCategoryActivityType ? activityColors[activeCategoryActivityType] : undefined;
 
   const categoryPillIcon = activeCategoryActivityType ? (

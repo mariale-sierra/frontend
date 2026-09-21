@@ -1,36 +1,21 @@
 import { colors, activityColors } from '../../constants/theme';
+import { activityTypeForCategoryCode as sharedActivityTypeForCategoryCode } from '../../constants/challengeFilters';
 import type { ActivityType } from '../../types/activity';
 import type { SpaceContract } from '../../types/space';
 import type { ExerciseCategory } from '../exercises/exercises.service';
 
 /**
- * `exercise_categories.code` (kebab-case, e.g. `cardio-intense`) <-> the
- * frontend's `ActivityType` (camelCase, e.g. `cardioIntense`) — the same six
- * values, just cased differently on each side. Spaces reuses this exact
- * taxonomy (see `CATEGORY_OPTIONS` in `constants/challengeCreateOptions.ts`)
- * instead of inventing a parallel one.
- *
- * Real, reported bug (2026-09): this used underscore codes
- * (`cardio_intense`) while the live `havit.exercise_categories.code` column
- * actually uses hyphens (`cardio-intense`) — confirmed directly against the
- * API. Every lookup for cardioIntense/cardioLow/mindBody silently missed, so
- * a space using one of those three colors couldn't load its current color
- * when reopening "Manage space" (looked unset), and picking one of those
- * three and hitting Save silently dropped the color entirely (the other
- * three fields still saved fine, so it read as "Save doesn't work" for only
- * some colors).
+ * `exercise_categories.code` <-> the frontend's `ActivityType` — Spaces
+ * reuses the exact same taxonomy/mapping the exercise catalog does (see
+ * `constants/challengeFilters.ts`'s `CATEGORY_CODE_TO_ACTIVITY`, the one
+ * source of truth) instead of keeping its own separate copy, which had
+ * drifted out of sync with the live (underscored) codes at one point —
+ * confirmed live 2026-09-21, the real cause of a space using
+ * cardioIntense/cardioLow/mindBody not loading its current color when
+ * reopening "Manage space," and silently dropping that color on Save.
  */
-const CODE_TO_ACTIVITY_TYPE: Record<string, ActivityType> = {
-  strength: 'strength',
-  'cardio-intense': 'cardioIntense',
-  'cardio-low': 'cardioLow',
-  flexibility: 'flexibility',
-  'mind-body': 'mindBody',
-  functional: 'functional',
-};
-
 export function activityTypeForCategoryCode(code: string): ActivityType | null {
-  return CODE_TO_ACTIVITY_TYPE[code] ?? null;
+  return sharedActivityTypeForCategoryCode(code) ?? null;
 }
 
 /** Finds the real `exercise_categories` row (id + code + name) matching a
@@ -41,7 +26,7 @@ export function findCategoryForActivityType(
   categories: ExerciseCategory[],
   type: ActivityType,
 ): ExerciseCategory | null {
-  return categories.find((category) => CODE_TO_ACTIVITY_TYPE[category.code] === type) ?? null;
+  return categories.find((category) => sharedActivityTypeForCategoryCode(category.code) === type) ?? null;
 }
 
 /** A space's own accent color (Activity Color System v2, extended to Spaces

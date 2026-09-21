@@ -129,8 +129,7 @@ export function normalizeLocationCode(code: string): string {
   return LOCATION_CODE_ALIASES[code] ?? code;
 }
 
-/** Same for a category: a database seeded from the repo's SQL has 'cardio_intense'
- * where the live one has 'cardio-intense', which the UI keys by. */
-export function normalizeCategoryCode(code: string): string {
-  return code.replace(/_/g, '-');
-}
+// Category-code normalization moved to constants/challengeFilters.ts
+// (`normalizeCategoryCode`/`activityTypeForCategoryCode`) — that's the one
+// place `CATEGORY_CODE_TO_ACTIVITY` itself lives, so the normalization and
+// the map it feeds can never drift out of sync with each other again.

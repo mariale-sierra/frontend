@@ -125,4 +125,47 @@ describe('BottomSheetModal', () => {
 
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  // TagParticipantsSheet's own fix for a real, reported crash: it opens from
+  // app/(add)/camera.tsx, itself a native `fullScreenModal` route — nesting
+  // RN's own `<Modal>` inside that is the documented footgun this opts out
+  // of. Every other caller keeps the default (unset) behavior untouched.
+  describe('renderInPlace', () => {
+    it("skips RN's own <Modal> and renders as a plain overlay instead", async () => {
+      const screen = await render(
+        <BottomSheetModal visible onClose={jest.fn()} renderInPlace>
+          <RNText>Inside</RNText>
+        </BottomSheetModal>,
+      );
+
+      expect(screen.getByText('Inside')).toBeTruthy();
+      expect(JSON.stringify(screen.toJSON())).not.toContain('"type":"Modal"');
+    });
+
+    it('still shows its content, closes on an outside tap, and stays open on an inside one — same as the default', async () => {
+      const onClose = jest.fn();
+      const screen = await render(
+        <BottomSheetModal visible onClose={onClose} glass renderInPlace>
+          <RNText>Inside</RNText>
+        </BottomSheetModal>,
+      );
+
+      expect(screen.getByText('Inside')).toBeTruthy();
+      await fireEvent.press(screen.getByText('Inside'));
+      expect(onClose).not.toHaveBeenCalled();
+
+      await fireEvent.press(screen.getByTestId('bottom-sheet-backdrop'));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders nothing while it is closed, same as the default', async () => {
+      const screen = await render(
+        <BottomSheetModal visible={false} onClose={jest.fn()} renderInPlace>
+          <RNText>Inside</RNText>
+        </BottomSheetModal>,
+      );
+
+      expect(screen.queryByText('Inside')).toBeNull();
+    });
+  });
 });

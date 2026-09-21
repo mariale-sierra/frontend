@@ -8,6 +8,7 @@ import { AuthProvider } from '../context/authContext';
 import { ThemeProvider } from '../context/themeContext';
 import { useAuth } from '../hooks/useAuth';
 import { ChallengeFinishedPopup } from '../components/ui/ChallengeFinishedPopup';
+import { ChallengeJoinApprovedPopup } from '../components/ui/ChallengeJoinApprovedPopup';
 import { UploadSuccessPopup } from '../components/ui/UploadSuccessPopup';
 import { ErrorNotificationProvider } from '../components/ui/ErrorNotificationProvider';
 import i18n, { PREFERRED_LANGUAGE_KEY } from '../i18n';
@@ -132,6 +133,7 @@ export default function RootLayout() {
             <RootNavigator />
             <UploadSuccessPopup />
             <ChallengeFinishedPopup />
+            <ChallengeJoinApprovedPopup />
           </ErrorNotificationProvider>
         </AuthProvider>
       </ThemeProvider>

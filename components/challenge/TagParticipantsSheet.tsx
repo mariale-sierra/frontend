@@ -1,14 +1,21 @@
 import { useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Icon } from '../ui/icon';
-import { Text } from '../ui/text';
+import { BottomSheetModal } from '../ui/bottomSheetModal';
 import { Button } from '../ui/button';
+import { Icon } from '../ui/icon';
 import { SearchBar } from '../ui/searchBar';
+import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 import { Row } from '../layout/row';
-import { colors, radius, spacing } from '../../constants/theme';
+import { borderWidth, colors, radius, spacing, textOpacity } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import type { ChallengeParticipantContract } from '../../types/challenge';
+
+const AVATAR_SIZE = 40;
+const CHECK_SIZE = 24;
+const CHECK_ICON_SIZE = 14;
+const EMPTY_ICON_SIZE = 34;
 
 interface TagParticipantsSheetProps {
   visible: boolean;
@@ -25,6 +32,12 @@ interface TagParticipantsSheetProps {
  * uses — tagging only makes sense among people already in the challenge.
  * No confirmation step on the tagged side (product decision): selecting here
  * is the final action, applied on the next progress submission.
+ *
+ * A glass bottom sheet, like the comments sheet (`BottomSheetModal glass`): the photo
+ * it is opened over shows through it, a tap outside closes it, and it rides up above
+ * the keyboard when you search (the sheet used to be a hand-rolled `Modal` with a
+ * hard-coded black backdrop that did none of those). Its "Done" button is the way out
+ * once you have picked, so there is no close icon.
  */
 export function TagParticipantsSheet({
   visible,
@@ -51,91 +64,93 @@ export function TagParticipantsSheet({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.sheet}>
-          <Row justify="space-between" align="center" style={styles.header}>
-            <Text variant="body" weight="bold">
-              {t('challengeProgress.tagParticipantsLabel')}
+    // Tall enough to leave room for the keyboard when the search is used (the sheet
+    // floats up above it), like the comments sheet. `renderInPlace`: this sheet opens
+    // from app/(add)/camera.tsx, which is ITSELF a native `fullScreenModal` route — see
+    // BottomSheetModal's own doc comment on why nesting RN's `<Modal>` inside that would
+    // risk exactly the crash this fixes.
+    <BottomSheetModal visible={visible} onClose={onClose} height="60%" glass renderInPlace>
+      <View style={styles.fill}>
+        <View style={styles.header}>
+          <Text variant="subheader" align="center">
+            {t('challengeProgress.tagParticipantsLabel')}
+          </Text>
+          {selectedIds.length > 0 ? (
+            <Text variant="caption" tone="secondary" align="center">
+              {t('challengeProgress.tagParticipantsSelectedCount', { count: selectedIds.length })}
             </Text>
-            <Pressable onPress={onClose} accessibilityRole="button" hitSlop={8}>
-              <Icon name="close-outline" size={24} color={colors.paper} />
-            </Pressable>
-          </Row>
-
-          <SearchBar
-            value={query}
-            onChangeText={setQuery}
-            placeholder={t('challengeProgress.tagParticipantsSearchPlaceholder')}
-          />
-
-          <FlatList
-            data={filtered}
-            keyExtractor={(item) => item.id}
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            keyboardShouldPersistTaps="handled"
-            ListEmptyComponent={
-              <View style={styles.emptyWrap}>
-                <Text tone="secondary">{t('challengeProgress.tagParticipantsEmpty')}</Text>
-              </View>
-            }
-            renderItem={({ item }) => {
-              const selected = selectedIds.includes(item.id);
-              return (
-                <Pressable onPress={() => toggle(item.id)} accessibilityRole="checkbox" accessibilityState={{ checked: selected }}>
-                  <Row align="center" gap="md" style={styles.row}>
-                    <UserAvatar username={item.username} size={36} />
-                    <Text variant="body" numberOfLines={1} style={styles.username}>
-                      @{item.username}
-                    </Text>
-                    <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
-                      {selected && <Icon name="checkmark-outline" size={14} color={colors.ink} />}
-                    </View>
-                  </Row>
-                </Pressable>
-              );
-            }}
-          />
-
-          <Button variant="primary" onPress={onClose} style={styles.doneButton}>
-            {selectedIds.length > 0
-              ? t('challengeProgress.tagParticipantsSelectedCount', { count: selectedIds.length })
-              : t('common.actions.done')}
-          </Button>
+          ) : null}
         </View>
+
+        <SearchBar
+          value={query}
+          onChangeText={setQuery}
+          placeholder={t('challengeProgress.tagParticipantsSearchPlaceholder')}
+        />
+
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          style={styles.fill}
+          contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Icon name="people-outline" size={EMPTY_ICON_SIZE} color={withAlpha(colors.paper, textOpacity.tertiary)} />
+              <Text variant="body" tone="secondary" align="center">
+                {t('challengeProgress.tagParticipantsEmpty')}
+              </Text>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const selected = selectedIds.includes(item.id);
+            return (
+              // A pressable `Row`: it dims a little while pressed, like the app's other rows.
+              <Row
+                pressable
+                onPress={() => toggle(item.id)}
+                align="center"
+                gap="md"
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: selected }}
+                style={styles.row}
+              >
+                <UserAvatar username={item.username} size={AVATAR_SIZE} />
+                <Text variant="body" weight="bold" numberOfLines={1} style={styles.username}>
+                  @{item.username}
+                </Text>
+                <View style={[styles.check, selected && styles.checkSelected]}>
+                  {selected ? <Icon name="checkmark-outline" size={CHECK_ICON_SIZE} color={colors.ink} /> : null}
+                </View>
+              </Row>
+            );
+          }}
+        />
+
+        <Button variant="primary" onPress={onClose} style={styles.doneButton}>
+          {t('common.actions.done')}
+        </Button>
       </View>
-    </Modal>
+    </BottomSheetModal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  fill: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.big,
-    borderTopRightRadius: radius.big,
-    padding: spacing.lg,
-    maxHeight: '75%',
-    gap: spacing.md,
   },
   header: {
-    paddingBottom: spacing.xs,
-  },
-  list: {
-    flexGrow: 0,
+    gap: spacing.xs,
+    paddingBottom: spacing.md,
   },
   listContent: {
-    gap: spacing.xs,
     paddingVertical: spacing.sm,
   },
-  emptyWrap: {
-    paddingVertical: spacing.xl,
+  empty: {
     alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.xl,
   },
   row: {
     paddingVertical: spacing.sm,
@@ -143,20 +158,23 @@ const styles = StyleSheet.create({
   username: {
     flex: 1,
   },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: colors.paper,
+  // The app's own selection mark (see the Space form's privacy options): an empty ring,
+  // filled `primary` with an `ink` check once picked. A circle: `big` is more than half of
+  // the size.
+  check: {
+    width: CHECK_SIZE,
+    height: CHECK_SIZE,
+    borderRadius: radius.big,
+    borderWidth: borderWidth.thin,
+    borderColor: withAlpha(colors.paper, textOpacity.tertiary),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxSelected: {
+  checkSelected: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
   doneButton: {
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
   },
 });

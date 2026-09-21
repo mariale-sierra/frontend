@@ -20,7 +20,7 @@ import { LocationIcon } from '../../components/icons/locationIcon';
 import type { LocationType } from '../../components/icons/locationIcon';
 import { getExerciseList, getExerciseCategories, type ExerciseCategory } from '../../services/exercises/exercises.service';
 import { adaptExerciseListRow } from '../../services/adapters/exerciseAdapter';
-import { CATEGORY_CODE_TO_ACTIVITY } from '../../constants/challengeFilters';
+import { activityTypeForCategoryCode } from '../../constants/challengeFilters';
 
 const INACTIVE_ICON_COLOR = withAlpha(colors.paper, textOpacity.secondary);
 
@@ -111,7 +111,7 @@ export default function ExerciseCatalogScreen() {
   }
 
   const categoryOptions = categories.map((c) => {
-    const activityType = CATEGORY_CODE_TO_ACTIVITY[c.code];
+    const activityType = activityTypeForCategoryCode(c.code);
     return {
       code: c.code,
       label: t(`exerciseCatalog.categories.${c.code}` as never),
@@ -129,7 +129,7 @@ export default function ExerciseCatalogScreen() {
 
   const activeCategoryLabel = activeCategory ? t(`exerciseCatalog.categories.${activeCategory}` as never) : t('exerciseCatalog.filters.categories');
   const activeLocationLabel = activeLocation ? t(`exerciseCatalog.locations.${activeLocation}` as never) : t('exerciseCatalog.filters.locations');
-  const activeCategoryActivityType = activeCategory ? CATEGORY_CODE_TO_ACTIVITY[activeCategory] : undefined;
+  const activeCategoryActivityType = activeCategory ? activityTypeForCategoryCode(activeCategory) : undefined;
   const activeCategoryColor = activeCategoryActivityType ? activityColors[activeCategoryActivityType] : undefined;
 
   const categoryPillIcon = activeCategoryActivityType ? (

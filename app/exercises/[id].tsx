@@ -20,12 +20,11 @@ import type { ExerciseDetail, MuscleSvgPartDto } from '../../services/exercises/
 import {
   pickHeaderImageUrl,
   buildAnatomyHighlights,
-  normalizeCategoryCode,
   normalizeLocationCode,
 } from '../../services/adapters/exerciseAdapter';
 import { colors, radius, spacing, activityColors } from '../../constants/theme';
 import { getChallengeAccentColor } from '../../services/adapters/challengeState';
-import { CATEGORY_CODE_TO_ACTIVITY } from '../../constants/challengeFilters';
+import { activityTypeForCategoryCode, normalizeCategoryCode } from '../../constants/challengeFilters';
 
 type MuscleWithRole = { role: 'primary' | 'secondary'; svgParts: MuscleSvgPartDto[] };
 
@@ -112,7 +111,7 @@ export default function ExerciseDetailScreen() {
   // The exercise's own activity color: its primary category's. The screen's light and
   // every badge are this color; an exercise with no category yet gets the neutral one.
   const primaryCategory = exercise.categories.find((category) => category.isPrimary) ?? exercise.categories[0];
-  const accentColor = getChallengeAccentColor(primaryCategory ? CATEGORY_CODE_TO_ACTIVITY[primaryCategory.code] : null);
+  const accentColor = getChallengeAccentColor(primaryCategory ? activityTypeForCategoryCode(primaryCategory.code) : null);
 
   return (
     <ScreenBackground variant="top" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
@@ -137,7 +136,7 @@ export default function ExerciseDetailScreen() {
           <Row justify="center" gap="sm" style={styles.badgeLine}>
             {exercise.categories.map((category) => {
               const code = normalizeCategoryCode(category.code);
-              const activityType = CATEGORY_CODE_TO_ACTIVITY[code];
+              const activityType = activityTypeForCategoryCode(category.code);
               return (
                 <AccentPill
                   key={category.code}

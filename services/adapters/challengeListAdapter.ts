@@ -38,6 +38,11 @@ export interface ChallengeMineCardViewModel {
    * color from `state` + this via `challengeState.ts`'s
    * `getChallengeCardColor()`, don't read `activityColors` directly. */
   dominantActivityCategory: ActivityType | null;
+  /** Who created it — `null` if the raw contract carried no such field
+   * (never actually null for a real challenge; defensive only). Lets a
+   * caller tell "I made this" apart from "I joined/was approved into this"
+   * — see the Challenges tab's own "you were approved" popup detection. */
+  createdByUserId: string | null;
 }
 
 
@@ -174,6 +179,7 @@ function toMineCard(challenge: ChallengeContract, latestPhoto: ChallengePhoto | 
     state,
     latestPhotoUrl: latestPhoto?.imageUrl ?? null,
     dominantActivityCategory: pickDominantActivityCategory(challenge),
+    createdByUserId: typeof challenge.created_by_user_id === 'string' ? challenge.created_by_user_id : null,
   };
 }
 

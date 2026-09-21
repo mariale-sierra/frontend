@@ -1,4 +1,4 @@
-import { normalizeCategoryCode, normalizeLocationCode, pickExerciseIdByName } from '../exerciseAdapter';
+import { normalizeLocationCode, pickExerciseIdByName } from '../exerciseAdapter';
 
 describe('pickExerciseIdByName', () => {
   const rows = [
@@ -42,16 +42,5 @@ describe('normalizeLocationCode', () => {
   });
 });
 
-describe('normalizeCategoryCode', () => {
-  it('hyphenates the underscored codes of a database seeded from the repo SQL', () => {
-    expect(normalizeCategoryCode('cardio_intense')).toBe('cardio-intense');
-    expect(normalizeCategoryCode('cardio_low')).toBe('cardio-low');
-    expect(normalizeCategoryCode('mind_body')).toBe('mind-body');
-  });
-
-  it('leaves the live catalog codes alone', () => {
-    for (const code of ['strength', 'cardio-intense', 'cardio-low', 'flexibility', 'mind-body', 'functional']) {
-      expect(normalizeCategoryCode(code)).toBe(code);
-    }
-  });
-});
+// normalizeCategoryCode moved to constants/challengeFilters.ts (and its
+// direction fixed — see constants/__tests__/challengeFilters.test.ts).

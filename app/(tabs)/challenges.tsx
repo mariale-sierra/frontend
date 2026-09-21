@@ -19,7 +19,15 @@ import { getMyChallenges } from '../../services/user/user.service';
 import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../../services/adapters';
 import { groupLatestPhotoByChallengeId } from '../../services/adapters/challengeState';
 import { useChallengeFinishedStore } from '../../store/challengeFinishedStore';
+import { useChallengeJoinApprovedStore } from '../../store/challengeJoinApprovedStore';
 import { hasShownCompletion, markCompletionShown } from '../../utils/shownCompletions';
+import {
+  establishMembershipBaseline,
+  hasEstablishedMembershipBaseline,
+  hasSeenChallengeMembership,
+  markChallengeMembershipSeen,
+} from '../../utils/seenChallengeMemberships';
+import { useAuth } from '../../hooks/useAuth';
 
 function ChallengeListSeparator() {
   return <View style={styles.separator} />;
@@ -60,6 +68,11 @@ export default function Challenges() {
   // device, or an older build), so it is shown here once — `shownCompletions`
   // keeps it to once per challenge EVER, across launches and across the two places.
   const showChallengeFinished = useChallengeFinishedStore((state) => state.show);
+  // Same idea for "You're in!": the only place a private challenge's owner
+  // approving a join request can ever be discovered, since that happens
+  // asynchronously on the OWNER's device — see utils/seenChallengeMemberships.ts.
+  const showChallengeJoinApproved = useChallengeJoinApprovedStore((state) => state.show);
+  const { userId } = useAuth();
 
   // Shared fetch used both by the focus-refetch effect below and by
   // pull-to-refresh — `isActive` mirrors the effect's own `active` closure
@@ -93,6 +106,30 @@ export default function Challenges() {
           if (!isActive()) return;
         }
 
+        // "You're in!" — a private challenge's owner can approve a pending
+        // join request at any time, on their own device; this is the only
+        // place the requester ever finds out. Only ever considers a
+        // challenge the user didn't create themselves; a direct join or an
+        // accepted invite already marks itself seen at its own success
+        // point (see markChallengeMembershipSeen's other call sites), so it
+        // never doubles up with this.
+        if (userId) {
+          const notCreatedByMe = mineViewModels.filter((c) => c.createdByUserId !== userId);
+          if (!(await hasEstablishedMembershipBaseline())) {
+            // First run ever on this device: every current membership is
+            // pre-existing, not a new approval — record it silently, no popups.
+            await establishMembershipBaseline(notCreatedByMe.map((c) => c.challengeId));
+          } else {
+            for (const challenge of notCreatedByMe) {
+              if (!(await hasSeenChallengeMembership(challenge.challengeId))) {
+                await markChallengeMembershipSeen(challenge.challengeId);
+                showChallengeJoinApproved({ challengeId: challenge.challengeId, challengeName: challenge.title });
+              }
+              if (!isActive()) return;
+            }
+          }
+        }
+
         // GET /challenges (getChallenges) returns every challenge, joined
         // or not — Explore is meant to be "what you could join," so any
         // challenge already in Mine (joined, or created — creating one
@@ -110,7 +147,7 @@ export default function Challenges() {
         setError(t('challenges.loadError'));
       }
     },
-    [t, showChallengeFinished],
+    [t, showChallengeFinished, showChallengeJoinApproved, userId],
   );
 
   // Refetches on focus (not just on mount) so joining/leaving/completing a
