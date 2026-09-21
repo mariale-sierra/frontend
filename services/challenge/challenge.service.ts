@@ -1,6 +1,7 @@
 import api from '../api';
 import type {
   ChallengeContract,
+  ChallengeJoinRequestContract,
   ChallengeParticipantContract,
   ChallengePhoto,
   ChallengeProgressContract,
@@ -8,6 +9,27 @@ import type {
   JoinChallengeResponse,
   TodayRoutineContract,
 } from '../../types/challenge';
+
+type ChallengeJoinRequestsResponse =
+  | ChallengeJoinRequestContract[]
+  | {
+      data?: ChallengeJoinRequestContract[];
+      message?: string;
+    };
+
+/** true if `userId` is the challenge's creator — same check the backend
+ * does server-side (challenge.created_by_user_id === userId), derived
+ * client-side from the field GET /challenges/:id already returns instead of
+ * adding a per-request `role` field to the contract (which spaces has, via
+ * spaceAdapter.ts, but challenges doesn't — not worth a backend contract
+ * change just for this). */
+export function isChallengeOwner(
+  challenge: Pick<ChallengeContract, 'created_by_user_id'> | null | undefined,
+  currentUserId: string | null | undefined,
+): boolean {
+  if (!challenge?.created_by_user_id || !currentUserId) return false;
+  return challenge.created_by_user_id === currentUserId;
+}
 
 type ChallengesListResponse =
   | ChallengeContract[]
@@ -147,4 +169,52 @@ export async function getUserPosts(userId: string, cursor?: string): Promise<Use
     photos: Array.isArray(response.data) ? response.data : [],
     nextCursor: response.headers['x-next-cursor'] as string | undefined,
   };
+}
+
+// ---------------------------------------------------------------------
+// Bloque 1 — owner/admin actions
+// ---------------------------------------------------------------------
+
+/** Owner-only: pending join requests for a private challenge. */
+export async function getChallengeJoinRequests(
+  challengeId: string,
+): Promise<ChallengeJoinRequestContract[]> {
+  const response = await api.get<ChallengeJoinRequestsResponse>(
+    `/challenges/${challengeId}/join-requests`,
+  );
+  const payload = response.data;
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (payload && Array.isArray(payload.data)) {
+    return payload.data;
+  }
+  return [];
+}
+
+export async function approveChallengeJoinRequest(challengeId: string, requestId: string) {
+  const response = await api.post<ChallengeJoinRequestContract>(
+    `/challenges/${challengeId}/join-requests/${requestId}/approve`,
+  );
+  return response.data;
+}
+
+export async function rejectChallengeJoinRequest(challengeId: string, requestId: string) {
+  const response = await api.post<ChallengeJoinRequestContract>(
+    `/challenges/${challengeId}/join-requests/${requestId}/reject`,
+  );
+  return response.data;
+}
+
+/** Owner-only, public challenges only — the backend rejects this for a private one. */
+export async function removeChallengeParticipant(challengeId: string, userId: string) {
+  const response = await api.patch(`/challenges/${challengeId}/users/${userId}/remove`);
+  return response.data;
+}
+
+/** Admin-only (global) — closes any challenge. */
+export async function closeChallenge(challengeId: string) {
+  const response = await api.patch(`/challenges/${challengeId}/close`);
+  return response.data;
 }

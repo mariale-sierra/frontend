@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { BackButton } from '../../components/ui/backButton';
+import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
+import { ConfirmationPopup } from '../../components/ui/confirmationPopup';
 import { colors, spacing } from '../../constants/theme';
-import { getPublicProfile } from '../../services/user/user.service';
+import { banUser, getPublicProfile } from '../../services/user/user.service';
 import type { PublicProfileContract } from '../../types/user';
 import { ProfileHeader, FollowButton, UserPostsGrid, ProfilePhotoModal } from '../../components/profile';
 import type { ChallengePhoto } from '../../types/challenge';
 import { useAuth } from '../../hooks/useAuth';
+import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 /**
@@ -38,11 +41,14 @@ export default function UserProfile() {
   const { t } = useTranslation();
   const router = useRouter();
   const { userId: sessionUserId } = useAuth();
+  const isAdmin = useIsAdmin();
 
   const [profile, setProfile] = useState<PublicProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<ChallengePhoto | null>(null);
+  const [banPopupVisible, setBanPopupVisible] = useState(false);
+  const [banning, setBanning] = useState(false);
 
   const isOwnProfile = Boolean(sessionUserId && userId && sessionUserId === userId);
 
@@ -96,6 +102,19 @@ export default function UserProfile() {
   }, [userId]);
   const { refreshing, onRefresh } = usePullToRefresh(refreshUserProfile);
 
+  async function handleBan() {
+    if (!userId) return;
+    setBanning(true);
+    try {
+      await banUser(userId);
+      setBanPopupVisible(false);
+    } catch {
+      // Global api.ts interceptor already surfaces an error toast.
+    } finally {
+      setBanning(false);
+    }
+  }
+
   if (isOwnProfile) {
     return null;
   }
@@ -143,6 +162,19 @@ export default function UserProfile() {
                       )
                     }
                   />
+                  {isAdmin && (
+                    <Pressable
+                      onPress={() => setBanPopupVisible(true)}
+                      style={styles.banButton}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('profile.banUserA11y')}
+                    >
+                      <Icon name="ban-outline" size={16} color={colors.error} />
+                      <Text variant="label" weight="bold" style={styles.banButtonText}>
+                        {t('profile.banUserButton')}
+                      </Text>
+                    </Pressable>
+                  )}
                 </View>
               }
             />
@@ -151,6 +183,23 @@ export default function UserProfile() {
         )}
       </ScrollView>
       <ProfilePhotoModal photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
+      <ConfirmationPopup
+        visible={banPopupVisible}
+        title={t('profile.banUserTitle')}
+        description={t('profile.banUserDescription')}
+        onDismiss={() => !banning && setBanPopupVisible(false)}
+        primaryButton={{
+          label: t('profile.banUserConfirm'),
+          onPress: handleBan,
+          variant: 'danger',
+          loading: banning,
+        }}
+        secondaryButton={{
+          label: t('profile.banUserCancel'),
+          onPress: () => setBanPopupVisible(false),
+          disabled: banning,
+        }}
+      />
     </ScreenBackground>
   );
 }
@@ -175,5 +224,14 @@ const styles = StyleSheet.create({
   actionsWrap: {
     alignItems: 'center',
     paddingTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  banButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  banButtonText: {
+    color: colors.error,
   },
 });

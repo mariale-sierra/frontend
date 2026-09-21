@@ -3,6 +3,8 @@ export interface UserProfileContract {
   username?: string;
   email?: string;
   is_active?: boolean;
+  /** Bloque 1 — global platform admin (GET /users/me only). */
+  is_admin?: boolean;
   created_at?: string;
   updated_at?: string;
   [key: string]: unknown;

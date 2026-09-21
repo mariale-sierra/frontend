@@ -14,11 +14,13 @@ import { ChallengeAccentBackdrop } from '../../../components/challenge/challenge
 import type { ChallengeInfoRow } from '../../../components/challenge/detail';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
-import { getChallenge, joinChallenge } from '../../../services/challenge/challenge.service';
+import { closeChallenge, getChallenge, isChallengeOwner, joinChallenge } from '../../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../../services/user/user.service';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
 import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
+import { useAuth } from '../../../hooks/useAuth';
+import { useIsAdmin } from '../../../hooks/useIsAdmin';
 import { useErrorNotificationStore } from '../../../store/errorNotificationStore';
 import type { ChallengeContract } from '../../../types/challenge';
 
@@ -43,6 +45,24 @@ export default function ChallengeDetail() {
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('none');
   const [membershipLoading, setMembershipLoading] = useState(true);
   const { showSuccess } = useErrorNotificationStore();
+  const { userId } = useAuth();
+  const isAdmin = useIsAdmin();
+  const isOwner = isChallengeOwner(challenge, userId);
+
+  const closeChallengePopup = useConfirmationPopup({
+    type: 'closeChallenge',
+    challengeName: challenge?.name ?? t('challenges.fallbackName'),
+    onConfirm: async () => {
+      const challengeId = typeof id === 'string' ? id : '';
+      if (!challengeId) return;
+      try {
+        await closeChallenge(challengeId);
+        setChallenge((prev) => (prev ? { ...prev, status: 'closed' } : prev));
+      } catch {
+        // The confirmation popup itself surfaces failure via its own error state; nothing else to do here.
+      }
+    },
+  });
 
   const joinPopup = useConfirmationPopup({
     type: 'join',
@@ -195,6 +215,26 @@ export default function ChallengeDetail() {
             >
               <Icon name="share-outline" size={22} color={colors.paper} />
             </Pressable>
+            {isOwner && (
+              <Pressable
+                onPress={() => router.push(`/challenge/${id}/manage`)}
+                style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel={t('challengeProgress.manageA11y')}
+              >
+                <Icon name="settings-outline" size={22} color={colors.paper} />
+              </Pressable>
+            )}
+            {isAdmin && challenge?.status !== 'closed' && (
+              <Pressable
+                onPress={closeChallengePopup.show}
+                style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel={t('challengeProgress.closeChallengeA11y')}
+              >
+                <Icon name="lock-closed-outline" size={22} color={colors.error} />
+              </Pressable>
+            )}
           </Row>
         </Row>
 
@@ -236,6 +276,7 @@ export default function ChallengeDetail() {
       )}
 
       <joinPopup.Component />
+      <closeChallengePopup.Component />
     </ScreenBackground>
   );
 }

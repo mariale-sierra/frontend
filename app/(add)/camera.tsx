@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -24,6 +24,11 @@ import { applyExerciseMetrics } from '../../services/metrics/applyExerciseMetric
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
 import { showProgressLoggedFeedback } from '../../utils/progressLoggedFeedback';
+import { useAuth } from '../../hooks/useAuth';
+import { useChallengeParticipants } from '../../hooks/useChallengeParticipants';
+import { getChallenge, isChallengeOwner } from '../../services/challenge/challenge.service';
+import { TagParticipantsSheet } from '../../components/challenge/TagParticipantsSheet';
+import type { ChallengeContract } from '../../types/challenge';
 
 function VisibilityToggle({
   visibility,
@@ -73,6 +78,26 @@ export default function Camera() {
 
   const [visibility, setVisibility] = useState<'followers' | 'private'>('followers');
   const visAnim = useRef(new Animated.Value(1)).current;
+
+  // Bloque 1 — joint owner posts: only shown/usable when the current user
+  // owns the selected challenge. `getChallengeUsers`-backed participants
+  // list (same hook members.tsx uses) doubles as the tag picker's source —
+  // tagging only makes sense among people already in the challenge.
+  const { userId } = useAuth();
+  const [selectedChallenge, setSelectedChallenge] = useState<ChallengeContract | null>(null);
+  const { participants } = useChallengeParticipants(selectedChallengeId ?? null);
+  const [taggedUserIds, setTaggedUserIds] = useState<string[]>([]);
+  const [tagSheetVisible, setTagSheetVisible] = useState(false);
+
+  useEffect(() => {
+    if (!selectedChallengeId) {
+      setSelectedChallenge(null);
+      return;
+    }
+    getChallenge(selectedChallengeId).then(setSelectedChallenge).catch(() => setSelectedChallenge(null));
+  }, [selectedChallengeId]);
+
+  const isOwner = isChallengeOwner(selectedChallenge, userId);
 
   const cameraRef = useRef<CameraView>(null);
   const isBusy = isTakingPicture || uploadingImage || submittingProgress;
@@ -140,6 +165,7 @@ export default function Camera() {
       isRestDay: false as const,
       visibility,
       routineId: currentRoutineId ?? undefined,
+      taggedUserIds: isOwner && taggedUserIds.length > 0 ? taggedUserIds : undefined,
     };
 
     setSubmittingProgress(true);
@@ -252,6 +278,22 @@ export default function Camera() {
         <View style={styles.cameraContainer}>
           <Image source={{ uri: capturedUri }} style={styles.cameraFill} resizeMode="cover" />
           <VisibilityToggle visibility={visibility} anim={visAnim} onToggle={toggleVisibility} />
+          {isOwner && (
+            <Pressable
+              onPress={() => setTagSheetVisible(true)}
+              style={({ pressed }) => [styles.tagToggle, pressed && styles.pressed]}
+              hitSlop={8}
+            >
+              <View style={styles.tagToggleInner}>
+                <Icon name="pricetag-outline" size={17} color={colors.paper} />
+                <Text style={styles.visibilityLabel}>
+                  {taggedUserIds.length > 0
+                    ? t('challengeProgress.tagParticipantsSelectedCount', { count: taggedUserIds.length })
+                    : t('challengeProgress.tagParticipantsLabel')}
+                </Text>
+              </View>
+            </Pressable>
+          )}
         </View>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -273,6 +315,14 @@ export default function Camera() {
             )}
           </Pressable>
         </View>
+
+        <TagParticipantsSheet
+          visible={tagSheetVisible}
+          participants={participants}
+          selectedIds={taggedUserIds}
+          onChange={setTaggedUserIds}
+          onClose={() => setTagSheetVisible(false)}
+        />
       </View>
     );
   }
@@ -393,6 +443,22 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: spacing.md,
     right: spacing.md,
+  },
+  tagToggle: {
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.md,
+  },
+  tagToggleInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.medium,
+    backgroundColor: withAlpha(colors.ink, 0.45),
+    borderWidth: 1,
+    borderColor: withAlpha(colors.paper, 0.18),
   },
   visibilityInner: {
     flexDirection: 'row',

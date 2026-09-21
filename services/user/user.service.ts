@@ -66,6 +66,17 @@ export async function searchUsers(query: string): Promise<PublicProfileContract[
  * each challenge already carrying its own `status` field — this flattens the groups into a
  * single array so callers can filter/group client-side as needed (see `ChallengeContract.status`).
  */
+/** Admin-only (global). Reuses the backend's is_active flag — never a hard delete. */
+export async function banUser(userId: string) {
+  const response = await api.patch(`/users/${userId}/ban`);
+  return response.data;
+}
+
+export async function unbanUser(userId: string) {
+  const response = await api.patch(`/users/${userId}/unban`);
+  return response.data;
+}
+
 export async function getMyChallenges(): Promise<ChallengeContract[]> {
   const res = await api.get('/users/me/challenges');
   const payload = res.data;
