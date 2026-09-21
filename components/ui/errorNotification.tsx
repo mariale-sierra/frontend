@@ -35,10 +35,11 @@ interface ErrorNotificationProps {
 }
 
 // The status shows in ONE small place: the leading icon. The toast itself is the
-// same frosted-glass surface as the nav bar and the toggles, with `paper` text —
-// the usual toast: quiet, readable, and it says what happened without shouting
-// (it used to be a whole banner filled with `error` red / `success` green, which
-// was far too loud for something that appears over whatever you were doing).
+// same frosted-glass surface as the nav bar and the toggles, with `paper` text — plus
+// the light of a popup (`highlight`: a sheen and a gradient rim), so it does not
+// read as a flat dark bar. Quiet, readable, and it says what happened without
+// shouting (it used to be a whole banner filled with `error` red / `success` green,
+// which was far too loud for something that appears over whatever you were doing).
 const STATUS: Record<NotificationVariant, { icon: IconName; color: string }> = {
   error: { icon: 'alert-circle-outline', color: colors.error },
   success: { icon: 'checkmark-circle-outline', color: colors.success },
@@ -87,7 +88,7 @@ export function ErrorNotification({
         onPress={onDismiss}
         style={styles.touchable}
       >
-        <GlassSurface style={styles.content}>
+        <GlassSurface highlight style={styles.content}>
           <Icon name={status.icon} size={STATUS_ICON_SIZE} color={status.color} />
 
           <View style={styles.textContainer}>
@@ -145,10 +146,12 @@ const styles = StyleSheet.create({
   touchable: {
     flex: 1,
   },
-  // `radius.xl` — the toast's own rounder tier (see the token's doc comment).
-  // `GlassSurface` supplies the blur, tint, hairline rim and `overflow: hidden`.
+  // `radius.medium`: a rounded bar, not a pill. It was `radius.xl` (40), which on a bar
+  // this short (about 46 tall) is a full pill — 'too rounded' — and stretched the rim
+  // into an ellipse. `GlassSurface` supplies the blur, tint, gradient rim and
+  // `overflow: hidden`.
   content: {
-    borderRadius: radius.xl,
+    borderRadius: radius.medium,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     flexDirection: 'row',

@@ -31,7 +31,7 @@ export * from './FriendStreakCard';
 // loading/empty/error states and a "see more" action. Feed data is passed in via props.
 export * from './FriendsStreakSection';
 
-// StreakGridItem: One tile in the Streaks-All 4-column grid (avatar + overlapping
+// StreakGridItem: One tile in the Streaks-All 3-column grid (a round avatar + overlapping
 // count badge + name) — same badge treatment as FriendStreakCard, plus an optional
 // `primary` ring for the signed-in user's own tile.
 export * from './StreakGridItem';

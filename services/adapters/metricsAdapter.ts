@@ -118,6 +118,7 @@ export function adaptChallengesForMetrics(contracts: ChallengeContract[]): Chall
     locations: sanitizeLocations(
       Array.isArray(contract.locations) ? contract.locations : [],
     ),
+    dominantActivityCategory: pickDominantActivityCategory(contract),
   }));
   console.log('[adaptChallengesForMetrics] output', result);
   return result;

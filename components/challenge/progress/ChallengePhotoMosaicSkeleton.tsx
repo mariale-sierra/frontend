@@ -1,7 +1,9 @@
 import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { colors, fillOpacity, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { Icon } from '../../ui/icon';
+import { Text } from '../../ui/text';
 import type { ChallengePhoto } from '../../../types/challenge';
 
 interface ChallengePhotoMosaicSkeletonProps {
@@ -26,11 +28,23 @@ const COLUMNS = 3;
  * content height rather than being clipped to a fixed pager height.
  */
 export function ChallengePhotoMosaicSkeleton({ width, photos, totalDays, onPressPhoto }: ChallengePhotoMosaicSkeletonProps) {
+  const { t } = useTranslation();
   const horizontalPadding = spacing.base;
   const gap = spacing.sm;
   const itemWidth = (width - horizontalPadding * 2 - gap * (COLUMNS - 1)) / COLUMNS;
 
   const cells = photos.slice(0, totalDays);
+
+  // No consistency photos yet: say so, instead of leaving the place empty.
+  if (cells.length === 0) {
+    return (
+      <View style={[styles.empty, { paddingHorizontal: horizontalPadding }]}>
+        <Text variant="body" tone="secondary" align="center">
+          {t('challengeProgress.consistency.gridEmpty')}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.content, { paddingHorizontal: horizontalPadding }]}>
@@ -67,6 +81,11 @@ const styles = StyleSheet.create({
   // consistencyHeader) already contributes the only vertical gap via its
   // own paddingBottom, same fix as ChallengeWorkoutCalendar's `page`.
   content: {},
+  // The label that stands in for an empty grid, centered in the room the grid would take.
+  empty: {
+    paddingVertical: spacing['2xl'],
+    alignItems: 'center',
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

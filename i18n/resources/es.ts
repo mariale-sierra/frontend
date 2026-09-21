@@ -177,6 +177,7 @@ const es = {
       legendToday: 'Hoy',
       ofDays_one: 'de {{count}} día',
       ofDays_other: 'de {{count}} días',
+      gridEmpty: 'Aún no hay fotos de constancia',
     },
     membersA11y: 'Ver miembros del reto',
     infoA11y: 'Información del reto',

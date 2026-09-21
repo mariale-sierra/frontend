@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { AccentCard } from '../ui/accentCard';
 import { Icon } from '../ui/icon';
@@ -16,6 +17,9 @@ const TITLE_LINES = 2;
 
 interface ChallengeDeckCardProps {
   challenge: LogChallengeQuickPick;
+  /** Called when the card's photo has loaded, or failed to, or at once if it has none —
+   * when there is nothing left to wait for. */
+  onPhotoSettled?: () => void;
 }
 
 /**
@@ -27,7 +31,13 @@ interface ChallengeDeckCardProps {
  * rest of the card. It fills the box it is given (a little square); the deck sizes and
  * places it.
  */
-export function ChallengeDeckCard({ challenge }: ChallengeDeckCardProps) {
+export function ChallengeDeckCard({ challenge, onPhotoSettled }: ChallengeDeckCardProps) {
+  const hasPhoto = Boolean(challenge.photoUrl);
+  // A card with no photo has nothing to wait for.
+  useEffect(() => {
+    if (!hasPhoto) onPhotoSettled?.();
+  }, [hasPhoto, onPhotoSettled]);
+
   // The picker lists what can be logged today, so every challenge here is `active`:
   // its activity color, or the neutral one when it has no dominant activity yet.
   const glowColor = getChallengeGlowColor('active', challenge.dominantActivityCategory);
@@ -42,7 +52,14 @@ export function ChallengeDeckCard({ challenge }: ChallengeDeckCardProps) {
       </Text>
 
       {challenge.photoUrl ? (
-        <Image source={{ uri: challenge.photoUrl }} style={styles.photo} resizeMode="cover" />
+        <Image
+          testID="challenge-deck-photo"
+          source={{ uri: challenge.photoUrl }}
+          style={styles.photo}
+          resizeMode="cover"
+          onLoad={onPhotoSettled}
+          onError={onPhotoSettled}
+        />
       ) : (
         <View style={[styles.photo, styles.photoPlaceholder]}>
           <Icon name="image-outline" size={PLACEHOLDER_ICON_SIZE} color={withAlpha(colors.paper, textOpacity.tertiary)} />

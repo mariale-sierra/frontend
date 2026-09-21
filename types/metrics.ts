@@ -25,6 +25,9 @@ export interface ChallengeOption {
   label: string;
   activityCategories: ActivityCategory[];
   locations: LocationType[];
+  /** The challenge's own dominant activity (`null` if it has none yet) — what the
+   * Log Metrics screen takes its color from, as the info and progress screens do. */
+  dominantActivityCategory: ActivityType | null;
 }
 
 export type MetricField = 'reps' | 'lbs' | 'duration' | 'distance' | 'rounds';

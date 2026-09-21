@@ -229,7 +229,7 @@ export const SpaceForm = forwardRef<SpaceFormHandle, SpaceFormProps>(function Sp
             name={name.trim() || t('spaces.namePlaceholder')}
             description={description.trim()}
             membersCount={previewMembersCount ?? 1}
-            accentColor={accentColor}
+            activityType={activityType}
           />
         </View>
       </View>

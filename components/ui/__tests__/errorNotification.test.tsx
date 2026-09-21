@@ -2,7 +2,7 @@ import { fireEvent } from '@testing-library/react-native';
 import { renderWithProviders } from '../../../test-utils/renderWithProviders';
 import { ErrorNotification } from '../errorNotification';
 import type { ErrorNotificationConfig } from '../errorNotification';
-import { colors } from '../../../constants/theme';
+import { colors, lineHeight, radius, spacing } from '../../../constants/theme';
 
 jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
@@ -62,12 +62,41 @@ describe('ErrorNotification', () => {
       }
     });
 
-    it('sits on the shared glass surface — a blur, the surface tint and the hairline rim', async () => {
+    it('sits on the shared glass surface — a blur and the surface tint', async () => {
       const screen = await renderToast({ message: 'Message', duration: 0 });
       const tree = JSON.stringify(screen.toJSON());
 
       expect(tree).toContain('ExpoBlur');
       expect(tree).toContain(colors.surface);
+    });
+
+    it('has the light of a popup — a sheen and a gradient rim, following its radius — not a flat dark bar', async () => {
+      for (const variant of ['error', 'success'] as const) {
+        const screen = await renderToast({ message: 'Message', variant, duration: 0 });
+        const tree = JSON.stringify(screen.toJSON());
+
+        expect(tree).toContain('glassSheen');
+        expect(tree).toContain('glassRim');
+        expect(tree).toContain(`"rx":${radius.medium},"ry":${radius.medium}`);
+        await screen.unmount();
+      }
+    });
+
+    // It was `radius.xl` (40): on a bar about 46 tall, a full pill ("too rounded"), whose rim was
+    // stretched into an ellipse.
+    it('is a rounded bar, not a pill: the medium radius', async () => {
+      const screen = await renderToast({ message: 'Message', duration: 0 });
+      const tree = JSON.stringify(screen.toJSON());
+
+      expect(tree).toContain(`"borderRadius":${radius.medium}`);
+      expect(tree).not.toContain(`"borderRadius":${radius.xl}`);
+    });
+
+    it('has a radius its bar can carry: no more than half of the shortest it gets', async () => {
+      // A single line of text, or the status icon, between its vertical padding.
+      const shortest = spacing.md * 2 + Math.max(lineHeight.sm, 22);
+
+      expect(radius.medium).toBeLessThanOrEqual(shortest / 2);
     });
   });
 });

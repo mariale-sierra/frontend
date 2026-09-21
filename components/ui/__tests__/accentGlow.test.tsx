@@ -87,6 +87,49 @@ describe('AccentMesh', () => {
     expect(JSON.stringify(screen.toJSON()).match(/"dither":true/g)).toHaveLength(recipe.blobs.length + 2);
   });
 
+  it('draws no scrim for a recipe that has none — the screen backdrop, whose color reaches the left edge', async () => {
+    const recipe = getMeshRecipe('screen', 'cardioLow');
+    const screen = await render(
+      <Canvas>
+        <AccentMesh width={390} height={844} color={activityColors.cardioLow} recipe={recipe} />
+      </Canvas>,
+    );
+
+    // The fields and the arch are the dithered gradients: no scrim, and no top fade either.
+    expect(JSON.stringify(screen.toJSON()).match(/"dither":true/g)).toHaveLength(recipe.blobs.length + 1);
+  });
+
+  it("cuts a recipe's arch out of its fields: an `ink` field drawn over them, and only for a recipe that has one", async () => {
+    const recipe = getMeshRecipe('screen', 'strength');
+    const withArch = JSON.stringify(
+      (
+        await render(
+          <Canvas>
+            <AccentMesh width={390} height={844} color={activityColors.strength} recipe={recipe} />
+          </Canvas>,
+        )
+      ).toJSON(),
+    );
+    const without = JSON.stringify(
+      (
+        await render(
+          <Canvas>
+            <AccentMesh width={390} height={844} color={activityColors.strength} recipe={{ ...recipe, arch: undefined }} />
+          </Canvas>,
+        )
+      ).toJSON(),
+    );
+    const dominant = recipe.blobs.find((blob) => blob.hue === 0)!;
+    const inkAtCore = withAlpha(colors.ink, recipe.arch!.peak);
+
+    // The screen recipe has no scrim, so this ink can only be the arch...
+    expect(without).not.toContain(inkAtCore);
+    expect(withArch).toContain(inkAtCore);
+    // ...and it is drawn after (over) the fields.
+    const dominantColor = withAlpha(rotateHue(boostSaturation(activityColors.strength, ACCENT_VIVID_FACTOR), 0), dominant.peak);
+    expect(withArch.indexOf(inkAtCore)).toBeGreaterThan(withArch.indexOf(dominantColor));
+  });
+
   it.each(Object.entries(activityColors))('draws for the %s activity color as its base', async (_name, color) => {
     const screen = await render(
       <Canvas>

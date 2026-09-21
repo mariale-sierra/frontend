@@ -1,8 +1,17 @@
 import { fireEvent } from '@testing-library/react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { SpaceCard } from '../SpaceCard';
+import { getMeshRecipe } from '../../../constants/meshRecipes';
+import { activityColors } from '../../../constants/theme';
+import { ACCENT_VIVID_FACTOR } from '../../ui/accentDome';
+import { boostSaturation, rotateHue, withAlpha } from '../../../utils/color';
 import type { SpaceContract } from '../../../types/space';
 
+// The glow is drawn once the card has been measured; this hands it a size at once.
+jest.mock('../../ui/accentGlow', () => ({
+  AccentGlow: ({ children }: { children: (size: { width: number; height: number }) => React.ReactNode }) =>
+    children({ width: 342, height: 140 }),
+}));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, params?: Record<string, unknown>) =>
@@ -100,5 +109,20 @@ describe('SpaceCard', () => {
     // string) are now passed separately — both show up in this mock's
     // `key:val1,val2` output.
     expect(screen.getByText('spaces.membersCount:50,50')).toBeTruthy();
+  });
+
+  it("lights the card with orbs in the space's own category color", async () => {
+    const screen = await renderWithTheme(
+      <SpaceCard
+        space={buildSpace({ activityCategory: { id: 5, code: 'mind-body', name: 'Mind-Body' } })}
+        onPress={jest.fn()}
+        onPressCta={jest.fn()}
+      />,
+    );
+    const dominant = getMeshRecipe('space', 'mindBody').blobs.find((orb) => orb.hue === 0)!;
+
+    expect(JSON.stringify(screen.toJSON())).toContain(
+      withAlpha(rotateHue(boostSaturation(activityColors.mindBody, ACCENT_VIVID_FACTOR), 0), dominant.peak),
+    );
   });
 });

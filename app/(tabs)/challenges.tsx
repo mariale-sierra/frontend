@@ -16,7 +16,7 @@ import type { ChallengeMineCardViewModel } from '../../services/adapters/challen
 import { colors, radius, spacing } from '../../constants/theme';
 import { getChallenges, getMyProgressPhotos } from '../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../services/user/user.service';
-import { toChallengeMineViewModels, toExploreChallengeViewModels, withoutFinishedChallenges } from '../../services/adapters';
+import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../../services/adapters';
 import { groupLatestPhotoByChallengeId } from '../../services/adapters/challengeState';
 import { useChallengeFinishedStore } from '../../store/challengeFinishedStore';
 import { hasShownCompletion, markCompletionShown } from '../../utils/shownCompletions';
@@ -77,9 +77,9 @@ export default function Challenges() {
         const enrolled = enrolledRaw ?? [];
         const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(myPhotos ?? []);
         const mineViewModels = toChallengeMineViewModels(enrolled, latestPhotoByChallengeId);
-        // A finished challenge (`won`) is not in Mine any more — Mine is what you
-        // are still doing. It was celebrated when it finished (or is, just below).
-        setMineChallenges(withoutFinishedChallenges(mineViewModels));
+        // A finished challenge (`won`) stays in Mine, as its "Finished" card after the
+        // ones still going — the card must not vanish when the celebration is closed.
+        setMineChallenges(mineViewModels);
 
         for (const challenge of mineViewModels) {
           if (challenge.state === 'won' && !(await hasShownCompletion(challenge.challengeId))) {

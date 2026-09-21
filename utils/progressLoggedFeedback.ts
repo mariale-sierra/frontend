@@ -27,7 +27,8 @@ async function completeChallengeIfFinished(challengeId: string): Promise<Challen
 /**
  * The popup after a day has been logged (a photo, or a rest day): the "Challenge
  * complete" one when that was the challenge's last day — the challenge is marked
- * completed first, so it also leaves Challenges-Mine — and the usual "logged!"
+ * completed first, so it becomes a "Finished" card in Challenges-Mine (and leaves
+ * Home) — and the usual "logged!"
  * one otherwise. Only one of the two ever shows.
  */
 export async function showProgressLoggedFeedback(challengeId: string): Promise<void> {

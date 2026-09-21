@@ -51,22 +51,29 @@ export const HOME_GRADIENT_EDGE: 'top' | 'bottom' = 'top';
  */
 export const PAPER_GRADIENT = {
   /** How wide the half-moon is where it meets the screen's edge, as a fraction of
-   * the screen's width (0.5 = the whole width; more runs off the sides). */
-  domeHalfWidth: 0.5,
+   * the screen's width (0.5 = the whole width; more runs off the sides). Wider than
+   * it is deep, so it is a half moon and not a circle: on a phone the arc's center
+   * is on the edge or beyond it. */
+  domeHalfWidth: 0.65,
   /** How far into the screen it reaches, as a fraction of the screen's height. */
-  domeDepth: 0.5,
+  domeDepth: 0.27,
   /** Alpha of `paper` in the half-moon at its strongest... */
-  washPeak: 0.12,
+  washPeak: 0.08,
   /** ...and of the soft bloom on the middle of the edge, the light's focal point. */
-  bloomPeak: 0.1,
+  bloomPeak: 0.06,
 } as const;
 
 /**
- * The same spotlight in a color (Home's activity color): a little stronger, since
- * a color at the alpha `paper` gets reads dimmer.
+ * The spotlight in a color (Home's activity color): a little stronger than the paper
+ * one, since a color at the alpha `paper` gets reads dimmer. It keeps the shape and
+ * strength it has always had — Home's light is as it was when the paper light on the
+ * other screens was made gentler and flatter (2026-09-20, explicit request: 'too
+ * strong and looks too much like a circle instead of a half moon'), so it does not
+ * follow `PAPER_GRADIENT`.
  */
 export const TINTED_GRADIENT = {
-  ...PAPER_GRADIENT,
+  domeHalfWidth: 0.5,
+  domeDepth: 0.5,
   washPeak: 0.2,
   bloomPeak: 0.16,
 } as const;

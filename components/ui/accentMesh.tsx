@@ -1,7 +1,7 @@
 import { Circle, FractalNoise, Group, LinearGradient, RadialGradient, Rect, vec } from '@shopify/react-native-skia';
 import { ACCENT_VIVID_FACTOR } from './accentDome';
 import { colors } from '../../constants/theme';
-import type { MeshBlob, MeshRecipe } from '../../constants/meshRecipes';
+import type { MeshArch, MeshBlob, MeshRecipe } from '../../constants/meshRecipes';
 import { boostSaturation, rotateHue, withAlpha } from '../../utils/color';
 
 // How a field (or the scrim, or the top fade) eases out, as [position from its
@@ -43,7 +43,7 @@ interface AccentMeshProps {
 // width, so a field keeps its shape when rotated), rotated, then moved to its
 // center. Drawn under this transform, the unit circle's radial gradient becomes
 // the field's stretched, tilted soft edge.
-function place(field: MeshBlob, width: number, height: number) {
+function place(field: Pick<MeshBlob, 'x' | 'y' | 'rx' | 'ry' | 'angle'>, width: number, height: number) {
   return [
     { translateX: field.x * width },
     { translateY: field.y * height },
@@ -51,6 +51,23 @@ function place(field: MeshBlob, width: number, height: number) {
     { scaleX: field.rx * width },
     { scaleY: field.ry * width },
   ];
+}
+
+// The half-moon of `ink` that carves a recipe's color into an arch: a field like the
+// others, but level (the arch is never tilted) and `ink` instead of a hue.
+function ArchCut({ arch, width, height }: { arch: MeshArch; width: number; height: number }) {
+  return (
+    <Group transform={place({ ...arch, angle: 0 }, width, height)}>
+      <Circle cx={0} cy={0} r={1} dither>
+        <RadialGradient
+          c={vec(0, 0)}
+          r={1}
+          colors={MESH_FALLOFF.map(([, share]) => withAlpha(colors.ink, arch.peak * share))}
+          positions={MESH_FALLOFF.map(([position]) => position)}
+        />
+      </Circle>
+    </Group>
+  );
 }
 
 /**
@@ -69,7 +86,7 @@ function place(field: MeshBlob, width: number, height: number) {
  * Renders Skia nodes only, so it goes inside a `Canvas`, over the card's `ink` base.
  */
 export function AccentMesh({ width, height, color, recipe, grainOpacity = 0 }: AccentMeshProps) {
-  const { blobs, scrim, topFade } = recipe;
+  const { blobs, scrim, topFade, arch } = recipe;
   const base = boostSaturation(color, ACCENT_VIVID_FACTOR);
 
   return (
@@ -94,16 +111,23 @@ export function AccentMesh({ width, height, color, recipe, grainOpacity = 0 }: A
         })}
       </Group>
 
+      {/* The arch is a field too, in `ink` and drawn over the others (not added to
+          them), so it carves the color into its curve; eased out the same way. */}
+      {arch ? <ArchCut arch={arch} width={width} height={height} /> : null}
+
       {/* The scrim eases in from the left edge the same way — not a straight
-          two-stop ramp, which shows as a visible line where it ends. */}
-      <Rect x={0} y={0} width={width} height={height} dither>
-        <LinearGradient
-          start={vec(0, 0)}
-          end={vec(width * scrim.reach, 0)}
-          colors={MESH_FALLOFF.map(([, share]) => withAlpha(colors.ink, scrim.peak * share))}
-          positions={MESH_FALLOFF.map(([position]) => position)}
-        />
-      </Rect>
+          two-stop ramp, which shows as a visible line where it ends. A recipe with
+          none (a peak of 0) draws none. */}
+      {scrim.peak > 0 ? (
+        <Rect x={0} y={0} width={width} height={height} dither>
+          <LinearGradient
+            start={vec(0, 0)}
+            end={vec(width * scrim.reach, 0)}
+            colors={MESH_FALLOFF.map(([, share]) => withAlpha(colors.ink, scrim.peak * share))}
+            positions={MESH_FALLOFF.map(([position]) => position)}
+          />
+        </Rect>
+      ) : null}
 
       {/* The top fade eases in from the top edge, so the gradient thins out
           gradually as it goes up instead of stopping. */}

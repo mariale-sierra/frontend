@@ -5,15 +5,21 @@ import { AccentCard } from '../ui/accentCard';
 import { Text } from '../ui/text';
 import { ChallengeCardMembers } from '../challenge/card/ChallengeCardMembers';
 import { challengeCardText } from '../challenge/card/challengeCardText';
+import { USE_MESH_CARD_GLOW } from '../../constants/challengeCards';
+import { getMeshRecipe } from '../../constants/meshRecipes';
 import { spacing } from '../../constants/theme';
 import { formatCount } from '../../utils/format';
+import { getChallengeGlowColor, getChallengeGlowKey } from '../../services/adapters/challengeState';
+import type { ActivityType } from '../../types/activity';
 
 interface SpaceCardViewProps {
   name: string;
   description?: string | null;
   membersCount: number;
-  /** The space's own Activity Color — the card's glow and outline. */
-  accentColor: string;
+  /** The space's own Activity Type: its color is the card's outline and its orbs of
+   * light, and the type picks the orbs' composition (the neutral color and a quieter
+   * set of orbs when the space has none). */
+  activityType: ActivityType | null;
   /** The Join / Request / Pending pill, top right. None for a member or owner,
    * and in the form's live preview. */
   cta?: ReactNode;
@@ -22,8 +28,10 @@ interface SpaceCardViewProps {
 /**
  * What a Space looks like as a card: the glow card look shared with the challenge
  * cards (`AccentCard` — dark, the space's Activity Color as a fine outline and as
- * a glow) with a glow of its own, a half-moon from the top AND the bottom edge
- * (`twinGlow`), in the Space card's compact layout, based on wireframe Chats-46A:
+ * a glow) with a glow of its own, a scatter of soft ORBS of light (the `space` mesh
+ * recipe: seven round bubbles of different sizes, a playful cousin of the Explore
+ * cards' mesh; a half-moon from the top AND the bottom edge, `twinGlow`, when
+ * `USE_MESH_CARD_GLOW` is off), in the Space card's compact layout, based on wireframe Chats-46A:
  * the name on the left, the Join / Request / Pending pill on the right of the same
  * row, then the description, then the member count. No activity badge (the color
  * says it), and roomier padding than the challenge cards. Sized by its content.
@@ -34,13 +42,14 @@ export function SpaceCardView({
   name,
   description,
   membersCount,
-  accentColor,
+  activityType,
   cta,
 }: SpaceCardViewProps) {
   const { t } = useTranslation();
+  const glowRecipe = USE_MESH_CARD_GLOW ? getMeshRecipe('space', getChallengeGlowKey('active', activityType)) : undefined;
 
   return (
-    <AccentCard color={accentColor} twinGlow style={styles.card}>
+    <AccentCard color={getChallengeGlowColor('active', activityType)} glowRecipe={glowRecipe} twinGlow style={styles.card}>
       {/* The name on the left, in the SAME row as the CTA pill, the CTA anchored
           to its top edge (the wireframe's shape). */}
       <View style={styles.headerRow}>

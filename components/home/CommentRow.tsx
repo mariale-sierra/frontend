@@ -30,6 +30,7 @@ export function CommentRow({ comment, isMine, onDelete }: CommentRowProps) {
       </View>
       {isMine && (
         <IconButton
+          testID="comment-delete"
           name="trash-outline"
           size={28}
           iconSize={16}

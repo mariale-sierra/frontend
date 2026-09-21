@@ -1,8 +1,4 @@
-import {
-  toChallengeMineViewModels,
-  toExploreChallengeViewModels,
-  withoutFinishedChallenges,
-} from '../challengeListAdapter';
+import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../challengeListAdapter';
 import type { ChallengeContract, ChallengePhoto } from '../../../types/challenge';
 
 function buildChallenge(overrides: Partial<ChallengeContract> & { id: string }): ChallengeContract {
@@ -79,25 +75,43 @@ describe('toExploreChallengeViewModels', () => {
   });
 });
 
-describe('withoutFinishedChallenges', () => {
-  it('drops a challenge that is finished, keeps the ones still going, and keeps their order', () => {
-    const viewModels = toChallengeMineViewModels(
+// A finished challenge must not vanish from Mine when its celebration is closed: it stays,
+// as its "Finished" card, after the challenges still going.
+describe('a finished challenge in Challenges-Mine', () => {
+  const mine = () =>
+    toChallengeMineViewModels(
       [
+        buildChallenge({ id: 'LEFT', status: 'left', current_day: 3 }),
         buildChallenge({ id: 'FINISHED', status: 'completed', current_day: 30 }),
         buildChallenge({ id: 'GOING', status: 'active', current_day: 5 }),
-        buildChallenge({ id: 'LEFT', status: 'left', current_day: 3 }),
       ],
       NO_PHOTOS,
     );
 
-    expect(viewModels.map((challenge) => challenge.state)).toContain('won');
-    expect(withoutFinishedChallenges(viewModels).map((challenge) => challenge.challengeId)).toEqual(['GOING', 'LEFT']);
+  it('stays in the list, as a `won` card', () => {
+    const finished = mine().find((challenge) => challenge.challengeId === 'FINISHED');
+
+    expect(finished).toBeDefined();
+    expect(finished?.state).toBe('won');
   });
 
-  it('is empty when every challenge is finished, and when there are none', () => {
-    const finished = toChallengeMineViewModels([buildChallenge({ id: 'A', status: 'completed' })], NO_PHOTOS);
+  it('comes after the challenges still going and before the ones that were left', () => {
+    expect(mine().map((challenge) => challenge.challengeId)).toEqual(['GOING', 'FINISHED', 'LEFT']);
+  });
 
-    expect(withoutFinishedChallenges(finished)).toEqual([]);
-    expect(withoutFinishedChallenges([])).toEqual([]);
+  it('is the only card there when it is the only challenge', () => {
+    const viewModels = toChallengeMineViewModels([buildChallenge({ id: 'A', status: 'completed' })], NO_PHOTOS);
+
+    expect(viewModels.map((challenge) => challenge.state)).toEqual(['won']);
+  });
+
+  it('keeps what the card shows: how far it got', () => {
+    const [finished] = toChallengeMineViewModels(
+      [buildChallenge({ id: 'A', status: 'completed', current_day: 30, duration_days: 30 })],
+      NO_PHOTOS,
+    );
+
+    expect(finished.currentDay).toBe(30);
+    expect(finished.totalDays).toBe(30);
   });
 });

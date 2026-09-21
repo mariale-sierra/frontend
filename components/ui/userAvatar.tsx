@@ -36,9 +36,13 @@ interface UserAvatarProps {
   size?: number;
   /** Optional profile photo URL — falls back to the initial when absent. */
   imageUrl?: string | null;
+  /** A true circle, whatever the size. By default the corner radius is the flat `big`
+   * token, so a big avatar is a rounded square (the wireframes' profile avatar); a
+   * grid of friends (Streaks-All) asks for the circle. */
+  circle?: boolean;
 }
 
-export function UserAvatar({ username, size = 40, imageUrl }: UserAvatarProps) {
+export function UserAvatar({ username, size = 40, imageUrl, circle = false }: UserAvatarProps) {
   const initial = username ? username[0].toUpperCase() : '?';
   const fontSize = Math.round(size * 0.38);
   // Corner radius is always the flat `big` token, not size/2 — confirmed by
@@ -46,7 +50,7 @@ export function UserAvatar({ username, size = 40, imageUrl }: UserAvatarProps) {
   // circles (28px exceeds half their own width/height, so the platform
   // clamps it into a full circle), while the large profile avatar (88px)
   // deliberately shows as a rounded square/"squircle" instead of a circle.
-  const cornerRadius = radius.big;
+  const cornerRadius = circle ? size / 2 : radius.big;
 
   if (imageUrl) {
     return (

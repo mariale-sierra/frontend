@@ -270,14 +270,14 @@ export const radius = {
   // cards), so bumping it directly would have re-rounded every one of those
   // too, not just the two components that got the complaint. A real new
   // tier for the small set of "showcase" surfaces that want to read as
-  // noticeably rounder than even a hero card — ConfirmationPopup's card,
-  // the toast notification, and (merged in from the chats feature branch,
+  // noticeably rounder than even a hero card — ConfirmationPopup's card
+  // and (merged in from the chats feature branch,
   // 2026-08-31) MessageBubble's chat bubbles — a heavily-rounded bubble
   // shape happened to already reference this exact token name pre-merge,
   // a genuine coincidence confirmed by reading that branch's own code, not
   // a deliberate reuse decided here. Don't reach for this as a default;
   // `big` stays the standard "very rounded" token for everything else.
-  xl: 40, // ConfirmationPopup's card, the toast notification, MessageBubble's chat bubbles
+  xl: 40, // ConfirmationPopup's card, MessageBubble's chat bubbles (the toast was here too, until it read as a pill: it is `medium` now)
 } as const;
 
 export type RadiusToken = keyof typeof radius;
@@ -302,6 +302,12 @@ export const glass = {
   // .72 a badge over a soft gradient is nearly a solid dark pill.
   badgeTintOpacity: 0.4,
   borderOpacity: 0.08, // hairline `paper` rim
+  // The extra light of the popups and toasts (`GlassSurface`'s `highlight`): a soft
+  // `paper` sheen across the glass, brightest at its top-left corner, and a rim that
+  // catches the light there, fades through the middle and picks up a fainter echo at
+  // the bottom-right — a gradient outline in place of the plain hairline all round.
+  sheenOpacity: 0.14,
+  rimOpacity: { bright: 0.5, dim: 0.05, echo: 0.2 },
 } as const;
 
 // ---------------------------------------------------------------------------

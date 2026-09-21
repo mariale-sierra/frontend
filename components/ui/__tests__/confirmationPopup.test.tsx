@@ -2,7 +2,8 @@ import { fireEvent } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { ConfirmationPopup } from '../confirmationPopup';
-import { colors } from '../../../constants/theme';
+import { colors, fillOpacity, fontSize, glass, lineHeight, radius, spacing } from '../../../constants/theme';
+import { withAlpha } from '../../../utils/color';
 
 describe('ConfirmationPopup', () => {
   const baseProps = {
@@ -85,13 +86,16 @@ describe('ConfirmationPopup', () => {
       );
     }
 
-    it('is a plain `surface` card, with no colored glow behind it, whichever the tone', async () => {
+    it('is a frosted-glass card — the blur and the tint — with no colored glow behind it, whichever the tone', async () => {
       for (const tone of ['default', 'success'] as const) {
         const screen = await renderPopup({ tone });
         const tree = JSON.stringify(screen.toJSON());
 
-        expect(tree).toContain(`"backgroundColor":"${colors.surface}"`);
-        // The glow was an SVG radial gradient in the tone's color.
+        expect(tree).toContain('ExpoBlur');
+        expect(tree).toContain(`"backgroundColor":"${withAlpha(colors.surface, glass.tintOpacity)}"`);
+        // Not a solid `surface` card any more.
+        expect(tree).not.toContain(`"backgroundColor":"${colors.surface}"`);
+        // The old glow was an SVG radial gradient in the tone's color.
         expect(tree).not.toContain('RadialGradient');
         expect(tree).not.toContain('popupGlow');
         await screen.unmount();
@@ -114,11 +118,45 @@ describe('ConfirmationPopup', () => {
       expect(JSON.stringify(screen.toJSON())).toContain(`"color":"${colors.error}"`);
     });
 
-    it('rounds the card and gives it the shared hairline rim', async () => {
-      const screen = await renderPopup();
-      const flatCards = JSON.stringify(screen.toJSON());
+    it('rounds the card, and lights it like glass: a sheen and a gradient rim, in `paper` whichever the tone', async () => {
+      for (const tone of ['default', 'success'] as const) {
+        const screen = await renderPopup({ tone });
+        const tree = JSON.stringify(screen.toJSON());
 
-      expect(flatCards).toContain('"borderWidth":' + StyleSheet.hairlineWidth);
+        expect(tree).toContain('glassSheen');
+        expect(tree).toContain('glassRim');
+        expect(tree).toContain(`"rx":${radius.xl},"ry":${radius.xl}`);
+        await screen.unmount();
+      }
+    });
+
+    it('is sized like a standard alert, not a whole card: at most 300 wide, 24 of padding', async () => {
+      const screen = await renderPopup();
+      const tree = JSON.stringify(screen.toJSON());
+
+      expect(tree).toContain('"width":"100%","maxWidth":300');
+      expect(tree).toContain(`"borderRadius":${radius.xl},"padding":${spacing.lg}`);
+    });
+
+    it('sets its title as a subheader (20), not a screen title (30), and its description at 14', async () => {
+      const screen = await renderPopup();
+      const tree = JSON.stringify(screen.toJSON());
+
+      expect(tree).toContain(`"fontSize":${fontSize.xl},"lineHeight":${lineHeight.xl}`);
+      expect(tree).not.toContain(`"fontSize":${fontSize['3xl']}`);
+      expect(tree).toContain(`"fontSize":${fontSize.sm},"lineHeight":${lineHeight.sm}`);
+    });
+
+    it('shrinks the icon to 32', async () => {
+      const screen = await renderPopup();
+
+      expect(JSON.stringify(screen.toJSON())).toContain('"size":32');
+    });
+
+    it('dims what is behind it the way the bottom sheets do, so the glass has something to show', async () => {
+      const screen = await renderPopup();
+
+      expect(JSON.stringify(screen.toJSON())).toContain(`"backgroundColor":"${withAlpha(colors.ink, fillOpacity.dim)}"`);
     });
   });
 });

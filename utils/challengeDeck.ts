@@ -27,7 +27,7 @@ import {
 export interface DeckLayout {
   cardWidth: number;
   cardHeight: number;
-  /** Where the front card's left edge is, so that the whole pile is centered. */
+  /** Where the front card's left edge is, so that the front card is centered. */
   cardLeft: number;
   /** The height of the deck: the front card and the edges of the ones behind it. */
   viewportHeight: number;
@@ -39,11 +39,13 @@ export interface DeckLayout {
 
 /**
  * The size and place of a deck of `count` cards in a space `width` wide: the cards a
- * share of it (`DECK_CARD_WIDTH_SHARE`) and standing out to the right and below by
- * only as many cards as are really behind the front one (at most `DECK_VISIBLE_BEHIND`)
- * — so a deck of one card is that card, centered, and a deck of two has the room for
- * one behind it, not two: the pile is centered however many cards it has, and so is
- * the loading skeleton that stands in for it.
+ * share of it (`DECK_CARD_WIDTH_SHARE`), the FRONT card centered — however many cards
+ * there are, and whichever one is in front, the card you are looking at is in the
+ * middle, and the ones behind it stand out to its right — and room below for only as
+ * many cards as are really behind it (at most `DECK_VISIBLE_BEHIND`). (It used to center
+ * the whole pile, the front card and the edges of the others together, which put the
+ * front card left of the middle, more so with more cards, and once the deck was down to
+ * its last cards.) The loading skeleton that stands in for the deck is laid out the same.
  */
 export function getDeckLayout(width: number, count: number): DeckLayout {
   const cardWidth = width * DECK_CARD_WIDTH_SHARE;
@@ -53,7 +55,7 @@ export function getDeckLayout(width: number, count: number): DeckLayout {
   return {
     cardWidth,
     cardHeight,
-    cardLeft: (width - cardWidth - DECK_CASCADE * behind) / 2,
+    cardLeft: (width - cardWidth) / 2,
     viewportHeight: cardHeight + DECK_SLIVER * behind,
     step: cardHeight * DECK_STEP_SHARE,
     haloRadius: cardWidth * DECK_HALO_RADIUS_SHARE,

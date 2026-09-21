@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { fireEvent } from '@testing-library/react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { ChallengeDeckCard } from '../challengeDeckCard';
 import { activityColors, colors, fillOpacity, radius, spacing } from '../../../constants/theme';
@@ -100,5 +101,52 @@ describe('ChallengeDeckCard', () => {
     // The inset the challenge cards give their text: `md` of padding and an `sm` on top.
     expect(card.padding).toBe(DECK_CARD_PADDING);
     expect(DECK_CARD_PADDING).toBe(spacing.md + spacing.sm);
+  });
+
+  describe('telling when its photo is done', () => {
+    const PHOTO = 'https://example.com/today.jpg';
+    const renderWith = (item: LogChallengeQuickPick, onPhotoSettled: () => void) =>
+      renderWithTheme(<ChallengeDeckCard challenge={item} onPhotoSettled={onPhotoSettled} />);
+
+    it('waits for its photo: nothing yet while it is still loading', async () => {
+      const onPhotoSettled = jest.fn();
+      await renderWith(challenge({ photoUrl: PHOTO }), onPhotoSettled);
+
+      expect(onPhotoSettled).not.toHaveBeenCalled();
+    });
+
+    it('is done once its photo has loaded', async () => {
+      const onPhotoSettled = jest.fn();
+      const screen = await renderWith(challenge({ photoUrl: PHOTO }), onPhotoSettled);
+
+      await fireEvent(screen.getByTestId('challenge-deck-photo'), 'load');
+
+      expect(onPhotoSettled).toHaveBeenCalledTimes(1);
+    });
+
+    it('is done too when its photo fails to load: it goes without, not on waiting for it', async () => {
+      const onPhotoSettled = jest.fn();
+      const screen = await renderWith(challenge({ photoUrl: PHOTO }), onPhotoSettled);
+
+      await fireEvent(screen.getByTestId('challenge-deck-photo'), 'error');
+
+      expect(onPhotoSettled).toHaveBeenCalledTimes(1);
+    });
+
+    it('has nothing to wait for without a photo: done at once, on the placeholder', async () => {
+      const onPhotoSettled = jest.fn();
+      const screen = await renderWith(challenge({ photoUrl: null }), onPhotoSettled);
+
+      expect(onPhotoSettled).toHaveBeenCalledTimes(1);
+      expect(screen.queryByTestId('challenge-deck-photo')).toBeNull();
+    });
+
+    it('does not need anyone listening', async () => {
+      const screen = await render(challenge({ photoUrl: PHOTO }));
+
+      await fireEvent(screen.getByTestId('challenge-deck-photo'), 'load');
+
+      expect(screen.getByTestId('challenge-deck-photo')).toBeTruthy();
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { toCommentViewModel, toCommentViewModels } from '../workoutPostSocialAdapter';
+import { toCommentThread, toCommentViewModel, toCommentViewModels } from '../workoutPostSocialAdapter';
 import type { CommentContract } from '../../../types/workout-post-social';
 
 const baseComment = (overrides: Partial<CommentContract> = {}): CommentContract => ({
@@ -51,5 +51,27 @@ describe('toCommentViewModels', () => {
     const comments = [baseComment({ id: 1 }), baseComment({ id: 2 })];
     const vms = toCommentViewModels(comments);
     expect(vms.map((v) => v.id)).toEqual([1, 2]);
+  });
+});
+
+describe('toCommentThread', () => {
+  it('turns the API\'s oldest-first list round, so the newest comment is first: a stack', () => {
+    const thread = toCommentThread([baseComment({ id: 1 }), baseComment({ id: 2 }), baseComment({ id: 3 })]);
+
+    expect(thread.map((comment) => comment.id)).toEqual([3, 2, 1]);
+  });
+
+  it('maps each comment as `toCommentViewModel` does', () => {
+    const [comment] = toCommentThread([baseComment({ id: 7, content: 'Great!' })]);
+
+    expect(comment).toEqual(toCommentViewModel(baseComment({ id: 7, content: 'Great!' })));
+  });
+
+  it('is empty for no comments, and leaves the list it was given as it was', () => {
+    const given = [baseComment({ id: 1 }), baseComment({ id: 2 })];
+
+    expect(toCommentThread([])).toEqual([]);
+    toCommentThread(given);
+    expect(given.map((comment) => comment.id)).toEqual([1, 2]);
   });
 });

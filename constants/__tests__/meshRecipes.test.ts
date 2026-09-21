@@ -1,8 +1,10 @@
 import { MESH_FALLOFF } from '../../components/ui/accentMesh';
 import { getMeshRecipe, MESH_RECIPES } from '../meshRecipes';
-import type { MeshBlob, MeshCardKind, MeshRecipeKey } from '../meshRecipes';
+import type { MeshArch, MeshBlob, MeshCardKind, MeshRecipeKey } from '../meshRecipes';
 
-const CARD_KINDS: MeshCardKind[] = ['mine', 'explore', 'deck'];
+const CARD_KINDS: MeshCardKind[] = ['mine', 'explore', 'deck', 'screen', 'space'];
+// The kinds made of a few huge fields: the Spaces' card is a scatter of small orbs, which has tests of its own.
+const FIELD_KINDS = CARD_KINDS.filter((kind) => kind !== 'space');
 const KEYS: MeshRecipeKey[] = [
   'strength',
   'cardioIntense',
@@ -18,11 +20,13 @@ const ACTIVITIES = KEYS.slice(0, 6);
 
 // Every recipe of a kind, as [kind, key] pairs, for `it.each`.
 const ALL = CARD_KINDS.flatMap((kind) => KEYS.map((key) => [kind, key] as const));
+const FIELD_PAIRS = FIELD_KINDS.flatMap((kind) => KEYS.map((key) => [kind, key] as const));
 
 // A field's size is a fraction of the card's width; a card is about this tall for
-// its width: Mine and Explore 176 tall on a ~342 wide card, the log picker's little
-// square (`deck`) about as tall as it is wide.
-const ASPECT: Record<MeshCardKind, number> = { mine: 0.52, explore: 0.52, deck: 1.1 };
+// its width (a Space card, `space`, about 140 tall on a 342 wide card): Mine and Explore 176 tall on a ~342 wide card, the log picker's little
+// square (`deck`) about as tall as it is wide, and a phone's screen (`screen`) a bit
+// more than twice as tall as it is wide.
+const ASPECT: Record<MeshCardKind, number> = { mine: 0.52, explore: 0.52, deck: 1.1, screen: 2.16, space: 0.42 };
 const CARD_ASPECT = ASPECT.mine;
 
 // The mesh's "center of mass": each field's position weighted by how strong and big it is.
@@ -60,6 +64,12 @@ function glowAt(blobs: MeshBlob[], x: number, y: number, aspect = CARD_ASPECT) {
   return Math.min(1, total);
 }
 
+// How much of the arch's `ink` there is at a point, given as fractions of the screen's
+// width and height — the same shape as a field, level.
+function archAt(arch: MeshArch, x: number, y: number, aspect: number) {
+  return Math.min(1, arch.peak * falloff(Math.hypot((x - arch.x) / arch.rx, ((y - arch.y) * aspect) / arch.ry)));
+}
+
 describe('MESH_FALLOFF', () => {
   it('runs from full strength at the core to nothing at the edge, without ever rising', () => {
     expect(MESH_FALLOFF[0]).toEqual([0, 1]);
@@ -92,7 +102,7 @@ describe('MESH_RECIPES', () => {
     expect(Object.keys(MESH_RECIPES[kind]).sort()).toEqual([...KEYS].sort());
   });
 
-  it.each(ALL)('%s / %s is three fields — few colors, widely spaced', (kind, key) => {
+  it.each(FIELD_PAIRS)('%s / %s is three fields — few colors, widely spaced', (kind, key) => {
     expect(getMeshRecipe(kind, key).blobs).toHaveLength(3);
   });
 
@@ -116,7 +126,7 @@ describe('MESH_RECIPES', () => {
     }
   });
 
-  it.each(ALL)('%s / %s has very large fields — the main one wider than the card', (kind, key) => {
+  it.each(FIELD_PAIRS)('%s / %s has very large fields — the main one wider than the card', (kind, key) => {
     const { blobs } = getMeshRecipe(kind, key);
 
     expect(Math.max(...blobs.map((blob) => blob.rx))).toBeGreaterThanOrEqual(1);
@@ -126,7 +136,7 @@ describe('MESH_RECIPES', () => {
     }
   });
 
-  it.each(ALL)('%s / %s is unequal — one field dominates and another barely shows', (kind, key) => {
+  it.each(FIELD_PAIRS)('%s / %s is unequal — one field dominates and another barely shows', (kind, key) => {
     const { blobs } = getMeshRecipe(kind, key);
     const peaks = blobs.map((blob) => blob.peak);
     const biggest = blobs.reduce((best, blob) => (blob.rx * blob.ry > best.rx * best.ry ? blob : best));
@@ -254,6 +264,183 @@ describe('MESH_RECIPES', () => {
 
     expect(deck).not.toBe(JSON.stringify(getMeshRecipe('mine', key)));
     expect(deck).not.toBe(JSON.stringify(getMeshRecipe('explore', key)));
+  });
+
+  describe('the screen backdrop', () => {
+    // The fallback is a quieter, monochrome one.
+    const scaleOf = (key: MeshRecipeKey) => (key === 'default' ? 0.6 : 1);
+    // What is left of the color at a point once the arch has been cut out of it.
+    const lit = (key: MeshRecipeKey, x: number, y: number) => {
+      const { blobs, arch } = getMeshRecipe('screen', key);
+      const cut = arch ? archAt(arch, x, y, ASPECT.screen) : 0;
+      return glowAt(blobs, x, y, ASPECT.screen) * (1 - cut);
+    };
+    // How far down a column the color goes: where it has fallen to a faint tenth.
+    const depth = (key: MeshRecipeKey, x: number) => {
+      let y = 0.02;
+      while (y < 1 && lit(key, x, y) > 0.1 * scaleOf(key)) y += 0.01;
+      return y;
+    };
+
+    it.each(KEYS)('(%s) has its light at the TOP: lit along the whole top, bleeding down toward the middle, the bottom left dark', (key) => {
+      // Lit across the top, the middle of it too (no dark gap)...
+      for (const x of [0.05, 0.5, 0.95]) {
+        expect(lit(key, x, 0.03)).toBeGreaterThan(0.12 * scaleOf(key));
+      }
+      // ...still lit a third of the way down...
+      expect(lit(key, 0.5, 0.2)).toBeGreaterThan(0.03 * scaleOf(key));
+      expect(lit(key, 0.05, 0.3)).toBeGreaterThan(0.03 * scaleOf(key));
+      // ...much more at the top than half way down...
+      expect(lit(key, 0.5, 0.03)).toBeGreaterThan(lit(key, 0.5, 0.5) * 3);
+      // ...and by the bottom only a trace is left, which the bottom bar covers.
+      expect(lit(key, 0.5, 0.9)).toBeLessThan(0.02);
+      expect(lit(key, 0.05, 0.95)).toBeLessThan(0.02);
+    });
+
+    it.each(KEYS)('(%s) is an INVERTED half-moon: the color ends in an arch, lower down the sides than in the middle', (key) => {
+      // The color reaches further down at both edges than in the middle.
+      expect(depth(key, 0.05)).toBeGreaterThan(depth(key, 0.5) + 0.04);
+      expect(depth(key, 0.95)).toBeGreaterThan(depth(key, 0.5) + 0.04);
+    });
+
+    it.each(KEYS)('(%s) carves the arch with a dome of ink, centered and low on the screen', (key) => {
+      const { arch } = getMeshRecipe('screen', key);
+
+      expect(arch).toBeDefined();
+      expect(arch!.x).toBe(0.5);
+      // Its center is in the lower half of the screen, below the color it cuts into.
+      expect(arch!.y).toBeGreaterThan(0.5);
+      expect(arch!.y).toBeLessThanOrEqual(1);
+      expect(arch!.peak).toBeGreaterThan(0.9);
+      expect(arch!.peak).toBeLessThanOrEqual(1);
+      // Big, like the fields, and taller than it is wide (the screen is), so it eases in slowly.
+      expect(arch!.rx).toBeGreaterThanOrEqual(0.45);
+      expect(arch!.ry).toBeGreaterThan(arch!.rx);
+    });
+
+    it.each(KEYS)('(%s) leaves the very top of the arch faint, so the top of the screen is lit all along', (key) => {
+      const { arch } = getMeshRecipe('screen', key);
+
+      expect(archAt(arch!, 0.5, 0.02, ASPECT.screen)).toBeLessThan(0.1);
+    });
+
+    it.each(KEYS)('(%s) is focused on the edges: fields come in from opposite sides of the screen', (key) => {
+      const [first, second] = [...getMeshRecipe('screen', key).blobs].sort((a, b) => b.peak - a.peak);
+
+      expect(Math.abs(first.x - second.x)).toBeGreaterThan(0.8);
+      expect(Math.sign(first.angle)).not.toBe(Math.sign(second.angle));
+    });
+
+    it.each(KEYS)('(%s) has no scrim and no top fade: the text sits on the color', (key) => {
+      const { scrim, topFade } = getMeshRecipe('screen', key);
+
+      expect(scrim.peak).toBe(0);
+      expect(topFade).toBeUndefined();
+    });
+
+    it.each(KEYS)('(%s) has a composition of its own, not Mine, Explore or Deck', (key) => {
+      const screen = JSON.stringify(getMeshRecipe('screen', key));
+
+      for (const kind of ['mine', 'explore', 'deck'] as const) {
+        expect(screen).not.toBe(JSON.stringify(getMeshRecipe(kind, key)));
+      }
+    });
+
+    it.each(['mine', 'explore', 'deck'] as const)('leaves the arch to the screen: %s has none', (kind) => {
+      for (const key of KEYS) {
+        expect(getMeshRecipe(kind, key).arch).toBeUndefined();
+      }
+    });
+  });
+
+  describe('the space card — orbs, not fields', () => {
+    const orbsOf = (key: MeshRecipeKey) => getMeshRecipe('space', key).blobs;
+    const at = (key: MeshRecipeKey, x: number, y: number) => glowAt(orbsOf(key), x, y, ASPECT.space);
+    const scaleOf = (key: MeshRecipeKey) => (key === 'default' ? 0.6 : 1);
+
+    it.each(KEYS)('(%s) is a scatter of orbs — more of them than the other cards have fields', (key) => {
+      expect(orbsOf(key).length).toBeGreaterThanOrEqual(6);
+      for (const kind of FIELD_KINDS) {
+        expect(orbsOf(key).length).toBeGreaterThan(getMeshRecipe(kind, key).blobs.length);
+      }
+    });
+
+    it.each(KEYS)('(%s) has ROUND orbs: as wide as they are tall, and never tilted', (key) => {
+      for (const orb of orbsOf(key)) {
+        expect(orb.rx).toBeCloseTo(orb.ry, 5);
+        expect(orb.angle).toBe(0);
+      }
+    });
+
+    it.each(KEYS)('(%s) has orbs, not washes: none as big as the card is wide', (key) => {
+      for (const orb of orbsOf(key)) {
+        expect(orb.rx).toBeLessThanOrEqual(0.5);
+        expect(orb.rx).toBeGreaterThanOrEqual(0.08);
+      }
+    });
+
+    it.each(KEYS)('(%s) has orbs of different sizes: the biggest at least twice the smallest', (key) => {
+      const sizes = orbsOf(key).map((orb) => orb.rx);
+
+      expect(Math.max(...sizes) / Math.min(...sizes)).toBeGreaterThanOrEqual(2);
+    });
+
+    it.each(KEYS)('(%s) uses all three hues of its palette, over and over', (key) => {
+      const hues = new Set(orbsOf(key).map((orb) => orb.hue));
+
+      // (The fallback is a monochrome one: its three hues are all no rotation at all.)
+      expect(hues.size).toBe(key === 'default' ? 1 : 3);
+    });
+
+    it.each(KEYS)('(%s) scatters them across the whole card: both sides, top and bottom', (key) => {
+      const xs = orbsOf(key).map((orb) => orb.x);
+      const ys = orbsOf(key).map((orb) => orb.y);
+
+      expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThanOrEqual(0.6);
+      expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThanOrEqual(0.6);
+    });
+
+    it.each(KEYS)('(%s) has its biggest orb away from the text: in the bottom-right, whatever the key', (key) => {
+      const biggest = orbsOf(key).reduce((best, orb) => (orb.rx > best.rx ? orb : best));
+
+      expect(biggest.x).toBeGreaterThan(0.6);
+      expect(biggest.y).toBeGreaterThan(0.6);
+      // It is the strongest too: the dominant one.
+      expect(biggest.peak).toBe(Math.max(...orbsOf(key).map((orb) => orb.peak)));
+    });
+
+    it.each(KEYS)('(%s) keeps the name and description calm: dim behind them, brighter at the bottom-right', (key) => {
+      // The name and the description run along the top-left.
+      expect(at(key, 0.25, 0.25)).toBeLessThanOrEqual(0.25 * scaleOf(key));
+      expect(at(key, 0.85, 0.85)).toBeGreaterThan(at(key, 0.25, 0.25) * 1.5);
+    });
+
+    it.each(KEYS)('(%s) is lit all round: some orb light in every corner and along the top and bottom', (key) => {
+      for (const [x, y] of [[0.95, 0.1], [0.9, 0.9], [0.55, 0.05], [0.4, 0.95]] as const) {
+        expect(at(key, x, y)).toBeGreaterThan(0.08 * scaleOf(key));
+      }
+    });
+
+    it.each(KEYS)('(%s) is not mirrored: the text side is the left whatever the key', (key) => {
+      const biggest = orbsOf(key).reduce((best, orb) => (orb.rx > best.rx ? orb : best));
+
+      expect(biggest.x).toBeGreaterThan(0.5);
+    });
+
+    it.each(KEYS)('(%s) has a scrim over the text side, light', (key) => {
+      const { scrim } = getMeshRecipe('space', key);
+
+      expect(scrim.peak).toBeGreaterThan(0);
+      expect(scrim.peak).toBeLessThanOrEqual(0.25);
+    });
+
+    it.each(KEYS)('(%s) has a composition of its own, not Mine, Explore, Deck or the screen', (key) => {
+      const space = JSON.stringify(getMeshRecipe('space', key));
+
+      for (const kind of FIELD_KINDS) {
+        expect(space).not.toBe(JSON.stringify(getMeshRecipe(kind, key)));
+      }
+    });
   });
 
   it.each(KEYS)('gives Mine and Explore different compositions for %s', (key) => {

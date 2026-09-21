@@ -65,3 +65,23 @@ describe('glass badges', () => {
     expect(contrast).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+describe('glass highlight (popups and toasts)', () => {
+  it('lays a soft sheen, quieter than the tint it sits on', () => {
+    expect(glass.sheenOpacity).toBeGreaterThan(0);
+    expect(glass.sheenOpacity).toBeLessThan(glass.tintOpacity / 2);
+  });
+
+  it('lights the rim brightest at the top-left, then a fainter echo at the bottom-right, and least in between', () => {
+    const { bright, dim, echo } = glass.rimOpacity;
+
+    expect(bright).toBeGreaterThan(echo);
+    expect(echo).toBeGreaterThan(dim);
+    expect(dim).toBeGreaterThan(0);
+    expect(bright).toBeLessThanOrEqual(1);
+  });
+
+  it('makes the rim a real outline — brighter than the plain hairline at its brightest', () => {
+    expect(glass.rimOpacity.bright).toBeGreaterThan(glass.borderOpacity);
+  });
+});

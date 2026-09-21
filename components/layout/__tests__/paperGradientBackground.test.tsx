@@ -29,8 +29,25 @@ describe('PaperGradientBackground', () => {
   });
 
   it('stays a spotlight, not a wash over the whole screen', () => {
-    expect(PAPER_GRADIENT.domeHalfWidth).toBeLessThanOrEqual(0.6);
-    expect(PAPER_GRADIENT.domeDepth).toBeLessThanOrEqual(0.6);
+    expect(PAPER_GRADIENT.domeHalfWidth).toBeLessThanOrEqual(0.7);
+    expect(PAPER_GRADIENT.domeDepth).toBeLessThanOrEqual(0.35);
+  });
+
+  it('is a half moon, not a circle: wider than it is deep, so the arc’s center is on the edge or beyond it', () => {
+    // On a phone (390 x 844): the circle through the dome's rim and its lowest point has its
+    // center at `depth - radius` from the edge — at or past the edge (<= 0) for a half moon.
+    const [width, height] = [390, 844];
+    const halfWidth = PAPER_GRADIENT.domeHalfWidth * width;
+    const depth = PAPER_GRADIENT.domeDepth * height;
+    const radius = (halfWidth ** 2 + depth ** 2) / (2 * depth);
+
+    expect(depth - radius).toBeLessThanOrEqual(0);
+    expect(halfWidth).toBeGreaterThanOrEqual(depth);
+  });
+
+  it('is gentler than it was: the first version was .12 and .10, and read as too strong', () => {
+    expect(PAPER_GRADIENT.washPeak).toBeLessThan(0.12);
+    expect(PAPER_GRADIENT.bloomPeak).toBeLessThan(0.1);
   });
 
   it('shines in from the bottom edge unless told otherwise', async () => {
@@ -51,10 +68,12 @@ describe('PaperGradientBackground', () => {
     expect(tinted).not.toBe(paper);
     expect(TINTED_GRADIENT.washPeak).toBeGreaterThan(PAPER_GRADIENT.washPeak);
     expect(TINTED_GRADIENT.bloomPeak).toBeGreaterThan(PAPER_GRADIENT.bloomPeak);
-    // Still the same size of spotlight, and still quiet.
-    expect(TINTED_GRADIENT.domeHalfWidth).toBe(PAPER_GRADIENT.domeHalfWidth);
-    expect(TINTED_GRADIENT.domeDepth).toBe(PAPER_GRADIENT.domeDepth);
+    // Still quiet.
     expect(TINTED_GRADIENT.washPeak + TINTED_GRADIENT.bloomPeak).toBeLessThanOrEqual(0.4);
+  });
+
+  it('leaves Home’s tinted light as it was — its own shape and strength, whatever the paper light is', () => {
+    expect(TINTED_GRADIENT).toEqual({ domeHalfWidth: 0.5, domeDepth: 0.5, washPeak: 0.2, bloomPeak: 0.16 });
   });
 
   it('runs the other way when it is turned upside down', async () => {

@@ -1,4 +1,5 @@
 import 'react-native-gesture-handler/jestSetup';
+import { StyleSheet } from 'react-native';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
@@ -7,6 +8,7 @@ import LogChallengePicker from '../log';
 import { getMyChallenges } from '../../services/user/user.service';
 import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
 import { router } from 'expo-router';
+import { DECK_IMAGES_TIMEOUT_MS } from '../../constants/challengeDeck';
 
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
@@ -177,5 +179,100 @@ describe('the log-progress picker', () => {
     await fireEvent.press(await screen.findByText('logMetrics.pickChallenge.exploreCta'));
 
     expect(router.replace).toHaveBeenCalledWith('/(tabs)/challenges?view=explore');
+  });
+
+  // The skeleton only goes once the cards' photos have loaded — the deck used to arrive with
+  // its pictures still missing.
+  describe('while the photos of the deck load', () => {
+    const photo = (challengeId: string) => ({
+      id: `photo-${challengeId}`,
+      challengeId,
+      userName: 'me',
+      imageUrl: `https://example.com/${challengeId}.jpg`,
+      day: 2,
+      visibility: 'public',
+    });
+
+    async function renderWithPhotos(challengeIds = [1, 2]) {
+      (getMyChallenges as jest.Mock).mockResolvedValue(challengeIds.map((id) => challenge(id, `Challenge ${id}`)));
+      (getMyProgressPhotos as jest.Mock).mockResolvedValue(challengeIds.map((id) => photo(String(id))));
+      await renderPicker();
+      await giveDeckItsWidth();
+      await waitFor(() => expect(screen.queryByTestId('challenge-deck')).toBeTruthy());
+    }
+
+    afterEach(() => jest.useRealTimers());
+
+    it('keeps the skeleton up once the challenges have arrived, until their photos have loaded', async () => {
+      await renderWithPhotos();
+
+      expect(screen.getByTestId('challenge-deck-skeleton')).toBeTruthy();
+    });
+
+    it('has the deck drawn behind it — so the photos load — but not seen, and out of reach', async () => {
+      await renderWithPhotos();
+      const holder = screen.getByTestId('challenge-deck').parent!;
+
+      expect(screen.getAllByTestId('challenge-deck-photo')).toHaveLength(2);
+      expect(StyleSheet.flatten(holder.props.style).opacity).toBe(0);
+      expect(holder.props.pointerEvents).toBe('none');
+    });
+
+    it('is still the skeleton while only some of the photos have loaded', async () => {
+      await renderWithPhotos();
+
+      await fireEvent(screen.getAllByTestId('challenge-deck-photo')[0], 'load');
+
+      expect(screen.getByTestId('challenge-deck-skeleton')).toBeTruthy();
+    });
+
+    it('swaps the skeleton for the deck once every photo has loaded', async () => {
+      await renderWithPhotos();
+
+      for (const image of screen.getAllByTestId('challenge-deck-photo')) {
+        await fireEvent(image, 'load');
+      }
+
+      expect(screen.queryByTestId('challenge-deck-skeleton')).toBeNull();
+      const holder = screen.getByTestId('challenge-deck').parent!;
+      expect(holder.props.pointerEvents).toBe('auto');
+      expect(StyleSheet.flatten(holder.props.style)?.opacity).not.toBe(0);
+    });
+
+    it('does not wait on a photo that fails to load', async () => {
+      await renderWithPhotos();
+      const [first, second] = screen.getAllByTestId('challenge-deck-photo');
+
+      await fireEvent(first, 'load');
+      await fireEvent(second, 'error');
+
+      expect(screen.queryByTestId('challenge-deck-skeleton')).toBeNull();
+    });
+
+    it('shows the deck after all, if a photo never comes', async () => {
+      jest.useFakeTimers();
+      await renderWithPhotos();
+      expect(screen.getByTestId('challenge-deck-skeleton')).toBeTruthy();
+
+      await act(async () => jest.advanceTimersByTime(DECK_IMAGES_TIMEOUT_MS));
+
+      expect(screen.queryByTestId('challenge-deck-skeleton')).toBeNull();
+    });
+
+    it('lets a deck with no photos through at once', async () => {
+      (getMyChallenges as jest.Mock).mockResolvedValue([challenge(1, 'Morning Strength')]);
+      await renderPicker();
+      await giveDeckItsWidth();
+
+      await waitFor(() => expect(screen.queryByTestId('challenge-deck-skeleton')).toBeNull());
+      expect(screen.getByTestId('challenge-deck')).toBeTruthy();
+    });
+
+    it('does not open a challenge from the deck while it is still hidden behind the skeleton', async () => {
+      await renderWithPhotos();
+
+      expect(screen.getByTestId('challenge-deck').parent!.props.pointerEvents).toBe('none');
+      expect(router.replace).not.toHaveBeenCalled();
+    });
   });
 });

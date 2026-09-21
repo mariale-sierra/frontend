@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Row } from '../layout/row';
 import { Stack } from '../layout/stack';
 import { Text } from '../ui/text';
+import { GlassSurface } from '../ui/glassSurface';
 import { Icon } from '../ui/icon';
 import { SetTargetStepper } from './setTargetStepper';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
@@ -63,7 +64,7 @@ export function LogMetricsExerciseCard({ exercise, onChangeValue }: LogMetricsEx
   const allAdjusted = totalSets > 0 && adjustedCount === totalSets;
 
   return (
-    <View style={styles.card}>
+    <GlassSurface style={styles.card}>
       <Row gap="sm" align="center">
         <View style={[styles.indicator, allAdjusted && styles.indicatorDone]}>
           {allAdjusted && <Icon name="checkmark-outline" size={13} color={colors.ink} />}
@@ -127,15 +128,16 @@ export function LogMetricsExerciseCard({ exercise, onChangeValue }: LogMetricsEx
           );
         })}
       </Stack>
-    </View>
+    </GlassSurface>
   );
 }
 
+// A frosted-glass card, the same glass as the comments sheet: the screen's gradient
+// shows through it (`GlassSurface` supplies the blur, the tint and the rim).
 const styles = StyleSheet.create({
   card: {
     gap: spacing.md,
     borderRadius: radius.medium,
-    backgroundColor: colors.surface,
     padding: spacing.base,
   },
   indicator: {

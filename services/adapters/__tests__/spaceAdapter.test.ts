@@ -2,6 +2,7 @@ import {
   activityTypeForCategoryCode,
   findCategoryForActivityType,
   getSpaceAccentColor,
+  getSpaceActivityType,
   getSpaceMembershipCta,
 } from '../spaceAdapter';
 import { activityColors, colors } from '../../../constants/theme';
@@ -58,6 +59,29 @@ describe('getSpaceAccentColor', () => {
 
   it('falls back to the neutral primary color when no category is set', () => {
     expect(getSpaceAccentColor(baseSpace())).toBe(colors.primary);
+  });
+});
+
+describe('getSpaceActivityType', () => {
+  it('is the activity type of the space\'s chosen category', () => {
+    const space = baseSpace({ activityCategory: { id: 1, code: 'mind-body', name: 'Mind-Body' } });
+
+    expect(getSpaceActivityType(space)).toBe('mindBody');
+  });
+
+  it('is null when no category is set, or one the app does not know', () => {
+    expect(getSpaceActivityType(baseSpace())).toBeNull();
+    expect(getSpaceActivityType(baseSpace({ activityCategory: { id: 9, code: 'unknown', name: 'Unknown' } }))).toBeNull();
+  });
+
+  it('is what the accent color comes from: the two agree for every category', () => {
+    for (const code of ['strength', 'cardio-intense', 'cardio-low', 'flexibility', 'mind-body', 'functional']) {
+      const space = baseSpace({ activityCategory: { id: 1, code, name: code } });
+      const type = getSpaceActivityType(space);
+
+      expect(type).not.toBeNull();
+      expect(getSpaceAccentColor(space)).toBe(activityColors[type!]);
+    }
   });
 });
 

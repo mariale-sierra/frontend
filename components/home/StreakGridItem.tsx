@@ -8,26 +8,26 @@ interface StreakGridItemProps {
   avatarUrl?: string;
   streakDays: number;
   loggedToday: boolean;
+  /** The avatar's diameter — what its column allows (`getStreakGridLayout`). */
+  size: number;
 }
 
-const AVATAR_SIZE = 64;
-
-export function StreakGridItem({ username, avatarUrl, streakDays, loggedToday }: StreakGridItemProps) {
+export function StreakGridItem({ username, avatarUrl, streakDays, loggedToday, size }: StreakGridItemProps) {
   // Same rule as FriendStreakCard: `success` badge when logged today, dark
   // `surface` otherwise.
   const badgeColor = loggedToday ? colors.success : colors.surface;
 
   return (
-    <View style={styles.item}>
-      <View style={styles.avatarWrap}>
-        <UserAvatar username={username} imageUrl={avatarUrl} size={AVATAR_SIZE} />
+    <View style={[styles.item, { width: size }]}>
+      <View style={{ width: size, height: size }}>
+        <UserAvatar username={username} imageUrl={avatarUrl} size={size} circle />
         <View style={[styles.badge, { backgroundColor: badgeColor }]}>
           <Text variant="caption" weight="bold" inverse={loggedToday}>
             {streakDays}
           </Text>
         </View>
       </View>
-      <Text variant="caption" tone="secondary" numberOfLines={1} style={styles.name}>
+      <Text variant="caption" tone="secondary" numberOfLines={1} style={[styles.name, { width: size }]}>
         {username}
       </Text>
     </View>
@@ -36,13 +36,8 @@ export function StreakGridItem({ username, avatarUrl, streakDays, loggedToday }:
 
 const styles = StyleSheet.create({
   item: {
-    width: AVATAR_SIZE,
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  avatarWrap: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
   },
   badge: {
     position: 'absolute',
@@ -58,7 +53,6 @@ const styles = StyleSheet.create({
     borderColor: colors.ink,
   },
   name: {
-    width: AVATAR_SIZE,
     textAlign: 'center',
   },
 });

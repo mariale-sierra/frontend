@@ -5,6 +5,7 @@ import { ChallengeCardProgress } from '../ChallengeCardProgress';
 import { ChallengeCardTickRing } from '../ChallengeCardTickRing';
 import { activityColors, colors } from '../../../../constants/theme';
 import { getMeshRecipe } from '../../../../constants/meshRecipes';
+import { PROGRESS_RING } from '../../../../constants/progressRing';
 
 describe('ChallengeCard', () => {
   function renderCard(props: Partial<React.ComponentProps<typeof ChallengeCard>> = {}) {
@@ -174,5 +175,17 @@ describe('ChallengeCardTickRing', () => {
     );
 
     expect(JSON.stringify(screen.toJSON())).toContain('"width":104');
+  });
+});
+
+describe('ChallengeCardTickRing thickness', () => {
+  it('has ticks thicker than the Progress ring’s, scaled to this size — a bit thicker, on request', async () => {
+    const screen = await renderWithProviders(<ChallengeCardTickRing accentColor={activityColors.functional} />);
+    const width = Number(/"strokeWidth":([0-9.]+)/.exec(JSON.stringify(screen.toJSON()))![1]);
+    const scaledProgressTick = PROGRESS_RING.tickWidth * (104 / PROGRESS_RING.size);
+
+    expect(width).toBeGreaterThan(scaledProgressTick * 1.3);
+    // Still well apart from the next one: the ticks are 10 degrees from each other, about 8px at this size.
+    expect(width).toBeLessThan(4);
   });
 });

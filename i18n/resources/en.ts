@@ -180,6 +180,7 @@ const en = {
       legendToday: 'Today',
       ofDays_one: 'of {{count}} day',
       ofDays_other: 'of {{count}} days',
+      gridEmpty: 'No consistency photos yet',
     },
     membersA11y: 'View challenge members',
     infoA11y: 'Challenge info',

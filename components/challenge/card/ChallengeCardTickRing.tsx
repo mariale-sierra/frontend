@@ -13,8 +13,12 @@ const RING_SIZE = 104;
 // the card's ring is a small copy of it: short, thick, rounded ticks, not long
 // thin spikes.
 const SCALE = RING_SIZE / PROGRESS_RING.size;
+// The ticks are a little thicker than the Progress ring's scaled width (2026-09-20,
+// explicit request: 'a bit thicker'): a tick a third again as wide is still well apart
+// from its neighbors at this size.
+const TICK_THICKNESS = 1.5;
 const TICK_LENGTH = PROGRESS_RING.tickLength * SCALE;
-const TICK_WIDTH = PROGRESS_RING.tickWidth * SCALE;
+const TICK_WIDTH = PROGRESS_RING.tickWidth * SCALE * TICK_THICKNESS;
 const TICK_INSET = PROGRESS_RING.tickInset * SCALE;
 
 // Fewer ticks than the Progress ring's 60 (`PROGRESS_RING.segmentCount`): shrunk

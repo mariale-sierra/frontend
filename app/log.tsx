@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
@@ -61,6 +61,9 @@ export default function LogChallengePicker() {
   const [hasAnyChallenges, setHasAnyChallenges] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  // Whether the deck's photos have loaded (see `ChallengeDeck`'s `onReady`).
+  const [deckReady, setDeckReady] = useState(false);
+  const handleDeckReady = useCallback(() => setDeckReady(true), []);
 
   // Backdrop (blur + dim) fades in on mount rather than snapping straight to
   // full strength — a plain opacity animation on the layer that CONTAINS the
@@ -112,6 +115,11 @@ export default function LogChallengePicker() {
     router.replace('/(tabs)/challenges?view=explore');
   }
 
+  // The deck is there once there are challenges to show; but its skeleton stays up over it
+  // until its photos have loaded, so it never appears with its pictures still missing.
+  const showDeck = !loading && !error && challenges.length > 0;
+  const showSkeleton = loading || (showDeck && !deckReady);
+
   return (
     <View style={styles.root}>
       <Animated.View style={[StyleSheet.absoluteFill, backdropAnimatedStyle]} pointerEvents="box-none">
@@ -147,13 +155,33 @@ export default function LogChallengePicker() {
               the skeleton had, and is there in the very frame it arrives, with no
               empty moment while it measures itself. */}
           <View testID="log-challenges" onLayout={onLayout}>
-            {loading ? (
-              <ChallengeDeckSkeleton width={width} />
-            ) : error ? (
+            {/* The deck is drawn as soon as it has its challenges, but invisible and out of
+                reach until its photos have loaded: they load behind the skeleton, which is
+                drawn over it. The whole group (title + deck) sizes to its own content and
+                sits centered, per the floating-overlay redesign. */}
+            {showDeck ? (
+              <View style={!deckReady && styles.deckLoading} pointerEvents={deckReady ? 'auto' : 'none'}>
+                <ChallengeDeck
+                  challenges={challenges}
+                  width={width}
+                  onSelect={handleSelectChallenge}
+                  onReady={handleDeckReady}
+                />
+              </View>
+            ) : null}
+            {/* One skeleton the whole time — in the flow while the challenges load, then
+                over the deck while its photos do — so it does not restart in between. */}
+            {showSkeleton ? (
+              <View style={showDeck ? StyleSheet.absoluteFill : undefined} pointerEvents="none">
+                <ChallengeDeckSkeleton width={width} />
+              </View>
+            ) : null}
+            {!loading && error ? (
               <View style={styles.stateWrap}>
                 <Text variant="body" tone="secondary" align="center">{t('logMetrics.pickChallenge.errorMessage')}</Text>
               </View>
-            ) : challenges.length === 0 ? (
+            ) : null}
+            {!loading && !error && challenges.length === 0 ? (
               <View style={styles.stateWrap}>
                 <Text variant="body" tone="secondary" align="center">
                   {hasAnyChallenges
@@ -166,11 +194,7 @@ export default function LogChallengePicker() {
                   </Text>
                 </Pressable>
               </View>
-            ) : (
-              // The whole group (title + deck) sizes to its own content and sits
-              // centered, per the floating-overlay redesign.
-              <ChallengeDeck challenges={challenges} width={width} onSelect={handleSelectChallenge} />
-            )}
+            ) : null}
           </View>
         </Pressable>
       </View>
@@ -202,6 +226,10 @@ const styles = StyleSheet.create({
   },
   headerStack: {
     paddingHorizontal: spacing.sm,
+  },
+  // The deck while its photos load: laid out (so they load), but not seen.
+  deckLoading: {
+    opacity: 0,
   },
   stateWrap: {
     alignItems: 'center',

@@ -48,8 +48,10 @@ import type { ActivityType } from '../types/activity';
 export type MeshRecipeKey = ActivityType | 'rest' | 'completed' | 'default';
 
 /** Which card the mesh is for — each has its own layout. `deck` is the log
- * picker's little square card. */
-export type MeshCardKind = 'mine' | 'explore' | 'deck';
+ * picker's little square card, `space` is the Spaces' card (seven ORBS, not three big
+ * fields), and `screen` is not a card at all: the backdrop of the Log Metrics screen,
+ * the same mesh at the size of a phone's screen. */
+export type MeshCardKind = 'mine' | 'explore' | 'deck' | 'space' | 'screen';
 
 export interface MeshBlob {
   /** Degrees the field's hue is rotated from the base color. */
@@ -72,12 +74,20 @@ export interface MeshFade {
   reach: number;
 }
 
+/** A dome of `ink`, low on the screen, which the fields' color is carved out of: where a
+ * fade ends the color in a straight edge, an arch ends it in a curve — higher in the
+ * middle, running lower down the sides. Placed like a field (its `x` / `y` the center,
+ * `rx` / `ry` the half-sizes) but never tilted, and eased out the same way. */
+export type MeshArch = Omit<MeshBlob, 'hue' | 'angle'>;
+
 export interface MeshRecipe {
   blobs: MeshBlob[];
   /** Fades in from the left edge, over the text side. */
   scrim: MeshFade;
   /** Fades in from the top edge, so the gradient thins out upward. Optional. */
   topFade?: MeshFade;
+  /** Carves the color into an arch (`ink` over the fields). Optional. */
+  arch?: MeshArch;
 }
 
 // ---------------------------------------------------------------------------
@@ -94,6 +104,7 @@ interface Layout {
   blobs: BlobSlot[];
   scrim: MeshFade;
   topFade?: MeshFade;
+  arch?: MeshArch;
 }
 
 const LAYOUTS: Record<MeshCardKind, Layout> = {
@@ -138,6 +149,47 @@ const LAYOUTS: Record<MeshCardKind, Layout> = {
       { hue: 2, x: 0.05, y: 0.7, rx: 0.8, ry: 0.45, angle: 20, peak: 0.11 },
     ],
     scrim: { peak: 0.14, reach: 0.35 },
+  },
+  // A whole screen, about twice as tall as it is wide, with its content in the middle:
+  // an INVERTED half-moon — where the info / progress dome is a half-moon of light
+  // hanging from the top edge, whose lower edge bulges down in the middle, this ends in
+  // an ARCH: the color runs across the whole top and bleeds down toward the middle, and
+  // its lower edge curves the other way, higher in the middle and running lower down the
+  // sides, so it hugs the screen's edges. Three huge fields, a different color from each
+  // top corner and a faint third across the middle, give the color and its flow; the
+  // `arch`, a dome of `ink` centered low on the screen, carves them into that shape (its
+  // ink is faint at the very top, so the top is lit all along, strong in the middle
+  // where the color has bled to). Everything is huge and eased out slowly, so the arch is
+  // a soft, long transition, not an edge. No scrim (the text is on the color, in paper),
+  // no top fade.
+  screen: {
+    blobs: [
+      { hue: 0, x: -0.05, y: -0.06, rx: 1.7, ry: 1.9, angle: 30, peak: 0.34 },
+      { hue: 1, x: 1.05, y: -0.06, rx: 1.6, ry: 1.8, angle: -30, peak: 0.24 },
+      { hue: 2, x: 0.5, y: 0.2, rx: 1.6, ry: 1.2, angle: 0, peak: 0.13 },
+    ],
+    scrim: { peak: 0, reach: 0.3 },
+    arch: { x: 0.5, y: 0.7, rx: 0.8, ry: 1.85, peak: 1 },
+  },
+  // The Spaces' card: the same mesh, but as ORBS — a scatter of round, soft bubbles of
+  // light of different sizes, rather than a few huge fields (the other cards' look), so it
+  // is more playful (2026-09-20, explicit request: 'more fun, more orbs ... like the
+  // explore cards but with its own thing'). The palette has three hues, so the seven orbs
+  // repeat them. The big one sits in the bottom-right corner, a medium one and a small
+  // one crowd the top-right (under the Join pill), the rest float about the edges and
+  // one in the middle right — and the left, where the name and description are, is only
+  // dotted with small dim ones, under a light scrim. All round (`rx` = `ry`, no tilt).
+  space: {
+    blobs: [
+      { hue: 0, x: 0.88, y: 0.9, rx: 0.34, ry: 0.34, angle: 0, peak: 0.36 },
+      { hue: 1, x: 0.62, y: 0.06, rx: 0.18, ry: 0.18, angle: 0, peak: 0.3 },
+      { hue: 2, x: 0.98, y: 0.1, rx: 0.15, ry: 0.15, angle: 0, peak: 0.3 },
+      { hue: 1, x: 0.36, y: 0.92, rx: 0.13, ry: 0.13, angle: 0, peak: 0.24 },
+      { hue: 2, x: 0.74, y: 0.48, rx: 0.1, ry: 0.1, angle: 0, peak: 0.24 },
+      { hue: 0, x: 0.04, y: 0.3, rx: 0.1, ry: 0.1, angle: 0, peak: 0.2 },
+      { hue: 1, x: 0.06, y: 0.96, rx: 0.1, ry: 0.1, angle: 0, peak: 0.2 },
+    ],
+    scrim: { peak: 0.16, reach: 0.42 },
   },
 };
 
@@ -232,6 +284,33 @@ const VARIATIONS: Record<MeshCardKind, Record<MeshRecipeKey, Variation>> = {
     completed: { angle: 6, shiftX: 0.02, mirror: true },
     default: { angle: 0, shiftX: 0 },
   },
+  // The screen mirrors too — which side the dominant field comes in from — and tilts a
+  // little; no `lift`, it would move the top-lit fields the wrong way. (The arch stays
+  // put, in the middle.)
+  screen: {
+    strength: { angle: 4, shiftX: 0.02 },
+    cardioIntense: { angle: 0, shiftX: 0 },
+    cardioLow: { angle: -5, shiftX: -0.02, mirror: true },
+    flexibility: { angle: -6, shiftX: 0.02, mirror: true },
+    mindBody: { angle: 4, shiftX: -0.02 },
+    functional: { angle: 6, shiftX: 0.03, mirror: true },
+    rest: { angle: -3, shiftX: 0 },
+    completed: { angle: 4, shiftX: 0.02, mirror: true },
+    default: { angle: 0, shiftX: 0 },
+  },
+  // Orbs are round, so a tilt would show nothing: each activity's orbs are nudged across
+  // and up or down instead, and none is mirrored (the text is on the left, whatever the key).
+  space: {
+    strength: { angle: 0, shiftX: 0.02, lift: 1 },
+    cardioIntense: { angle: 0, shiftX: -0.02, lift: 1.06 },
+    cardioLow: { angle: 0, shiftX: 0.03, lift: 0.94 },
+    flexibility: { angle: 0, shiftX: -0.03, lift: 1.04 },
+    mindBody: { angle: 0, shiftX: 0, lift: 0.96 },
+    functional: { angle: 0, shiftX: 0.04, lift: 1.02 },
+    rest: { angle: 0, shiftX: -0.01, lift: 1 },
+    completed: { angle: 0, shiftX: 0.02, lift: 1.05 },
+    default: { angle: 0, shiftX: 0, lift: 1 },
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -256,6 +335,7 @@ function buildRecipe(kind: MeshCardKind, key: MeshRecipeKey): MeshRecipe {
     })),
     scrim: layout.scrim,
     topFade: layout.topFade,
+    arch: layout.arch,
   };
 }
 
@@ -266,6 +346,8 @@ export const MESH_RECIPES: Record<MeshCardKind, Record<MeshRecipeKey, MeshRecipe
   mine: Object.fromEntries(KEYS.map((key) => [key, buildRecipe('mine', key)])) as Record<MeshRecipeKey, MeshRecipe>,
   explore: Object.fromEntries(KEYS.map((key) => [key, buildRecipe('explore', key)])) as Record<MeshRecipeKey, MeshRecipe>,
   deck: Object.fromEntries(KEYS.map((key) => [key, buildRecipe('deck', key)])) as Record<MeshRecipeKey, MeshRecipe>,
+  space: Object.fromEntries(KEYS.map((key) => [key, buildRecipe('space', key)])) as Record<MeshRecipeKey, MeshRecipe>,
+  screen: Object.fromEntries(KEYS.map((key) => [key, buildRecipe('screen', key)])) as Record<MeshRecipeKey, MeshRecipe>,
 };
 
 /** The recipe for a kind of card and a glow key (see `getChallengeGlowKey`). */

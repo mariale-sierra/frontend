@@ -7,8 +7,9 @@ import { Text } from '../ui/text';
 import { ChallengeDeckCard } from './challengeDeckCard';
 import { ChallengeDeckHalo } from './challengeDeckHalo';
 import { DeckItem } from './challengeDeckItem';
-import { DECK_SPRING } from '../../constants/challengeDeck';
+import { DECK_IMAGES_TIMEOUT_MS, DECK_SPRING } from '../../constants/challengeDeck';
 import { spacing } from '../../constants/theme';
+import { useAllSettled } from '../../hooks/useAllSettled';
 import { deckDragProgress, deckSettleTarget, getDeckLayout } from '../../utils/challengeDeck';
 import { triggerLightHaptic } from '../../utils/haptics';
 import { getChallengeGlowColor } from '../../services/adapters/challengeState';
@@ -22,6 +23,11 @@ interface ChallengeDeckProps {
   width: number;
   /** Called with the id of the challenge whose card is pressed. */
   onSelect: (challengeId: string) => void;
+  /** Called once, when every card's photo has loaded (or failed, or there is none) — the
+   * deck is complete — or, at the latest, after `DECK_IMAGES_TIMEOUT_MS`. The deck draws
+   * its cards from the start, so their photos load while whatever holds it (the log
+   * picker) keeps its skeleton up over it until it says so. */
+  onReady?: () => void;
 }
 
 interface DeckCardButtonProps {
@@ -29,10 +35,13 @@ interface DeckCardButtonProps {
   /** For a screen reader, which can reach any card. A touch on the front card is the
    * deck's own tap gesture, not this. */
   onSelect: (challengeId: string) => void;
+  /** Called with the challenge's id when its card's photo is done. */
+  onPhotoSettled: (challengeId: string) => void;
 }
 
-function DeckCardButton({ challenge, onSelect }: DeckCardButtonProps) {
+function DeckCardButton({ challenge, onSelect, onPhotoSettled }: DeckCardButtonProps) {
   const { t } = useTranslation();
+  const handlePhotoSettled = useCallback(() => onPhotoSettled(challenge.id), [onPhotoSettled, challenge.id]);
 
   // Not a `Pressable`: its press would still fire when a drag lets go, since the drag is
   // a native gesture the touch system knows nothing about.
@@ -44,7 +53,7 @@ function DeckCardButton({ challenge, onSelect }: DeckCardButtonProps) {
       accessibilityLabel={t('home.logProgressA11y', { name: challenge.name })}
       onAccessibilityTap={() => onSelect(challenge.id)}
     >
-      <ChallengeDeckCard challenge={challenge} />
+      <ChallengeDeckCard challenge={challenge} onPhotoSettled={handlePhotoSettled} />
     </View>
   );
 }
@@ -57,8 +66,8 @@ function DeckCardButton({ challenge, onSelect }: DeckCardButtonProps) {
  * comes forward, and dragging down brings it back the way it went; the deck settles
  * on a card, a flick carrying it on to the next. One drag moves one card. The cards are
  * little squares, a bit tall (`DECK_CARD_ASPECT`), `DECK_CARD_WIDTH_SHARE` of the deck's
- * width. Whether there are one, two or ten of them, the pile is centered
- * (`getDeckLayout`).
+ * width. Whether there are one, two or ten of them, the front card is centered
+ * (`getDeckLayout`), and so is the circle of light behind it.
  *
  * Nothing scrolls: a pan gesture moves one number, `progress` (which card is in
  * front, between cards while dragging), and every card's place and look is
@@ -69,7 +78,7 @@ function DeckCardButton({ challenge, onSelect }: DeckCardButtonProps) {
  * never as a drag: it opens the front card if the touch was on it. Behind the pile is a
  * circle of light in the front card's activity color (`ChallengeDeckHalo`).
  */
-export function ChallengeDeck({ challenges, width, onSelect }: ChallengeDeckProps) {
+export function ChallengeDeck({ challenges, width, onSelect, onReady }: ChallengeDeckProps) {
   const [front, setFront] = useState(0);
   // The same number for the tap gesture to read, which runs outside a render.
   const frontRef = useRef(0);
@@ -79,6 +88,10 @@ export function ChallengeDeck({ challenges, width, onSelect }: ChallengeDeckProp
 
   const count = challenges.length;
   const { cardWidth, cardHeight, cardLeft, viewportHeight, step, haloRadius } = getDeckLayout(width, count);
+
+  // Ready once every card's photo is done.
+  const challengeIds = useMemo(() => challenges.map((challenge) => challenge.id), [challenges]);
+  const settlePhoto = useAllSettled(challengeIds, onReady, DECK_IMAGES_TIMEOUT_MS);
 
   // The circle of light behind the deck: each card's own activity color.
   const haloColors = useMemo(
@@ -165,7 +178,7 @@ export function ChallengeDeck({ challenges, width, onSelect }: ChallengeDeckProp
             colors={haloColors}
             progress={progress}
             radius={haloRadius}
-            style={{ left: width / 2 - haloRadius, top: viewportHeight / 2 - haloRadius }}
+            style={{ left: width / 2 - haloRadius, top: cardHeight / 2 - haloRadius }}
           />
 
           <GestureDetector gesture={gesture}>
@@ -181,7 +194,7 @@ export function ChallengeDeck({ challenges, width, onSelect }: ChallengeDeckProp
                   left={cardLeft}
                   isFront={index === front}
                 >
-                  <DeckCardButton challenge={challenge} onSelect={onSelect} />
+                  <DeckCardButton challenge={challenge} onSelect={onSelect} onPhotoSettled={settlePhoto} />
                 </DeckItem>
               ))}
             </View>

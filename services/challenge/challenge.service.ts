@@ -87,8 +87,9 @@ export async function leaveChallenge(id: string) {
 
 export async function completeChallenge(id: string) {
   // Backend route is @Patch(':id/complete') (challenges.controller.ts) — marks
-  // the caller's participation `completed`, which is what moves the challenge
-  // out of Challenges-Mine (see `isChallengeFinished` for when it is called).
+  // the caller's participation `completed`, which is what makes the challenge
+  // a finished (`won`) card in Challenges-Mine and takes it off Home (see
+  // `isChallengeFinished` for when it is called).
   const response = await api.patch(`/challenges/${id}/complete`);
   return response.data;
 }

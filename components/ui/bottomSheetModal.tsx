@@ -4,10 +4,12 @@ import type { KeyboardEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fillOpacity, radius, shadows, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
-import { GlassBackdrop, glassBorderStyle } from './glassSurface';
+import { GlassBackdrop, GlassHighlight, glassRimmedStyle } from './glassSurface';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const ANIM_DURATION = 260;
+// The sheet's top corners, which a glass sheet's rim follows.
+const SHEET_RADIUS = radius.big;
 
 interface BottomSheetModalProps {
   visible: boolean;
@@ -24,9 +26,9 @@ interface BottomSheetModalProps {
    * composer to rise into (real, reported bug: "displays at the bottom,
    * not up to half the screen"). */
   height?: `${number}%`;
-  /** Makes the sheet frosted glass — the blur, the translucent `surface` tint and
-   * the hairline rim the nav bar and the toggles have — instead of an opaque
-   * `surface` card, so what is behind it shows through (the comments sheet). */
+  /** Makes the sheet frosted glass — the blur and the translucent `surface` tint the
+   * nav bar and the toggles have, and the gradient rim along its top edge — instead of
+   * an opaque `surface` card, so what is behind it shows through (the comments sheet). */
   glass?: boolean;
 }
 
@@ -119,7 +121,12 @@ export function BottomSheetModal({ visible, onClose, children, maxHeight = '70%'
           },
         ]}
       >
-        {glass ? <GlassBackdrop /> : null}
+        {glass ? (
+          <>
+            <GlassBackdrop />
+            <GlassHighlight kind="sheet" cornerRadius={SHEET_RADIUS} />
+          </>
+        ) : null}
         {children}
       </Animated.View>
     </Modal>
@@ -137,19 +144,20 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.big,
-    borderTopRightRadius: radius.big,
+    borderTopLeftRadius: SHEET_RADIUS,
+    borderTopRightRadius: SHEET_RADIUS,
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.lg,
     ...shadows.lg,
   },
-  // A glass sheet is see-through, with its own rim, and clips its blur to the rounded
-  // top corners. (No shadow: `overflow: 'hidden'` would clip it anyway.)
+  // A glass sheet is see-through, with its own rim (the gradient one, so no hairline), and
+  // clips its blur to the rounded top corners. (No shadow: `overflow: 'hidden'` would clip
+  // it anyway.)
   glassSheet: {
     backgroundColor: 'transparent',
     overflow: 'hidden',
     shadowOpacity: 0,
     elevation: 0,
-    ...glassBorderStyle,
+    ...glassRimmedStyle,
   },
 });

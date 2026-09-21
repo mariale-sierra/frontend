@@ -65,7 +65,7 @@ export const ExploreChallengeCardV2 = memo(function ExploreChallengeCardV2({
             <Text variant="title" style={[challengeCardText.primary, styles.ringNumber]}>
               {challenge.durationDays}
             </Text>
-            <Text variant="caption" weight="bold" style={[challengeCardText.paper, styles.daysUnit]}>
+            <Text variant="caption" weight="bold" style={challengeCardText.paper}>
               {t('challenges.daysUnit', { count: challenge.durationDays })}
             </Text>
           </ChallengeCardTickRing>
@@ -89,8 +89,5 @@ const styles = StyleSheet.create({
   // variant's roomier 38), which pulls the "days" label up under it.
   ringNumber: {
     lineHeight: fontSize['3xl'],
-  },
-  daysUnit: {
-    textTransform: 'uppercase',
   },
 });

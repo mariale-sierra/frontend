@@ -1,4 +1,4 @@
-import { getLogChallengeQuickPicks } from '../metricsAdapter';
+import { adaptChallengesForMetrics, getLogChallengeQuickPicks } from '../metricsAdapter';
 import type { ChallengeContract } from '../../../types/challenge';
 
 const contract = (overrides: Record<string, unknown> = {}): ChallengeContract =>
@@ -101,5 +101,38 @@ describe('getLogChallengeQuickPicks', () => {
     for (const { overrides, listed } of cases) {
       expect(getLogChallengeQuickPicks([contract(overrides)], new Map())).toHaveLength(listed ? 1 : 0);
     }
+  });
+});
+
+describe('adaptChallengesForMetrics', () => {
+  beforeEach(() => {
+    // The adapter logs its input and output.
+    jest.spyOn(console, 'log').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("carries each challenge's own dominant activity, which is what the Log Metrics screen takes its color from", () => {
+    const [strength, cardio] = adaptChallengesForMetrics([
+      contract({ id: 1, dominant_activity_category: 'strength' }),
+      contract({ id: 2, dominant_activity_category: 'cardioLow' }),
+    ]);
+
+    expect(strength.dominantActivityCategory).toBe('strength');
+    expect(cardio.dominantActivityCategory).toBe('cardioLow');
+  });
+
+  it('has none for a challenge with no dominant activity yet', () => {
+    const [option] = adaptChallengesForMetrics([contract({ dominant_activity_category: null })]);
+
+    expect(option.dominantActivityCategory).toBeNull();
+  });
+
+  it('keeps what it already had: the id, the name, the categories and the locations', () => {
+    const [option] = adaptChallengesForMetrics([contract({ id: 9, name: 'Night Run' })]);
+
+    expect(option).toMatchObject({ id: '9', label: 'Night Run', activityCategories: [], locations: [] });
   });
 });

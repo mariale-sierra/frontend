@@ -10,6 +10,7 @@ import {
   DECK_CARD_WIDTH_SHARE,
   DECK_CASCADE,
   DECK_HALO_RADIUS_SHARE,
+  DECK_IMAGES_TIMEOUT_MS,
   DECK_SHADE_STEP,
   DECK_STEP_SHARE,
   DECK_TILT,
@@ -76,15 +77,15 @@ describe('ChallengeDeck', () => {
     }
   });
 
-  it('makes the cards little squares, a bit tall — a share of the deck, the whole pile centered', async () => {
+  it('makes the cards little squares, a bit tall — a share of the deck, the front card centered', async () => {
     const screen = await renderDeck();
     const { width, height, left } = styleOf(boxOf(screen, 'Morning Strength'));
 
     expect(width).toBeCloseTo(342 * DECK_CARD_WIDTH_SHARE, 5);
     expect(width).toBeLessThan(342);
     expect(height / width).toBeCloseTo(DECK_CARD_ASPECT, 5);
-    // The pile — the front card and the ones standing out to its right — is centered.
-    expect(left).toBeCloseTo((342 - width - DECK_CASCADE * DECK_VISIBLE_BEHIND) / 2, 5);
+    // The front card is centered, and the ones standing out to its right still fit.
+    expect(left).toBeCloseTo((342 - width) / 2, 5);
     expect(left + width + DECK_CASCADE * DECK_VISIBLE_BEHIND).toBeLessThanOrEqual(342);
   });
 
@@ -178,14 +179,30 @@ describe('ChallengeDeck', () => {
     const deckChildren = (screen: Awaited<ReturnType<typeof renderDeck>>) =>
       screen.getByTestId('challenge-deck').children as unknown as { props: { style: unknown } }[];
 
-    it.each([1, 2, 3, 4, 8])('centers the whole pile in the deck for %s challenge(s)', async (n) => {
+    it.each([1, 2, 3, 4, 8])('centers the front card in the deck for %s challenge(s)', async (n) => {
       const screen = await renderDeck(some(n));
       const { left, width } = styleOf(boxOf(screen, 'Challenge 0'));
-      // Only as many cards stand out behind the front one as there are (two at most).
-      const behind = Math.min(n - 1, DECK_VISIBLE_BEHIND);
 
-      // As much room to the left of the pile as to its right.
-      expect(left).toBeCloseTo(342 - (left + width + DECK_CASCADE * behind), 5);
+      // As much room to the left of the card as to its right, whatever stands out behind it.
+      expect(left).toBeCloseTo(342 - (left + width), 5);
+      expect(left + width + DECK_CASCADE * Math.min(n - 1, DECK_VISIBLE_BEHIND)).toBeLessThanOrEqual(342);
+    });
+
+    it('keeps the front card where it is as the deck moves on, and as fewer cards are left behind it', async () => {
+      const screen = await renderDeck(some(3));
+      const front = () => styleOf(boxOf(screen, 'Challenge 0')).left;
+      const before = front();
+
+      await act(async () => {
+        fireGestureHandler(getByGestureTestId('challenge-deck-pan'), [
+          { state: State.BEGAN },
+          { state: State.ACTIVE },
+          { translationY: -160 },
+          { state: State.END, translationY: -160, velocityY: 0 },
+        ]);
+      });
+
+      expect(front()).toBe(before);
     });
 
     it('is one card, centered, for a single challenge: nothing standing out to the right, and no count', async () => {
@@ -208,13 +225,15 @@ describe('ChallengeDeck', () => {
       expect(await viewportHeight(3)).toBe(await viewportHeight(9));
     });
 
-    it.each([1, 2, 3, 6])('centers the circle of light on the pile for %s challenge(s)', async (n) => {
+    it.each([1, 2, 3, 6])('centers the circle of light on the front card for %s challenge(s)', async (n) => {
       const screen = await renderDeck(some(n));
       const [halo, viewport] = deckChildren(screen).map((child) => styleOf(child));
       const radius = halo.width / 2;
 
+      // Centered on the front card, in width and in height.
       expect(halo.left + radius).toBeCloseTo(342 / 2, 5);
-      expect(halo.top + radius).toBeCloseTo(viewport.height / 2, 5);
+      expect(halo.top + radius).toBeCloseTo(styleOf(boxOf(screen, 'Challenge 0')).height / 2, 5);
+      expect(viewport.height).toBeGreaterThan(0);
       expect(radius).toBeCloseTo(342 * DECK_CARD_WIDTH_SHARE * DECK_HALO_RADIUS_SHARE, 5);
     });
 
@@ -382,5 +401,92 @@ describe('ChallengeDeck', () => {
 
     expect(screen.getByText('Morning Strength')).toBeTruthy();
     expect(screen.queryByText(/^\d+ \/ \d+$/)).toBeNull();
+  });
+
+  describe('telling when it is ready — every card\'s photo done', () => {
+    const withPhotos = (count: number): LogChallengeQuickPick[] =>
+      challenges.slice(0, count).map((challenge, index) => ({ ...challenge, photoUrl: `https://example.com/${index}.jpg` }));
+    const renderReady = (items: LogChallengeQuickPick[], onReady: () => void) =>
+      renderWithTheme(<ChallengeDeck challenges={items} width={342} onSelect={jest.fn()} onReady={onReady} />);
+
+    afterEach(() => jest.useRealTimers());
+
+    it('draws every card from the start, so their photos load', async () => {
+      const screen = await renderReady(withPhotos(3), jest.fn());
+
+      expect(screen.getAllByTestId('challenge-deck-photo')).toHaveLength(3);
+    });
+
+    it('is not ready while a photo is still loading', async () => {
+      const onReady = jest.fn();
+      const screen = await renderReady(withPhotos(3), onReady);
+      const photos = screen.getAllByTestId('challenge-deck-photo');
+
+      await fireEvent(photos[0], 'load');
+      await fireEvent(photos[2], 'load');
+
+      expect(onReady).not.toHaveBeenCalled();
+    });
+
+    it('is ready, once, when the last photo has loaded', async () => {
+      const onReady = jest.fn();
+      const screen = await renderReady(withPhotos(3), onReady);
+
+      for (const photo of screen.getAllByTestId('challenge-deck-photo')) {
+        await fireEvent(photo, 'load');
+      }
+
+      expect(onReady).toHaveBeenCalledTimes(1);
+    });
+
+    it('counts a photo that failed as done: it does not hold the deck up', async () => {
+      const onReady = jest.fn();
+      const screen = await renderReady(withPhotos(2), onReady);
+      const [first, second] = screen.getAllByTestId('challenge-deck-photo');
+
+      await fireEvent(first, 'load');
+      await fireEvent(second, 'error');
+
+      expect(onReady).toHaveBeenCalledTimes(1);
+    });
+
+    it('is ready at once when no card has a photo', async () => {
+      const onReady = jest.fn();
+      await renderReady(challenges, onReady);
+
+      expect(onReady).toHaveBeenCalledTimes(1);
+    });
+
+    it('waits only for the photos there are: a card with none does not hold it up', async () => {
+      const onReady = jest.fn();
+      const mixed = [withPhotos(1)[0], challenges[1]];
+      const screen = await renderReady(mixed, onReady);
+      expect(onReady).not.toHaveBeenCalled();
+
+      await fireEvent(screen.getByTestId('challenge-deck-photo'), 'load');
+
+      expect(onReady).toHaveBeenCalledTimes(1);
+    });
+
+    it('gives up on a photo that never comes, after DECK_IMAGES_TIMEOUT_MS, so the deck is not held up for good', async () => {
+      jest.useFakeTimers();
+      const onReady = jest.fn();
+      const screen = await renderReady(withPhotos(2), onReady);
+      await fireEvent(screen.getAllByTestId('challenge-deck-photo')[0], 'load');
+
+      await act(async () => jest.advanceTimersByTime(DECK_IMAGES_TIMEOUT_MS - 1));
+      expect(onReady).not.toHaveBeenCalled();
+
+      await act(async () => jest.advanceTimersByTime(1));
+      expect(onReady).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not need anyone listening', async () => {
+      const screen = await renderWithTheme(<ChallengeDeck challenges={withPhotos(1)} width={342} onSelect={jest.fn()} />);
+
+      await fireEvent(screen.getByTestId('challenge-deck-photo'), 'load');
+
+      expect(screen.getByTestId('challenge-deck')).toBeTruthy();
+    });
   });
 });

@@ -207,17 +207,6 @@ export function toChallengeMineViewModels(
 }
 
 /**
- * Mine is what the user is still doing: a finished challenge (`won` — its last
- * day was logged and it was marked completed) is not in it any more. It was
- * celebrated when it finished, and Home already leaves it out.
- */
-export function withoutFinishedChallenges(
-  challenges: ChallengeMineCardViewModel[],
-): ChallengeMineCardViewModel[] {
-  return challenges.filter((challenge) => challenge.state !== 'won');
-}
-
-/**
  * Explore tab — every challenge the user could join. Sorted most-joined
  * first (`membersCount` descending), per explicit request — same "sort
  * happens once here, not left to callers" shape as `toChallengeMineViewModels`'s

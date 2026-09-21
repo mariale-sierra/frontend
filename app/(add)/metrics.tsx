@@ -7,6 +7,7 @@ import { Stack } from '../../components/layout/stack';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
 import { LogMetricsExerciseCard } from '../../components/add/logMetricsExerciseCard';
+import { ChallengeMeshBackdrop } from '../../components/challenge/challengeMeshBackdrop';
 import { CreateFlowPrimaryButton } from '../../components/challenge/create';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
@@ -87,37 +88,37 @@ export default function Metrics() {
 
   return (
     <ScreenBackground variant="default" applyTopInset={false}>
-      <View style={styles.headerPanel}>
-        <Row justify="space-between" align="center" style={[styles.topBar, { paddingTop: insets.top + spacing.md }]}>
-          <Pressable onPress={goBack} hitSlop={12} style={styles.iconButton}>
-            <Icon name="chevron-back-outline" size={24} color={colors.paper} />
-          </Pressable>
-          <Pressable
-            onPress={goToRestDay}
-            style={({ pressed }) => [styles.restDayButton, pressed && styles.restDayButtonPressed]}
-            accessibilityRole="button"
-            accessibilityLabel={t('challenges.restDay')}
-          >
-            <Icon name="moon-outline" size={16} color={colors.ink} />
-            <Text variant="label" weight="bold" style={styles.restDayButtonText}>
-              {t('challenges.restDay')}
-            </Text>
-          </Pressable>
-        </Row>
+      {/* The challenge's own activity-color mesh, on the edges and mostly at the top, where
+          the header used to be a `surface` panel with a divider under it. */}
+      <ChallengeMeshBackdrop category={selectedChallenge?.dominantActivityCategory} />
 
-        <View style={styles.titleBlock}>
-          <Text variant="header" size="xs" numberOfLines={1} style={styles.eyebrow}>
-            {selectedChallenge?.label ?? ''}
+      <Row justify="space-between" align="center" style={[styles.topBar, { paddingTop: insets.top + spacing.md }]}>
+        <Pressable onPress={goBack} hitSlop={12} style={styles.iconButton}>
+          <Icon name="chevron-back-outline" size={24} color={colors.paper} />
+        </Pressable>
+        <Pressable
+          onPress={goToRestDay}
+          style={({ pressed }) => [styles.restDayButton, pressed && styles.restDayButtonPressed]}
+          accessibilityRole="button"
+          accessibilityLabel={t('challenges.restDay')}
+        >
+          <Icon name="moon-outline" size={16} color={colors.ink} />
+          <Text variant="label" weight="bold" style={styles.restDayButtonText}>
+            {t('challenges.restDay')}
           </Text>
-          <Text variant="title" numberOfLines={2}>
-            {routineName
-              ? t('logMetrics.entry.dayWithRoutine', { day: currentDay ?? 1, routine: routineName })
-              : t('logMetrics.pickChallenge.dayLabel', { day: currentDay ?? 1 })}
-          </Text>
-        </View>
+        </Pressable>
+      </Row>
+
+      <View style={styles.titleBlock}>
+        <Text variant="header" size="xs" numberOfLines={1} style={styles.eyebrow}>
+          {selectedChallenge?.label ?? ''}
+        </Text>
+        <Text variant="title" numberOfLines={2}>
+          {routineName
+            ? t('logMetrics.entry.dayWithRoutine', { day: currentDay ?? 1, routine: routineName })
+            : t('logMetrics.pickChallenge.dayLabel', { day: currentDay ?? 1 })}
+        </Text>
       </View>
-
-      <View style={styles.headerDivider} />
 
       <View style={styles.contentWrap}>{renderContent()}</View>
 
@@ -136,9 +137,6 @@ export default function Metrics() {
 }
 
 const styles = StyleSheet.create({
-  headerPanel: {
-    backgroundColor: colors.surface,
-  },
   topBar: {
     paddingHorizontal: spacing.base,
   },
@@ -173,10 +171,6 @@ const styles = StyleSheet.create({
   eyebrow: {
     color: colors.primary,
     opacity: 1,
-  },
-  headerDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: withAlpha(colors.paper, 0.08),
   },
   contentWrap: {
     flex: 1,

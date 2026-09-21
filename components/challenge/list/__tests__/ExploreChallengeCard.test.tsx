@@ -76,6 +76,12 @@ describe('Explore card (glow design) specifics', () => {
     });
   });
 
+  it('does not set the days label in capitals — it reads "days", as the text has it', async () => {
+    const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ durationDays: 21 })} />);
+
+    expect(StyleSheet.flatten(screen.getByText('days').props.style).textTransform).toBeUndefined();
+  });
+
   it('tightens the number so the days label sits closer under it', async () => {
     const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ durationDays: 21 })} />);
 

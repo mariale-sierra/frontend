@@ -304,11 +304,22 @@ describe('getDeckLayout', () => {
     expect(cardHeight / cardWidth).toBeCloseTo(DECK_CARD_ASPECT, 5);
   });
 
-  it.each([1, 2, 3, 4, 10])('centers the pile for %s card(s): as much room to its left as to its right', (count) => {
+  it.each([1, 2, 3, 4, 10])('centers the FRONT card for %s card(s): as much room to its left as to its right', (count) => {
     const { cardWidth, cardLeft } = getDeckLayout(WIDTH_OF_DECK, count);
-    const behind = Math.min(count - 1, DECK_VISIBLE_BEHIND);
 
-    expect(cardLeft).toBeCloseTo(WIDTH_OF_DECK - (cardLeft + cardWidth + DECK_CASCADE * behind), 5);
+    expect(cardLeft).toBeCloseTo((WIDTH_OF_DECK - cardWidth) / 2, 5);
+    expect(cardLeft).toBeCloseTo(WIDTH_OF_DECK - (cardLeft + cardWidth), 5);
+  });
+
+  it('puts the front card in the same place for one card and for ten — the pile behind it does not move it', () => {
+    expect(getDeckLayout(WIDTH_OF_DECK, 2).cardLeft).toBe(getDeckLayout(WIDTH_OF_DECK, 1).cardLeft);
+    expect(getDeckLayout(WIDTH_OF_DECK, 10).cardLeft).toBe(getDeckLayout(WIDTH_OF_DECK, 1).cardLeft);
+  });
+
+  it('leaves the cards behind room to stand out to the right, inside the deck', () => {
+    const { cardWidth, cardLeft } = getDeckLayout(WIDTH_OF_DECK, 10);
+
+    expect(cardLeft + cardWidth + DECK_CASCADE * DECK_VISIBLE_BEHIND).toBeLessThanOrEqual(WIDTH_OF_DECK);
   });
 
   it('is a lone card, centered, with nothing standing out and no room below it, for one challenge', () => {

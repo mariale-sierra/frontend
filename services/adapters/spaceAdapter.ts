@@ -50,8 +50,14 @@ export function findCategoryForActivityType(
  * `colors.primary` when the space has no chosen category, same fallback rule
  * challenges use for a dominant category. */
 export function getSpaceAccentColor(space: Pick<SpaceContract, 'activityCategory'>): string {
-  const type = space.activityCategory ? activityTypeForCategoryCode(space.activityCategory.code) : null;
+  const type = getSpaceActivityType(space);
   return type ? activityColors[type] : colors.primary;
+}
+
+/** The Activity Type a space's chosen category stands for (`null` when it has none) —
+ * what its accent color, and its card's orbs, come from. */
+export function getSpaceActivityType(space: Pick<SpaceContract, 'activityCategory'>): ActivityType | null {
+  return space.activityCategory ? activityTypeForCategoryCode(space.activityCategory.code) : null;
 }
 
 export type SpaceMembershipCta =

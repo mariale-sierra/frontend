@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from '../ui/text';
 import { IconButton } from '../ui/iconButton';
-import { colors, radius, spacing, textOpacity, typography } from '../../constants/theme';
+import { colors, fillOpacity, radius, spacing, textOpacity, typography } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 
 interface SetTargetStepperProps {
   value: number;
@@ -23,10 +24,14 @@ interface SetTargetStepperProps {
 /** One steppable set-target row (Log-Metrics "Target Stepper" wireframe) —
  * visually distinct from the Routine Creator's `ValueStepper`
  * (components/routine/builder/valueStepper.tsx): here the whole pill IS the
- * value's own recessed track (`ink` bg, border lights up `success` once this
- * set has been adjusted away from its plan), the minus button blends into
- * that same background (`ghost`, no fill of its own) instead of getting a
- * `surface` fill, and only the plus button carries the lime accent.
+ * value's own track: a soft, lighter gray than the card it sits on — the same
+ * translucent `paper` chip fill (`fillOpacity.chip`) as the selected option of
+ * the Mine / Explore toggle — with every label in it `paper`, so none gets lost
+ * on it. (2026-09-20, explicit request. It was a solid `ink` slot, then no fill
+ * at all, then a hole cut in the glass card, each of which the user turned down.)
+ * Its border lights up `success` once this set has been adjusted away from its
+ * plan; the minus button has no fill of its own (`ghost`), and only the plus
+ * button carries the lime accent.
  *
  * Tap-to-edit added 2026-08-31: the value used to be a read-only `Text`,
  * steppable only one `step` at a time — fine for reps, painfully slow for
@@ -81,7 +86,7 @@ export function SetTargetStepper({ value, unitLabel, adjusted, step, onIncrease,
         <Pressable onPress={startEditing} hitSlop={8}>
           <Text variant="body" weight="bold">
             {value}
-            <Text variant="caption" tone="tertiary"> {unitLabel}</Text>
+            <Text variant="caption"> {unitLabel}</Text>
           </Text>
         </Pressable>
       )}
@@ -109,7 +114,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.small,
     borderWidth: 1.5,
     borderColor: 'transparent',
-    backgroundColor: colors.ink,
+    backgroundColor: withAlpha(colors.paper, fillOpacity.chip),
     paddingLeft: spacing.base,
     paddingRight: spacing.sm,
   },

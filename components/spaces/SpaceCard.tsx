@@ -2,7 +2,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { AccentPill } from '../ui/accentPill';
 import { SpaceCardView } from './SpaceCardView';
-import { getSpaceAccentColor, getSpaceMembershipCta } from '../../services/adapters/spaceAdapter';
+import { getSpaceAccentColor, getSpaceActivityType, getSpaceMembershipCta } from '../../services/adapters/spaceAdapter';
 import type { SpaceContract } from '../../types/space';
 
 interface SpaceCardProps {
@@ -34,7 +34,7 @@ export function SpaceCard({ space, onPress, onPressCta, ctaLoading = false }: Sp
         name={space.name}
         description={space.description}
         membersCount={space.membersCount}
-        accentColor={accentColor}
+        activityType={getSpaceActivityType(space)}
         cta={
           cta.kind === 'join' || cta.kind === 'request' ? (
             <AccentPill
