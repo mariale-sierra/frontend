@@ -24,6 +24,14 @@ const baseURL = (Constants.expoConfig?.extra?.apiUrl as string | undefined) ?? F
 
 const api = axios.create({
   baseURL,
+  // ngrok's free tier interstitial warning page intercepts every request
+  // (not just browser navigations) to a *.ngrok-free.* domain unless this
+  // header is present — without it, API calls get back an HTML warning page
+  // instead of JSON. Harmless to send against the real backend, which just
+  // ignores unknown headers.
+  headers: baseURL.includes('ngrok-free')
+    ? { 'ngrok-skip-browser-warning': 'true' }
+    : undefined,
 });
 
 api.interceptors.request.use(async (config) => {
