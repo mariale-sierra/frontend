@@ -4,6 +4,7 @@ import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
 import { Row } from '../../layout/row';
 import { colors, radius, spacing } from '../../../constants/theme';
+import { triggerLightHaptic } from '../../../utils/haptics';
 
 interface ChallengeRoutineDayCardProps {
   day: number;
@@ -19,10 +20,10 @@ interface ChallengeRoutineDayCardProps {
 }
 
 /** One row in "The cycle" list (Challenge-Info) — List-row card pattern
- * (`surface` bg, `medium` radius) with a numbered circle badge instead of an
+ * (`surface` bg, `big` radius) with a numbered circle badge instead of an
  * icon. Rest days share the same row shape but read as non-interactive: no
  * chevron, `rest`-colored title, muted "no photo needed" subtitle, since
- * there's no routine to view. */
+ * there's no routine to view — a tap on one only gives a light haptic. */
 export default function ChallengeRoutineDayCard({ day, isRestDay, routineName, subtitle, accentColor, onPress }: ChallengeRoutineDayCardProps) {
   const { t } = useTranslation();
   const badgeColor = isRestDay ? colors.rest : accentColor;
@@ -47,7 +48,11 @@ export default function ChallengeRoutineDayCard({ day, isRestDay, routineName, s
   );
 
   if (isRestDay) {
-    return <View style={styles.card}>{content}</View>;
+    return (
+      <Pressable onPress={triggerLightHaptic} style={styles.card}>
+        {content}
+      </Pressable>
+    );
   }
 
   return (
@@ -60,7 +65,7 @@ export default function ChallengeRoutineDayCard({ day, isRestDay, routineName, s
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.medium,
+    borderRadius: radius.big,
     paddingHorizontal: spacing.base,
     paddingVertical: spacing.md,
   },

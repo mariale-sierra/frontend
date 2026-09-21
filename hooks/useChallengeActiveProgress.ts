@@ -4,8 +4,9 @@ import { useChallengeParticipants } from './useChallengeParticipants';
 import { getChallenge, getMyProgressPhotos } from '../services/challenge/challenge.service';
 import { deriveChallengeCardState, pickChallengeStatus, pickDominantActivityCategory, getChallengeAccentColor } from '../services/adapters/challengeState';
 import type { ChallengeCardState } from '../services/adapters/challengeState';
-import { buildRingTicks, computeConsistencyPercents, dayInCycle, findCycleDayFor, isRestDay } from '../utils/challengeCycle';
+import { buildDayRingTicks, classifyDay, dayInCycle, findCycleDayFor, isRestDay } from '../utils/challengeCycle';
 import { colors } from '../constants/theme';
+import { PROGRESS_RING } from '../constants/progressRing';
 import { withAlpha } from '../utils/color';
 import type { ActivityType } from '../types/activity';
 import type { ChallengeContract, ChallengePhoto } from '../types/challenge';
@@ -57,8 +58,9 @@ export interface ChallengeActiveProgressData {
 const RING_TRACK_COLOR = withAlpha(colors.paper, 0.12);
 // Fixed regardless of totalDays — see buildRingTicks's doc comment. A 10-day
 // and a 75-day challenge render the same dense, evenly-spaced dial; only the
-// filled proportion changes.
-const RING_SEGMENT_COUNT = 60;
+// filled proportion changes. (Shared with the ring itself and the Explore card's
+// echo of it — see `PROGRESS_RING`.)
+const RING_SEGMENT_COUNT = PROGRESS_RING.segmentCount;
 
 /**
  * Data-fetching for the challenge active-progress screen. Combines:
@@ -162,23 +164,28 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
     });
   }, [fullChallenge, myPhotos, isDayRestDay, currentDay, completedToday]);
 
-  const { photoPercent, restPercent } = useMemo(
-    () => computeConsistencyPercents({ totalDays, currentDay, cycleLengthDays, cycleDays, photoDays: photoDaySet }),
-    [totalDays, currentDay, cycleLengthDays, cycleDays, photoDaySet],
-  );
-
   const dominantActivityCategory = useMemo(
     () => (fullChallenge ? pickDominantActivityCategory(fullChallenge) : null),
     [fullChallenge],
   );
 
+  // The ring is laid out by day (see `buildDayRingTicks`): each day takes its own
+  // place on it, so a day that was missed stays an empty gap and the days after it
+  // are filled after the gap — the same `classifyDay` the calendar uses, so the two
+  // can never disagree about a day.
   const ticks = useMemo(
     () =>
-      buildRingTicks({
+      buildDayRingTicks({
         segmentCount: RING_SEGMENT_COUNT,
-        photoPercent,
-        restPercent,
-        // The ring's "Photo days" arc IS the activity color — distinct from
+        totalDays,
+        statusOf: (challengeDay) =>
+          classifyDay({
+            challengeDay,
+            currentDay,
+            isRestDay: isDayRestDay(challengeDay),
+            hasPhoto: photoDaySet.has(challengeDay),
+          }),
+        // The ring's photo days ARE the activity color — distinct from
         // the calendar's "Photo in" dots, which stay fixed `success` (see
         // ChallengeWorkoutCalendar.tsx). Per explicit correction: these are
         // two different indicators, not the same rule applied twice.
@@ -186,7 +193,7 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
         restColor: colors.rest,
         trackColor: RING_TRACK_COLOR,
       }),
-    [photoPercent, restPercent, dominantActivityCategory],
+    [totalDays, currentDay, isDayRestDay, photoDaySet, dominantActivityCategory],
   );
 
   const todayCycleDay = fullChallenge ? findCycleDayFor(currentDay, cycleLengthDays, cycleDays) : null;

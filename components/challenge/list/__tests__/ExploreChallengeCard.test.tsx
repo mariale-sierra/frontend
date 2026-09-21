@@ -3,7 +3,7 @@ import { fireEvent } from '@testing-library/react-native';
 import { renderWithProviders } from '../../../../test-utils/renderWithProviders';
 import { ExploreChallengeCard } from '../ExploreChallengeCard';
 import { ExploreChallengeCardV2 } from '../ExploreChallengeCardV2';
-import { colors, fontSize } from '../../../../constants/theme';
+import { activityColors, colors, fontSize } from '../../../../constants/theme';
 import type { ExploreChallengeViewModel } from '../challengeListSections';
 
 function buildChallenge(overrides: Partial<ExploreChallengeViewModel> = {}): ExploreChallengeViewModel {
@@ -95,7 +95,17 @@ describe('Explore card (glow design) specifics', () => {
     expect(screen.getByText('day')).toBeTruthy();
   });
 
-  it('leaves out the category badge and the subtitle when there is nothing to show in them', async () => {
+  it('shows the category as a plain label in the activity color, not a badge', async () => {
+    const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge()} />);
+    const label = StyleSheet.flatten(screen.getByText('Strength').props.style);
+
+    expect(label).toMatchObject({ color: activityColors.strength, opacity: 1, textTransform: 'uppercase' });
+    // A badge would fill its background with the accent color.
+    expect(label.backgroundColor).toBeUndefined();
+    expect(JSON.stringify(screen.toJSON())).not.toContain('flash-outline');
+  });
+
+  it('leaves out the category label and the subtitle when there is nothing to show in them', async () => {
     const screen = await renderWithProviders(
       <ExploreChallengeCardV2 challenge={buildChallenge({ categoriesLabel: '', locationsLabel: '' })} />,
     );

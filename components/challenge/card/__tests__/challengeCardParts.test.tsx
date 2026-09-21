@@ -4,6 +4,7 @@ import { ChallengeCard, CHALLENGE_CARD_HEIGHT } from '../ChallengeCard';
 import { ChallengeCardProgress } from '../ChallengeCardProgress';
 import { ChallengeCardTickRing } from '../ChallengeCardTickRing';
 import { activityColors, colors } from '../../../../constants/theme';
+import { getMeshRecipe } from '../../../../constants/meshRecipes';
 
 describe('ChallengeCard', () => {
   function renderCard(props: Partial<React.ComponentProps<typeof ChallengeCard>> = {}) {
@@ -70,6 +71,20 @@ describe('ChallengeCard', () => {
     // The outline is the accent color, softened.
     expect(JSON.stringify(screen.toJSON())).toContain(activityColors.mindBody.toUpperCase());
   });
+
+  it('keeps the accent outline when it draws a mesh glow', async () => {
+    const screen = await renderWithProviders(
+      <ChallengeCard
+        accentColor={activityColors.mindBody}
+        glowRecipe={getMeshRecipe('mine', 'mindBody')}
+        top={null}
+        title="A"
+        footer={null}
+      />,
+    );
+
+    expect(JSON.stringify(screen.toJSON())).toContain(activityColors.mindBody.toUpperCase());
+  });
 });
 
 describe('ChallengeCardProgress', () => {
@@ -94,9 +109,9 @@ describe('ChallengeCardProgress', () => {
 });
 
 describe('ChallengeCardProgress track', () => {
-  // Over the glow (bottom edge) the groove is `ink` at 45%; over the dark (a card
-  // whose glow comes from the top) it is `paper` at 12%. `withAlpha` appends the alpha byte.
-  it('is a darker groove when the glow is behind it', async () => {
+  // The dark track is `ink` at 45%; the light one is `paper` at 12%. `withAlpha`
+  // appends the alpha byte.
+  it('is the darker groove by default (over a glow)', async () => {
     const screen = await renderWithProviders(
       <ChallengeCardProgress progress={0.5} currentDay={1} totalDays={2} accentColor={activityColors.strength} />,
     );
@@ -104,14 +119,14 @@ describe('ChallengeCardProgress track', () => {
     expect(JSON.stringify(screen.toJSON())).toContain(`"backgroundColor":"${colors.ink}73"`);
   });
 
-  it('is a lighter groove when the card is dark behind it (the glow comes from the top)', async () => {
+  it('is a lighter groove over a dark card', async () => {
     const screen = await renderWithProviders(
       <ChallengeCardProgress
         progress={0.5}
         currentDay={1}
         totalDays={2}
         accentColor={activityColors.strength}
-        glowEdge="top"
+        track="light"
       />,
     );
 
@@ -136,13 +151,18 @@ describe('ChallengeCardTickRing', () => {
     expect(screen.toJSON()).toBeTruthy();
   });
 
-  it.each(['top', 'bottom'] as const)('renders with its light coming from the %s', async (glowEdge) => {
+  it('draws only the ticks — no disc or glow of its own in the middle, so the card\'s gradient runs through', async () => {
     const screen = await renderWithProviders(
-      <ChallengeCardTickRing accentColor={activityColors.functional} glowEdge={glowEdge}>
+      <ChallengeCardTickRing accentColor={activityColors.functional}>
         <RNText>21</RNText>
       </ChallengeCardTickRing>,
     );
+    const tree = JSON.stringify(screen.toJSON());
 
+    // The ticks are there (the accent at 55%: `withAlpha` appends the alpha byte, 0x8C)...
+    expect(tree).toContain(`${activityColors.functional}8C`);
+    // ...and there is no dark `ink` fill anywhere in the ring (the old face disc was one).
+    expect(tree).not.toContain(colors.ink);
     expect(screen.getByText('21')).toBeTruthy();
   });
 

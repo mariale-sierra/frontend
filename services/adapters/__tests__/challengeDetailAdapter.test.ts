@@ -1,4 +1,5 @@
-import { toChallengeDetailViewModel } from '../challengeDetailAdapter';
+import { getUpcomingDays, toChallengeDetailViewModel } from '../challengeDetailAdapter';
+import type { ChallengeDaySummary } from '../challengeDetailAdapter';
 import type { ChallengeContract } from '../../../types/challenge';
 
 const LABELS = { locationFallbackLabel: 'Anywhere', categoryFallbackLabel: 'General' };
@@ -123,5 +124,48 @@ describe('toChallengeDetailViewModel', () => {
     if (!result.ok) return;
     expect(result.value.cycleLengthDays).toBe(4);
     expect(result.value.restDaysPerCycleCount).toBe(1);
+  });
+});
+
+describe('getUpcomingDays', () => {
+  const day = (number: number, isRestDay: boolean): ChallengeDaySummary => ({
+    day: number,
+    isRestDay,
+    routineName: isRestDay ? '' : `Routine ${number}`,
+    exerciseCount: isRestDay ? 0 : 4,
+    location: 'Gym',
+  });
+  // Three routines and a rest day: 1, 2, 3 and rest 4.
+  const cycle = [day(1, false), day(2, false), day(3, false), day(4, true)];
+
+  it('is just the next day when it is a routine', () => {
+    expect(getUpcomingDays(cycle, 4, 1).map((item) => item.day)).toEqual([2]);
+    expect(getUpcomingDays(cycle, 4, 2).map((item) => item.day)).toEqual([3]);
+  });
+
+  it('shows the routine after a rest day as well — never a lone rest day', () => {
+    // From day 3 the next is the rest day 4, then the cycle wraps to routine 1.
+    expect(getUpcomingDays(cycle, 4, 3).map((item) => item.day)).toEqual([4, 1]);
+  });
+
+  it('keeps going through several rest days in a row, to the routine after them', () => {
+    const twoRests = [day(1, false), day(2, true), day(3, true), day(4, false)];
+
+    expect(getUpcomingDays(twoRests, 4, 1).map((item) => item.day)).toEqual([2, 3, 4]);
+  });
+
+  it('wraps round the cycle: the day after the last is the first', () => {
+    expect(getUpcomingDays(cycle, 4, 4).map((item) => item.day)).toEqual([1]);
+  });
+
+  it('follows the cycle for at most one lap, and never loops forever on all-rest days', () => {
+    const allRest = [day(1, true), day(2, true)];
+
+    expect(getUpcomingDays(allRest, 2, 1)).toHaveLength(2);
+  });
+
+  it('is empty without a cycle, or with a day the cycle has no entry for', () => {
+    expect(getUpcomingDays(cycle, 0, 1)).toEqual([]);
+    expect(getUpcomingDays([], 4, 1)).toEqual([]);
   });
 });

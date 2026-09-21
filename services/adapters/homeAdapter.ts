@@ -1,5 +1,10 @@
 import { asString, asNumber, asBoolean } from './adapterUtils';
-import { pickChallengeStatus, deriveChallengeCardState, pickDominantActivityCategory } from './challengeState';
+import {
+  pickChallengeStatus,
+  deriveChallengeCardState,
+  pickDominantActivityCategory,
+  getChallengeGlowColor,
+} from './challengeState';
 import type { ChallengeCardState } from './challengeState';
 import { isRestDay as isRestDayForCycle } from '../../utils/challengeCycle';
 import type { ActivityType } from '../../types/activity';
@@ -182,6 +187,16 @@ export function getHomeChallengesSorted(
   const completedToday = vms.filter((vm) => vm.state === 'completed').sort(byDaysRemaining);
 
   return [...active, ...rest, ...completedToday];
+}
+
+/**
+ * The color each hero card in Home's carousel glows in (`getChallengeGlowColor`:
+ * lavender on a rest day, green once today is logged, the challenge's own activity
+ * color otherwise), in the carousel's order. Home's background light takes these
+ * colors, one per page, as the carousel is scrolled.
+ */
+export function getHomeGlowColors(challenges: HomeActiveChallengeViewModel[]): string[] {
+  return challenges.map((challenge) => getChallengeGlowColor(challenge.state, challenge.dominantActivityCategory));
 }
 
 export function progressToHomeActiveChallengeViewModel(

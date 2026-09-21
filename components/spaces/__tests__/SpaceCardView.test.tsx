@@ -1,7 +1,7 @@
 import { StyleSheet, Text as RNText } from 'react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { SpaceCardView } from '../SpaceCardView';
-import { activityColors, fontSize } from '../../../constants/theme';
+import { activityColors, fontSize, spacing } from '../../../constants/theme';
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -13,16 +13,14 @@ jest.mock('react-i18next', () => ({
 const baseProps = {
   name: 'Girls running club',
   description: 'Sunrise 5Ks and slow jogs.',
-  categoryName: 'Cardio Low',
   membersCount: 50,
   accentColor: activityColors.cardioLow,
 };
 
 describe('SpaceCardView', () => {
-  it('shows the category badge, the name, the description and the member count', async () => {
+  it('shows the name, the description and the member count — and no activity badge', async () => {
     const screen = await renderWithTheme(<SpaceCardView {...baseProps} />);
 
-    expect(screen.getByText('Cardio Low')).toBeTruthy();
     expect(screen.getByText('Girls running club')).toBeTruthy();
     expect(screen.getByText('Sunrise 5Ks and slow jogs.')).toBeTruthy();
     expect(screen.getByText('spaces.membersCount:50,50')).toBeTruthy();
@@ -42,10 +40,9 @@ describe('SpaceCardView', () => {
     expect(StyleSheet.flatten(screen.getByText('Sunrise 5Ks and slow jogs.').props.style).fontSize).toBe(fontSize.xs);
   });
 
-  it('leaves out the badge and the description when there are none', async () => {
-    const screen = await renderWithTheme(<SpaceCardView {...baseProps} categoryName={null} description={null} />);
+  it('leaves out the description when there is none', async () => {
+    const screen = await renderWithTheme(<SpaceCardView {...baseProps} description={null} />);
 
-    expect(screen.queryByText('Cardio Low')).toBeNull();
     expect(screen.queryByText('Sunrise 5Ks and slow jogs.')).toBeNull();
     expect(screen.getByText('Girls running club')).toBeTruthy();
   });
@@ -61,5 +58,15 @@ describe('SpaceCardView', () => {
     const screen = await renderWithTheme(<SpaceCardView {...baseProps} />);
 
     expect(screen.queryByText('join-pill')).toBeNull();
+  });
+
+  // The card has its own look: roomier than the challenge cards, and a half-moon of
+  // light from the top AND the bottom edge.
+  it('gives the content more room from the card edges than the challenge cards have', async () => {
+    const screen = await renderWithTheme(<SpaceCardView {...baseProps} />);
+    const tree = JSON.stringify(screen.toJSON());
+
+    expect(tree).toContain(`"paddingHorizontal":${spacing.lg}`);
+    expect(tree).toContain(`"paddingVertical":${spacing.base}`);
   });
 });

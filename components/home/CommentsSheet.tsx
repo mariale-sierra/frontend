@@ -138,12 +138,14 @@ export function CommentsSheet({
           sheet up above it (see its own doc comment) — a KeyboardAvoidingView
           in here doesn't work reliably nested inside a Modal, and would
           double up with that anyway. */}
-      <BottomSheetModal visible={visible} onClose={onClose} height="50%">
+      {/* Glass: the feed shows through the sheet instead of being covered by it. */}
+      <BottomSheetModal visible={visible} onClose={onClose} height="50%" glass>
         <View style={styles.flexFill}>
-          <Row justify="space-between" style={styles.header}>
-            <Text variant="subheader">{t('comments.title')}</Text>
-            <IconButton name="close-outline" onPress={onClose} />
-          </Row>
+          {/* No close button: a tap outside the sheet (its backdrop), or the Android
+              back button, closes it. */}
+          <Text variant="subheader" align="center" style={styles.header}>
+            {t('comments.title')}
+          </Text>
 
           {loading ? (
             <View style={[styles.centered, styles.flexFill]}>

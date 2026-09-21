@@ -1,5 +1,13 @@
-import { memo, useCallback, useState } from 'react';
-import { Dimensions, FlatList, NativeScrollEvent, NativeSyntheticEvent, Pressable, StyleSheet, View } from 'react-native';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Animated,
+  Dimensions,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
@@ -12,11 +20,15 @@ import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeA
 
 const ITEM_WIDTH = Dimensions.get('window').width - spacing.lg * 2;
 const SEPARATOR_WIDTH = spacing.md;
-const SNAP_INTERVAL = ITEM_WIDTH + SEPARATOR_WIDTH;
+/** How far the carousel scrolls from one card to the next, in px. */
+export const ACTIVE_CHALLENGE_SNAP_INTERVAL = ITEM_WIDTH + SEPARATOR_WIDTH;
 
 interface Props {
   challenges: HomeActiveChallengeViewModel[];
   hoursLeft: number;
+  /** Fed the carousel's horizontal scroll offset as it scrolls, so something
+   * outside it (Home's background light) can follow the card in view. */
+  scrollX?: Animated.Value;
 }
 
 interface ItemProps {
@@ -90,13 +102,32 @@ function ChallengeSeparator() {
   return <View style={styles.separator} />;
 }
 
-export const ActiveChallengeSection = memo(function ActiveChallengeSection({ challenges, hoursLeft }: Props) {
+export const ActiveChallengeSection = memo(function ActiveChallengeSection({
+  challenges,
+  hoursLeft,
+  scrollX,
+}: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
 
   function handleScrollEnd(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const index = Math.round(event.nativeEvent.contentOffset.x / SNAP_INTERVAL);
+    const index = Math.round(event.nativeEvent.contentOffset.x / ACTIVE_CHALLENGE_SNAP_INTERVAL);
     setActiveIndex(Math.max(0, Math.min(index, challenges.length - 1)));
   }
+
+  // The list starts at its first card each time it is built, so the offset it
+  // reports does too (it would otherwise keep whatever it was left at).
+  useEffect(() => {
+    scrollX?.setValue(0);
+  }, [scrollX]);
+
+  // Reports the offset natively, so whatever follows it tracks the finger.
+  const handleScroll = useMemo(
+    () =>
+      scrollX
+        ? Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: true })
+        : undefined,
+    [scrollX],
+  );
 
   // Which hero card design to show — see `constants/challengeCards.ts`. The
   // newer card fills whatever it's put in, so it gets the carousel's item width
@@ -115,17 +146,19 @@ export const ActiveChallengeSection = memo(function ActiveChallengeSection({ cha
 
   return (
     <View>
-      <FlatList
+      <Animated.FlatList
         data={challenges}
         horizontal
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.challengeId}
         contentContainerStyle={styles.listContent}
         ItemSeparatorComponent={ChallengeSeparator}
-        snapToInterval={SNAP_INTERVAL}
+        snapToInterval={ACTIVE_CHALLENGE_SNAP_INTERVAL}
         snapToAlignment="start"
         decelerationRate="fast"
         disableIntervalMomentum
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         onMomentumScrollEnd={handleScrollEnd}
         renderItem={renderItem}
       />

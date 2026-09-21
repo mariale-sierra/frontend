@@ -1,79 +1,70 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Canvas, Circle, DashPathEffect, Group, vec } from '@shopify/react-native-skia';
-import { AccentDome } from '../../ui/accentDome';
-import { colors, spacing } from '../../../constants/theme';
+import { Canvas, Path } from '@shopify/react-native-skia';
+import { spacing, textOpacity } from '../../../constants/theme';
+import { PROGRESS_RING } from '../../../constants/progressRing';
+import { buildTickRingPath } from '../../../utils/tickRing';
+import { withAlpha } from '../../../utils/color';
 
 const RING_SIZE = 104;
-// How long each tick is, running in from the ring's outer edge.
-const TICK_LENGTH = 13;
-// The ring is a fixed 60 ticks (one every 6 degrees), each a 1.8-degree sliver —
-// 30% of its slot. A dashed stroke draws them all as one element.
-const TICK_COUNT = 60;
-const TICK_SHARE = 0.3;
-// The glow inside the ring is the same half-moon light as the card's, from one of
-// the face's edges at face scale — a little stronger, since it's small.
-const FACE_GLOW = {
-  domeHalfWidth: 0.62,
-  domeDepth: 0.8,
-  washPeak: 0.3,
-  bloomPeak: 0.12,
-} as const;
+
+// The ticks are the Progress screen's ring scaled down — its own tick length,
+// width and inset (`PROGRESS_RING`), times the ratio of the two ring sizes — so
+// the card's ring is a small copy of it: short, thick, rounded ticks, not long
+// thin spikes.
+const SCALE = RING_SIZE / PROGRESS_RING.size;
+const TICK_LENGTH = PROGRESS_RING.tickLength * SCALE;
+const TICK_WIDTH = PROGRESS_RING.tickWidth * SCALE;
+const TICK_INSET = PROGRESS_RING.tickInset * SCALE;
+
+// Fewer ticks than the Progress ring's 60 (`PROGRESS_RING.segmentCount`): shrunk
+// to 104px, the same 60 sit about 5px apart (the Progress ring's are about 8px
+// apart) and looked overcrowded. 36 is one every 10 degrees, about 8px apart
+// again — the same spacing as the Progress ring.
+const TICK_COUNT = 36;
+
+// The ticks are the accent color, softened — full strength was harsh for a ring
+// that only decorates (the Progress ring has a dim track between its bright ticks).
+const TICK_OPACITY = textOpacity.secondary;
 
 interface ChallengeCardTickRingProps {
-  /** The challenge's own activity color, for the ticks and the glow. */
+  /** The challenge's own activity color, for the ticks. */
   accentColor: string;
   /** What sits in the middle of the ring (a number and a caption). */
   children?: ReactNode;
-  /** The edge of the face its light comes from — the same edge as the card's own
-   * glow, so the two agree. Default `bottom`. */
-  glowEdge?: 'top' | 'bottom';
 }
 
 /**
- * A ring of accent ticks around a softly glowing face, with content in its
- * middle — the Explore card's side panel, a small echo of the tick ring on the
- * challenge's Progress screen. Drawn in one small fixed-size Skia canvas: a
- * dashed circle for the ticks, and `AccentDome` (the same light as the card's
- * glow and the screens' backdrop) clipped to the face. Centered in a column a
- * little wider than the ring itself.
+ * A ring of soft accent ticks with content in its middle — the Explore card's
+ * side panel, a small copy of the tick ring on the challenge's Progress screen.
+ * Just the ticks, as one rounded-stroke path in a small fixed-size Skia canvas:
+ * the middle is left clear, with no face or glow of its own, so the card's own
+ * gradient runs unbroken behind the number and the card reads as one piece (an
+ * opaque disc with its own glow there looked like a second gradient on the card).
+ * Centered in a column a little wider than the ring itself.
  */
-export function ChallengeCardTickRing({ accentColor, children, glowEdge = 'bottom' }: ChallengeCardTickRingProps) {
+export function ChallengeCardTickRing({ accentColor, children }: ChallengeCardTickRingProps) {
   const center = RING_SIZE / 2;
-  // The ticks are the stroke of a circle at their midline; the face is what's inside them.
-  const tickRadius = center - TICK_LENGTH / 2;
-  const faceRadius = center - TICK_LENGTH;
-  const faceSize = faceRadius * 2;
-  const faceOrigin = center - faceRadius;
-  const slot = (2 * Math.PI * tickRadius) / TICK_COUNT;
-  const tick = slot * TICK_SHARE;
-  // A rounded rect with a radius of half its side is a circle — the shape the
-  // face's light is clipped to. Plain objects, not Skia's `rect()` / `rrect()`
-  // helpers, so drawing it needs no native call.
-  const faceClip = {
-    rect: { x: faceOrigin, y: faceOrigin, width: faceSize, height: faceSize },
-    rx: faceRadius,
-    ry: faceRadius,
-  };
+  // A round stroke cap reaches half a tick width past each end of its line, so the
+  // lines are pulled in by that much to keep the ticks the Progress ring's size.
+  const ticks = buildTickRingPath({
+    center,
+    innerRadius: center - TICK_INSET - TICK_LENGTH + TICK_WIDTH / 2,
+    outerRadius: center - TICK_INSET - TICK_WIDTH / 2,
+    count: TICK_COUNT,
+  });
 
   return (
     <View style={styles.column}>
       <View style={styles.ring}>
         <Canvas style={StyleSheet.absoluteFill}>
-          {/* Starts at 12 o'clock and runs clockwise, like the Progress screen's ring
-              (a Skia circle starts at 3 o'clock, so it's turned a quarter back). */}
-          <Group transform={[{ rotate: -Math.PI / 2 }]} origin={vec(center, center)}>
-            <Circle cx={center} cy={center} r={tickRadius} style="stroke" strokeWidth={TICK_LENGTH} color={accentColor}>
-              <DashPathEffect intervals={[tick, slot - tick]} />
-            </Circle>
-          </Group>
-
-          <Circle cx={center} cy={center} r={faceRadius} color={colors.ink} />
-          <Group clip={faceClip}>
-            <Group transform={[{ translateX: faceOrigin }, { translateY: faceOrigin }]}>
-              <AccentDome width={faceSize} height={faceSize} color={accentColor} edge={glowEdge} {...FACE_GLOW} />
-            </Group>
-          </Group>
+          <Path
+            path={ticks}
+            style="stroke"
+            strokeWidth={TICK_WIDTH}
+            strokeCap="round"
+            color={withAlpha(accentColor, TICK_OPACITY)}
+          />
         </Canvas>
         {children}
       </View>

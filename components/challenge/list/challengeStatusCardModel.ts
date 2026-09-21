@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next';
 import type { Icon } from '../../ui/icon';
 import { getProgressFraction } from '../../../utils/challengeCycle';
-import { getChallengeCardColor, getChallengeGlowColor } from '../../../services/adapters/challengeState';
+import { getChallengeCardColor, getChallengeGlowColor, getChallengeGlowKey } from '../../../services/adapters/challengeState';
 import type { ChallengeMineCardViewModel } from '../../../services/adapters/challengeListAdapter';
 
 type IconName = React.ComponentProps<typeof Icon>['name'];
@@ -74,6 +74,9 @@ export function getChallengeStatusCardModel(challenge: ChallengeMineCardViewMode
     // once today is done, the activity color otherwise) — the classic card has
     // no glow and doesn't read this.
     glowColor: getChallengeGlowColor(challenge.state, challenge.dominantActivityCategory),
+    // Which mesh recipe the glow card draws (its own for a rest day and a
+    // completed one, the activity's otherwise).
+    glowKey: getChallengeGlowKey(challenge.state, challenge.dominantActivityCategory),
     stateIcon: STATE_ICON[challenge.state],
     stateLabel,
     progress: getProgressFraction(challenge.currentDay, challenge.totalDays),

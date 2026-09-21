@@ -106,7 +106,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
         </Text>
       ) : null}
 
-      <Row justify="space-between" align="center">
+      <Row justify="space-between" align="center" style={styles.actions}>
         <Row gap="lg" justify="flex-start">
           <Row
             pressable
@@ -155,6 +155,11 @@ const styles = StyleSheet.create({
   },
   header: {
     justifyContent: 'flex-start',
+  },
+  // The like / comment / send row sits well below the photo and the caption: on top
+  // of the card's own `sm` gap, another `md`.
+  actions: {
+    marginTop: spacing.md,
   },
   photo: {
     width: '100%',

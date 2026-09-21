@@ -10,7 +10,7 @@ import type { ChallengeVisibility } from '../types/challenge';
 import { useChallengeBuilder } from '../store/challengeBuilderStore';
 import { getRoutineLocationSummary, useRoutineBuilder } from '../store/routineBuilderStore';
 import { colors, activityColors } from '../constants/theme';
-import { CATEGORY_TO_ACTIVITY, ACTIVITY_TO_CATEGORY } from '../constants/challengeFilters';
+import { CATEGORY_TO_ACTIVITY } from '../constants/challengeFilters';
 import type { ActivityType } from '../types/activity';
 import { useTranslation } from 'react-i18next';
 import { createChallengeNameSchema, type ChallengeNameFormValues } from '../validation/challengeSchemas';
@@ -127,18 +127,17 @@ export function useCreateChallengeFlow() {
       title: t('challengeCreate.steps.name.title'),
       description: t('challengeCreate.steps.name.description'),
     },
-    // 'activityLocation' ("What kind of training?") deprecated 2026-09-04,
-    // per explicit request — NOT deleted, just omitted from the step
-    // sequence: create.tsx's `case 'activityLocation':` branch, the
-    // toggleCategory/toggleLocation actions, and selectedCategories/
-    // selectedLocations in the store are all still intact below. Reason:
-    // the exercise picker (app/challenge/routine/exercises.tsx) already has
-    // its own Categories/Locations/Muscles filters, so asking the user to
-    // guess a challenge-wide category/location before they've even picked
-    // an exercise was redundant. Categories/locations are now derived AFTER
-    // the fact from whichever exercises actually end up in the built
-    // routines — see `derivedCategories`/`derivedLocations` below, used for
-    // both the Review step's read-only summary and the real submit payload.
+    // "What kind of training?" — the challenge's activity categories and locations.
+    // It was taken out of the sequence on 2026-09-04 (the picker has its own filters,
+    // so it looked redundant) and put back 2026-09-20, on explicit request: these
+    // choices are what LIMIT the exercises the picker offers
+    // (app/challenge/routine/exercises.tsx, routine/select.tsx), so they have to be
+    // made first.
+    {
+      kind: 'activityLocation',
+      title: t('challengeCreate.steps.activityLocation.title'),
+      description: t('challengeCreate.steps.activityLocation.description'),
+    },
     {
       kind: 'cycle',
       title: t('challengeCreate.steps.cycle.title'),
@@ -182,58 +181,24 @@ export function useCreateChallengeFlow() {
     labels: validationLabels,
   });
 
-  // Categories/locations are no longer a manual, independently-validated
-  // field (see the 'activityLocation' deprecation note in `steps` above) —
-  // they're derived from whatever exercises actually ended up in the
-  // routines, so `hasRoutineForEveryDay` (already required below) is the
-  // one real gate that also guarantees derivedCategories/derivedLocations
-  // end up non-empty in the normal case.
   const missingConfigurationFields = useMemo(() => {
     const missing: string[] = [];
 
     if (title.trim().length === 0) missing.push(validationLabels.challengeName);
+    if (selectedCategories.length === 0) missing.push(validationLabels.exerciseCategories);
+    if (selectedLocations.length === 0) missing.push(validationLabels.challengeLocation);
     if (!hasRoutineForEveryDay) missing.push(validationLabels.configureEveryDay);
     if (!visibility) missing.push(validationLabels.visibility);
 
     return missing;
   }, [
     title,
+    selectedCategories,
+    selectedLocations,
     hasRoutineForEveryDay,
     visibility,
     validationLabels,
   ]);
-
-  // Derived from the exercises actually picked across every configured
-  // cycle day — replaces the old manual selectedCategories/selectedLocations
-  // as the real source of truth for both the Review step's read-only
-  // summary and the submitted payload. Empty only if every day is a rest
-  // day (no exercises anywhere in the cycle).
-  const derivedCategories = useMemo(() => {
-    const seen = new Set<string>();
-    const result: string[] = [];
-    for (let day = 1; day <= cycleLengthDays; day += 1) {
-      const routine = routinesByDay[day];
-      if (!routine || routine.isRestDay) continue;
-      for (const exercise of routine.exercises) {
-        const name = ACTIVITY_TO_CATEGORY[exercise.activityType];
-        if (name && !seen.has(name)) {
-          seen.add(name);
-          result.push(name);
-        }
-      }
-    }
-    return result;
-  }, [cycleLengthDays, routinesByDay]);
-
-  const derivedLocations = useMemo(() => {
-    const exercises = Array.from({ length: cycleLengthDays }, (_, index) => index + 1)
-      .flatMap((day) => {
-        const routine = routinesByDay[day];
-        return routine && !routine.isRestDay ? routine.exercises : [];
-      });
-    const summary = getRoutineLocationSummary(exercises);
-    return summary ? summary.split('/').map((value) => value.trim()).filter(Boolean) : [];
-  }, [cycleLengthDays, routinesByDay]);
 
   // Single source of truth for "is the form complete": derived from the same
   // `missingConfigurationFields` list used to build the submit-blocking hint, rather than
@@ -310,8 +275,8 @@ export function useCreateChallengeFlow() {
       visibility,
       cycleLengthDays,
       cyclesCount,
-      selectedCategories: derivedCategories,
-      selectedLocations: derivedLocations,
+      selectedCategories,
+      selectedLocations,
       routinesByDay,
     });
 
@@ -474,8 +439,6 @@ export function useCreateChallengeFlow() {
     visibility,
     selectedCategories,
     selectedLocations,
-    derivedCategories,
-    derivedLocations,
     currentStep,
     activeStep,
     steps,

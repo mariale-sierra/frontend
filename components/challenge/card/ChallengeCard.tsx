@@ -3,6 +3,8 @@ import { StyleSheet, View } from 'react-native';
 import { AccentCard } from '../../ui/accentCard';
 import { Text } from '../../ui/text';
 import { spacing } from '../../../constants/theme';
+import { USE_MESH_CARD_GLOW } from '../../../constants/challengeCards';
+import type { MeshRecipe } from '../../../constants/meshRecipes';
 import { challengeCardText } from './challengeCardText';
 
 /** Fixed height of the list cards (Challenges-Mine and Explore) — the loading
@@ -31,8 +33,10 @@ interface ChallengeCardProps {
   side?: ReactNode;
   /** See `ChallengeCardSizing`. Default `fixed`. */
   sizing?: ChallengeCardSizing;
-  /** The edge the glow comes from. Default `bottom`. */
-  glowEdge?: 'top' | 'bottom';
+  /** The mesh recipe for the card's glow (see `getMeshRecipe`); the plain
+   * half-moon from the bottom edge when unset — or when `USE_MESH_CARD_GLOW` is
+   * off, which is the revert. */
+  glowRecipe?: MeshRecipe;
 }
 
 /**
@@ -55,12 +59,12 @@ export function ChallengeCard({
   footer,
   side,
   sizing = 'fixed',
-  glowEdge,
+  glowRecipe,
 }: ChallengeCardProps) {
   return (
     <AccentCard
       color={accentColor}
-      glowEdge={glowEdge}
+      glowRecipe={USE_MESH_CARD_GLOW ? glowRecipe : undefined}
       style={[styles.card, sizing === 'fill' ? styles.fill : styles.fixed]}
     >
       <View style={[styles.content, !side && styles.contentAlone]}>

@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native';
 import { fireEvent } from '@testing-library/react-native';
 import { renderWithProviders } from '../../../../test-utils/renderWithProviders';
 import { ChallengeStatusCard } from '../ChallengeStatusCard';
@@ -31,7 +32,25 @@ describe('Mine card (glow design) glow color', () => {
     expect(JSON.stringify(screen.toJSON())).toContain(`${color}4D`);
   });
 
-  it('hangs its glow from the top, so the progress track is the light groove', async () => {
+  it('sets the camera and the Add photo label in plain paper, not the accent color', async () => {
+    const screen = await renderWithProviders(<ChallengeStatusCardV2 challenge={buildChallenge()} />);
+
+    expect(StyleSheet.flatten(screen.getByText('Add photo').props.style)).toMatchObject({
+      color: colors.paper,
+      opacity: 1,
+    });
+    // The camera icon is drawn in paper too.
+    expect(JSON.stringify(screen.toJSON())).toMatch(/"name":"camera-outline","size":26,"color":"#FFFFFF"/);
+  });
+
+  it('keeps the photo tile a darker ink inset, so the paper camera stands out', async () => {
+    const screen = await renderWithProviders(<ChallengeStatusCardV2 challenge={buildChallenge()} />);
+
+    // `ink` at 62% (`withAlpha` appends the alpha byte 0x9E).
+    expect(JSON.stringify(screen.toJSON())).toContain(`"backgroundColor":"${colors.ink}9E"`);
+  });
+
+  it('draws its progress track as the light groove, since its text side is scrimmed dark', async () => {
     const screen = await renderWithProviders(<ChallengeStatusCardV2 challenge={buildChallenge()} />);
 
     // `paper` at 12% (`withAlpha` appends the alpha byte, 0x1F).

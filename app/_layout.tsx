@@ -7,6 +7,7 @@ import { InterTight_700Bold } from '@expo-google-fonts/inter-tight';
 import { AuthProvider } from '../context/authContext';
 import { ThemeProvider } from '../context/themeContext';
 import { useAuth } from '../hooks/useAuth';
+import { ChallengeFinishedPopup } from '../components/ui/ChallengeFinishedPopup';
 import { UploadSuccessPopup } from '../components/ui/UploadSuccessPopup';
 import { ErrorNotificationProvider } from '../components/ui/ErrorNotificationProvider';
 import i18n, { PREFERRED_LANGUAGE_KEY } from '../i18n';
@@ -130,6 +131,7 @@ export default function RootLayout() {
           <ErrorNotificationProvider>
             <RootNavigator />
             <UploadSuccessPopup />
+            <ChallengeFinishedPopup />
           </ErrorNotificationProvider>
         </AuthProvider>
       </ThemeProvider>

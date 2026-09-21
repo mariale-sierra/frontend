@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { Animated, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +11,7 @@ import { Icon } from '../../components/ui/icon';
 import { Loader } from '../../components/ui/loader';
 import { Text } from '../../components/ui/text';
 import { Row } from '../../components/layout/row';
-import { ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
+import { ACTIVE_CHALLENGE_SNAP_INTERVAL, ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
 import { FeedPostCard } from '../../components/home/FeedPostCard';
 import { FriendsStreakSection } from '../../components/home/FriendsStreakSection';
 import type { FriendStreakViewModel } from '../../services/adapters/followAdapter';
@@ -19,7 +19,7 @@ import { HomeContentSkeleton } from '../../components/home/HomeContentSkeleton';
 import { EmptyFeed } from '../../components/home/EmptyFeed';
 import { FeedErrorState } from '../../components/home/FeedErrorState';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
-import { getHomeChallengesSorted } from '../../services/adapters/homeAdapter';
+import { getHomeChallengesSorted, getHomeGlowColors } from '../../services/adapters/homeAdapter';
 import { groupLatestPhotoByChallengeId } from '../../services/adapters/challengeState';
 import { getMyChallenges } from '../../services/user/user.service';
 import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
@@ -29,6 +29,7 @@ import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
 import { getFollowingStreaks } from '../../services/follow/follow.service';
 import { toFriendStreakViewModels } from '../../services/adapters/followAdapter';
 import { colors, spacing } from '../../constants/theme';
+import { HOME_GRADIENT_EDGE, HOME_GRADIENT_SCROLLS, USE_HOME_ACTIVITY_GRADIENT } from '../../constants/screenBackground';
 import { formatTodayLabel, hoursUntilMidnight } from '../../utils/time';
 
 function FeedSeparator() {
@@ -47,6 +48,25 @@ export default function Home() {
   // fetched "current" challenge from /challenges/progress.
   const [challenges, setChallenges] = useState<HomeActiveChallengeViewModel[]>([]);
   const [challengeLoading, setChallengeLoading] = useState(true);
+
+  // The carousel's scroll offset, which the background light follows: it takes
+  // the color of the card in view, cross-fading to the next as the carousel scrolls.
+  const carouselScrollX = useRef(new Animated.Value(0)).current;
+
+  // How far the feed is scrolled, so the background light rides up with the page
+  // instead of staying fixed behind the posts.
+  const listScrollY = useRef(new Animated.Value(0)).current;
+  const handleListScroll = useMemo(
+    () => Animated.event([{ nativeEvent: { contentOffset: { y: listScrollY } } }], { useNativeDriver: true }),
+    [listScrollY],
+  );
+  const backgroundPages = useMemo(
+    () =>
+      USE_HOME_ACTIVITY_GRADIENT
+        ? { colors: getHomeGlowColors(challenges), scrollX: carouselScrollX, pageWidth: ACTIVE_CHALLENGE_SNAP_INTERVAL }
+        : undefined,
+    [carouselScrollX, challenges],
+  );
 
   const [feedPosts, setFeedPosts] = useState<FeedPostViewModel[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
@@ -241,7 +261,7 @@ export default function Home() {
         <>
           <View style={styles.challengeArea}>
             {challenges.length > 0 ? (
-              <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
+              <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} scrollX={carouselScrollX} />
             ) : (
               <View style={styles.center}>
                 <Text variant="body" tone="secondary">{t('home.noActiveChallenge')}</Text>
@@ -262,7 +282,7 @@ export default function Home() {
       )}
       </View>
     ),
-    [challenges, friendStreaks, friendStreaksError, hoursLeft, isReady, router, t, username],
+    [carouselScrollX, challenges, friendStreaks, friendStreaksError, hoursLeft, isReady, router, t, username],
   );
   const listEmptyComponent = useMemo(
     () => (!isReady ? null : feedError ? <FeedErrorState /> : <EmptyFeed />),
@@ -274,8 +294,14 @@ export default function Home() {
   );
 
   return (
-    <ScreenBackground variant="default" gradientBackground>
-      <FlatList
+    <ScreenBackground
+      variant="default"
+      gradientBackground
+      gradientEdge={HOME_GRADIENT_EDGE}
+      gradientPages={backgroundPages}
+      gradientScrollY={HOME_GRADIENT_SCROLLS ? listScrollY : undefined}
+    >
+      <Animated.FlatList
         data={isReady ? feedPosts : []}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
@@ -289,6 +315,8 @@ export default function Home() {
             </View>
           ) : null
         }
+        onScroll={handleListScroll}
+        scrollEventThrottle={16}
         onEndReached={loadMoreFeed}
         onEndReachedThreshold={0.4}
         initialNumToRender={4}

@@ -1,9 +1,12 @@
 import { StyleSheet, View } from 'react-native';
+import { PROGRESS_RING } from '../../../constants/progressRing';
 
-const RING_SIZE = 180;
-const TICK_LENGTH = 14;
-const TICK_WIDTH = 3;
-const TICK_INSET = 3;
+// The ring's geometry is shared (see `PROGRESS_RING`) with the Explore card's
+// small echo of it.
+const RING_SIZE = PROGRESS_RING.size;
+const TICK_LENGTH = PROGRESS_RING.tickLength;
+const TICK_WIDTH = PROGRESS_RING.tickWidth;
+const TICK_INSET = PROGRESS_RING.tickInset;
 
 interface ChallengeProgressRingProps {
   /** One resolved color per day, evenly spaced clockwise from 12 o'clock — the caller

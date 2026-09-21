@@ -85,12 +85,12 @@ describe('SpaceCard', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the member count and category badge', async () => {
+  it('renders the member count, and no category badge', async () => {
     const screen = await renderWithTheme(
       <SpaceCard space={buildSpace()} onPress={jest.fn()} onPressCta={jest.fn()} />,
     );
 
-    expect(screen.getByText('Cardio Low')).toBeTruthy();
+    expect(screen.queryByText('Cardio Low')).toBeNull();
     // Real bug this test previously couldn't catch: `react-i18next` is
     // mocked here (no real pluralization), so this assertion used to encode
     // the ACTUAL production bug (passing `formatCount()`'s string output as

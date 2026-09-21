@@ -33,7 +33,7 @@ export function isRestDay(
 }
 
 /**
- * Per-day status for the Consistency ring/calendar — one shared priority
+ * Per-day status for the progress ring and the calendar — one shared priority
  * order so the ring's segments and the calendar's dot colors can never
  * disagree about the same day:
  * 1. `photo` — the user has a photo logged for this day (wins even on a
@@ -64,79 +64,64 @@ export function classifyDay(params: {
 }
 
 /**
- * Consistency-ring segment percentages (0–1) — denominator is the WHOLE
- * challenge span (1..totalDays), so the ring always reads as real progress
- * out of the full challenge, not just days elapsed. `photoPercent` takes
- * priority over `restPercent` for a given day (matches `classifyDay`'s
- * priority — logging on a rest day counts as a photo day, not a rest day).
+ * The ring's tick colors, laid out by DAY: the ring is the whole challenge, day 1
+ * at 12 o'clock and the last day at the end of the circle, and each stretch of it
+ * takes the color of the day it stands for — the activity color for a day with a
+ * photo, the rest color for a rest day that has been reached, and the empty track
+ * for everything else (today and the days to come, and a day that was MISSED).
+ * So a missed day stays an empty gap where it is, and whatever comes after it is
+ * filled after the gap; only a challenge where every day was done is a full circle.
+ * (This used to count the photo days and the rest days and fill that many ticks
+ * from the start, one run of each, so missing a day just made the ring a little
+ * shorter, and the rest ticks always came right after the photo ones.)
  *
- * `restCount` only counts rest days already reached (`day <= currentDay`) —
- * a future rest day hasn't happened yet and shouldn't already read as
- * "ticked off" on day 1 (fixed 2026-08-29, matches `classifyDay`'s own
- * `future`-before-`rest` priority so the ring and the calendar agree).
- * `photoCount` needs no such guard — `photoDays` can only ever contain days
- * the user has actually logged, which can't be in the future.
+ * A fixed `segmentCount` of ticks stands for the `totalDays` days whatever their
+ * number — a 10-day and a 75-day challenge are the same dense dial (tying the tick
+ * count to the length made short challenges look sparse). So a tick covers some
+ * days (`totalDays / segmentCount`, over 1 for a long challenge) or a part of one
+ * (a short challenge draws each day as a run of ticks). A tick that covers days of
+ * different kinds takes the kind that covers most of it, the photo day winning a
+ * tie — a long challenge's missed day is not lost, but not blown up either.
  *
- * Deliberately percentage-based, not "one tick per day" — a fixed number of
- * ring ticks (see ChallengeProgressRing) rendered from these two percents
- * looks the same density for a 10-day challenge as a 75-day one; tying tick
- * count to `totalDays` made short challenges look sparse/broken.
+ * Colors are passed in rather than imported so this stays a pure, theme-agnostic,
+ * easily-tested function; `statusOf` is what says how each day went (see
+ * `classifyDay`).
  */
-export function computeConsistencyPercents(params: {
-  totalDays: number;
-  currentDay: number;
-  cycleLengthDays: number;
-  cycleDays: ChallengeCycleDayContract[];
-  photoDays: Set<number>;
-}): { photoPercent: number; restPercent: number } {
-  const { totalDays, currentDay, cycleLengthDays, cycleDays, photoDays } = params;
-  if (totalDays <= 0) return { photoPercent: 0, restPercent: 0 };
-
-  let photoCount = 0;
-  let restCount = 0;
-
-  for (let day = 1; day <= totalDays; day += 1) {
-    if (photoDays.has(day)) {
-      photoCount += 1;
-    } else if (day <= currentDay && isRestDay(day, cycleLengthDays, cycleDays)) {
-      restCount += 1;
-    }
-  }
-
-  return {
-    photoPercent: photoCount / totalDays,
-    restPercent: restCount / totalDays,
-  };
-}
-
-/**
- * Resolves a fixed `segmentCount` of ring-tick colors from the two
- * percentages above — colors passed in rather than imported so this stays a
- * pure, theme-agnostic, easily-testable function (ChallengeProgressRing's
- * caller supplies the real theme tokens).
- */
-export function buildRingTicks(params: {
+export function buildDayRingTicks(params: {
   segmentCount: number;
-  photoPercent: number;
-  restPercent: number;
+  totalDays: number;
+  statusOf: (challengeDay: number) => DayStatus;
   photoColor: string;
   restColor: string;
   trackColor: string;
 }): string[] {
-  const { segmentCount, photoPercent, restPercent, photoColor, restColor, trackColor } = params;
+  const { segmentCount, totalDays, statusOf, photoColor, restColor, trackColor } = params;
   if (segmentCount <= 0) return [];
+  if (totalDays <= 0) return Array.from({ length: segmentCount }, () => trackColor);
 
-  const photoBoundary = Math.max(0, Math.min(1, photoPercent));
-  const restBoundary = Math.max(photoBoundary, Math.min(1, photoBoundary + restPercent));
+  const statuses = Array.from({ length: totalDays }, (_, index) => statusOf(index + 1));
+  // Tolerance for comparing lengths that are fractions of a day.
+  const EPSILON = 1e-9;
 
   return Array.from({ length: segmentCount }, (_, index) => {
-    const midpoint = (index + 0.5) / segmentCount;
-    if (midpoint < photoBoundary) return photoColor;
-    if (midpoint < restBoundary) return restColor;
+    // This tick covers days `start` to `end` (in days from the challenge's start).
+    const start = (index * totalDays) / segmentCount;
+    const end = ((index + 1) * totalDays) / segmentCount;
+
+    let photo = 0;
+    let rest = 0;
+    for (let day = Math.floor(start); day < Math.ceil(end) && day < totalDays; day += 1) {
+      const covered = Math.min(end, day + 1) - Math.max(start, day);
+      if (statuses[day] === 'photo') photo += covered;
+      else if (statuses[day] === 'rest') rest += covered;
+    }
+    const empty = end - start - photo - rest;
+
+    if (photo > EPSILON && photo + EPSILON >= rest && photo + EPSILON >= empty) return photoColor;
+    if (rest > EPSILON && rest + EPSILON >= empty) return restColor;
     return trackColor;
   });
 }
-
 
 /**
  * How far along a challenge is, as a share of its length (0 to 1) — the fill of

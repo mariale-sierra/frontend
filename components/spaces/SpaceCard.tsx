@@ -16,10 +16,12 @@ interface SpaceCardProps {
  * Based on wireframe Chats-46A, in the same card format as the challenge cards
  * (see `SpaceCardView`): the space's own Activity Color (see
  * spaceAdapter.getSpaceAccentColor) as a soft outline and a glow rising from the
- * bottom edge, a category badge, the space name and description, a member count
- * row, and a Join / Request to join pill in that color (Join carries a trailing
- * arrow) — or a neutral outlined "Pending" pill once a request is in.
- * Restyled 2026-09-20 (explicit request); the content and behavior are unchanged.
+ * bottom edge (and, since 2026-09-20, the top edge too), the space name and
+ * description, a member count row, and a Join / Request to join pill in that color
+ * (Join carries a trailing arrow) — or a neutral `surface` "Pending" pill once a
+ * request is in. Restyled 2026-09-20 (explicit request), and again the same day
+ * (no category badge, roomier padding, the twin glow, the surface pending pill);
+ * the behavior is unchanged.
  */
 export function SpaceCard({ space, onPress, onPressCta, ctaLoading = false }: SpaceCardProps) {
   const { t } = useTranslation();
@@ -31,7 +33,6 @@ export function SpaceCard({ space, onPress, onPressCta, ctaLoading = false }: Sp
       <SpaceCardView
         name={space.name}
         description={space.description}
-        categoryName={space.activityCategory?.name}
         membersCount={space.membersCount}
         accentColor={accentColor}
         cta={
@@ -44,7 +45,7 @@ export function SpaceCard({ space, onPress, onPressCta, ctaLoading = false }: Sp
               onPress={onPressCta}
             />
           ) : cta.kind === 'pending' ? (
-            <AccentPill variant="outline" label={t('spaces.pendingCta')} />
+            <AccentPill variant="surface" label={t('spaces.pendingCta')} />
           ) : undefined
         }
       />

@@ -15,8 +15,8 @@ import { ACTIVITY_METRIC_CONFIG } from '../../types/metrics';
 import type { LocationType } from '../../components/icons/locationIcon';
 import type { ChallengeContract, ChallengePhoto, TodayRoutineContract } from '../../types/challenge';
 import type { ActivityType } from '../../types/activity';
-import { asString } from './adapterUtils';
-import { pickChallengeStatus, pickDominantActivityCategory } from './challengeState';
+import { asNumber, asString } from './adapterUtils';
+import { deriveChallengeCardState, pickChallengeStatus, pickDominantActivityCategory } from './challengeState';
 import { pickCurrentDay, pickIsRestDay, pickTodayCompleted } from './homeAdapter';
 
 const ALLOWED_ACTIVITY_CATEGORIES = new Set<ActivityCategory>(
@@ -36,13 +36,12 @@ function sanitizeLocations(locations: unknown[]): LocationType[] {
   );
 }
 
-/** Log-today's-progress bottom sheet — one row per active challenge that
- * can actually receive a log today (rest days and already-logged-today
+/** Log-today's-progress picker — one card per active challenge that can
+ * actually receive a log today (rest days and already-logged-today
  * challenges excluded, see below). */
 export interface LogChallengeQuickPick {
   id: string;
   name: string;
-  currentDay: number;
   /** From the same `GET /workout-posts/mine` grouping the challenge cards
    * already use (challengeState.ts's groupLatestPhotoByChallengeId) — this
    * user's own latest photo for the challenge, or null if they haven't
@@ -60,36 +59,41 @@ export interface LogChallengeQuickPick {
  * per-challenge, would — an N+1 fetch this list can't afford). See the
  * design system skill's Open Items Tracker for the backend gap.
  *
- * Rest-day challenges are excluded entirely, not just visually de-emphasized
- * — there's nothing to log on a rest day, so it's not a valid quick-pick
- * target at all. Same for a challenge whose TODAY already has a logged
- * photo (this user's own latest photo's `.day` matches today's cycle day,
- * the same "completed" check `deriveChallengeCardState()` uses) — logging
- * again would just be a second entry for a day that's already done.
+ * Only a challenge in the `active` state (`deriveChallengeCardState`, the one
+ * state machine Home's and Mine's cards use too) gets a card, so this list can
+ * never disagree with them. Everything else is left out entirely, not just
+ * visually de-emphasized: a finished (`won`) or abandoned (`left`) challenge, one
+ * whose TODAY is `completed` — already logged, by a photo (this user's own latest
+ * photo's `.day` matches today's cycle day) or by a submitted rest day (the
+ * server's `completedToday`; fixed 2026-08-29, a real bug, because an ad-hoc rest
+ * day has no photo) — and a `rest` day, when there is nothing to log. Logging again
+ * would just be a second entry for a day that's already done.
  *
- * Also excludes a challenge whose today is already `completedToday`
- * server-side (fixed 2026-08-29, real bug) — a submitted ad-hoc rest day
- * (via the Log-Metrics screen's own "Rest day" button) has no photo and
- * isn't a cycle-scheduled rest day either, so neither check above caught
- * it; the challenge kept showing here as if nothing had been logged. */
+ * Also left out: a challenge whose days have run out (`currentDay` past its
+ * length) but was never marked completed — it is over, whatever its status says. */
 export function getLogChallengeQuickPicks(
   challenges: ChallengeContract[],
   latestPhotoByChallengeId: Map<string, ChallengePhoto>,
 ): LogChallengeQuickPick[] {
   return challenges
     .filter((challenge) => {
-      if (pickChallengeStatus(challenge) !== 'active') return false;
-      if (pickIsRestDay(challenge)) return false;
-      if (pickTodayCompleted(challenge)) return false;
       const currentDay = pickCurrentDay(challenge);
-      const latestPhotoDay = latestPhotoByChallengeId.get(String(challenge.id))?.day ?? null;
-      if (latestPhotoDay != null && latestPhotoDay === currentDay) return false;
-      return true;
+      const totalDays = asNumber(challenge.duration_days) ?? 0;
+      if (totalDays > 0 && currentDay > totalDays) return false;
+
+      return (
+        deriveChallengeCardState({
+          status: pickChallengeStatus(challenge),
+          isRestDay: pickIsRestDay(challenge),
+          currentDay,
+          latestPhotoDay: latestPhotoByChallengeId.get(String(challenge.id))?.day ?? null,
+          completedToday: pickTodayCompleted(challenge),
+        }) === 'active'
+      );
     })
     .map((challenge) => ({
       id: String(challenge.id),
       name: asString(challenge.name) || 'Challenge',
-      currentDay: pickCurrentDay(challenge),
       photoUrl: latestPhotoByChallengeId.get(String(challenge.id))?.imageUrl ?? null,
       dominantActivityCategory: pickDominantActivityCategory(challenge),
     }));

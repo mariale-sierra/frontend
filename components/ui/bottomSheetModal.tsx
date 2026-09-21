@@ -2,8 +2,9 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Keyboard, Modal, Platform, Pressable, StyleSheet } from 'react-native';
 import type { KeyboardEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radius, shadows, spacing } from '../../constants/theme';
+import { colors, fillOpacity, radius, shadows, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
+import { GlassBackdrop, glassBorderStyle } from './glassSurface';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const ANIM_DURATION = 260;
@@ -23,6 +24,10 @@ interface BottomSheetModalProps {
    * composer to rise into (real, reported bug: "displays at the bottom,
    * not up to half the screen"). */
   height?: `${number}%`;
+  /** Makes the sheet frosted glass — the blur, the translucent `surface` tint and
+   * the hairline rim the nav bar and the toggles have — instead of an opaque
+   * `surface` card, so what is behind it shows through (the comments sheet). */
+  glass?: boolean;
 }
 
 /** Shared bottom-sheet shell for the exercise filter sheets (categories,
@@ -33,7 +38,7 @@ interface BottomSheetModalProps {
  * together, which visibly dragged the backdrop up from the bottom along
  * with the sheet (real reported bug). Both layers are absolutely
  * positioned so neither depends on Modal's default flex stacking. */
-export function BottomSheetModal({ visible, onClose, children, maxHeight = '70%', height }: BottomSheetModalProps) {
+export function BottomSheetModal({ visible, onClose, children, maxHeight = '70%', height, glass = false }: BottomSheetModalProps) {
   const insets = useSafeAreaInsets();
   const [mounted, setMounted] = useState(visible);
   const progress = useRef(new Animated.Value(0)).current;
@@ -88,12 +93,14 @@ export function BottomSheetModal({ visible, onClose, children, maxHeight = '70%'
 
   return (
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={onClose}>
+      {/* A tap anywhere outside the sheet closes it. */}
+      <Pressable testID="bottom-sheet-backdrop" style={StyleSheet.absoluteFill} onPress={onClose}>
         <Animated.View style={[styles.backdrop, { opacity: progress }]} />
       </Pressable>
       <Animated.View
         style={[
           styles.sheet,
+          glass && styles.glassSheet,
           {
             maxHeight,
             ...(height ? { height } : null),
@@ -112,6 +119,7 @@ export function BottomSheetModal({ visible, onClose, children, maxHeight = '70%'
           },
         ]}
       >
+        {glass ? <GlassBackdrop /> : null}
         {children}
       </Animated.View>
     </Modal>
@@ -121,7 +129,7 @@ export function BottomSheetModal({ visible, onClose, children, maxHeight = '70%'
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: withAlpha('#000000', 0.5),
+    backgroundColor: withAlpha(colors.ink, fillOpacity.dim),
   },
   sheet: {
     position: 'absolute',
@@ -134,5 +142,14 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingHorizontal: spacing.lg,
     ...shadows.lg,
+  },
+  // A glass sheet is see-through, with its own rim, and clips its blur to the rounded
+  // top corners. (No shadow: `overflow: 'hidden'` would clip it anyway.)
+  glassSheet: {
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
+    shadowOpacity: 0,
+    elevation: 0,
+    ...glassBorderStyle,
   },
 });

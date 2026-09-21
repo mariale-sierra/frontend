@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -16,17 +16,10 @@ import type { ChallengeMineCardViewModel } from '../../services/adapters/challen
 import { colors, radius, spacing } from '../../constants/theme';
 import { getChallenges, getMyProgressPhotos } from '../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../services/user/user.service';
-import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../../services/adapters';
+import { toChallengeMineViewModels, toExploreChallengeViewModels, withoutFinishedChallenges } from '../../services/adapters';
 import { groupLatestPhotoByChallengeId } from '../../services/adapters/challengeState';
-import { useChallengeCompletion } from '../../hooks/useConfirmationPopup';
-import { storage } from '../../utils/storage';
-
-// Persisted (not just in-memory) so a challenge that already showed its
-// completion celebration doesn't show it again on every fresh app launch —
-// a real bug: the old in-memory-only `useRef` Set reset on every cold start,
-// so the SAME "you finished it!" popup re-appeared every day the user
-// reopened the app, for every already-won challenge, forever. Fixed 2026-08-28.
-const SHOWN_COMPLETIONS_KEY = 'shown_challenge_completions';
+import { useChallengeFinishedStore } from '../../store/challengeFinishedStore';
+import { hasShownCompletion, markCompletionShown } from '../../utils/shownCompletions';
 
 function ChallengeListSeparator() {
   return <View style={styles.separator} />;
@@ -61,41 +54,12 @@ export default function Challenges() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Celebration popup for a challenge that just flipped to `won` (the whole
-  // challenge finished — see challengeState.ts's deriveChallengeCardState),
-  // NOT the per-day `completed` state. Tracks which challengeIds have
-  // already shown it — persisted to storage (SHOWN_COMPLETIONS_KEY above),
-  // not just an in-memory Set, so it doesn't re-trigger on every fresh app
-  // launch, only genuinely once per challenge ever.
-  const completion = useChallengeCompletion();
-  const { show: showCompletion } = completion;
-  const shownCompletions = useRef(new Set<string>());
-  const [shownCompletionsLoaded, setShownCompletionsLoaded] = useState(false);
-
-  // Load the persisted "already shown" set once on mount, before the focus
-  // effect below is allowed to show anything — otherwise the first focus
-  // could show a popup for a challenge that was already celebrated in a
-  // previous session, in the brief window before this resolves.
-  useEffect(() => {
-    let active = true;
-    storage
-      .getItem(SHOWN_COMPLETIONS_KEY)
-      .then((raw) => {
-        if (!active || !raw) return;
-        try {
-          const ids = JSON.parse(raw);
-          if (Array.isArray(ids)) shownCompletions.current = new Set(ids);
-        } catch {
-          // Corrupt/old value — treat as empty, not fatal.
-        }
-      })
-      .finally(() => {
-        if (active) setShownCompletionsLoaded(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  // The "Challenge complete" popup is global (`ChallengeFinishedPopup`, at the app
+  // root) and normally shows the moment the last day is logged. This is the
+  // fallback for a challenge that finished without this device seeing it (another
+  // device, or an older build), so it is shown here once — `shownCompletions`
+  // keeps it to once per challenge EVER, across launches and across the two places.
+  const showChallengeFinished = useChallengeFinishedStore((state) => state.show);
 
   // Shared fetch used both by the focus-refetch effect below and by
   // pull-to-refresh — `isActive` mirrors the effect's own `active` closure
@@ -113,20 +77,20 @@ export default function Challenges() {
         const enrolled = enrolledRaw ?? [];
         const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(myPhotos ?? []);
         const mineViewModels = toChallengeMineViewModels(enrolled, latestPhotoByChallengeId);
-        setMineChallenges(mineViewModels);
+        // A finished challenge (`won`) is not in Mine any more — Mine is what you
+        // are still doing. It was celebrated when it finished (or is, just below).
+        setMineChallenges(withoutFinishedChallenges(mineViewModels));
 
-        if (shownCompletionsLoaded) {
-          for (const challenge of mineViewModels) {
-            if (challenge.state === 'won' && !shownCompletions.current.has(challenge.challengeId)) {
-              shownCompletions.current.add(challenge.challengeId);
-              storage.setItem(SHOWN_COMPLETIONS_KEY, JSON.stringify(Array.from(shownCompletions.current)));
-              showCompletion({
-                challengeId: challenge.challengeId,
-                challengeName: challenge.title,
-                totalDays: challenge.totalDays,
-              });
-            }
+        for (const challenge of mineViewModels) {
+          if (challenge.state === 'won' && !(await hasShownCompletion(challenge.challengeId))) {
+            await markCompletionShown(challenge.challengeId);
+            showChallengeFinished({
+              challengeId: challenge.challengeId,
+              challengeName: challenge.title,
+              totalDays: challenge.totalDays,
+            });
           }
+          if (!isActive()) return;
         }
 
         // GET /challenges (getChallenges) returns every challenge, joined
@@ -146,7 +110,7 @@ export default function Challenges() {
         setError(t('challenges.loadError'));
       }
     },
-    [t, showCompletion, shownCompletionsLoaded],
+    [t, showChallengeFinished],
   );
 
   // Refetches on focus (not just on mount) so joining/leaving/completing a
@@ -256,7 +220,6 @@ export default function Challenges() {
         <View style={styles.skeletonWrap}>
           <ChallengesContentSkeleton />
         </View>
-        <completion.Component />
       </ScreenBackground>
     );
   }
@@ -268,7 +231,6 @@ export default function Challenges() {
         <View style={styles.center}>
           <Text tone="secondary">{error}</Text>
         </View>
-        <completion.Component />
       </ScreenBackground>
     );
   }
@@ -318,8 +280,6 @@ export default function Challenges() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         />
       )}
-
-      <completion.Component />
     </ScreenBackground>
   );
 }

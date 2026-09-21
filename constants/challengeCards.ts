@@ -15,12 +15,15 @@
 export const USE_GLOW_CHALLENGE_CARDS = true;
 
 /**
- * Which edge of the card the glow comes from on the glow cards in the
- * Challenges-Mine and Challenges-Explore lists (and Search's challenge
- * results): `top` hangs it from the top edge, like the Challenge-Info and
- * progress backdrops; `bottom` raises it from the bottom edge, as it first was.
- * Home's hero card and Space cards always keep the bottom glow. Turned upside
- * down on 2026-09-20, on explicit request — set this back to `'bottom'` to
- * undo it.
+ * The glow of the cards in the Challenges-Mine and Challenges-Explore lists (and
+ * Search's challenge results).
+ *
+ * `true` — the mesh glow (`AccentMesh`): a colorful, organic gradient with its
+ * own recipe for each activity color and for the rest-day and completed states,
+ * strongest along the bottom and the right side (`MESH_RECIPES`). Since
+ * 2026-09-20 (explicit request).
+ *
+ * `false` — the plain half-moon glow from the bottom edge (`AccentDome`), which
+ * Home's hero card and Space cards always use. Flipping this is the whole revert.
  */
-export const LIST_CARD_GLOW_EDGE: 'top' | 'bottom' = 'top';
+export const USE_MESH_CARD_GLOW = true;

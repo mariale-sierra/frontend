@@ -1,4 +1,6 @@
-import { getHomeChallengesSorted } from '../homeAdapter';
+import { getHomeChallengesSorted, getHomeGlowColors } from '../homeAdapter';
+import type { HomeActiveChallengeViewModel } from '../homeAdapter';
+import { activityColors, colors } from '../../../constants/theme';
 import type { ChallengeContract, ChallengePhoto } from '../../../types/challenge';
 
 function buildChallenge(overrides: Partial<ChallengeContract> & { id: string }): ChallengeContract {
@@ -184,5 +186,47 @@ describe('getHomeChallengesSorted', () => {
     const result = getHomeChallengesSorted([restChallenge, completedChallenge, activeChallenge], photos);
 
     expect(result.map((vm) => vm.challengeId)).toEqual(['ACTIVE', 'REST', 'DONE']);
+  });
+});
+
+describe('getHomeGlowColors', () => {
+  function buildViewModel(overrides: Partial<HomeActiveChallengeViewModel>): HomeActiveChallengeViewModel {
+    return {
+      challengeId: 'c',
+      title: 'Challenge',
+      currentDay: 1,
+      totalDays: 30,
+      state: 'active',
+      streakCount: 0,
+      dominantActivityCategory: null,
+      ...overrides,
+    };
+  }
+
+  it('gives each card its glow color, in the carousel order', () => {
+    const colorsInOrder = getHomeGlowColors([
+      buildViewModel({ dominantActivityCategory: 'cardioLow' }),
+      buildViewModel({ dominantActivityCategory: 'strength' }),
+      buildViewModel({ dominantActivityCategory: 'mindBody' }),
+    ]);
+
+    expect(colorsInOrder).toEqual([activityColors.cardioLow, activityColors.strength, activityColors.mindBody]);
+  });
+
+  it('is lavender on a rest day and green once today is logged, whatever the activity', () => {
+    const colorsInOrder = getHomeGlowColors([
+      buildViewModel({ state: 'rest', dominantActivityCategory: 'strength' }),
+      buildViewModel({ state: 'completed', dominantActivityCategory: 'strength' }),
+    ]);
+
+    expect(colorsInOrder).toEqual([colors.rest, colors.success]);
+  });
+
+  it('is the neutral primary for a challenge with no dominant activity yet', () => {
+    expect(getHomeGlowColors([buildViewModel({ dominantActivityCategory: null })])).toEqual([colors.primary]);
+  });
+
+  it('is empty when there are no challenges', () => {
+    expect(getHomeGlowColors([])).toEqual([]);
   });
 });

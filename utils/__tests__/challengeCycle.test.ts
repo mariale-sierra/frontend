@@ -1,4 +1,5 @@
-import { buildRingTicks, classifyDay, computeConsistencyPercents, dayInCycle, findCycleDayFor, getProgressFraction, isRestDay } from '../challengeCycle';
+import { buildDayRingTicks, classifyDay, dayInCycle, findCycleDayFor, getProgressFraction, isRestDay } from '../challengeCycle';
+import type { DayStatus } from '../challengeCycle';
 import type { ChallengeCycleDayContract } from '../../types/challenge';
 
 const CYCLE: ChallengeCycleDayContract[] = [
@@ -78,110 +79,108 @@ describe('classifyDay', () => {
   });
 });
 
-describe('computeConsistencyPercents', () => {
-  it('counts photo days and already-reached rest-without-photo days separately, over the full span', () => {
-    // 4-day cycle: days 1-3 workout, day 4 rest. 8-day challenge = 2 full cycles.
-    // Photos logged on days 1, 2, 5 (3 photo days). Day 4 and day 8 are rest, no photo (2 rest days).
-    // currentDay 8 (challenge over) so both rest days have been reached.
-    const result = computeConsistencyPercents({
-      totalDays: 8,
-      currentDay: 8,
-      cycleLengthDays: 4,
-      cycleDays: CYCLE,
-      photoDays: new Set([1, 2, 5]),
+describe('buildDayRingTicks', () => {
+  const colors = { photoColor: 'ACTIVITY', restColor: 'REST', trackColor: 'TRACK' };
+  // One tick per day, so the ring reads day by day.
+  const ring = (statuses: DayStatus[], segmentCount = statuses.length) =>
+    buildDayRingTicks({
+      segmentCount,
+      totalDays: statuses.length,
+      statusOf: (day) => statuses[day - 1],
+      ...colors,
     });
-    expect(result.photoPercent).toBeCloseTo(3 / 8);
-    expect(result.restPercent).toBeCloseTo(2 / 8);
+
+  it('starts empty — nothing done yet, however long the challenge', () => {
+    expect(ring(['today', 'future', 'future', 'future']).every((tick) => tick === 'TRACK')).toBe(true);
   });
 
-  it('a photo on a rest day counts as photoPercent, not restPercent', () => {
-    const result = computeConsistencyPercents({
-      totalDays: 4,
-      currentDay: 4,
-      cycleLengthDays: 4,
-      cycleDays: CYCLE,
-      photoDays: new Set([4]), // day 4 is a rest day per CYCLE
-    });
-    expect(result.photoPercent).toBe(1 / 4);
-    expect(result.restPercent).toBe(0);
+  it('fills each day where it is, in the activity color for a photo and the rest color for a rest day', () => {
+    expect(ring(['photo', 'photo', 'photo', 'rest', 'photo', 'today', 'future', 'future'])).toEqual([
+      'ACTIVITY', 'ACTIVITY', 'ACTIVITY', 'REST', 'ACTIVITY', 'TRACK', 'TRACK', 'TRACK',
+    ]);
   });
 
-  it('does not count a rest day that has not been reached yet', () => {
-    // Same 8-day/4-day-cycle challenge as above, but currentDay is 1 —
-    // days 4 and 8 are rest per the cycle but haven't happened yet, so they
-    // must not already show as "ticked off" on day 1.
-    const result = computeConsistencyPercents({
-      totalDays: 8,
-      currentDay: 1,
-      cycleLengthDays: 4,
-      cycleDays: CYCLE,
-      photoDays: new Set(),
-    });
-    expect(result.restPercent).toBe(0);
+  it('leaves a missed day as an empty gap — the days after it are filled AFTER the gap', () => {
+    // A 3-train-days-and-a-rest-day cycle, the first train day done, two missed, then the rest day.
+    expect(ring(['photo', 'missed', 'missed', 'rest', 'photo', 'photo', 'photo', 'rest'])).toEqual([
+      'ACTIVITY', 'TRACK', 'TRACK', 'REST', 'ACTIVITY', 'ACTIVITY', 'ACTIVITY', 'REST',
+    ]);
   });
 
-  it('returns zeros for a non-positive totalDays', () => {
-    expect(computeConsistencyPercents({ totalDays: 0, currentDay: 0, cycleLengthDays: 4, cycleDays: CYCLE, photoDays: new Set() }))
-      .toEqual({ photoPercent: 0, restPercent: 0 });
-  });
-});
+  it('puts the rest ticks after the empty space, where the rest day falls, not straight after the photo ones', () => {
+    const ticks = ring(['photo', 'missed', 'missed', 'rest']);
 
-describe('buildRingTicks', () => {
-  it('splits a fixed segment count proportionally regardless of the challenge length it represents', () => {
-    // 50% photo, 25% rest, 25% track, over 20 segments → 10 photo, 5 rest, 5 track.
-    const ticks = buildRingTicks({
-      segmentCount: 20,
-      photoPercent: 0.5,
-      restPercent: 0.25,
-      photoColor: 'LIME',
-      restColor: 'PURPLE',
-      trackColor: 'TRACK',
-    });
-    expect(ticks.filter((c) => c === 'LIME')).toHaveLength(10);
-    expect(ticks.filter((c) => c === 'PURPLE')).toHaveLength(5);
-    expect(ticks.filter((c) => c === 'TRACK')).toHaveLength(5);
-    // Photo segments come first (clockwise from the start), then rest, then track.
-    expect(ticks.slice(0, 10).every((c) => c === 'LIME')).toBe(true);
-    expect(ticks.slice(10, 15).every((c) => c === 'PURPLE')).toBe(true);
-    expect(ticks.slice(15).every((c) => c === 'TRACK')).toBe(true);
+    expect(ticks.indexOf('REST')).toBe(3);
+    expect(ticks.slice(0, 3)).toEqual(['ACTIVITY', 'TRACK', 'TRACK']);
   });
 
-  it('renders the same segment count for a short or a long challenge — only the split changes', () => {
-    const shortChallenge = buildRingTicks({
+  it('is a full circle only when every day was done', () => {
+    const done = ring(['photo', 'photo', 'rest', 'photo', 'photo', 'photo', 'rest', 'photo']);
+    const oneMissed = ring(['photo', 'photo', 'rest', 'missed', 'photo', 'photo', 'rest', 'photo']);
+
+    expect(done.every((tick) => tick !== 'TRACK')).toBe(true);
+    expect(oneMissed.filter((tick) => tick === 'TRACK')).toHaveLength(1);
+  });
+
+  it('does not fill a future rest day, or today before it is done', () => {
+    expect(ring(['photo', 'today', 'future', 'future'])).toEqual(['ACTIVITY', 'TRACK', 'TRACK', 'TRACK']);
+  });
+
+  it('gives each day a run of ticks when there are more ticks than days', () => {
+    // 4 days on 8 ticks: two ticks a day.
+    expect(ring(['photo', 'missed', 'rest', 'photo'], 8)).toEqual([
+      'ACTIVITY', 'ACTIVITY', 'TRACK', 'TRACK', 'REST', 'REST', 'ACTIVITY', 'ACTIVITY',
+    ]);
+  });
+
+  it('keeps a missed day as a gap of ticks in a long challenge too, in the same place', () => {
+    // 60 ticks for a 60-day challenge (one each), with one missed day at day 31.
+    const statuses: DayStatus[] = Array.from({ length: 60 }, (_, index) => (index === 30 ? 'missed' : 'photo'));
+    const ticks = ring(statuses);
+
+    expect(ticks[30]).toBe('TRACK');
+    expect(ticks.filter((tick) => tick === 'TRACK')).toHaveLength(1);
+  });
+
+  it('shows the kind that covers most of a tick when a tick covers more than one day', () => {
+    // 10 days on 4 ticks: 2.5 days a tick. Tick 0 covers days 1, 2 and half of 3.
+    const statuses: DayStatus[] = ['photo', 'photo', 'missed', 'missed', 'missed', 'missed', 'missed', 'photo', 'photo', 'photo'];
+    const ticks = ring(statuses, 4);
+
+    expect(ticks[0]).toBe('ACTIVITY'); // photo, photo, half of a missed day
+    expect(ticks[1]).toBe('TRACK'); // half of a missed day, two missed days
+    expect(ticks[2]).toBe('TRACK'); // two missed days, half of a photo one
+    expect(ticks[3]).toBe('ACTIVITY'); // half of a photo day, two photo days
+  });
+
+  it('lets the photo day win a tie between a photo day and an empty one', () => {
+    // 2 days on 1 tick: half photo, half missed.
+    expect(ring(['photo', 'missed'], 1)).toEqual(['ACTIVITY']);
+    expect(ring(['rest', 'missed'], 1)).toEqual(['REST']);
+    expect(ring(['photo', 'rest'], 1)).toEqual(['ACTIVITY']);
+  });
+
+  it('renders the same dial for a short or a long challenge — only what fills it changes', () => {
+    const short = ring(['photo', 'photo', 'photo', 'photo', 'photo', 'today', 'future', 'future', 'future', 'future'], 60);
+    const long = buildDayRingTicks({
       segmentCount: 60,
-      photoPercent: 3 / 10, // e.g. 3 of 10 days
-      restPercent: 0,
-      photoColor: 'LIME',
-      restColor: 'PURPLE',
-      trackColor: 'TRACK',
+      totalDays: 75,
+      statusOf: (day) => (day <= 37 ? 'photo' : 'future'),
+      ...colors,
     });
-    const longChallenge = buildRingTicks({
-      segmentCount: 60,
-      photoPercent: 3 / 10, // same proportion, e.g. 22.5 of 75 days
-      restPercent: 0,
-      photoColor: 'LIME',
-      restColor: 'PURPLE',
-      trackColor: 'TRACK',
-    });
-    expect(shortChallenge).toHaveLength(60);
-    expect(longChallenge).toHaveLength(60);
-    expect(shortChallenge).toEqual(longChallenge);
+
+    expect(short).toHaveLength(60);
+    expect(long).toHaveLength(60);
+    // Half done either way: the first half of the dial is filled, the rest is not.
+    expect(short.filter((tick) => tick === 'ACTIVITY')).toHaveLength(30);
+    expect(long.filter((tick) => tick === 'ACTIVITY')).toHaveLength(30);
   });
 
-  it('clamps percentages so photo+rest never exceeds 100% of the ring', () => {
-    const ticks = buildRingTicks({
-      segmentCount: 10,
-      photoPercent: 0.8,
-      restPercent: 0.5, // 0.8+0.5 > 1
-      photoColor: 'LIME',
-      restColor: 'PURPLE',
-      trackColor: 'TRACK',
-    });
-    expect(ticks.filter((c) => c === 'TRACK')).toHaveLength(0);
-  });
-
-  it('returns an empty array for a non-positive segment count', () => {
-    expect(buildRingTicks({ segmentCount: 0, photoPercent: 0.5, restPercent: 0.5, photoColor: 'A', restColor: 'B', trackColor: 'C' })).toEqual([]);
+  it('is an empty track for a challenge with no days, and no ticks for no segments', () => {
+    expect(buildDayRingTicks({ segmentCount: 3, totalDays: 0, statusOf: () => 'photo', ...colors })).toEqual([
+      'TRACK', 'TRACK', 'TRACK',
+    ]);
+    expect(buildDayRingTicks({ segmentCount: 0, totalDays: 5, statusOf: () => 'photo', ...colors })).toEqual([]);
   });
 });
 

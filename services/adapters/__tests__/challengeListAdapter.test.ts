@@ -1,4 +1,8 @@
-import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../challengeListAdapter';
+import {
+  toChallengeMineViewModels,
+  toExploreChallengeViewModels,
+  withoutFinishedChallenges,
+} from '../challengeListAdapter';
 import type { ChallengeContract, ChallengePhoto } from '../../../types/challenge';
 
 function buildChallenge(overrides: Partial<ChallengeContract> & { id: string }): ChallengeContract {
@@ -72,5 +76,28 @@ describe('toExploreChallengeViewModels', () => {
     const viewModels = toExploreChallengeViewModels(challenges);
 
     expect(viewModels.map((v) => v.challengeId)).toEqual(['most', 'some', 'few', 'none']);
+  });
+});
+
+describe('withoutFinishedChallenges', () => {
+  it('drops a challenge that is finished, keeps the ones still going, and keeps their order', () => {
+    const viewModels = toChallengeMineViewModels(
+      [
+        buildChallenge({ id: 'FINISHED', status: 'completed', current_day: 30 }),
+        buildChallenge({ id: 'GOING', status: 'active', current_day: 5 }),
+        buildChallenge({ id: 'LEFT', status: 'left', current_day: 3 }),
+      ],
+      NO_PHOTOS,
+    );
+
+    expect(viewModels.map((challenge) => challenge.state)).toContain('won');
+    expect(withoutFinishedChallenges(viewModels).map((challenge) => challenge.challengeId)).toEqual(['GOING', 'LEFT']);
+  });
+
+  it('is empty when every challenge is finished, and when there are none', () => {
+    const finished = toChallengeMineViewModels([buildChallenge({ id: 'A', status: 'completed' })], NO_PHOTOS);
+
+    expect(withoutFinishedChallenges(finished)).toEqual([]);
+    expect(withoutFinishedChallenges([])).toEqual([]);
   });
 });

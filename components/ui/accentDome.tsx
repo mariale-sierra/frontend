@@ -4,7 +4,7 @@ import { boostSaturation, rotateHue, withAlpha } from '../../utils/color';
 
 // A touch more saturated than the (intentionally muted) activity token, so
 // the light reads as colored light instead of a gray wash.
-const VIVID_FACTOR = 1.25;
+export const ACCENT_VIVID_FACTOR = 1.25;
 
 // How far, in degrees of hue, the two sides of the wash drift from the accent —
 // enough for a visible two-tone shift, close enough to stay one color family.
@@ -31,8 +31,9 @@ const DOME_PROFILE: [number, number][] = [
   [1, 0],
 ];
 
-// Radial falloff for the bloom.
-const FALLOFF: [number, number][] = [
+// Radial falloff for the bloom — and for the mesh's blobs (`AccentMesh`), so all
+// the accent light eases out the same way.
+export const SOFT_FALLOFF: [number, number][] = [
   [0, 1],
   [0.25, 0.9],
   [0.5, 0.55],
@@ -74,12 +75,14 @@ interface AccentDomeProps {
  * The accent "light" behind a challenge — one recipe shared by the
  * Challenge-Info / progress / members / routine backdrop
  * (`ChallengeAccentBackdrop`, a whole screen, hung from its top edge), the
- * challenge cards' glow (`AccentGlow`, raised from a card's bottom edge) and the
- * Explore card's tick-ring face: a two-tone wash (the accent, drifting warmer on
- * the left and cooler on the right) shaped like a half-moon — a large circle cut
- * off by an edge — strongest at that edge and fading out along a round rim, one
- * soft bloom on the edge's center as its focal point, and, optionally, a faint
- * grain.
+ * background gradient's paper light (`MeshGradientBackground`) and the glow
+ * cards' glow (`AccentGlow`, from a card's bottom or top edge): a two-tone wash
+ * (the accent, drifting warmer on the left and cooler on the right) shaped like a
+ * half-moon — a large circle cut off by an edge — strongest at that edge and
+ * fading out along a round rim, one soft bloom on the edge's center as its focal
+ * point, and, optionally, a faint grain. The gradients are DITHERED: a light
+ * this quiet only has a few dozen 8-bit steps to fall through, and undithered each
+ * step shows as a ring.
  *
  * Renders Skia nodes only, so it goes inside a `Canvas`, over whatever base
  * (`ink`, `surface`) the caller draws first. Rather than a raw radius, the
@@ -99,7 +102,7 @@ export function AccentDome({
   bloomBlur = 0,
   grainOpacity = 0,
 }: AccentDomeProps) {
-  const accent = boostSaturation(color, VIVID_FACTOR);
+  const accent = boostSaturation(color, ACCENT_VIVID_FACTOR);
   const tones = TONE_STEPS.map((step) => rotateHue(accent, step * HUE_SPREAD));
 
   const cx = width / 2;
@@ -121,7 +124,7 @@ export function AccentDome({
         <Rect x={0} y={0} width={width} height={height}>
           <LinearGradient start={vec(0, 0)} end={vec(width, 0)} colors={tones} />
         </Rect>
-        <Rect x={0} y={0} width={width} height={height} blendMode="dstIn">
+        <Rect x={0} y={0} width={width} height={height} blendMode="dstIn" dither>
           <RadialGradient
             c={vec(cx, centerY)}
             r={radius}
@@ -133,12 +136,12 @@ export function AccentDome({
 
       <Group blendMode="plus">
         {bloomBlur > 0 ? <Blur blur={bloomBlur} mode="clamp" /> : null}
-        <Circle cx={cx} cy={edgeY} r={bloomRadius}>
+        <Circle cx={cx} cy={edgeY} r={bloomRadius} dither>
           <RadialGradient
             c={vec(cx, edgeY)}
             r={bloomRadius}
-            colors={FALLOFF.map(([, share]) => withAlpha(accent, bloomPeak * share))}
-            positions={FALLOFF.map(([position]) => position)}
+            colors={SOFT_FALLOFF.map(([, share]) => withAlpha(accent, bloomPeak * share))}
+            positions={SOFT_FALLOFF.map(([position]) => position)}
           />
         </Circle>
       </Group>

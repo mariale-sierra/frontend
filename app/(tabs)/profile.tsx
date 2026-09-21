@@ -94,14 +94,6 @@ export default function Profile() {
   const topBar = (
     <Row justify="flex-end" gap="sm" style={styles.topBar}>
       <IconButton
-        name="barbell-outline"
-        iconSize={22}
-        onPress={() => router.push('/exercises')}
-        accessibilityRole="button"
-        accessibilityLabel={t('profile.exercisesButtonA11y')}
-        hitSlop={10}
-      />
-      <IconButton
         name="pencil-outline"
         iconSize={22}
         onPress={() => router.push('/profile/edit')}

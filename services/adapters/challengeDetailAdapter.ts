@@ -150,3 +150,29 @@ export function toChallengeDetailViewModel(
     },
   };
 }
+
+/**
+ * What comes up after a day in the cycle, for the routine screen's "Next in the cycle":
+ * the next day and, if that is a REST day, the rest days that follow it and then the
+ * first routine after them — so a rest day is never the only thing shown, the routine
+ * it leads to always is. A routine day next is just itself. The cycle wraps round
+ * (the day after its last is its first), and it is followed for at most one lap.
+ */
+export function getUpcomingDays(
+  days: ChallengeDaySummary[],
+  cycleLengthDays: number,
+  fromDay: number,
+): ChallengeDaySummary[] {
+  const upcoming: ChallengeDaySummary[] = [];
+  if (cycleLengthDays <= 0) return upcoming;
+
+  let day = fromDay;
+  for (let step = 0; step < cycleLengthDays; step += 1) {
+    day = (day % cycleLengthDays) + 1;
+    const summary = days.find((item) => item.day === day);
+    if (!summary) break;
+    upcoming.push(summary);
+    if (!summary.isRestDay) break;
+  }
+  return upcoming;
+}

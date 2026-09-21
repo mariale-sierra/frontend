@@ -18,6 +18,7 @@ import { ActivityIcon } from '../../components/icons/activityIcon';
 import { LocationIcon } from '../../components/icons/locationIcon';
 import { Text } from '../../components/ui/text';
 import { colors, spacing, activityColors } from '../../constants/theme';
+import { USE_VIVID_CREATE_FLOW_BACKGROUND } from '../../constants/screenBackground';
 import { withAlpha } from '../../utils/color';
 import { CATEGORY_OPTIONS, LOCATION_OPTIONS } from '../../constants/challengeCreateOptions';
 import { useCreateChallengeFlow } from '../../hooks/useCreateChallengeFlow';
@@ -36,8 +37,6 @@ export default function CreateChallenge() {
     visibility,
     selectedCategories,
     selectedLocations,
-    derivedCategories,
-    derivedLocations,
     currentStep,
     activeStep,
     steps,
@@ -176,19 +175,19 @@ export default function CreateChallenge() {
             cyclesCount={cyclesCount}
             durationDays={durationDays}
             visibility={visibility}
-            selectedCategories={derivedCategories}
-            selectedLocations={derivedLocations}
+            selectedCategories={selectedCategories}
+            selectedLocations={selectedLocations}
             getDayStatus={getDayStatus}
             getDayRoutineLabel={getDayRoutineLabel}
             accentColor={challengeAccentColor}
-            onEditCycle={() => setCurrentStep(1)}
+            onEditCycle={() => setCurrentStep(steps.findIndex((step) => step.kind === 'cycle'))}
           />
         );
     }
   }
 
   return (
-    <ScreenBackground variant="top" gradientBackground>
+    <ScreenBackground variant="top" gradientBackground vividGradient={USE_VIVID_CREATE_FLOW_BACKGROUND}>
       <ScrollView contentContainerStyle={styles.container}>
         <Stack gap="lg">
           <CreateFlowProgressHeader

@@ -1,6 +1,8 @@
 import { fireEvent } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { ConfirmationPopup } from '../confirmationPopup';
+import { colors } from '../../../constants/theme';
 
 describe('ConfirmationPopup', () => {
   const baseProps = {
@@ -68,4 +70,56 @@ describe('ConfirmationPopup', () => {
 
     expect(screen.queryByText('Cancel invitation?')).toBeNull();
   });
+
+  // A plain elevated card, not a colored one: the tone used to tint a glow across
+  // the whole card, which was far too loud for a confirmation.
+  describe('look', () => {
+    async function renderPopup(props: Partial<React.ComponentProps<typeof ConfirmationPopup>> = {}) {
+      return renderWithTheme(
+        <ConfirmationPopup
+          {...baseProps}
+          icon="checkmark-circle-outline"
+          primaryButton={{ label: 'Confirm', onPress: jest.fn() }}
+          {...props}
+        />,
+      );
+    }
+
+    it('is a plain `surface` card, with no colored glow behind it, whichever the tone', async () => {
+      for (const tone of ['default', 'success'] as const) {
+        const screen = await renderPopup({ tone });
+        const tree = JSON.stringify(screen.toJSON());
+
+        expect(tree).toContain(`"backgroundColor":"${colors.surface}"`);
+        // The glow was an SVG radial gradient in the tone's color.
+        expect(tree).not.toContain('RadialGradient');
+        expect(tree).not.toContain('popupGlow');
+        await screen.unmount();
+      }
+    });
+
+    it('shows the tone only in the icon: neutral by default, `success` green for the success tone', async () => {
+      const neutral = await renderPopup();
+      const success = await renderPopup({ tone: 'success' });
+
+      expect(JSON.stringify(neutral.toJSON())).toContain(`"color":"${colors.primary}"`);
+      expect(JSON.stringify(success.toJSON())).toContain(`"color":"${colors.success}"`);
+      // The success green is on the icon, not on any fill.
+      expect(JSON.stringify(success.toJSON())).not.toContain(`"backgroundColor":"${colors.success}`);
+    });
+
+    it('lets a caller color the icon itself (a destructive confirmation)', async () => {
+      const screen = await renderPopup({ iconColor: colors.error });
+
+      expect(JSON.stringify(screen.toJSON())).toContain(`"color":"${colors.error}"`);
+    });
+
+    it('rounds the card and gives it the shared hairline rim', async () => {
+      const screen = await renderPopup();
+      const flatCards = JSON.stringify(screen.toJSON());
+
+      expect(flatCards).toContain('"borderWidth":' + StyleSheet.hairlineWidth);
+    });
+  });
 });
+

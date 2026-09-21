@@ -14,7 +14,8 @@ const containerSize = { xs: 18, sm: 28, md: 36, lg: 48 };
 const iconSize = { xs: 12, sm: 18, md: 22, lg: 26 };
 const dotSize = { xs: 6, sm: 8, md: 10, lg: 12 };
 
-const iconMap: Record<ActivityType, keyof typeof Ionicons.glyphMap> = {
+/** The Ionicons glyph for each activity — also for anything that draws its own icon (a badge). */
+export const ACTIVITY_ICON_NAME: Record<ActivityType, keyof typeof Ionicons.glyphMap> = {
   strength: 'barbell-outline',
   cardioIntense: 'flash-outline',
   flexibility: 'flower-outline',
@@ -26,7 +27,7 @@ const iconMap: Record<ActivityType, keyof typeof Ionicons.glyphMap> = {
 // Category is icon + name only now — no per-category color (see design
 // system → Explicitly Rejected Patterns). Every variant renders in the same
 // neutral tokens regardless of `type`; the icon glyph is still selected per
-// category via iconMap above.
+// category via ACTIVITY_ICON_NAME above.
 export function ActivityIcon({ type, size = 'md', variant = 'circle', color }: ActivityIconProps) {
 
   if (variant === 'dot') {
@@ -46,7 +47,7 @@ export function ActivityIcon({ type, size = 'md', variant = 'circle', color }: A
   if (variant === 'plain') {
     return (
       <Ionicons
-        name={iconMap[type]}
+        name={ACTIVITY_ICON_NAME[type]}
         size={iconSize[size]}
         color={color ?? colors.paper}
       />
@@ -66,7 +67,7 @@ export function ActivityIcon({ type, size = 'md', variant = 'circle', color }: A
       ]}
     >
       <Ionicons
-        name={iconMap[type]}
+        name={ACTIVITY_ICON_NAME[type]}
         size={iconSize[size]}
         color={colors.paper}
       />

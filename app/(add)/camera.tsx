@@ -23,7 +23,7 @@ import type { WorkoutLogContract } from '../../types/workout-log';
 import { applyExerciseMetrics } from '../../services/metrics/applyExerciseMetrics';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
-import { useUploadSuccessStore } from '../../store/uploadSuccessStore';
+import { showProgressLoggedFeedback } from '../../utils/progressLoggedFeedback';
 
 function VisibilityToggle({
   visibility,
@@ -179,9 +179,6 @@ export default function Camera() {
       }
     }
     invalidateChallengeProgressCache();
-    // The success popup itself is global (mounted at app root), so it shows
-    // on top of wherever the back() calls below land.
-    useUploadSuccessStore.getState().show();
     setSubmittingProgress(false);
     try {
       // Closes the whole (add) modal group, back to whatever screen the user
@@ -207,6 +204,10 @@ export default function Camera() {
     } catch (navError) {
       console.error('[Camera] closing the (add) modal failed after a successful save:', navError);
     }
+    // The popup itself is global (mounted at app root), so it shows on top of
+    // wherever the back() calls above landed: "Challenge complete" if that was
+    // the challenge's last day (it is marked completed first), else "logged!".
+    void showProgressLoggedFeedback(selectedChallengeId);
   }
 
   if (!permission) {

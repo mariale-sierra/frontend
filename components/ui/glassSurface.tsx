@@ -11,17 +11,23 @@ export const glassBorderStyle = {
   borderColor: withAlpha(colors.paper, glass.borderOpacity),
 } as const;
 
+interface GlassBackdropProps {
+  /** How much of the `surface` tint sits over the blur. Default `glass.tintOpacity`;
+   * a small badge over a colored light takes the lighter `glass.badgeTintOpacity`. */
+  tintOpacity?: number;
+}
+
 /**
  * The blur + dark `surface` tint layers of the shared glass recipe (see
  * `glass` in the theme), absolutely filling whatever contains them. Use it as
  * the first child of a container that clips (`overflow: 'hidden'`) and has a
  * radius, or via `GlassSurface` below, which does all of that.
  */
-export function GlassBackdrop() {
+export function GlassBackdrop({ tintOpacity = glass.tintOpacity }: GlassBackdropProps) {
   return (
     <>
       <BlurView intensity={glass.blurIntensity} tint={glass.tint} style={StyleSheet.absoluteFill} />
-      <View pointerEvents="none" style={styles.tint} />
+      <View pointerEvents="none" style={[styles.tint, { backgroundColor: withAlpha(colors.surface, tintOpacity) }]} />
     </>
   );
 }
@@ -44,6 +50,5 @@ const styles = StyleSheet.create({
   },
   tint: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: withAlpha(colors.surface, glass.tintOpacity),
   },
 });

@@ -16,6 +16,7 @@ import { Input } from '../../../components/ui/input';
 import { ExerciseBlock } from '../../../components/routine';
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
+import { USE_VIVID_CREATE_FLOW_BACKGROUND } from '../../../constants/screenBackground';
 import { withAlpha } from '../../../utils/color';
 import { addExerciseToRoutine, buildRoutineExercisePersistence, createRoutine } from '../../../services/routine/routine.service';
 import { getMetricTypes } from '../../../services/metrics/metrics.service';
@@ -123,7 +124,7 @@ export default function CreateRoutineScreen() {
   }
 
   return (
-    <ScreenBackground variant="top" gradientBackground>
+    <ScreenBackground variant="top" gradientBackground vividGradient={USE_VIVID_CREATE_FLOW_BACKGROUND}>
       <Row justify="space-between" align="center" style={styles.topBar}>
         <Pressable onPress={() => safeBack()} hitSlop={12} style={styles.iconButton}>
           <Icon

@@ -10,10 +10,12 @@ import { BackButton } from '../../../../components/ui/backButton';
 import { Icon } from '../../../../components/ui/icon';
 import { Text } from '../../../../components/ui/text';
 import { ChallengeAccentBackdrop } from '../../../../components/challenge/challengeAccentBackdrop';
+import { UpcomingDayCard } from '../../../../components/challenge/detail/UpcomingDayCard';
 import { colors, radius, spacing, textOpacity } from '../../../../constants/theme';
 import { withAlpha } from '../../../../utils/color';
 import { toTitleCase } from '../../../../utils/format';
 import { toChallengeDetailViewModel } from '../../../../services/adapters/index';
+import { getUpcomingDays } from '../../../../services/adapters/challengeDetailAdapter';
 import { getChallenge, joinChallenge } from '../../../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../../../services/user/user.service';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../../services/adapters/challengeState';
@@ -24,23 +26,24 @@ import {
 } from '../../../../services/adapters/metricsAdapter';
 import { ACTIVITY_METRIC_CONFIG } from '../../../../types/metrics';
 import { useConfirmationPopup } from '../../../../hooks/useConfirmationPopup';
+import { useOpenExercise } from '../../../../hooks/useOpenExercise';
 import { useErrorNotificationStore } from '../../../../store/errorNotificationStore';
 import type { ChallengeContract, ChallengeCycleDayContract, ChallengeExerciseSetContract, ChallengeExerciseTargetContract } from '../../../../types/challenge';
 import type { TFunction } from 'i18next';
 
 type MembershipStatus = 'creator' | 'joined' | 'none';
 
+// The chevron on an exercise row, that says tapping it opens the exercise.
+const EXERCISE_CHEVRON_SIZE = 14;
+
 interface ExerciseRow {
   name: string;
   /** "4 × 12" / "3 × 45s" style. */
   setsLabel: string;
   restLabel: string;
-  /** Catalog exercise description — undefined until `getCycleDaySummaries()`
-   * returns it (see `ChallengeExerciseContract.description`'s own doc
-   * comment) or for the rare exercise with a genuinely blank one. Presence
-   * of this field, not any separate flag, is what shows the row's
-   * expand/collapse chevron below — no description, no toggle. */
-  description?: string;
+  /** The exercise's name as the catalog stores it ("HIP THRUST") — what tapping
+   * the row looks the exercise up by, to open its screen. */
+  catalogName: string;
 }
 
 /** "45" → "45s", "90" → "1m 30s" — the terse table-cell form. Distinct from
@@ -110,8 +113,6 @@ function buildExerciseRows(cycleDay: ChallengeCycleDayContract | undefined, t: T
     const restSeconds = toNum(sets[0]?.rest_seconds_after ?? null);
     const restLabel = restSeconds != null ? formatSeconds(restSeconds) : '—';
 
-    const description = typeof exercise.description === 'string' && exercise.description.trim() ? exercise.description.trim() : undefined;
-
     return {
       // The shared exercise-library catalog stores names in all caps
       // ("HIP THRUST") — toTitleCase() normalizes that for display without
@@ -122,7 +123,7 @@ function buildExerciseRows(cycleDay: ChallengeCycleDayContract | undefined, t: T
       name: toTitleCase(rawName),
       setsLabel,
       restLabel,
-      description,
+      catalogName: rawName,
     };
   });
 }
@@ -207,27 +208,10 @@ export default function RoutineDayDetail() {
     : undefined;
   const exercises = useMemo(() => buildExerciseRows(rawCycleDay, t), [rawCycleDay, t]);
 
-  // Per-row description expand/collapse (2026-08-30, new). Keyed by list
-  // index rather than exercise id since these rows have no stable id of
-  // their own. Reset on day change (via "Next in the cycle") so an
-  // expanded row on today's list doesn't carry over onto tomorrow's,
-  // which reuses this same mounted screen instance for a new `day` param.
-  const [expandedExerciseIndexes, setExpandedExerciseIndexes] = useState<Set<number>>(new Set());
-  useEffect(() => {
-    setExpandedExerciseIndexes(new Set());
-  }, [requestedDay]);
-
-  function toggleExerciseDescription(index: number) {
-    setExpandedExerciseIndexes((current) => {
-      const next = new Set(current);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
-      return next;
-    });
-  }
+  // Tapping an exercise opens its own screen — everything the catalog knows about
+  // it, not just the one-line description this row used to expand into. Keyed by
+  // list index, since these rows have no stable id of their own.
+  const { openExercise, openingKey } = useOpenExercise();
 
   // Activity Color System v2 — everything on this screen that was flat
   // `colors.primary` now resolves to this challenge's own accent instead
@@ -238,8 +222,9 @@ export default function RoutineDayDetail() {
   // exists yet at that point, so there's nothing to resolve a color from.
   const accentColor = getChallengeAccentColor(challenge ? pickDominantActivityCategory(challenge) : null);
 
-  const nextDay = view && view.cycleLengthDays > 0 ? (requestedDay % view.cycleLengthDays) + 1 : null;
-  const nextDaySummary = nextDay != null ? view?.days.find((item) => item.day === nextDay) ?? null : null;
+  // What comes next in the cycle: the next day and, when that is a rest day, the
+  // routine after it as well — never a lone rest day.
+  const upcomingDays = view ? getUpcomingDays(view.days, view.cycleLengthDays, requestedDay) : [];
 
   function handleShare() {
     if (!challenge || !selectedDay) return;
@@ -256,12 +241,14 @@ export default function RoutineDayDetail() {
     );
   }
 
+  // Nothing to show: a load error, or a rest day — which has no routine, and which
+  // nothing in the app opens (a rest day's row does not navigate), so this is only
+  // ever reached by a stale link.
   if (!view || !selectedDay || selectedDay.isRestDay) {
     return (
       <ScreenBackground variant="default" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
-        {/* A rest day is still part of this challenge — keep its backdrop so
-            stepping through "Next in the cycle" doesn't flip the look. Skipped
-            when there's no challenge to take a color from (load error). */}
+        {/* Keep the challenge's backdrop when there is a challenge to take a color
+            from (skipped on a load error). */}
         {challenge && <ChallengeAccentBackdrop color={accentColor} />}
         <Row justify="space-between" align="center" style={styles.topBar}>
           <BackButton style={styles.backButton} />
@@ -322,49 +309,40 @@ export default function RoutineDayDetail() {
             </Text>
           </Row>
 
-          {exercises.map((exercise, index) => {
-            const hasDescription = exercise.description != null;
-            const isExpanded = hasDescription && expandedExerciseIndexes.has(index);
-
-            return (
-              <View
-                key={`${exercise.name}-${index}`}
-                style={[styles.exerciseUnit, index < exercises.length - 1 && styles.exerciseRowDivider]}
+          {exercises.map((exercise, index) => (
+            <View
+              key={`${exercise.name}-${index}`}
+              style={[styles.exerciseUnit, index < exercises.length - 1 && styles.exerciseRowDivider]}
+            >
+              <Pressable
+                disabled={openingKey !== null}
+                onPress={() => openExercise(exercise.catalogName, index)}
+                accessibilityRole="button"
+                accessibilityLabel={t('challengeRoutineDay.openExerciseA11y', { name: exercise.name })}
               >
-                <Pressable
-                  disabled={!hasDescription}
-                  onPress={() => toggleExerciseDescription(index)}
-                  accessibilityRole={hasDescription ? 'button' : undefined}
-                  accessibilityLabel={
-                    hasDescription ? t('challengeRoutineDay.exerciseDescriptionA11y', { name: exercise.name }) : undefined
-                  }
-                >
-                  <Row justify="space-between" align="center" style={styles.exerciseRow}>
-                    <Row align="center" gap="xs" style={styles.exerciseName}>
-                      <Text variant="body" weight="regular" numberOfLines={1} style={styles.exerciseNameText}>
-                        {exercise.name}
-                      </Text>
-                      {hasDescription && (
-                        <Icon
-                          name={isExpanded ? 'chevron-up-outline' : 'chevron-down-outline'}
-                          size={14}
-                          color={withAlpha(colors.paper, textOpacity.tertiary)}
-                        />
-                      )}
-                    </Row>
-                    <Text variant="body" weight="bold" style={[styles.exerciseSets, { color: accentColor }]}>{exercise.setsLabel}</Text>
-                    <Text variant="label" weight="medium" style={styles.tableHeaderRest}>{exercise.restLabel}</Text>
+                <Row justify="space-between" align="center" style={styles.exerciseRow}>
+                  <Row align="center" gap="xs" style={styles.exerciseName}>
+                    <Text variant="body" weight="regular" numberOfLines={1} style={styles.exerciseNameText}>
+                      {exercise.name}
+                    </Text>
+                    {/* The way in to the exercise's screen: a chevron, or a spinner
+                        on the row being looked up. */}
+                    {openingKey === index ? (
+                      <ActivityIndicator size="small" color={withAlpha(colors.paper, textOpacity.tertiary)} />
+                    ) : (
+                      <Icon
+                        name="chevron-forward-outline"
+                        size={EXERCISE_CHEVRON_SIZE}
+                        color={withAlpha(colors.paper, textOpacity.tertiary)}
+                      />
+                    )}
                   </Row>
-                </Pressable>
-
-                {isExpanded && (
-                  <Text variant="body" tone="secondary" size="sm" style={styles.exerciseDescription}>
-                    {exercise.description}
-                  </Text>
-                )}
-              </View>
-            );
-          })}
+                  <Text variant="body" weight="bold" style={[styles.exerciseSets, { color: accentColor }]}>{exercise.setsLabel}</Text>
+                  <Text variant="label" weight="medium" style={styles.tableHeaderRest}>{exercise.restLabel}</Text>
+                </Row>
+              </Pressable>
+            </View>
+          ))}
         </View>
 
         <View style={styles.notesSection}>
@@ -376,29 +354,17 @@ export default function RoutineDayDetail() {
           </Text>
         </View>
 
-        {nextDaySummary && (
-          <View style={styles.nextSection}>
-            <Pressable
-              onPress={() => router.push(`/challenge/${id}/routine/${nextDaySummary.day}`)}
-              style={({ pressed }) => [styles.nextCard, pressed && styles.pressed]}
-              accessibilityRole="button"
-            >
-              <View style={[styles.nextBadge, { backgroundColor: nextDaySummary.isRestDay ? colors.rest : accentColor }]}>
-                <Text variant="label" weight="bold" style={styles.nextBadgeText}>{nextDaySummary.day}</Text>
-              </View>
-              <View style={styles.nextTextColumn}>
-                <Text variant="caption" tone="secondary">{t('challengeRoutineDay.nextInCycleLabel')}</Text>
-                <Text
-                  variant="body"
-                  weight="bold"
-                  numberOfLines={1}
-                  style={nextDaySummary.isRestDay ? styles.nextTitleRest : styles.nextTitle}
-                >
-                  {nextDaySummary.isRestDay ? t('challengeInfo.restDayLabel') : nextDaySummary.routineName}
-                </Text>
-              </View>
-              <Icon name="chevron-forward-outline" size={18} color={colors.paper} />
-            </Pressable>
+        {upcomingDays.length > 0 && (
+          <View style={[styles.nextSection, styles.upcomingList]}>
+            {upcomingDays.map((upcoming, index) => (
+              <UpcomingDayCard
+                key={upcoming.day}
+                day={upcoming}
+                label={index === 0 ? t('challengeRoutineDay.nextInCycleLabel') : t('challengeRoutineDay.afterThatLabel')}
+                accentColor={accentColor}
+                onPress={() => router.push(`/challenge/${id}/routine/${upcoming.day}`)}
+              />
+            ))}
           </View>
         )}
       </ScrollView>
@@ -483,10 +449,8 @@ const styles = StyleSheet.create({
     width: 56,
     textAlign: 'right',
   },
-  // Wraps one exercise's row + its (optional) expanded description — the
-  // divider now lives here, on the whole unit, not just the row, so it
-  // still sits directly above the NEXT exercise regardless of whether this
-  // one is expanded.
+  // Wraps one exercise's row — the divider lives here, on the whole unit, so it
+  // sits directly above the NEXT exercise.
   exerciseUnit: {},
   exerciseRow: {
     paddingVertical: spacing.md,
@@ -496,8 +460,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: withAlpha(colors.paper, 0.08),
   },
-  // Wraps the name Text + its expand/collapse chevron (only rendered for an
-  // exercise with a real description — see `hasDescription` in the JSX).
+  // Wraps the name Text + the chevron that says the row opens the exercise.
   exerciseName: {
     flex: 1,
     minWidth: 0,
@@ -508,15 +471,6 @@ const styles = StyleSheet.create({
   exerciseSets: {
     // color set inline — this challenge's own accent color, see accentColor above.
     opacity: 1,
-  },
-  // Description toggle (2026-08-30, new) — no horizontal padding of its own
-  // since it already lines up with the exercise name above it (both start
-  // at `tableSection`'s own left edge); `paddingBottom` matches `exerciseRow`'s
-  // own vertical rhythm so the divider below sits the same distance away
-  // whether this exercise is expanded or not.
-  exerciseDescription: {
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.md,
   },
   notesSection: {
     paddingHorizontal: spacing.base,
@@ -530,38 +484,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingBottom: spacing.lg,
   },
-  nextCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  // The rows of "what comes next" (see `UpcomingDayCard`), a comfortable gap apart.
+  upcomingList: {
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.medium,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-  },
-  nextBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.big,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  nextBadgeText: {
-    color: colors.ink,
-    opacity: 1,
-  },
-  nextTextColumn: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  nextTitle: {
-    opacity: 1,
-  },
-  nextTitleRest: {
-    color: colors.rest,
-    opacity: 1,
   },
   bottomBar: {
     paddingHorizontal: spacing.base,

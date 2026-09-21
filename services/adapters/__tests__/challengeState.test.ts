@@ -1,7 +1,9 @@
 import {
   deriveChallengeCardState,
   getChallengeGlowColor,
+  getChallengeGlowKey,
   groupLatestPhotoByChallengeId,
+  isChallengeFinished,
   pickChallengeStatus,
 } from '../challengeState';
 import { activityColors, colors } from '../../../constants/theme';
@@ -139,5 +141,60 @@ describe('getChallengeGlowColor', () => {
 
   it('falls back to the neutral primary when there is no dominant category yet', () => {
     expect(getChallengeGlowColor('active', null)).toBe(colors.primary);
+  });
+});
+
+describe('getChallengeGlowKey', () => {
+  it('is the state itself on a rest day and once today is completed, whatever the activity', () => {
+    expect(getChallengeGlowKey('rest', 'strength')).toBe('rest');
+    expect(getChallengeGlowKey('rest', null)).toBe('rest');
+    expect(getChallengeGlowKey('completed', 'mindBody')).toBe('completed');
+  });
+
+  it('is the activity on a train day, and for a finished or left challenge', () => {
+    expect(getChallengeGlowKey('active', 'cardioLow')).toBe('cardioLow');
+    expect(getChallengeGlowKey('won', 'flexibility')).toBe('flexibility');
+    expect(getChallengeGlowKey('left', 'functional')).toBe('functional');
+  });
+
+  it('is the fallback when there is no dominant activity yet', () => {
+    expect(getChallengeGlowKey('active', null)).toBe('default');
+    expect(getChallengeGlowKey('won', undefined)).toBe('default');
+  });
+
+  it('agrees with the glow color for every state and activity', () => {
+    for (const state of ['active', 'rest', 'completed', 'won', 'left'] as const) {
+      for (const category of [null, 'strength', 'cardioIntense', 'cardioLow', 'flexibility', 'mindBody', 'functional'] as const) {
+        const key = getChallengeGlowKey(state, category);
+        const expected =
+          key === 'rest' ? colors.rest : key === 'completed' ? colors.success : key === 'default' ? colors.primary : activityColors[key];
+        expect(getChallengeGlowColor(state, category)).toBe(expected);
+      }
+    }
+  });
+});
+
+describe('isChallengeFinished', () => {
+  it('is finished once the LAST day is logged', () => {
+    expect(isChallengeFinished({ currentDay: 75, totalDays: 75, completedToday: true })).toBe(true);
+  });
+
+  it('is not finished on the last day until that day is logged', () => {
+    expect(isChallengeFinished({ currentDay: 75, totalDays: 75, completedToday: false })).toBe(false);
+    expect(isChallengeFinished({ currentDay: 75, totalDays: 75 })).toBe(false);
+  });
+
+  it('is not finished on any earlier day, however done today is', () => {
+    expect(isChallengeFinished({ currentDay: 74, totalDays: 75, completedToday: true })).toBe(false);
+    expect(isChallengeFinished({ currentDay: 1, totalDays: 75, completedToday: true })).toBe(false);
+  });
+
+  it('counts a day past the end (an uncapped server) the same as the last one', () => {
+    expect(isChallengeFinished({ currentDay: 80, totalDays: 75, completedToday: true })).toBe(true);
+  });
+
+  it('is never finished with no days at all, or no current day', () => {
+    expect(isChallengeFinished({ currentDay: 0, totalDays: 0, completedToday: true })).toBe(false);
+    expect(isChallengeFinished({ totalDays: 75, completedToday: true })).toBe(false);
   });
 });

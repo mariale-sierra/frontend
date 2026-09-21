@@ -21,6 +21,7 @@ import type { LocationType } from '../../../components/icons/locationIcon';
 import { useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
 import { colors, spacing, activityColors, textOpacity } from '../../../constants/theme';
+import { USE_VIVID_CREATE_FLOW_BACKGROUND } from '../../../constants/screenBackground';
 import { withAlpha } from '../../../utils/color';
 import type { ExerciseCandidate } from '../../../hooks/useFilteredExercises';
 import {
@@ -342,7 +343,7 @@ export default function ExercisesScreen() {
   );
 
   return (
-    <ScreenBackground variant="top" gradientBackground>
+    <ScreenBackground variant="top" gradientBackground vividGradient={USE_VIVID_CREATE_FLOW_BACKGROUND}>
       <Row justify="space-between" align="center" style={styles.topBar}>
         <BackButton style={styles.backButton} />
         <Text variant="body" weight="bold" align="center" style={styles.headerTitle}>

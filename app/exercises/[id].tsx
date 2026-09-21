@@ -1,28 +1,41 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Row } from '../../components/layout/row';
+import { AccentPill } from '../../components/ui/accentPill';
 import { BackButton } from '../../components/ui/backButton';
 import { Text } from '../../components/ui/text';
-import { ActivityIcon } from '../../components/icons/activityIcon';
-import { LocationIcon } from '../../components/icons/locationIcon';
+import { ACTIVITY_ICON_NAME } from '../../components/icons/activityIcon';
+import { LOCATION_ICON_NAME } from '../../components/icons/locationIcon';
 import type { LocationType } from '../../components/icons/locationIcon';
+import { ExerciseAccentBackdrop } from '../../components/exercises/exerciseAccentBackdrop';
+import { ExercisePicture } from '../../components/exercises/exercisePicture';
 import { MuscleAnatomyView } from '../../components/anatomy/muscleAnatomyView';
 import type { AnatomyView, AnatomyHighlight } from '../../components/anatomy/muscleAnatomyView';
 import { getExerciseDetail, getMuscleDetail } from '../../services/exercises/exercises.service';
 import type { ExerciseDetail, MuscleSvgPartDto } from '../../services/exercises/exercises.service';
-import { pickHeaderImageUrl, buildAnatomyHighlights } from '../../services/adapters/exerciseAdapter';
+import {
+  pickHeaderImageUrl,
+  buildAnatomyHighlights,
+  normalizeCategoryCode,
+  normalizeLocationCode,
+} from '../../services/adapters/exerciseAdapter';
 import { colors, radius, spacing, activityColors } from '../../constants/theme';
-import { withAlpha } from '../../utils/color';
+import { getChallengeAccentColor } from '../../services/adapters/challengeState';
 import { CATEGORY_CODE_TO_ACTIVITY } from '../../constants/challengeFilters';
 
 type MuscleWithRole = { role: 'primary' | 'secondary'; svgParts: MuscleSvgPartDto[] };
 
+// The picture sits under the description, this share of the content's width.
+const PICTURE_WIDTH = '60%';
+
 export default function ExerciseDetailScreen() {
   const { t, i18n } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const locale = i18n.language.startsWith('es') ? 'es' : 'en';
 
   const [exercise, setExercise] = useState<ExerciseDetail | null>(null);
@@ -82,9 +95,8 @@ export default function ExerciseDetailScreen() {
   if (loading || !exercise) {
     return (
       <ScreenBackground variant="top">
-        <Row justify="space-between" align="center" style={styles.topBar}>
+        <Row align="center" style={styles.topBar}>
           <BackButton style={styles.backButton} />
-          <View style={styles.trailingSpacer} />
         </Row>
         <View style={styles.loadingWrap}>
           <ActivityIndicator color={colors.primary} />
@@ -97,44 +109,65 @@ export default function ExerciseDetailScreen() {
   const secondaryMuscles = exercise.muscles.filter((m) => m.role === 'secondary');
   const headerImage = pickHeaderImageUrl(exercise.assets);
 
+  // The exercise's own activity color: its primary category's. The screen's light and
+  // every badge are this color; an exercise with no category yet gets the neutral one.
+  const primaryCategory = exercise.categories.find((category) => category.isPrimary) ?? exercise.categories[0];
+  const accentColor = getChallengeAccentColor(primaryCategory ? CATEGORY_CODE_TO_ACTIVITY[primaryCategory.code] : null);
+
   return (
-    <ScreenBackground variant="top">
-      <Row justify="space-between" align="center" style={styles.topBar}>
+    <ScreenBackground variant="top" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
+      <ExerciseAccentBackdrop color={accentColor} />
+
+      {/* Just the back button: the exercise's name is right below, so a second copy
+          of it up here would be redundant. */}
+      <Row align="center" style={styles.topBar}>
         <BackButton style={styles.backButton} />
-        <Text variant="body" weight="bold" align="center" numberOfLines={1} style={styles.headerTitle}>
-          {exercise.name}
-        </Text>
-        <View style={styles.trailingSpacer} />
       </Row>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {headerImage && <Image source={{ uri: headerImage }} style={styles.heroImage} resizeMode="cover" />}
+        <Text variant="title" align="center">{exercise.name}</Text>
 
-        <Text variant="title" style={styles.name}>{exercise.name}</Text>
-
-        <Row style={styles.tagRow} gap="sm">
-          {exercise.categories.map((category) => {
-            const activityType = CATEGORY_CODE_TO_ACTIVITY[category.code];
-            return (
-              <View
-                key={category.code}
-                style={[styles.tag, activityType && { backgroundColor: withAlpha(activityColors[activityType], 0.16) }]}
-              >
-                {activityType && <ActivityIcon type={activityType} variant="plain" size="xs" color={activityColors[activityType]} />}
-                <Text variant="caption" weight="medium">{t(`exerciseCatalog.categories.${category.code}` as never)}</Text>
-              </View>
-            );
-          })}
-          {exercise.locations.map((location) => (
-            <View key={location.code} style={styles.tag}>
-              <LocationIcon type={location.code as LocationType} variant="plain" size="xs" />
-              <Text variant="caption" weight="medium">{t(`exerciseCatalog.locations.${location.code}` as never)}</Text>
-            </View>
-          ))}
-        </Row>
+        {/* The official badges, the bigger size, on two centered lines: the
+            activities, each in its own activity color, then the locations, as frosted
+            glass with a `paper` icon and label — neutral, so the activity colors stay
+            the only color here. The catalog's codes are normalized to the ones the labels and icons are keyed
+            by, and a code with no translation shows the catalog's own name — never
+            the raw key. */}
+        <View style={styles.badges}>
+          <Row justify="center" gap="sm" style={styles.badgeLine}>
+            {exercise.categories.map((category) => {
+              const code = normalizeCategoryCode(category.code);
+              const activityType = CATEGORY_CODE_TO_ACTIVITY[code];
+              return (
+                <AccentPill
+                  key={category.code}
+                  uppercase
+                  icon={activityType ? ACTIVITY_ICON_NAME[activityType] : undefined}
+                  label={t(`exerciseCatalog.categories.${code}` as never, { defaultValue: category.name })}
+                  color={activityType ? activityColors[activityType] : accentColor}
+                />
+              );
+            })}
+          </Row>
+          <Row justify="center" gap="sm" style={styles.badgeLine}>
+            {exercise.locations.map((location) => {
+              const code = normalizeLocationCode(location.code);
+              return (
+                <AccentPill
+                  key={location.code}
+                  uppercase
+                  variant="glass"
+                  icon={LOCATION_ICON_NAME[code as LocationType]}
+                  label={t(`exerciseCatalog.locations.${code}` as never, { defaultValue: location.name })}
+                />
+              );
+            })}
+          </Row>
+        </View>
 
         <Section title={t('exerciseCatalog.detail.description')}>
           <Text variant="body" tone="secondary">{exercise.description}</Text>
+          {headerImage && <ExercisePicture uri={headerImage} width={PICTURE_WIDTH} />}
         </Section>
 
         <Section title={t('exerciseCatalog.detail.instructions')}>
@@ -191,7 +224,7 @@ export default function ExerciseDetailScreen() {
             <ViewToggleButton label={t('exerciseCatalog.detail.back')} active={anatomyView === 'back'} onPress={() => setAnatomyView('back')} />
           </Row>
           <View style={styles.anatomyWrap}>
-            <MuscleAnatomyView view={anatomyView} highlights={anatomyHighlights} width={220} />
+            <MuscleAnatomyView view={anatomyView} highlights={anatomyHighlights} width={220} color={accentColor} />
           </View>
         </Section>
       </ScrollView>
@@ -202,7 +235,7 @@ export default function ExerciseDetailScreen() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={styles.section}>
-      <Text variant="header" size="sm" tone="secondary" style={styles.sectionTitle}>{title}</Text>
+      <Text variant="header" size="sm" style={styles.sectionTitle}>{title}</Text>
       {children}
     </View>
   );
@@ -238,48 +271,32 @@ const styles = StyleSheet.create({
   backButton: {
     marginLeft: -spacing.sm,
   },
-  headerTitle: {
-    flex: 1,
-  },
-  trailingSpacer: {
-    width: 44,
-    height: 44,
-  },
   loadingWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // A wide gap between the sections (major sections: `xl`).
   content: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['2xl'],
-    gap: spacing.base,
+    gap: spacing.xl,
   },
-  heroImage: {
-    width: '100%',
-    height: 220,
-    borderRadius: radius.small,
-    backgroundColor: colors.surface,
-  },
-  name: {
-    marginTop: spacing.sm,
-  },
-  tagRow: {
-    flexWrap: 'wrap',
-  },
-  tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.big,
-    backgroundColor: colors.surface,
-  },
-  section: {
+  // The two badge lines sit close together, each centered and wrapping if needed.
+  badges: {
     gap: spacing.sm,
   },
+  badgeLine: {
+    flexWrap: 'wrap',
+  },
+  section: {
+    gap: spacing.md,
+  },
+  // The section titles are `paper`, fully opaque (`Text`'s tone-opacity applies to a
+  // custom color too, so it is cancelled back).
   sectionTitle: {
+    color: colors.paper,
+    opacity: 1,
     textTransform: 'uppercase',
   },
   listRow: {

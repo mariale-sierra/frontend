@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -8,13 +8,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Stack } from '../components/layout/stack';
 import { Text } from '../components/ui/text';
-import { ChallengeQuickPickRow } from '../components/add/challengeQuickPickRow';
+import { ChallengeDeck } from '../components/add/challengeDeck';
+import { ChallengeDeckSkeleton } from '../components/add/challengeDeckSkeleton';
 import { getMyChallenges } from '../services/user/user.service';
 import { getMyProgressPhotos } from '../services/challenge/challenge.service';
 import { groupLatestPhotoByChallengeId } from '../services/adapters/challengeState';
 import { getLogChallengeQuickPicks, type LogChallengeQuickPick } from '../services/adapters/metricsAdapter';
 import { colors, radius, spacing, textOpacity } from '../constants/theme';
 import { withAlpha } from '../utils/color';
+import { useMeasuredWidth } from '../hooks/useMeasuredWidth';
 
 const BACKDROP_FADE_MS = 220;
 
@@ -28,10 +30,12 @@ const BACKDROP_FADE_MS = 220;
  *
  * Redesigned 2026-09-04 away from a bottom-sheet card (see git history for
  * the previous `sheet` panel anchored to the bottom) to a floating overlay:
- * no card/container behind the title+rows, content centered vertically
+ * no card/container behind the title, content centered vertically
  * instead of bottom-anchored, and a real animated backdrop blur instead of
- * a flat dim. Content, copy, challenge data, and navigation behavior are
- * unchanged — visual/layout only.
+ * a flat dim. And again 2026-09-20: the challenges are no longer a list of rows but
+ * a deck of cards (`ChallengeDeck`) — the challenge cards' look, piled one behind
+ * another, the front one leaving upward as you drag. Challenge data, copy and
+ * navigation behavior are unchanged.
  *
  * Deliberately a TOP-LEVEL route, not nested inside app/(add)/ — that group
  * is itself registered at the root with `presentation: 'fullScreenModal'`
@@ -44,7 +48,7 @@ const BACKDROP_FADE_MS = 220;
 export default function LogChallengePicker() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const { width, onLayout } = useMeasuredWidth();
 
   const [challenges, setChallenges] = useState<LogChallengeQuickPick[]>([]);
   // Real, reported bug: `challenges` (the LOGGABLE-today quick-pick list,
@@ -138,53 +142,36 @@ export default function LogChallengePicker() {
             <Text variant="body" size="sm" tone="secondary" align="left">{t('logMetrics.pickChallenge.subtitle')}</Text>
           </Stack>
 
-          {loading ? (
-            <View style={styles.stateWrap}>
-              <ActivityIndicator color={colors.primary} />
-            </View>
-          ) : error ? (
-            <View style={styles.stateWrap}>
-              <Text variant="body" tone="secondary" align="center">{t('logMetrics.pickChallenge.errorMessage')}</Text>
-            </View>
-          ) : challenges.length === 0 ? (
-            <View style={styles.stateWrap}>
-              <Text variant="body" tone="secondary" align="center">
-                {hasAnyChallenges
-                  ? t('logMetrics.pickChallenge.allLoggedMessage')
-                  : t('logMetrics.pickChallenge.emptyMessage')}
-              </Text>
-              <Pressable onPress={handleExplore} style={({ pressed }) => [styles.exploreButton, pressed && styles.pressed]}>
-                <Text variant="label" weight="bold" style={styles.exploreLabel}>
-                  {t('logMetrics.pickChallenge.exploreCta')}
+          {/* Measured once, here, and it stays put through loading, the deck and
+              the messages — so the deck that replaces the skeleton has the width
+              the skeleton had, and is there in the very frame it arrives, with no
+              empty moment while it measures itself. */}
+          <View testID="log-challenges" onLayout={onLayout}>
+            {loading ? (
+              <ChallengeDeckSkeleton width={width} />
+            ) : error ? (
+              <View style={styles.stateWrap}>
+                <Text variant="body" tone="secondary" align="center">{t('logMetrics.pickChallenge.errorMessage')}</Text>
+              </View>
+            ) : challenges.length === 0 ? (
+              <View style={styles.stateWrap}>
+                <Text variant="body" tone="secondary" align="center">
+                  {hasAnyChallenges
+                    ? t('logMetrics.pickChallenge.allLoggedMessage')
+                    : t('logMetrics.pickChallenge.emptyMessage')}
                 </Text>
-              </Pressable>
-            </View>
-          ) : (
-            // Capped rather than flex:1 — the whole group (title + rows)
-            // should size to its own content and sit centered, per the
-            // floating-overlay redesign. The cap only matters for accounts
-            // with enough active challenges to otherwise overflow the
-            // screen; below that it never engages and the list just sizes
-            // to its rows.
-            <ScrollView
-              style={{ maxHeight: windowHeight * 0.45 }}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-            >
-              {/* Each challenge is its own independent row — no shared list
-                  surface, no per-row card — separated by real gap. */}
-              <Stack gap="md">
-                {challenges.map((challenge, index) => (
-                  <ChallengeQuickPickRow
-                    key={challenge.id}
-                    challenge={challenge}
-                    index={index}
-                    onPress={() => handleSelectChallenge(challenge.id)}
-                  />
-                ))}
-              </Stack>
-            </ScrollView>
-          )}
+                <Pressable onPress={handleExplore} style={({ pressed }) => [styles.exploreButton, pressed && styles.pressed]}>
+                  <Text variant="label" weight="bold" style={styles.exploreLabel}>
+                    {t('logMetrics.pickChallenge.exploreCta')}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              // The whole group (title + deck) sizes to its own content and sits
+              // centered, per the floating-overlay redesign.
+              <ChallengeDeck challenges={challenges} width={width} onSelect={handleSelectChallenge} />
+            )}
+          </View>
         </Pressable>
       </View>
     </View>
@@ -215,9 +202,6 @@ const styles = StyleSheet.create({
   },
   headerStack: {
     paddingHorizontal: spacing.sm,
-  },
-  listContent: {
-    paddingVertical: spacing.xs,
   },
   stateWrap: {
     alignItems: 'center',

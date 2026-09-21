@@ -37,6 +37,14 @@ describe('getChallengeStatusCardModel', () => {
     expect(getChallengeStatusCardModel(buildChallenge({ state: 'won' }), t).glowColor).toBe(activityColors.cardioLow);
   });
 
+  it('picks the mesh recipe: its own for rest and completed, the activity\'s otherwise', () => {
+    expect(getChallengeStatusCardModel(buildChallenge({ state: 'rest' }), t).glowKey).toBe('rest');
+    expect(getChallengeStatusCardModel(buildChallenge({ state: 'completed' }), t).glowKey).toBe('completed');
+    expect(getChallengeStatusCardModel(buildChallenge({ state: 'active' }), t).glowKey).toBe('cardioLow');
+    expect(getChallengeStatusCardModel(buildChallenge({ state: 'won' }), t).glowKey).toBe('cardioLow');
+    expect(getChallengeStatusCardModel(buildChallenge({ dominantActivityCategory: null }), t).glowKey).toBe('default');
+  });
+
   it('picks the label and icon for each state', () => {
     expect(getChallengeStatusCardModel(buildChallenge({ state: 'active' }), t)).toMatchObject({
       stateLabel: 'challenges.trainDay',

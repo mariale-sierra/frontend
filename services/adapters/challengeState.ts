@@ -1,7 +1,8 @@
 import { asString } from './adapterUtils';
 import { colors, activityColors } from '../../constants/theme';
 import type { ActivityType } from '../../types/activity';
-import type { ChallengeContract, ChallengePhoto } from '../../types/challenge';
+import type { MeshRecipeKey } from '../../constants/meshRecipes';
+import type { ChallengeContract, ChallengePhoto, ChallengeProgressContract } from '../../types/challenge';
 
 export type NormalizedChallengeStatus = 'active' | 'completed' | 'left';
 export type ChallengeCardState = 'active' | 'rest' | 'completed' | 'won' | 'left';
@@ -75,20 +76,41 @@ export function getChallengeCardColor(
 }
 
 /**
- * The color a glow challenge card's light and outline take (Challenges-Mine and
- * Home's hero card): the state's own color on a `rest` day (lavender) and once
- * today is `completed` (green) — the two states a card is there to tell you
- * about — and the challenge's own activity color otherwise, including for a
- * finished or left challenge. (The card's *badge* always takes the state's
+ * Which glow a glow challenge card has (Challenges-Mine, Explore and Home's hero
+ * card): its own on a `rest` day and once today is `completed` — the two states a
+ * card is there to tell you about — and otherwise the challenge's own activity
+ * (`default` when it has no dominant activity yet), including for a finished or
+ * left challenge. The key picks the mesh recipe (`MESH_RECIPES`) and the base
+ * color (`getChallengeGlowColor`). (The card's *badge* always takes the state's
  * color; see `getChallengeCardColor`.)
+ */
+export function getChallengeGlowKey(
+  state: ChallengeCardState,
+  dominantActivityCategory: ActivityType | null | undefined,
+): MeshRecipeKey {
+  if (state === 'rest' || state === 'completed') return state;
+  return dominantActivityCategory ?? 'default';
+}
+
+// The base color behind each glow key.
+const GLOW_KEY_COLOR: Record<MeshRecipeKey, string> = {
+  ...activityColors,
+  rest: colors.rest,
+  completed: colors.success,
+  default: colors.primary,
+};
+
+/**
+ * The color a glow challenge card's light and outline take: lavender on a `rest`
+ * day, green once today is `completed`, the challenge's own activity color
+ * otherwise (the neutral `primary` with no dominant activity yet). See
+ * `getChallengeGlowKey`.
  */
 export function getChallengeGlowColor(
   state: ChallengeCardState,
   dominantActivityCategory: ActivityType | null | undefined,
 ): string {
-  return state === 'rest' || state === 'completed'
-    ? STATE_COLOR[state]
-    : getChallengeAccentColor(dominantActivityCategory);
+  return GLOW_KEY_COLOR[getChallengeGlowKey(state, dominantActivityCategory)];
 }
 
 /**
@@ -157,6 +179,19 @@ export function deriveChallengeCardState({
   if (completedToday) return 'completed';
   if (isRestDay) return 'rest';
   return 'active';
+}
+
+/**
+ * Is the whole challenge done? Once its LAST day has been logged — today is the
+ * final day (`currentDay` reaches `totalDays`, and the server caps it there) and
+ * today has a logged photo or a submitted rest day. That is the moment the app
+ * marks the challenge completed (nothing else ever does) and the moment it leaves
+ * Challenges-Mine; before it, a challenge is just on its last day.
+ */
+export function isChallengeFinished(
+  progress: Pick<ChallengeProgressContract, 'currentDay' | 'totalDays' | 'completedToday'>,
+): boolean {
+  return progress.totalDays > 0 && (progress.currentDay ?? 0) >= progress.totalDays && progress.completedToday === true;
 }
 
 /**

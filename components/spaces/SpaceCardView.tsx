@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { AccentCard } from '../ui/accentCard';
-import { AccentPill } from '../ui/accentPill';
 import { Text } from '../ui/text';
 import { ChallengeCardMembers } from '../challenge/card/ChallengeCardMembers';
 import { challengeCardText } from '../challenge/card/challengeCardText';
@@ -12,10 +11,8 @@ import { formatCount } from '../../utils/format';
 interface SpaceCardViewProps {
   name: string;
   description?: string | null;
-  /** The category's name, shown as the badge. No badge when there isn't one. */
-  categoryName?: string | null;
   membersCount: number;
-  /** The space's own Activity Color — the card's glow, outline and badge. */
+  /** The space's own Activity Color — the card's glow and outline. */
   accentColor: string;
   /** The Join / Request / Pending pill, top right. None for a member or owner,
    * and in the form's live preview. */
@@ -24,18 +21,18 @@ interface SpaceCardViewProps {
 
 /**
  * What a Space looks like as a card: the glow card look shared with the challenge
- * cards (`AccentCard` — dark, the space's Activity Color glowing up from the
- * bottom edge with a fine outline) in the Space card's own compact layout, based
- * on wireframe Chats-46A: the category badge over the name on the left, the
- * Join / Request / Pending pill on the right of the same row, then the
- * description, then the member count. Sized by its content. Presentational only
- * — `SpaceCard` adds the press handling, and the space form shows it as its live
- * preview.
+ * cards (`AccentCard` — dark, the space's Activity Color as a fine outline and as
+ * a glow) with a glow of its own, a half-moon from the top AND the bottom edge
+ * (`twinGlow`), in the Space card's compact layout, based on wireframe Chats-46A:
+ * the name on the left, the Join / Request / Pending pill on the right of the same
+ * row, then the description, then the member count. No activity badge (the color
+ * says it), and roomier padding than the challenge cards. Sized by its content.
+ * Presentational only — `SpaceCard` adds the press handling, and the space form
+ * shows it as its live preview.
  */
 export function SpaceCardView({
   name,
   description,
-  categoryName,
   membersCount,
   accentColor,
   cta,
@@ -43,18 +40,11 @@ export function SpaceCardView({
   const { t } = useTranslation();
 
   return (
-    <AccentCard color={accentColor} style={styles.card}>
-      {/* Real, reported layout bug: the badge and name used to be two
-          separate full-width rows (badge+CTA on row 1, name alone on row
-          2) — the wireframe groups the badge and name into ONE left-hand
-          column that sits in the SAME row as the CTA pill, the CTA
-          vertically anchored to that column's top edge, not floating
-          above the name on its own line. */}
+    <AccentCard color={accentColor} twinGlow style={styles.card}>
+      {/* The name on the left, in the SAME row as the CTA pill, the CTA anchored
+          to its top edge (the wireframe's shape). */}
       <View style={styles.headerRow}>
         <View style={styles.titleColumn}>
-          {categoryName ? (
-            <AccentPill size="sm" uppercase icon="flash-outline" label={categoryName} color={accentColor} />
-          ) : null}
           {/* `lg` (18px), a tier down from `subheader`'s 20 — a Space card's
               name is smaller than a challenge card's title, to keep the card short. */}
           <Text variant="subheader" size="lg" numberOfLines={1} style={challengeCardText.primary}>
@@ -91,9 +81,12 @@ export function SpaceCardView({
 }
 
 const styles = StyleSheet.create({
-  // `AccentCard`'s own `md` padding — compact, no extra inset.
+  // Roomier than `AccentCard`'s own `md` padding, so the content sits well in from
+  // the card's rounded edges: `lg` at the sides, `base` above and below.
   card: {
     gap: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.base,
   },
   headerRow: {
     flexDirection: 'row',

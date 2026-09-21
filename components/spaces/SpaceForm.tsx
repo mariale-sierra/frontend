@@ -228,7 +228,6 @@ export const SpaceForm = forwardRef<SpaceFormHandle, SpaceFormProps>(function Sp
           <SpaceCardView
             name={name.trim() || t('spaces.namePlaceholder')}
             description={description.trim()}
-            categoryName={selectedCategory?.name}
             membersCount={previewMembersCount ?? 1}
             accentColor={accentColor}
           />

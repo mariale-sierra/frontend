@@ -17,24 +17,6 @@ interface UseConfirmationPopupReturn {
   hide: () => void;
 }
 
-// For challenge completion notifications
-export interface ChallengeCompletionData {
-  challengeId: string;
-  challengeName: string;
-  /** Whole-challenge length in days, e.g. 75 — kept as raw data, not a
-   * pre-formatted string, so the popup can pluralize it correctly via i18n
-   * (challenges.completionPopup.descriptionWithDuration_one/_other). */
-  totalDays?: number;
-  completedAt?: Date;
-}
-
-interface UseChallengeCompletionReturn {
-  Component: React.FC;
-  show: (data: ChallengeCompletionData) => void;
-  hide: () => void;
-}
-
-
 export function useConfirmationPopup({
   type,
   challengeName,
@@ -103,7 +85,7 @@ export function useConfirmationPopup({
 
   // Real bug, fixed 2026-08-29, per explicit "the popup blinks" report on
   // Leave Challenge: memoized for the exact same reason already documented
-  // (and fixed) on useChallengeCompletion's own Component below, just never
+  // (and fixed) elsewhere, just never
   // applied here too. An unmemoized `Component` is a brand-new function
   // identity on every render — React treats that as a different component
   // TYPE, not the same one re-rendering, so it unmounts and remounts the
@@ -128,61 +110,4 @@ export function useConfirmationPopup({
   );
 
   return { Component, show, hide };
-}
-
-
-export function useChallengeCompletion(options?: {
-  onDismiss?: (data: ChallengeCompletionData) => void;
-}): UseChallengeCompletionReturn {
-  const { t } = useTranslation();
-  const [visible, setVisible] = useState(false);
-  const [completionData, setCompletionData] = useState<ChallengeCompletionData | null>(null);
-
-  const show = useCallback((data: ChallengeCompletionData) => {
-    setCompletionData(data);
-    setVisible(true);
-  }, []);
-
-  const hide = useCallback(() => {
-    setVisible(false);
-    setCompletionData((current) => {
-      options?.onDismiss?.(current!);
-      return current;
-    });
-  }, [options]);
-
-  // Memoized so its identity is stable across renders — otherwise every
-  // render created a brand-new component type, which made React unmount and
-  // remount the underlying Modal on every state update (the popup appeared
-  // to flicker and never fully close).
-  const Component: React.FC = useMemo(
-    () =>
-      function ChallengeCompletionPopup() {
-        if (!completionData) return null;
-
-        const description = completionData.totalDays
-          ? t('challenges.completionPopup.descriptionWithDuration', {
-              name: completionData.challengeName,
-              count: completionData.totalDays,
-            })
-          : t('challenges.completionPopup.description', { name: completionData.challengeName });
-
-        return (
-          <ConfirmationPopup
-            visible={visible}
-            title={t('challenges.completionPopup.title')}
-            description={description}
-            primaryButton={{
-              label: t('challenges.completionPopup.cta'),
-              onPress: hide,
-              variant: 'primary',
-            }}
-            onDismiss={hide}
-          />
-        );
-      },
-    [visible, completionData, hide, t],
-  );
-
-  return useMemo(() => ({ Component, show, hide }), [Component, show, hide]);
 }

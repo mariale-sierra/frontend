@@ -1,37 +1,24 @@
 import { StyleProp, StyleSheet, View, ViewStyle, useWindowDimensions } from 'react-native';
 import { Blur, Canvas, Fill, FractalNoise, Group, Oval, RadialGradient, Rect, vec } from '@shopify/react-native-skia';
 import { AccentDome } from '../ui/accentDome';
+import { RainbowGradientBackground } from './RainbowGradientBackground';
 import { activityColors, colors } from '../../constants/theme';
-import { boostSaturation, withAlpha } from '../../utils/color';
+import { withAlpha } from '../../utils/color';
 
-// The two looks the mesh comes in. Both are the same six fields on the same arc;
-// they differ in how strong and how saturated the fields are, and in whether a
-// colorless paper light sits underneath them.
-const LOOKS = {
-  // The original, tuned 2026-09-19. Peak opacity each color field reaches at its
-  // core is deliberately kept low — brighter reads as "ruined", so vividness comes
-  // from the colors themselves (`vividFactor`), not from more alpha. The activity
-  // palette is intentionally muted for UI chips/badges; this look alone uses more
-  // saturated versions of the same hues (derived from the tokens, not new hex
-  // values) so the six colors stay distinguishable instead of washing toward gray.
-  // Stashed 2026-09-20: it competed with the colored cards ("way too jarring").
-  vivid: {
-    fieldPeakOpacity: 0.13,
-    vividFactor: 1.35,
-    paperLight: null,
-  },
-  // Quiet enough to sit behind the colored cards: the fields at under half the
-  // strength and at the palette's own saturation (no boost), over a faint `paper`
-  // light from the top (an `AccentDome`, colorless — the depth the plain paper
-  // background gave) so the screen still has depth where the colors thin out.
-  soft: {
-    fieldPeakOpacity: 0.055,
-    vividFactor: 1,
-    paperLight: { domeHalfWidth: 0.7, domeDepth: 0.4, washPeak: 0.04, bloomPeak: 0.02 },
-  },
+// The `soft` look: quiet enough to sit behind the colored cards — the six fields at
+// under half the strength the original had, over a faint `paper` light from the top
+// (an `AccentDome`, colorless — the depth the plain paper background gave) so the
+// screen still has depth where the colors thin out.
+const SOFT_LOOK = {
+  fieldPeakOpacity: 0.055,
+  paperLight: { domeHalfWidth: 0.7, domeDepth: 0.4, washPeak: 0.04, bloomPeak: 0.02 },
 } as const;
 
-export type MeshGradientLook = keyof typeof LOOKS;
+/** `vivid` is the animated rainbow (`RainbowGradientBackground`) — the original
+ * static vivid mesh was freshened and made to move on 2026-09-20 (explicit
+ * request), so it no longer exists in its old form. `soft` is the quiet static
+ * mesh behind the colored cards. */
+export type MeshGradientLook = 'vivid' | 'soft';
 
 // The fields sit on a half-moon arc hanging from the top edge: the ends rise
 // to the corners and the middle dips lowest. Arc radius is a fraction of screen
@@ -61,8 +48,8 @@ const FALLOFF: [number, number][] = [
 // gray before. `angle` is degrees along the arc: 180 = far left, 0 = far right.
 const MESH_FIELDS = [
   { color: activityColors.mindBody, angle: 168 }, // magenta
-  { color: activityColors.cardioIntense, angle: 136.8 }, // gold
-  { color: activityColors.strength, angle: 105.6 }, // lime
+  { color: activityColors.strength, angle: 136.8 }, // gold
+  { color: activityColors.cardioIntense, angle: 105.6 }, // lime
   { color: activityColors.cardioLow, angle: 74.4 }, // aqua
   { color: activityColors.functional, angle: 43.2 }, // sky blue
   { color: activityColors.flexibility, angle: 12 }, // blue
@@ -70,28 +57,38 @@ const MESH_FIELDS = [
 
 interface MeshGradientBackgroundProps {
   style?: StyleProp<ViewStyle>;
-  /** `vivid` (the original) or `soft` — see `LOOKS`. Default `vivid`. */
+  /** `vivid` (the animated rainbow) or `soft` — see `MeshGradientLook`. Default `vivid`. */
   look?: MeshGradientLook;
 }
 
 /**
- * "Atmospheric mesh gradient" background — six feathered fields, one per
- * activity color, arranged on a half-moon arc hanging from the top of the
+ * The mesh gradient backgrounds, opt-in per screen via `ScreenBackground`'s
+ * `gradientBackground` prop — but only while `USE_PAPER_GRADIENT_BACKGROUND` is off
+ * (the screens get the simple `PaperGradientBackground` otherwise; which look it
+ * gets is decided by `USE_VIVID_MESH_BACKGROUND`). The one exception is the
+ * create-challenge flow, which asks for the `vivid` look outright (`vividGradient`,
+ * `USE_VIVID_CREATE_FLOW_BACKGROUND`).
+ */
+export function MeshGradientBackground({ style, look = 'vivid' }: MeshGradientBackgroundProps) {
+  return look === 'vivid' ? <RainbowGradientBackground style={style} /> : <SoftMeshBackground style={style} />;
+}
+
+/**
+ * "Atmospheric mesh gradient" background, `soft` look — six feathered fields, one
+ * per activity color, arranged on a half-moon arc hanging from the top of the
  * screen. Blended additively so neighboring fields read as continuous
  * intermediate hues, each stretched downward and eased out so the color
  * blends softly toward the bottom, then vignetted to solid `colors.ink` with
- * a very faint grain layer. Opt-in per screen via `ScreenBackground`'s
- * `gradientBackground` prop; which `look` it gets is decided by
- * `USE_VIVID_MESH_BACKGROUND`.
+ * a very faint grain layer.
  */
-export function MeshGradientBackground({ style, look = 'vivid' }: MeshGradientBackgroundProps) {
+function SoftMeshBackground({ style }: { style?: StyleProp<ViewStyle> }) {
   const { width, height } = useWindowDimensions();
-  const { fieldPeakOpacity, vividFactor, paperLight } = LOOKS[look];
+  const { fieldPeakOpacity, paperLight } = SOFT_LOOK;
 
   const fields = MESH_FIELDS.map((field) => {
     const radians = (field.angle * Math.PI) / 180;
     return {
-      color: boostSaturation(field.color, vividFactor),
+      color: field.color,
       cx: width * (0.5 + ARC_RADIUS * Math.cos(radians)),
       cy: height * ARC_CENTER_Y + width * ARC_RADIUS * Math.sin(radians),
       r: width * FIELD_RADIUS,
@@ -107,18 +104,16 @@ export function MeshGradientBackground({ style, look = 'vivid' }: MeshGradientBa
       <Canvas style={StyleSheet.absoluteFill}>
         <Fill color={colors.ink} />
 
-        {paperLight ? (
-          <AccentDome
-            width={width}
-            height={height}
-            color={colors.paper}
-            domeHalfWidth={paperLight.domeHalfWidth}
-            domeDepth={paperLight.domeDepth}
-            washPeak={paperLight.washPeak}
-            bloomPeak={paperLight.bloomPeak}
-            bloomBlur={width * 0.04}
-          />
-        ) : null}
+        <AccentDome
+          width={width}
+          height={height}
+          color={colors.paper}
+          domeHalfWidth={paperLight.domeHalfWidth}
+          domeDepth={paperLight.domeDepth}
+          washPeak={paperLight.washPeak}
+          bloomPeak={paperLight.bloomPeak}
+          bloomBlur={width * 0.04}
+        />
 
         {/* `plus` (additive), not `screen` — screen washes low-opacity colors
             toward gray/pastel over a dark base; additive keeps each field's

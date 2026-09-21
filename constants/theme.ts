@@ -48,7 +48,7 @@ export const colors = {
   success: '#5DCB85', // re-saturated slightly 2026-09-04, per explicit "a tiny more saturated" follow-up (was desaturated to ~43% of original S earlier the same day, now ~56%) — was #37E0A4 → #1E9E70 → #4ADE80 → #76EAA0 → #4ADE80 → #66C288 → #5DCB85 (current), a brighter teal-green originally
   warning: '#E39454', // re-saturated slightly 2026-09-04 (S now ~72% of original, was ~60%) — was #F2A93B amber → #C9540F → #FB923C → #F9B176 → #FB923C → #D79660 → #E39454 (current). Still no confirmed use case — see Open Items Tracker
   error: '#DA5959', // re-saturated slightly 2026-09-04 (S now ~63% of original, was ~52%) — was #DE2B2B → #A31E1E → #EF4444 → #F67575 → #EF4444 → #CF6464 → #DA5959 (current)
-  rest: '#D1C2FF', // lighter lavender 2026-09-19, per explicit request alongside the new activity palette — was #B49BFF → #B399FF → #C9B6FF → #B399FF → #BDACEC → #B9A6F2 → #D1C2FF (current), per explicit request each time. Rest/recovery states, day-level only — "no activity today". Never a whole challenge's identity color, even for a mostly-rest-day challenge.
+  rest: '#C1ACFF', // lavender, more saturated twice 2026-09-20, per explicit request (same lightness, HSV saturation .24 → .31 → .33) — was #B49BFF → #B399FF → #C9B6FF → #B399FF → #BDACEC → #B9A6F2 → #D1C2FF → #C4B0FF → #C1ACFF (current), per explicit request each time. Rest/recovery states, day-level only — "no activity today". Never a whole challenge's identity color, even for a mostly-rest-day challenge.
   neutral: '#8A8C82', // paused/inactive states — positive/neutral, not a problem
 } as const;
 
@@ -68,7 +68,8 @@ export type ColorToken = keyof Colors;
  * these — there is no "neutral" entry in this map on purpose.
  *
  * Each color pairs with `ink` text only — never `paper`/white. Every one is at
- * least 9:1 against `ink` (the weakest are flexibility and mindBody).
+ * least 9:1 against `ink` (the weakest are flexibility and mindBody; a test keeps
+ * it so).
  */
 export const activityColors: Record<ActivityType, string> = {
   // Set 2026-09-19, per explicit request, to a new brighter, more saturated
@@ -76,12 +77,19 @@ export const activityColors: Record<ActivityType, string> = {
   // 2026-09-04 desaturation passes, so each entry's history below reads
   // back to them. Every entry's own trailing hex is the prior value this
   // replaced. (The muted set this replaced was ~75% of these saturations.)
-  strength: '#E9EB54', // lime (power/alertness) — was #F2653A → #DEE027 → #E9EB54 → #DEE027 → #BCBD4A → #C7C93E → #E9EB54 (current)
-  cardioIntense: '#F7CF64', // golden-orange (fast/electric energy) — was #F0B429 → #F0BC33 → #F7CF64 → #F0BC33 → #CCAC57 → #D8B14B → #F7CF64 (current)
-  cardioLow: '#43EDD7', // aqua-turquoise (steady/calm endurance) — was #5CD97A → #9ADB4F → #1BDCC4 → #43EDD7 → #1BDCC4 → #40B7A8 → #33C4B2 → #43EDD7 (current)
-  flexibility: '#88ADF6', // electric blue (open/breath) — was #3DDBEE → #588AEE → #88ADF6 → #588AEE → #7493D2 → #6B90DB → #88ADF6 (current)
-  mindBody: '#F688E4', // magenta-pink (calm/balance) — was #F17FE0 → #EE58D5 → #F688E4 → #EE58D5 → #D274C2 → #DB6BC8 → #F688E4 (current)
-  functional: '#63CFF3', // sky blue (versatile/utility) — was #D8EE3C → #33BDEB → #63CFF3 → #33BDEB → #56ACC8 → #4AB2D4 → #63CFF3 (current)
+  // 2026-09-20, per explicit request: strength and cardioIntense swapped colors.
+  // Then, the same day, per explicit request: every color's saturation bumped a
+  // little (HSV saturation about 1.05x, with the brightness put back where the
+  // gamut allows, so each still pairs with `ink` text), and strength made a bit
+  // warmer (hue 44 -> 38 degrees, gold toward amber). A first try at about 1.16x
+  // was "way too much" and was cut back to this. Each entry's last "was" is the
+  // value before that bump.
+  strength: '#FFC460', // amber-gold (power/alertness) — was #F7CF64 (golden-orange, swapped from cardioIntense) → #E9EB54 (lime, before the swap)
+  cardioIntense: '#E9EB4D', // lime (fast/electric energy) — was #E9EB54 (lime, swapped from strength) → #F7CF64 (golden-orange, before the swap)
+  cardioLow: '#3BEED6', // aqua-turquoise (steady/calm endurance) — was #43EDD7 → #5CD97A → #9ADB4F → #1BDCC4 → #43EDD7 → #1BDCC4 → #40B7A8 → #33C4B2 → #43EDD7
+  flexibility: '#85ADFB', // electric blue (open/breath) — was #88ADF6 → #3DDBEE → #588AEE → #88ADF6 → #588AEE → #7493D2 → #6B90DB → #88ADF6
+  mindBody: '#FA85E7', // magenta-pink (calm/balance) — was #F688E4 → #F17FE0 → #EE58D5 → #F688E4 → #EE58D5 → #D274C2 → #DB6BC8 → #F688E4
+  functional: '#5DCFF6', // sky blue (versatile/utility) — was #63CFF3 → #D8EE3C → #33BDEB → #63CFF3 → #33BDEB → #56ACC8 → #4AB2D4 → #63CFF3
 } as const;
 
 /**
@@ -289,6 +297,10 @@ export const glass = {
   blurIntensity: 28,
   tint: 'dark',
   tintOpacity: 0.72, // `surface` over the blur
+  // A small badge over a colored light (the exercise screen's location badges): a
+  // lighter `surface` tint, so the light behind reads through it — at the sheets'
+  // .72 a badge over a soft gradient is nearly a solid dark pill.
+  badgeTintOpacity: 0.4,
   borderOpacity: 0.08, // hairline `paper` rim
 } as const;
 
