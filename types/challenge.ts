@@ -139,6 +139,9 @@ export interface ChallengeContract {
    * ever looked at whether today had a PHOTO. See `pickTodayCompleted()`
    * (homeAdapter.ts). */
   today_completed?: boolean;
+  /** 'open' | 'closed' — admin-only action (Bloque 1). Absent on older
+   * cached responses treated as 'open'. */
+  status?: string;
   [key: string]: unknown;
 }
 
@@ -180,6 +183,24 @@ export interface ProgressSubmissionRequest {
   caption?: string;
   visibility?: 'private' | 'followers';
   isRestDay?: boolean;
+  /** Bloque 1 — joint owner posts. Only the challenge owner can set this;
+   * the backend rejects it otherwise. Omit for a normal solo post. */
+  taggedUserIds?: string[];
+}
+
+/** Raw backend contract for a pending challenge join request (see GET
+ * /challenges/{id}/join-requests) — same shape as the spaces equivalent. */
+export interface ChallengeJoinRequestContract {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  user: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    profileImageUrl: string | null;
+  };
+  requestedAt: string;
+  respondedAt: string | null;
 }
 
 export interface TodayRoutineExerciseContract {
