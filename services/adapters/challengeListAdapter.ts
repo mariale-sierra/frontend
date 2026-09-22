@@ -209,8 +209,21 @@ const MINE_STATE_PRIORITY: Record<ChallengeMineCardViewModel['state'], number> =
 
 /**
  * Challenges-Mine tab — every challenge the user is enrolled in, in whatever
- * state. Sorted active → rest → completed → won → left, matching the
- * wireframe's example order.
+ * state, EXCEPT `left` (abandoned). Sorted active → rest → completed → won,
+ * matching the wireframe's example order.
+ *
+ * `left` is filtered out entirely, per explicit request 2026-09-22 ("I dont
+ * want to have the 'left' challenges, those shouldnt have a place anywhere")
+ * — a challenge the user walked away from doesn't belong in their list at
+ * all, not even collapsed alongside finished ones. The `left` state itself
+ * (icon/color/label, `deriveChallengeCardState`, both card components) is
+ * deliberately NOT removed from the codebase — it's a real
+ * `challenge_user_map.status` the backend can still report, and ripping the
+ * whole state out of the type/model layer for a "don't show it in this one
+ * list" request would be a much bigger, riskier change than this screen
+ * actually needs. If a future screen (e.g. a "challenge history") wants to
+ * surface left challenges again, the state and its card treatment are still
+ * there to reuse.
  *
  * Deliberately kept pure (no fetching here) — `latestPhotoByChallengeId` is
  * pre-fetched by the caller via a SINGLE GET /workout-posts/mine call,
@@ -225,6 +238,7 @@ export function toChallengeMineViewModels(
 ): ChallengeMineCardViewModel[] {
   return challenges
     .map((challenge) => toMineCard(challenge, latestPhotoByChallengeId.get(String(challenge.id))))
+    .filter((card) => card.state !== 'left')
     .sort((a, b) => MINE_STATE_PRIORITY[a.state] - MINE_STATE_PRIORITY[b.state]);
 }
 

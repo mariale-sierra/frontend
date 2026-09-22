@@ -11,7 +11,6 @@ import { challengeCardText } from '../card/challengeCardText';
 import { getChallengeStatusCardModel } from './challengeStatusCardModel';
 import type { ChallengeStatusCardProps, StatusCardSidePanel } from './challengeStatusCardModel';
 import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
-import { getMeshRecipe } from '../../../constants/meshRecipes';
 import { withAlpha } from '../../../utils/color';
 
 /**
@@ -25,8 +24,22 @@ import { withAlpha } from '../../../utils/color';
  * day (lavender) and once today is completed (green), and the challenge's own
  * activity color otherwise.
  *
+ * The glow itself is the plain half-moon (`AccentDome`, via `ChallengeCard`'s
+ * default when no `glowRecipe` is passed) — the SAME light Home's hero card
+ * uses (`ActiveChallengeItemV2`, also no `glowRecipe`), not the multi-color
+ * mesh. Per explicit request 2026-09-22 ("scratch the mine cards gradient,
+ * give the mine cards the same gradient as the challenge cards in the home
+ * screen") — three earlier rounds tuned the mesh recipe's brightness and
+ * field size chasing "overdiffused"/"blur" feedback; dropping the mesh
+ * entirely for the plain dome (the actual ask) makes all of that moot here.
+ * `LAYOUTS.mine` in `meshRecipes.ts` is left in place, unused — same
+ * "revert flag" pattern as `USE_MESH_CARD_GLOW` elsewhere, in case a mesh
+ * glow is wanted back here later.
+ *
  * Same props and logic as the classic `ChallengeStatusCard` (both read
- * `getChallengeStatusCardModel`) — only the visuals differ.
+ * `getChallengeStatusCardModel`) — only the visuals differ. The classic card
+ * has no glow at all (a flat, solid-color card), so it's unaffected by any
+ * of this.
  *
  * A finished (`won`) challenge's card is dimmed ("apagado") and gets a
  * periodic light sweep (`ChallengeCardShimmer`) — per explicit request
@@ -42,7 +55,7 @@ export const ChallengeStatusCardV2 = memo(function ChallengeStatusCardV2({
   onPressAddPhoto,
 }: ChallengeStatusCardProps) {
   const { t } = useTranslation();
-  const { stateColor, glowColor, glowKey, stateIcon, stateLabel, progress, sidePanel } = getChallengeStatusCardModel(
+  const { stateColor, glowColor, stateIcon, stateLabel, progress, sidePanel } = getChallengeStatusCardModel(
     challenge,
     t,
   );
@@ -51,10 +64,9 @@ export const ChallengeStatusCardV2 = memo(function ChallengeStatusCardV2({
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
       <View style={styles.cardWrap}>
-        <View style={isFinished && styles.dimmed}>
+        <View testID="challenge-card-content" style={isFinished && styles.dimmed}>
           <ChallengeCard
             accentColor={glowColor}
-            glowRecipe={getMeshRecipe('mine', glowKey)}
             top={<AccentPill size="sm" uppercase icon={stateIcon} label={stateLabel} color={stateColor} />}
             title={challenge.title}
             titleLines={2}
@@ -134,8 +146,10 @@ const styles = StyleSheet.create({
   },
   // The "apagado" dim for a finished challenge's card — content only, not
   // the shimmer sweep rendered alongside it (see the component doc comment).
+  // 0.78 read as "almost invisible" per explicit follow-up feedback
+  // 2026-09-22 — dropped further to a clearly-faded 0.55.
   dimmed: {
-    opacity: 0.78,
+    opacity: 0.55,
   },
   // `medium` radius: concentric with the card's `big` corners inside its `md` padding.
   panel: {

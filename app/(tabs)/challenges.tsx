@@ -66,10 +66,11 @@ export default function Challenges() {
   // see FinishedChallengesToggle's own doc comment.
   const [showFinished, setShowFinished] = useState(false);
 
-  // `mineChallenges` is already sorted active -> rest -> completed -> won ->
-  // left (toChallengeMineViewModels), so `finishedChallenges` stays in that
-  // same relative order once revealed. Only `won` counts as "finished" here —
-  // `left` (abandoned) is a different thing and stays in the main list.
+  // `mineChallenges` is already sorted active -> rest -> completed -> won
+  // (toChallengeMineViewModels), so `finishedChallenges` stays in that same
+  // relative order once revealed. `left` (abandoned) challenges never reach
+  // this array at all — that adapter filters them out entirely (per explicit
+  // request), so there's no separate "left stays inline" case to handle here.
   const activeMineChallenges = useMemo(() => mineChallenges.filter((c) => c.state !== 'won'), [mineChallenges]);
   const finishedMineChallenges = useMemo(() => mineChallenges.filter((c) => c.state === 'won'), [mineChallenges]);
   const mineListData = showFinished ? mineChallenges : activeMineChallenges;

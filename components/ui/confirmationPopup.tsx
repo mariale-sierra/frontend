@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet } from 'react-native';
 import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
@@ -36,6 +37,15 @@ interface ConfirmationPopupProps {
   icon?: PopupIconName;
   /** Overrides the icon's default color (the tone's own). */
   iconColor?: string;
+  /** Optional decorative content drawn over the whole modal (backdrop AND
+   * card), e.g. a confetti burst — `ChallengeFinishedPopup`'s own doc
+   * comment. Rendered inside the same `Modal`, since RN's `Modal` is its own
+   * native layer — a sibling outside `ConfirmationPopup` would render
+   * behind it, not on top. Must be non-interactive on its own (this popup
+   * doesn't add `pointerEvents` around it) so it never blocks the buttons.
+   * Nothing passes this today except that one popup — every other call site
+   * is unaffected. */
+  overlay?: ReactNode;
 }
 
 // The tone shows in the icon and nowhere else. The card used to carry a radial
@@ -78,6 +88,7 @@ export function ConfirmationPopup({
   tone = 'default',
   icon,
   iconColor,
+  overlay,
 }: ConfirmationPopupProps) {
   const handleBackdropPress = () => {
     if (!primaryButton.loading && !secondaryButton?.loading) {
@@ -160,6 +171,7 @@ export function ConfirmationPopup({
           </GlassSurface>
         </Pressable>
       </Pressable>
+      {overlay}
     </Modal>
   );
 }

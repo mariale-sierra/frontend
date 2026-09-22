@@ -119,13 +119,34 @@ describe('pickAuthor', () => {
   });
 });
 
+// A left (abandoned) challenge has no place in Challenges-Mine at all, per explicit
+// request 2026-09-22 — filtered out entirely, not just sorted to the bottom.
+describe('a left (abandoned) challenge in Challenges-Mine', () => {
+  it('never appears in the list at all', () => {
+    const mine = toChallengeMineViewModels(
+      [
+        buildChallenge({ id: 'LEFT', status: 'left', current_day: 3 }),
+        buildChallenge({ id: 'GOING', status: 'active', current_day: 5 }),
+      ],
+      NO_PHOTOS,
+    );
+
+    expect(mine.map((challenge) => challenge.challengeId)).toEqual(['GOING']);
+  });
+
+  it('leaves an empty Mine list when every challenge was left, rather than showing them', () => {
+    const mine = toChallengeMineViewModels([buildChallenge({ id: 'LEFT', status: 'left' })], NO_PHOTOS);
+
+    expect(mine).toEqual([]);
+  });
+});
+
 // A finished challenge must not vanish from Mine when its celebration is closed: it stays,
 // as its "Finished" card, after the challenges still going.
 describe('a finished challenge in Challenges-Mine', () => {
   const mine = () =>
     toChallengeMineViewModels(
       [
-        buildChallenge({ id: 'LEFT', status: 'left', current_day: 3 }),
         buildChallenge({ id: 'FINISHED', status: 'completed', current_day: 30 }),
         buildChallenge({ id: 'GOING', status: 'active', current_day: 5 }),
       ],
@@ -139,8 +160,8 @@ describe('a finished challenge in Challenges-Mine', () => {
     expect(finished?.state).toBe('won');
   });
 
-  it('comes after the challenges still going and before the ones that were left', () => {
-    expect(mine().map((challenge) => challenge.challengeId)).toEqual(['GOING', 'FINISHED', 'LEFT']);
+  it('comes after the challenges still going', () => {
+    expect(mine().map((challenge) => challenge.challengeId)).toEqual(['GOING', 'FINISHED']);
   });
 
   it('is the only card there when it is the only challenge', () => {

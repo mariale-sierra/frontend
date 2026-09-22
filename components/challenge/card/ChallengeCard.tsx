@@ -35,6 +35,12 @@ interface ChallengeCardProps {
   /** A panel on the right (the photo tile, the tick ring). The text column takes
    * the full width when there isn't one. */
   side?: ReactNode;
+  /** A small badge pinned to the card's top-right corner, drawn over the glow
+   * and the `side` panel — e.g. Explore's compact member count (just an icon
+   * and a number, since "members" is now said by the footer's author tag
+   * instead). Absolutely positioned at the same inset as the rest of the
+   * card's content; optional, most cards have none. */
+  cornerBadge?: ReactNode;
   /** See `ChallengeCardSizing`. Default `fixed`. */
   sizing?: ChallengeCardSizing;
   /** The mesh recipe for the card's glow (see `getMeshRecipe`); the plain
@@ -63,6 +69,7 @@ export function ChallengeCard({
   belowSubtitle,
   footer,
   side,
+  cornerBadge,
   sizing = 'fixed',
   glowRecipe,
 }: ChallengeCardProps) {
@@ -92,6 +99,7 @@ export function ChallengeCard({
       </View>
 
       {side}
+      {cornerBadge ? <View style={styles.cornerBadge}>{cornerBadge}</View> : null}
     </AccentCard>
   );
 }
@@ -131,5 +139,19 @@ const styles = StyleSheet.create({
     // A tight title / subtitle stack — the design system's one `gap: 2` exception.
     alignSelf: 'stretch',
     gap: 2,
+  },
+  // Real bug, found 2026-09-22: `top: 0, right: 0` sat flush with the
+  // card's own OUTER edge, not its padded content edge — RN positions an
+  // absolute child relative to the parent's border box, not its padding
+  // box (unlike CSS). Combined with the card's rounded `radius.big` corner
+  // and `overflow: 'hidden'`, that clipped most of the badge off. `top:
+  // spacing.md` matches `AccentCard`'s own padding exactly, so it sits at
+  // the same top inset every other piece of content in the card already
+  // does. `right` is one step further in (`spacing.base`, 16 vs. `md`'s 12)
+  // per explicit follow-up ("move it a bit to the left").
+  cornerBadge: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.base,
   },
 });

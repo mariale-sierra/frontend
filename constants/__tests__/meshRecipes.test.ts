@@ -183,8 +183,13 @@ describe('MESH_RECIPES', () => {
   it.each(KEYS)('Mine (%s) has some color in the top-right corner, and in the bottom-left', (key) => {
     const { blobs } = getMeshRecipe('mine', key);
 
-    expect(glowAt(blobs, 0.95, 0.08)).toBeGreaterThan(0.1);
-    expect(glowAt(blobs, 0.05, 0.96)).toBeGreaterThan(0.1);
+    // Thresholds lowered 2026-09-22 alongside `LAYOUTS.mine`'s own peaks —
+    // see that recipe's doc comment: the whole thing reads noticeably
+    // dimmer now, on purpose (repeatedly, across three rounds of feedback),
+    // so "some color" is checked against that new, much lower baseline
+    // instead of the pre-dim one.
+    expect(glowAt(blobs, 0.95, 0.08)).toBeGreaterThan(0.05);
+    expect(glowAt(blobs, 0.05, 0.96)).toBeGreaterThan(0.05);
   });
 
   it.each(KEYS)('Mine (%s) stretches the top-right corner glow toward the middle of the card', (key) => {
@@ -196,7 +201,8 @@ describe('MESH_RECIPES', () => {
     expect(corner.angle).toBeLessThan(-5);
     expect(corner.angle).toBeGreaterThan(-45);
     // ...so there is glow left of the photo tile, on the way from the corner to the middle.
-    expect(glowAt(blobs, 0.6, 0.3)).toBeGreaterThan(0.08);
+    // Threshold lowered alongside `LAYOUTS.mine`'s peaks — see above.
+    expect(glowAt(blobs, 0.6, 0.3)).toBeGreaterThan(0.035);
   });
 
   it.each(KEYS)('Explore (%s) is centered on the bottom and middle, not pushed into a corner', (key) => {

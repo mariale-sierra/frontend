@@ -80,11 +80,11 @@ describe('Mine card (glow design) glow color', () => {
   it('dims the card content and adds the light-sweep overlay only once the challenge is finished', async () => {
     const active = await renderWithProviders(<ChallengeStatusCardV2 challenge={buildChallenge({ state: 'active' })} />);
     expect(active.queryByTestId('challenge-card-shimmer')).toBeNull();
-    expect(JSON.stringify(active.toJSON())).not.toContain('"opacity":0.78');
+    expect(StyleSheet.flatten(active.getByTestId('challenge-card-content').props.style)?.opacity).toBeUndefined();
 
     const finished = await renderWithProviders(<ChallengeStatusCardV2 challenge={buildChallenge({ state: 'won' })} />);
     expect(finished.queryByTestId('challenge-card-shimmer')).toBeTruthy();
-    expect(JSON.stringify(finished.toJSON())).toContain('"opacity":0.78');
+    expect(StyleSheet.flatten(finished.getByTestId('challenge-card-content').props.style).opacity).toBe(0.55);
   });
 
   // The classic card design has no glow/shimmer mechanism at all — nothing

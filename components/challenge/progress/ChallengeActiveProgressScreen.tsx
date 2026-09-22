@@ -105,10 +105,6 @@ export function ChallengeActiveProgressScreen() {
   return (
     <ScreenBackground variant="challenges" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
       <ChallengeAccentBackdrop color={accentColor} />
-      {/* Replays every time a finished challenge's progress screen is opened —
-          see ConfettiBurst's own doc comment for why that's the intended
-          behavior here, unlike the once-ever "Challenge complete" popup. */}
-      <ConfettiBurst active={data.state === 'won'} />
 
       {/* The whole screen scrolls as one — the grid/calendar below are plain
           content Views, not their own independently-scrolling pager pages,
@@ -178,6 +174,16 @@ export function ChallengeActiveProgressScreen() {
       />
 
       <leavePopup.Component />
+
+      {/* Rendered LAST, not right after ChallengeAccentBackdrop — real bug,
+          found 2026-09-22: it used to sit before the ScrollView, so the
+          Consistency section's photos painted OVER the confetti instead of
+          under it (RN stacks siblings in document order, same as the web,
+          with no z-index here to override it). Replays every time a
+          finished challenge's progress screen is opened — see ConfettiBurst's
+          own doc comment for why that's the intended behavior here, unlike
+          the once-ever "Challenge complete" popup. */}
+      <ConfettiBurst active={data.state === 'won'} />
     </ScreenBackground>
   );
 }

@@ -1,5 +1,6 @@
-import { adaptChallengesForMetrics, activityTypeFromMetricCodes, getLogChallengeQuickPicks } from '../metricsAdapter';
-import type { ChallengeContract } from '../../../types/challenge';
+import { adaptChallengesForMetrics, activityTypeFromMetricCodes, adaptTodayRoutineExercises, getLogChallengeQuickPicks } from '../metricsAdapter';
+import type { ChallengeContract, TodayRoutineContract } from '../../../types/challenge';
+import type { ChallengeOption } from '../../../types/metrics';
 
 const contract = (overrides: Record<string, unknown> = {}): ChallengeContract =>
   ({
@@ -158,5 +159,81 @@ describe('adaptChallengesForMetrics', () => {
     const [option] = adaptChallengesForMetrics([contract({ id: 9, name: 'Night Run' })]);
 
     expect(option).toMatchObject({ id: '9', label: 'Night Run', activityCategories: [], locations: [] });
+  });
+});
+
+describe('adaptTodayRoutineExercises', () => {
+  beforeEach(() => {
+    jest.spyOn(console, 'log').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const challenge: ChallengeOption = {
+    id: '7',
+    label: 'Mind-Body Reset',
+    activityCategories: [],
+    locations: [],
+    dominantActivityCategory: 'mindBody',
+  };
+
+  // Real, confirmed bug 2026-09-22, reported directly: a duration-only exercise
+  // (Camel Pose) correctly showed just a duration field while being added to the
+  // routine (that screen reads the exercise's own real metrics), but the Log
+  // Metrics screen showed duration + distance for the same exercise — because
+  // this adapter derived its columns from the routine's SAVED targets instead
+  // of the exercise's own reviewed metrics, and those two can drift apart.
+  it("prefers the exercise's own reviewed metrics over the routine's saved target codes", () => {
+    const contract: TodayRoutineContract = {
+      routine_id: 1,
+      exercises: [
+        {
+          id: 101,
+          exercise: {
+            id: 55,
+            name: 'Camel Pose',
+            // The exercise's real profile: duration only (time).
+            exercise_metrics: [{ metricType: { code: 'time' } }],
+          },
+          sets: [],
+          // Stale/incomplete saved targets carrying a 'distance' target this
+          // exercise never actually tracks.
+          targets: [
+            { metricType: { code: 'time' }, target_value_seconds: 60 },
+            { metricType: { code: 'distance' }, target_value_decimal: 2 },
+          ],
+        },
+      ],
+    };
+
+    const [block] = adaptTodayRoutineExercises(contract, challenge);
+
+    expect(block.activityType).toBe('flexibility');
+    expect(block.rows[0]).toMatchObject({ duration: '60' });
+    expect(block.rows[0]).not.toHaveProperty('distance');
+  });
+
+  it('falls back to the saved target codes when the exercise has no reviewed metrics of its own (older manual exercise)', () => {
+    const contract: TodayRoutineContract = {
+      routine_id: 1,
+      exercises: [
+        {
+          id: 102,
+          exercise: { id: 56, name: 'Legacy Cardio Drill', exercise_metrics: [] },
+          sets: [],
+          targets: [
+            { metricType: { code: 'time' }, target_value_seconds: 600 },
+            { metricType: { code: 'distance' }, target_value_decimal: 3 },
+          ],
+        },
+      ],
+    };
+
+    const [block] = adaptTodayRoutineExercises(contract, challenge);
+
+    expect(block.activityType).toBe('cardioIntense');
+    expect(block.rows[0]).toMatchObject({ duration: '600', distance: '3' });
   });
 });

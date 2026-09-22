@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { ConfirmationPopup } from './confirmationPopup';
+import { ConfettiBurst } from '../challenge/progress/ConfettiBurst';
 import { useChallengeFinishedStore } from '../../store/challengeFinishedStore';
 
 /**
@@ -7,6 +8,14 @@ import { useChallengeFinishedStore } from '../../store/challengeFinishedStore';
  * (app/_layout.tsx), next to `UploadSuccessPopup`, so it shows on top of whatever
  * screen the user is on when a challenge finishes. See
  * store/challengeFinishedStore.ts.
+ *
+ * Also bursts confetti over it, per explicit request 2026-09-22 ("I want the
+ * confetti animation when you see the completed challenge pop up too") —
+ * the same `ConfettiBurst` the finished challenge's progress screen already
+ * uses, passed through `ConfirmationPopup`'s `overlay` slot so it draws
+ * inside the popup's own `Modal` layer (a plain sibling outside it would
+ * render behind the modal, not over it). `active={visible}` re-bursts every
+ * time this popup shows, not just the first time.
  */
 export function ChallengeFinishedPopup() {
   const { t } = useTranslation();
@@ -32,6 +41,7 @@ export function ChallengeFinishedPopup() {
       description={description}
       primaryButton={{ label: t('challenges.completionPopup.cta'), onPress: hide }}
       onDismiss={hide}
+      overlay={<ConfettiBurst active={visible} />}
     />
   );
 }

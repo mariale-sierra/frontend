@@ -27,13 +27,12 @@ describe.each([
   ['classic', ExploreChallengeCard],
   ['glow', ExploreChallengeCardV2],
 ])('Explore card (%s design)', (_design, Card) => {
-  it('shows the challenge title, where it happens, the category and the members', async () => {
+  it('shows the challenge title, where it happens, and the category', async () => {
     const screen = await renderWithProviders(<Card challenge={buildChallenge()} />);
 
     expect(screen.getByText('Iron Will')).toBeTruthy();
     expect(screen.getByText('Gym')).toBeTruthy();
     expect(screen.getByText('Strength')).toBeTruthy();
-    expect(screen.getByText(/members/)).toBeTruthy();
   });
 
   it('shows how long the challenge lasts, and no rest-days line', async () => {
@@ -78,6 +77,14 @@ describe.each([
   });
 });
 
+describe('Explore card (classic design) specifics', () => {
+  it('shows the member count as visible "N members" text in the footer', async () => {
+    const screen = await renderWithProviders(<ExploreChallengeCard challenge={buildChallenge()} />);
+
+    expect(screen.getByText(/members/)).toBeTruthy();
+  });
+});
+
 describe('Explore card (glow design) specifics', () => {
   it('shows the duration as a number with its unit, in the tick ring', async () => {
     const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ durationDays: 21 })} />);
@@ -107,11 +114,27 @@ describe('Explore card (glow design) specifics', () => {
     expect(StyleSheet.flatten(screen.getByText('21').props.style).lineHeight).toBe(fontSize['3xl']);
   });
 
-  it('marks the member count with a people icon (there are no member pictures to show)', async () => {
-    const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge()} />);
+  // Layout reworked 2026-09-22, per explicit request: the footer's old "N
+  // members" text moved to a compact corner badge (just the icon and the raw
+  // number, no word) — the footer now shows who made the challenge instead.
+  it('shows the member count as a compact icon+number badge in the top-right corner, not "N members" text', async () => {
+    const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ membersCount: 1200 })} />);
 
     expect(JSON.stringify(screen.toJSON())).toContain('people-outline');
-    expect(screen.getByText(/members/)).toBeTruthy();
+    expect(screen.getByText('1.2k')).toBeTruthy();
+    expect(screen.queryByText(/members/)).toBeNull();
+    // Still accessible to a screen reader, just not shown as visible text.
+    expect(screen.getByLabelText('1200 members')).toBeTruthy();
+  });
+
+  it("puts the author, not the member count, in the footer", async () => {
+    const screen = await renderWithProviders(
+      <ExploreChallengeCardV2
+        challenge={buildChallenge({ author: { username: 'ana', displayName: null, profileImageUrl: null } })}
+      />,
+    );
+
+    expect(screen.getByText('By @ana')).toBeTruthy();
   });
 
   it('uses the singular unit for a one-day challenge', async () => {

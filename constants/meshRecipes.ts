@@ -115,15 +115,33 @@ const LAYOUTS: Record<MeshCardKind, Layout> = {
   // the card instead of ending in a lobe; the third is a faint patch of the other
   // side of the palette in the bottom-left corner. The scrim is light so the
   // bottom-left (the progress bar) still has color under it.
-  // Peaks trimmed ~12% (0.38/0.26/0.12 -> 0.33/0.23/0.11) per explicit request,
-  // 2026-09-22 ("minimize the blur in the mine challenge cards a tiny bit") —
-  // same shape/position, just a little dimmer, so the glow reads a little less
-  // diffuse without disappearing.
+  // Reworked 2026-09-22: three rounds cut the PEAKS (brightness) progressively
+  // lower, chasing "overdiffused" feedback that was actually about something
+  // else — reverted back to the original peaks (0.38/0.26/0.12). The real
+  // complaint was the fields' SIZE/SPREAD: "too blurry, the orbs are getting
+  // too lost" — big, softly-falling-off fields blend into each other and
+  // lose their own shape, which reads as "blurry" regardless of how bright
+  // they are. Shrunk each field's `ry` (~25-30%, tightening the vertical
+  // spread each orb fades over) instead of `rx`: the dominant field's `rx`
+  // has its own floor ("has a huge field along the whole bottom" test,
+  // `rx >= 1`) it must keep — a "huge" field along the bottom edge is a
+  // deliberate part of this layout, not the diffuseness that was actually
+  // the complaint. hue1's `rx` also kept at/above 0.7 — the "stretches
+  // toward the middle" test's own floor.
+  //
+  // UNUSED as of 2026-09-22, kept for reference/reversion (same pattern as
+  // `USE_MESH_CARD_GLOW`): `ChallengeStatusCardV2` (Mine, the only real
+  // consumer of the `'mine'` kind) no longer passes a `glowRecipe` at all —
+  // per explicit request ("scratch the mine cards gradient, give the mine
+  // cards the same gradient as the challenge cards in the home screen"), it
+  // now falls back to `ChallengeCard`'s default plain half-moon `AccentDome`
+  // glow, the same one Home's hero card (`ActiveChallengeItemV2`) already
+  // uses. If a mesh glow comes back for Mine cards, this is where it lives.
   mine: {
     blobs: [
-      { hue: 0, x: 0.62, y: 1.02, rx: 1.15, ry: 0.6, angle: -8, peak: 0.33 },
-      { hue: 1, x: 1.02, y: 0.12, rx: 0.85, ry: 0.45, angle: -26, peak: 0.23 },
-      { hue: 2, x: 0, y: 1, rx: 0.55, ry: 0.32, angle: 0, peak: 0.11 },
+      { hue: 0, x: 0.62, y: 1.02, rx: 1.15, ry: 0.44, angle: -8, peak: 0.38 },
+      { hue: 1, x: 1.02, y: 0.12, rx: 0.72, ry: 0.32, angle: -26, peak: 0.26 },
+      { hue: 2, x: 0, y: 1, rx: 0.46, ry: 0.26, angle: 0, peak: 0.12 },
     ],
     scrim: { peak: 0.2, reach: 0.45 },
   },

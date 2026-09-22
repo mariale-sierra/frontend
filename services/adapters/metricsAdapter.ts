@@ -201,7 +201,15 @@ export interface TodayRoutineSet {
 interface TodayRoutineExerciseRow {
   id?: number | string;
   notes?: string | null;
-  exercise?: { id?: number | string; name?: string } | null;
+  exercise?: {
+    id?: number | string;
+    name?: string;
+    // The exercise's own reviewed metrics (exercise-metric-profiles.ts on the
+    // backend) — `RoutineService.getTodayRoutine()` joins these in. See
+    // `adaptTodayRoutineExercises`'s own comment for why this, not the saved
+    // targets, is now the PRIMARY source for which columns to show.
+    exercise_metrics?: Array<{ metricType?: { code?: string } | null }> | null;
+  } | null;
   sets?: TodayRoutineSet[] | null;
   targets?: TodayRoutineTarget[] | null;
 }
@@ -262,7 +270,23 @@ export function adaptTodayRoutineExercises(
         if (code) metricCodes.push(code);
       }
 
-      const activityType = activityTypeFromMetricCodes(metricCodes);
+      // Real bug found 2026-09-22, reported directly: a duration-only exercise
+      // (e.g. Camel Pose, a mind-body stretch) correctly showed just a duration
+      // field while being ADDED to the routine — that screen reads
+      // GET /exercises/:id/full's real per-exercise metrics directly — but this
+      // screen (reading the routine's SAVED targets instead) showed duration +
+      // distance for the same exercise. `activityTypeFromMetricCodes` itself
+      // was never wrong; it was being fed the wrong input here — the exercise's
+      // own reviewed metrics are the authoritative source of what it tracks,
+      // not whatever ended up saved as a target (which can't drift once this is
+      // the source, whereas a save path bug or partial/legacy data always
+      // could). Falls back to the saved-target codes only when an exercise has
+      // no exercise_metrics rows at all (an older manually-created exercise
+      // that predates the RepDB metric review).
+      const ownMetricCodes = (ex.exercise?.exercise_metrics ?? [])
+        .map((m) => m.metricType?.code)
+        .filter((code): code is string => Boolean(code));
+      const activityType = activityTypeFromMetricCodes(ownMetricCodes.length > 0 ? ownMetricCodes : metricCodes);
       // Per-exercise location isn't returned by this endpoint; default to a
       // valid value so sanitizeHydratedExercises keeps the row.
       const location = 'anywhere' as LocationType;

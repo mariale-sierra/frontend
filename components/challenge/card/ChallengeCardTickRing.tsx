@@ -36,6 +36,13 @@ interface ChallengeCardTickRingProps {
   accentColor: string;
   /** What sits in the middle of the ring (a number and a caption). */
   children?: ReactNode;
+  /** Nudges the ring down from its default vertical center, in px — e.g.
+   * Explore's glow card, so the ring sits clear of the member-count badge
+   * pinned to the card's top-right corner above it. A direct `top` offset on
+   * the ring itself (not padding/margin, which a `justifyContent: 'center'`
+   * column only applies half of to the visible position) — unset is the
+   * original exact-center placement. */
+  topOffset?: number;
 }
 
 /**
@@ -47,7 +54,7 @@ interface ChallengeCardTickRingProps {
  * opaque disc with its own glow there looked like a second gradient on the card).
  * Centered in a column a little wider than the ring itself.
  */
-export function ChallengeCardTickRing({ accentColor, children }: ChallengeCardTickRingProps) {
+export function ChallengeCardTickRing({ accentColor, children, topOffset }: ChallengeCardTickRingProps) {
   const center = RING_SIZE / 2;
   // A round stroke cap reaches half a tick width past each end of its line, so the
   // lines are pulled in by that much to keep the ticks the Progress ring's size.
@@ -60,7 +67,7 @@ export function ChallengeCardTickRing({ accentColor, children }: ChallengeCardTi
 
   return (
     <View style={styles.column}>
-      <View style={styles.ring}>
+      <View style={[styles.ring, topOffset ? { top: topOffset } : null]}>
         <Canvas style={StyleSheet.absoluteFill}>
           <Path
             path={ticks}

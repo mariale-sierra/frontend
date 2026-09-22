@@ -40,4 +40,13 @@ describe('ChallengeFinishedPopup', () => {
 
     expect(useChallengeFinishedStore.getState().visible).toBe(false);
   });
+
+  // Per explicit request 2026-09-22: "I want the confetti animation when
+  // you see the completed challenge pop up too."
+  it('bursts confetti over the popup', async () => {
+    useChallengeFinishedStore.getState().show({ challengeId: 'c1', challengeName: 'Iron Will', totalDays: 75 });
+    const screen = await renderWithProviders(<ChallengeFinishedPopup />);
+
+    expect(screen.getByTestId('confetti-burst')).toBeTruthy();
+  });
 });
