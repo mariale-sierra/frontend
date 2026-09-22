@@ -115,11 +115,15 @@ const LAYOUTS: Record<MeshCardKind, Layout> = {
   // the card instead of ending in a lobe; the third is a faint patch of the other
   // side of the palette in the bottom-left corner. The scrim is light so the
   // bottom-left (the progress bar) still has color under it.
+  // Peaks trimmed ~12% (0.38/0.26/0.12 -> 0.33/0.23/0.11) per explicit request,
+  // 2026-09-22 ("minimize the blur in the mine challenge cards a tiny bit") —
+  // same shape/position, just a little dimmer, so the glow reads a little less
+  // diffuse without disappearing.
   mine: {
     blobs: [
-      { hue: 0, x: 0.62, y: 1.02, rx: 1.15, ry: 0.6, angle: -8, peak: 0.38 },
-      { hue: 1, x: 1.02, y: 0.12, rx: 0.85, ry: 0.45, angle: -26, peak: 0.26 },
-      { hue: 2, x: 0, y: 1, rx: 0.55, ry: 0.32, angle: 0, peak: 0.12 },
+      { hue: 0, x: 0.62, y: 1.02, rx: 1.15, ry: 0.6, angle: -8, peak: 0.33 },
+      { hue: 1, x: 1.02, y: 0.12, rx: 0.85, ry: 0.45, angle: -26, peak: 0.23 },
+      { hue: 2, x: 0, y: 1, rx: 0.55, ry: 0.32, angle: 0, peak: 0.11 },
     ],
     scrim: { peak: 0.2, reach: 0.45 },
   },

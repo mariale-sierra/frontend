@@ -26,6 +26,10 @@ interface ChallengeCardProps {
   titleLines?: number;
   /** A small line under the title. */
   subtitle?: string;
+  /** Sits directly below `subtitle` (e.g. who made the challenge) — still part of
+   * the header, above the footer, but its own row rather than sharing the tight
+   * title/subtitle stack. */
+  belowSubtitle?: ReactNode;
   /** What sits at the bottom of the text column (progress, members). */
   footer: ReactNode;
   /** A panel on the right (the photo tile, the tick ring). The text column takes
@@ -56,6 +60,7 @@ export function ChallengeCard({
   title,
   titleLines,
   subtitle,
+  belowSubtitle,
   footer,
   side,
   sizing = 'fixed',
@@ -80,6 +85,7 @@ export function ChallengeCard({
               </Text>
             ) : null}
           </View>
+          {belowSubtitle}
         </View>
 
         {footer}

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
 import { Row } from '../../layout/row';
+import { ChallengeCardAuthor } from '../card/ChallengeCardAuthor';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { formatCount } from '../../../utils/format';
 import { getChallengeAccentColor } from '../../../services/adapters/challengeState';
@@ -47,15 +48,9 @@ export const ExploreChallengeCard = memo(function ExploreChallengeCard({ challen
                 {challenge.categoriesLabel}
               </Text>
             </Row>
-            {challenge.author ? (
-              <Row gap="xs" style={styles.tag}>
-                <Icon name="person-outline" size={14} color={colors.paper} />
-                <Text variant="caption" tone="secondary" numberOfLines={1} style={styles.tagText}>
-                  {t('challenges.byAuthor', { name: `@${challenge.author.username}` })}
-                </Text>
-              </Row>
-            ) : null}
           </Row>
+
+          {challenge.author ? <ChallengeCardAuthor author={challenge.author} /> : null}
 
           <Row justify="space-between" align="center">
             <Row gap="sm" align="center">

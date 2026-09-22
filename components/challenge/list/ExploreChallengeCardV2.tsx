@@ -2,7 +2,6 @@ import { memo } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
-import { Row } from '../../layout/row';
 import { ChallengeCard } from '../card/ChallengeCard';
 import { ChallengeCardAuthor } from '../card/ChallengeCardAuthor';
 import { ChallengeCardMembers } from '../card/ChallengeCardMembers';
@@ -18,7 +17,8 @@ import { getChallengeAccentColor, getChallengeGlowKey } from '../../../services/
  * Challenges-Explore card, glow design: the shared `ChallengeCard` — dark, the
  * challenge's own activity color glowing up from the bottom edge — a small
  * preview of the Challenge-Info screen. The category as a plain label in the
- * activity color (no badge), the title with where it happens under it, the
+ * activity color (no badge), the title with where it happens under it, then
+ * who made it (`ChallengeCardAuthor`, right below the location line), the
  * member count, and a tick ring on the right holding how many days it lasts.
  *
  * Same props and logic as the classic `ExploreChallengeCard` — only the visuals
@@ -59,11 +59,9 @@ export const ExploreChallengeCardV2 = memo(function ExploreChallengeCardV2({
         title={challenge.title}
         titleLines={1}
         subtitle={challenge.locationsLabel}
+        belowSubtitle={challenge.author ? <ChallengeCardAuthor author={challenge.author} /> : null}
         footer={
-          <Row>
-            <ChallengeCardMembers label={t('challenges.membersCount', { count: formatCount(challenge.membersCount) })} />
-            {challenge.author ? <ChallengeCardAuthor author={challenge.author} /> : null}
-          </Row>
+          <ChallengeCardMembers label={t('challenges.membersCount', { count: formatCount(challenge.membersCount) })} />
         }
         side={
           <ChallengeCardTickRing accentColor={accentColor}>
