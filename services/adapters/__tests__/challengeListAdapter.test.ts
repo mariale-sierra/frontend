@@ -1,5 +1,5 @@
-import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../challengeListAdapter';
-import type { ChallengeContract, ChallengePhoto } from '../../../types/challenge';
+import { pickAuthor, toChallengeMineViewModels, toExploreChallengeViewModels } from '../challengeListAdapter';
+import type { ChallengeAuthorContract, ChallengeContract, ChallengePhoto } from '../../../types/challenge';
 
 function buildChallenge(overrides: Partial<ChallengeContract> & { id: string }): ChallengeContract {
   return {
@@ -72,6 +72,50 @@ describe('toExploreChallengeViewModels', () => {
     const viewModels = toExploreChallengeViewModels(challenges);
 
     expect(viewModels.map((v) => v.challengeId)).toEqual(['most', 'some', 'few', 'none']);
+  });
+
+  it("carries the challenge's author through to the card", () => {
+    const author: ChallengeAuthorContract = {
+      id: 'u1',
+      username: 'ana',
+      displayName: 'Ana Ruiz',
+      profileImageUrl: 'https://cdn/ana.jpg',
+    };
+    const [viewModel] = toExploreChallengeViewModels([buildChallenge({ id: 'A', author })]);
+
+    // No `id` on the card's view model — see ChallengeAuthorViewModel's own doc comment.
+    expect(viewModel.author).toEqual({
+      username: 'ana',
+      displayName: 'Ana Ruiz',
+      profileImageUrl: 'https://cdn/ana.jpg',
+    });
+  });
+
+  it('has no author for a challenge whose creator account is gone (backend sends `author: null`)', () => {
+    const [viewModel] = toExploreChallengeViewModels([buildChallenge({ id: 'A', author: null })]);
+
+    expect(viewModel.author).toBeNull();
+  });
+
+  it('has no author for an older cached response with no `author` field at all', () => {
+    const [viewModel] = toExploreChallengeViewModels([buildChallenge({ id: 'A' })]);
+
+    expect(viewModel.author).toBeNull();
+  });
+});
+
+describe('pickAuthor', () => {
+  it('drops a malformed author with no usable username rather than crashing the card', () => {
+    expect(pickAuthor(buildChallenge({ id: 'A', author: { username: '' } as ChallengeAuthorContract }))).toBeNull();
+    expect(pickAuthor(buildChallenge({ id: 'A', author: 'ana' as unknown as ChallengeAuthorContract }))).toBeNull();
+  });
+
+  it('falls back displayName/profileImageUrl to null rather than undefined, for a plain equality check', () => {
+    const author = pickAuthor(
+      buildChallenge({ id: 'A', author: { id: 'u1', username: 'ana' } as ChallengeAuthorContract }),
+    );
+
+    expect(author).toEqual({ username: 'ana', displayName: null, profileImageUrl: null });
   });
 });
 

@@ -110,6 +110,18 @@ export interface ChallengeDayContract {
   [key: string]: unknown;
 }
 
+/** Who created a challenge — the same public-profile fields (username, display
+ * name, photo) visible on any profile, private or not. Embedded on every
+ * challenge GET /challenges and GET /challenges/:id return (`ChallengeAuthorDto`
+ * on the backend); `null` when the creator's account no longer exists. Shown on
+ * the Explore cards. */
+export interface ChallengeAuthorContract {
+  id: string;
+  username: string;
+  displayName: string | null;
+  profileImageUrl: string | null;
+}
+
 export interface ChallengeContract {
   id: number | string;
   name: string;
@@ -117,6 +129,7 @@ export interface ChallengeContract {
   visibility?: string;
   duration_days?: number;
   created_by_user_id?: string;
+  author?: ChallengeAuthorContract | null;
   cycle_length_days?: number;
   categories?: string[];
   locations?: string[];

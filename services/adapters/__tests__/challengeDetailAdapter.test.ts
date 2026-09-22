@@ -19,6 +19,25 @@ describe('toChallengeDetailViewModel', () => {
     expect(toChallengeDetailViewModel(buildChallenge({ duration_days: undefined }), LABELS)).toEqual({ ok: false });
   });
 
+  it("prefers the real embedded author (display name, then username) over the raw creator id", () => {
+    const withDisplayName = toChallengeDetailViewModel(
+      buildChallenge({ author: { id: 'u1', username: 'ana', displayName: 'Ana Ruiz', profileImageUrl: null } }),
+      LABELS,
+    );
+    expect(withDisplayName.ok && withDisplayName.value.authorName).toBe('Ana Ruiz');
+
+    const usernameOnly = toChallengeDetailViewModel(
+      buildChallenge({ author: { id: 'u1', username: 'ana', displayName: null, profileImageUrl: null } }),
+      LABELS,
+    );
+    expect(usernameOnly.ok && usernameOnly.value.authorName).toBe('ana');
+  });
+
+  it('falls back to the raw creator id when there is no embedded author at all (older cached response)', () => {
+    const result = toChallengeDetailViewModel(buildChallenge({ created_by_user_id: 'u1' }), LABELS);
+    expect(result.ok && result.value.authorName).toBe('u1');
+  });
+
   it("The cycle list has one row per cycle day, not per whole-challenge day — a 4-day cycle in a 30-day challenge is 4 rows, not 30", () => {
     const challenge = buildChallenge({
       duration_days: 30,

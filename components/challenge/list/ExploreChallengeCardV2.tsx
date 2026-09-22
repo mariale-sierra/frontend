@@ -2,7 +2,9 @@ import { memo } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../../ui/text';
+import { Row } from '../../layout/row';
 import { ChallengeCard } from '../card/ChallengeCard';
+import { ChallengeCardAuthor } from '../card/ChallengeCardAuthor';
 import { ChallengeCardMembers } from '../card/ChallengeCardMembers';
 import { ChallengeCardTickRing } from '../card/ChallengeCardTickRing';
 import { challengeCardText } from '../card/challengeCardText';
@@ -58,7 +60,10 @@ export const ExploreChallengeCardV2 = memo(function ExploreChallengeCardV2({
         titleLines={1}
         subtitle={challenge.locationsLabel}
         footer={
-          <ChallengeCardMembers label={t('challenges.membersCount', { count: formatCount(challenge.membersCount) })} />
+          <Row>
+            <ChallengeCardMembers label={t('challenges.membersCount', { count: formatCount(challenge.membersCount) })} />
+            {challenge.author ? <ChallengeCardAuthor author={challenge.author} /> : null}
+          </Row>
         }
         side={
           <ChallengeCardTickRing accentColor={accentColor}>

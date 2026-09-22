@@ -57,6 +57,25 @@ describe.each([
 
     expect(screen.getByText('Iron Will')).toBeTruthy();
   });
+
+  it('shows who made the challenge', async () => {
+    const screen = await renderWithProviders(
+      <Card
+        challenge={buildChallenge({
+          author: { username: 'ana', displayName: 'Ana Ruiz', profileImageUrl: null },
+        })}
+      />,
+    );
+
+    expect(screen.getByText('By @ana')).toBeTruthy();
+  });
+
+  it('renders with no author line for a challenge with none (older cache, or a deleted account)', async () => {
+    const screen = await renderWithProviders(<Card challenge={buildChallenge({ author: null })} />);
+
+    expect(screen.getByText('Iron Will')).toBeTruthy();
+    expect(screen.queryByText(/^By @/)).toBeNull();
+  });
 });
 
 describe('Explore card (glow design) specifics', () => {

@@ -47,6 +47,14 @@ export const ExploreChallengeCard = memo(function ExploreChallengeCard({ challen
                 {challenge.categoriesLabel}
               </Text>
             </Row>
+            {challenge.author ? (
+              <Row gap="xs" style={styles.tag}>
+                <Icon name="person-outline" size={14} color={colors.paper} />
+                <Text variant="caption" tone="secondary" numberOfLines={1} style={styles.tagText}>
+                  {t('challenges.byAuthor', { name: `@${challenge.author.username}` })}
+                </Text>
+              </Row>
+            ) : null}
           </Row>
 
           <Row justify="space-between" align="center">

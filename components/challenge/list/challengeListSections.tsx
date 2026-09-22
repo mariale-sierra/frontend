@@ -12,6 +12,14 @@
 
 import type { ActivityType } from '../../../types/activity';
 
+/** Who made a challenge — trimmed down to what an Explore card actually shows
+ * (no `id`: the card links to the challenge, not the author's profile yet). */
+export interface ChallengeAuthorViewModel {
+  username: string;
+  displayName: string | null;
+  profileImageUrl: string | null;
+}
+
 export interface ExploreChallengeViewModel {
   challengeId: string;
   title: string;
@@ -25,6 +33,9 @@ export interface ExploreChallengeViewModel {
    * (`null` if it has no exercises yet). Resolve the card's accent color via
    * `challengeState.ts`'s `getChallengeAccentColor()`. */
   dominantActivityCategory: ActivityType | null;
+  /** Who created it — `null`/absent when the creator's account no longer
+   * exists, or an older cached response never carried `author` at all. */
+  author?: ChallengeAuthorViewModel | null;
 }
 
 /** The props of a Challenges-Explore card — the same for every design of it. */

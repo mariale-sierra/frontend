@@ -23,10 +23,12 @@ export interface MyProfileContract {
   followers_count: number;
   following_count: number;
   /**
-   * Overall daily-activity streak (not per-challenge — see
-   * BadgesService.currentStreakDays on the backend). No endpoint sends this
-   * yet, so it's optional; ProfileHeader hides the streak badge/stat
-   * entirely when absent rather than showing a fabricated 0.
+   * Overall daily-activity streak (not per-challenge — consecutive UTC days
+   * with a COMPLETED workout log ending today; see `getCurrentStreakDays` /
+   * `UsersService.attachProgress` on the backend). Sent by GET /users/me and
+   * PATCH /users/me/profile (and the photo-upload response) since 2026-09-22.
+   * Still optional here for an older cached response; ProfileHeader hides the
+   * streak badge/stat entirely when absent rather than showing a fabricated 0.
    */
   streak_days?: number;
 }
@@ -43,7 +45,11 @@ export interface PublicProfileContract {
   following_count: number;
   /** Whether the authenticated caller actively follows this user. */
   is_following: boolean;
-  /** See MyProfileContract.streak_days — same "not sent yet" caveat. */
+  /** See MyProfileContract.streak_days. Sent by GET /users/:id/profile and
+   * GET /users/search since 2026-09-22, but only when `canSeeFullProfile` is
+   * true (public account, or the caller follows a private one) — a stranger
+   * viewing a private profile gets no `streak_days` at all, same as every
+   * other profile stat. */
   streak_days?: number;
 }
 

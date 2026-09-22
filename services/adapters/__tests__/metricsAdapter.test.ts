@@ -1,4 +1,4 @@
-import { adaptChallengesForMetrics, getLogChallengeQuickPicks } from '../metricsAdapter';
+import { adaptChallengesForMetrics, activityTypeFromMetricCodes, getLogChallengeQuickPicks } from '../metricsAdapter';
 import type { ChallengeContract } from '../../../types/challenge';
 
 const contract = (overrides: Record<string, unknown> = {}): ChallengeContract =>
@@ -101,6 +101,30 @@ describe('getLogChallengeQuickPicks', () => {
     for (const { overrides, listed } of cases) {
       expect(getLogChallengeQuickPicks([contract(overrides)], new Map())).toHaveLength(listed ? 1 : 0);
     }
+  });
+});
+
+describe('activityTypeFromMetricCodes', () => {
+  // Each case names the real backend metric profile (exercise-metric-profiles.ts) that
+  // produces this exact set of target codes, so a regression here points straight at
+  // which kind of exercise broke.
+  it.each([
+    { profile: 'weighted_reps (e.g. Squat)', codes: ['reps', 'weight'], expected: 'strength' },
+    { profile: 'bodyweight_reps (e.g. Push-up)', codes: ['reps'], expected: 'strength' },
+    { profile: 'duration (e.g. Plank, Jump Rope)', codes: ['time'], expected: 'flexibility' },
+    {
+      // The regression this fix is for: previously 'weight' was checked
+      // alongside 'reps', so a farmer's walk (time + weight, no reps) landed
+      // on 'strength' (reps+lbs columns) — no column existed to log its
+      // duration at all.
+      profile: "loaded_duration (e.g. Farmer's Walk, Sled Row)",
+      codes: ['time', 'weight'],
+      expected: 'flexibility',
+    },
+    { profile: 'distance_duration (e.g. Running)', codes: ['time', 'distance'], expected: 'cardioIntense' },
+    { profile: 'no codes at all (defensive default)', codes: [], expected: 'strength' },
+  ])('$profile -> $expected', ({ codes, expected }) => {
+    expect(activityTypeFromMetricCodes(codes)).toBe(expected);
   });
 });
 

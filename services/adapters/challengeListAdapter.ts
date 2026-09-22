@@ -1,7 +1,7 @@
 import { asString, asNumber, asBoolean } from './adapterUtils';
 import { pickChallengeStatus, deriveChallengeCardState, pickDominantActivityCategory } from './challengeState';
 import { isRestDay as isRestDayForCycle } from '../../utils/challengeCycle';
-import type { ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
+import type { ChallengeAuthorViewModel, ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import type { ActivityType } from '../../types/activity';
 import type { ChallengeContract, ChallengePhoto } from '../../types/challenge';
 
@@ -142,6 +142,21 @@ export function pickRestDaysCount(challenge: ChallengeContract): number {
   return challenge.cycle_days.filter((d) => asBoolean(d.is_rest_day) === true).length;
 }
 
+/** Explore card's "by @username" — `null` for a challenge with no embedded
+ * `author` (older cached response) or whose creator's account is gone
+ * (backend sends `author: null` rather than omitting the challenge). */
+export function pickAuthor(challenge: ChallengeContract): ChallengeAuthorViewModel | null {
+  const author = challenge.author;
+  if (!author || typeof author !== 'object') return null;
+  const username = asString(author.username);
+  if (!username) return null;
+  return {
+    username,
+    displayName: typeof author.displayName === 'string' ? author.displayName : null,
+    profileImageUrl: typeof author.profileImageUrl === 'string' ? author.profileImageUrl : null,
+  };
+}
+
 // pickChallengeStatus now lives in ./challengeState (shared with
 // homeAdapter.ts — both Home's hero card and this Mine tab need the exact
 // same status detection).
@@ -157,6 +172,7 @@ function toExploreCard(challenge: ChallengeContract, labels: ChallengeListLabels
     categoriesLabel: pickCategoriesLabel(challenge, labels.categoryFallbackLabel),
     membersCount: pickMembersCount(challenge),
     dominantActivityCategory: pickDominantActivityCategory(challenge),
+    author: pickAuthor(challenge),
   };
 }
 

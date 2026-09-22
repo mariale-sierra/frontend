@@ -159,9 +159,21 @@ export function activityTypeFromMetricCodes(codes: string[]): ActivityType {
   // 'distanceKm'/'duration' from the old seed file — those never matched
   // anything, so every cardio/flexibility exercise silently fell through to
   // the 'strength' default below. Fixed 2026-08-28, see havit-design-system-SKILL.md.
+  //
+  // 'weight' is checked AFTER 'time', not with 'reps' any more: a `loaded_duration`
+  // exercise (see backend's exercise-metric-profiles.ts — farmer's walks, carries,
+  // sled work) targets 'time'+'weight', no 'reps'. Checking weight alongside reps
+  // routed those to 'strength' (reps+lbs columns), which has no duration column at
+  // all — there was no way to log how long the carry lasted. None of
+  // ACTIVITY_METRIC_CONFIG's buckets has a duration+lbs combo, so this falls to
+  // 'flexibility' (duration only) instead: the exercise's required primary metric
+  // (time) gets a field; its optional secondary one (weight) doesn't, same trade-off
+  // `buildMetricTemplateFromExerciseMetrics`/`buildActivityMetricTemplate` already
+  // make for schema exercises. Found 2026-09-22 auditing every exercise's metrics.
   if (set.has('distance')) return 'cardioIntense'; // time + distance
-  if (set.has('reps') || set.has('weight')) return 'strength'; // reps + lbs
-  if (set.has('time')) return 'flexibility'; // time only
+  if (set.has('reps')) return 'strength'; // reps (+ optional weight)
+  if (set.has('time')) return 'flexibility'; // time only, or time + weight
+  if (set.has('weight')) return 'strength'; // weight with no reps/time (shouldn't happen today)
   return 'strength';
 }
 

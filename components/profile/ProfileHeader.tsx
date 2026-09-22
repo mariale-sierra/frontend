@@ -12,10 +12,11 @@ interface ProfileHeaderProps {
   bio?: string | null;
   imageUrl?: string | null;
   /**
-   * Overall daily-activity streak. No backend field sends this yet (see
-   * types/user.ts) — omit it and both the flame badge on the avatar and the
-   * "Day streak" stat column hide themselves rather than showing a
-   * fabricated 0.
+   * Overall daily-activity streak — see types/user.ts's `streak_days` for
+   * where the backend now sends it from. Still optional here: omit it and
+   * both the flame badge on the avatar and the "Day streak" stat column
+   * hide themselves rather than showing a fabricated 0 (a stranger viewing
+   * a private profile, or an older cached response).
    */
   streakDays?: number;
   followersCount: number;

@@ -41,6 +41,14 @@ export type ChallengeDetailAdapterResult =
 
 function getAuthorName(challenge: ChallengeContract): string | undefined {
   const candidates: Array<unknown> = [
+    // The real field, now that GET /challenges/:id embeds it
+    // (ChallengeAuthorDto) — prefer a display name, then the username.
+    // Checked before every other candidate below, which were all
+    // speculative field names that never actually existed on the response
+    // (this function's last resort, `created_by_user_id`, is a raw UUID —
+    // ugly, but kept as the final fallback for an even older cached response).
+    challenge.author?.displayName,
+    challenge.author?.username,
     challenge.created_by_username,
     challenge.creator_name,
     challenge.author_name,
