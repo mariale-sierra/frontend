@@ -10,6 +10,7 @@ import { Text } from '../../components/ui/text';
 import { ExploreCard, MineCard } from '../../components/challenge/list/challengeCards';
 import { ChallengesViewToggle } from '../../components/challenge/list/ChallengesViewToggle';
 import { ChallengesContentSkeleton } from '../../components/challenge/list/ChallengesContentSkeleton';
+import { FinishedChallengesToggle } from '../../components/challenge/list/FinishedChallengesToggle';
 import type { ChallengesView } from '../../components/challenge/list/ChallengesViewToggle';
 import type { ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import type { ChallengeMineCardViewModel } from '../../services/adapters/challengeListAdapter';
@@ -61,6 +62,17 @@ export default function Challenges() {
   const [exploreChallenges, setExploreChallenges] = useState<ExploreChallengeViewModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Finished challenges are collapsed out of the main Mine list by default —
+  // see FinishedChallengesToggle's own doc comment.
+  const [showFinished, setShowFinished] = useState(false);
+
+  // `mineChallenges` is already sorted active -> rest -> completed -> won ->
+  // left (toChallengeMineViewModels), so `finishedChallenges` stays in that
+  // same relative order once revealed. Only `won` counts as "finished" here —
+  // `left` (abandoned) is a different thing and stays in the main list.
+  const activeMineChallenges = useMemo(() => mineChallenges.filter((c) => c.state !== 'won'), [mineChallenges]);
+  const finishedMineChallenges = useMemo(() => mineChallenges.filter((c) => c.state === 'won'), [mineChallenges]);
+  const mineListData = showFinished ? mineChallenges : activeMineChallenges;
 
   // The "Challenge complete" popup is global (`ChallengeFinishedPopup`, at the app
   // root) and normally shows the moment the last day is logged. This is the
@@ -276,17 +288,33 @@ export default function Challenges() {
     <ScreenBackground variant="default" gradientBackground>
       {view === 'mine' ? (
         <FlatList
-          data={mineChallenges}
+          data={mineListData}
           keyExtractor={(item) => item.challengeId}
           renderItem={renderMineItem}
           ListHeaderComponent={listHeader}
           ItemSeparatorComponent={ChallengeListSeparator}
+          // Only the TRUE empty state (no challenges at all) shows this —
+          // `mineListData` can be empty just because every challenge is
+          // finished and still collapsed, which isn't "no challenges."
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text variant="body" tone="secondary" align="center">
-                {t('challenges.emptyMine')}
-              </Text>
-            </View>
+            mineChallenges.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text variant="body" tone="secondary" align="center">
+                  {t('challenges.emptyMine')}
+                </Text>
+              </View>
+            ) : undefined
+          }
+          ListFooterComponent={
+            finishedMineChallenges.length > 0 ? (
+              <View style={styles.itemWrap}>
+                <FinishedChallengesToggle
+                  count={finishedMineChallenges.length}
+                  expanded={showFinished}
+                  onToggle={() => setShowFinished((current) => !current)}
+                />
+              </View>
+            ) : undefined
           }
           contentContainerStyle={styles.listContent}
           initialNumToRender={3}

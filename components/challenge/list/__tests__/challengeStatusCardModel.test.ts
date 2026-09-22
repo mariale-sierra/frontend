@@ -23,11 +23,24 @@ describe('getChallengeStatusCardModel', () => {
     expect(getChallengeStatusCardModel(buildChallenge(), t).stateColor).toBe(activityColors.cardioLow);
   });
 
-  it('keeps the fixed colors for rest, completed, won and left', () => {
+  it('keeps the fixed colors for rest, completed and left', () => {
     expect(getChallengeStatusCardModel(buildChallenge({ state: 'rest' }), t).stateColor).toBe(colors.rest);
     expect(getChallengeStatusCardModel(buildChallenge({ state: 'completed' }), t).stateColor).toBe(colors.success);
-    expect(getChallengeStatusCardModel(buildChallenge({ state: 'won' }), t).stateColor).toBe(colors.neutral);
     expect(getChallengeStatusCardModel(buildChallenge({ state: 'left' }), t).stateColor).toBe(colors.neutral);
+  });
+
+  // Per explicit request 2026-09-22: "Finished" still reads as the label, but
+  // the badge itself takes the challenge's own activity color instead of the
+  // neutral gray every other inactive state uses — `left` (abandoned) is
+  // deliberately unchanged.
+  it("colors a finished challenge's badge with its own activity color, not the neutral left/abandoned gray", () => {
+    expect(getChallengeStatusCardModel(buildChallenge({ state: 'won' }), t).stateColor).toBe(activityColors.cardioLow);
+  });
+
+  it('falls back to the neutral primary for a finished challenge with no dominant activity yet', () => {
+    expect(
+      getChallengeStatusCardModel(buildChallenge({ state: 'won', dominantActivityCategory: null }), t).stateColor,
+    ).toBe(colors.primary);
   });
 
   it('glows lavender on a rest day and green once today is done, and in the activity color otherwise', () => {

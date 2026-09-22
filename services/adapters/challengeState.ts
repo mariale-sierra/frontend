@@ -61,18 +61,21 @@ export function getChallengeAccentColor(dominantActivityCategory: ActivityType |
 }
 
 /**
- * Card background color for a given `ChallengeCardState`. Same `STATE_COLOR`
- * mapping for rest/completed/won/left — those carry their own meaning,
- * untouched by the activity color system — but `active` now resolves to
- * the challenge's own dominant-activity accent instead of the flat
- * primary/white, per the confirmed-in-scope elements in the design
- * system skill's Activity Color System v2 section.
+ * Card background color for a given `ChallengeCardState`. `rest`/`completed`/
+ * `left` keep the fixed `STATE_COLOR` meaning, untouched by the activity color
+ * system. `active` resolves to the challenge's own dominant-activity accent
+ * instead of the flat primary/white, per the confirmed-in-scope elements in
+ * the design system skill's Activity Color System v2 section. `won` does too,
+ * per explicit request 2026-09-22 ("the badge should be in the activity color
+ * although it says finished") — the label still reads "Finished," only the
+ * neutral gray badge fill was wrong; `left` (abandoned, not finished) keeps
+ * neutral gray, deliberately not touched by the same request.
  */
 export function getChallengeCardColor(
   state: ChallengeCardState,
   dominantActivityCategory: ActivityType | null | undefined,
 ): string {
-  return state === 'active' ? getChallengeAccentColor(dominantActivityCategory) : STATE_COLOR[state];
+  return state === 'active' || state === 'won' ? getChallengeAccentColor(dominantActivityCategory) : STATE_COLOR[state];
 }
 
 /**

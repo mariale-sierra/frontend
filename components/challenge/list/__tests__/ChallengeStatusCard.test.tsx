@@ -72,6 +72,27 @@ describe('Mine card (glow design) glow color', () => {
 
     expect(JSON.stringify(screen.toJSON())).not.toContain(activityColors.cardioLow);
   });
+
+  // Per explicit request 2026-09-22: a finished challenge's badge is the
+  // activity color (asserted in challengeStatusCardModel.test.ts), plus its
+  // own card-level treatment — dimmed content and a light-sweep overlay —
+  // so it reads as done without vanishing or clashing with active ones.
+  it('dims the card content and adds the light-sweep overlay only once the challenge is finished', async () => {
+    const active = await renderWithProviders(<ChallengeStatusCardV2 challenge={buildChallenge({ state: 'active' })} />);
+    expect(active.queryByTestId('challenge-card-shimmer')).toBeNull();
+    expect(JSON.stringify(active.toJSON())).not.toContain('"opacity":0.78');
+
+    const finished = await renderWithProviders(<ChallengeStatusCardV2 challenge={buildChallenge({ state: 'won' })} />);
+    expect(finished.queryByTestId('challenge-card-shimmer')).toBeTruthy();
+    expect(JSON.stringify(finished.toJSON())).toContain('"opacity":0.78');
+  });
+
+  // The classic card design has no glow/shimmer mechanism at all — nothing
+  // to dim or sweep there, so this stays a `ChallengeStatusCardV2`-only test.
+  it('does not dim or sweep the classic card design for a finished challenge', async () => {
+    const screen = await renderWithProviders(<ChallengeStatusCard challenge={buildChallenge({ state: 'won' })} />);
+    expect(screen.queryByTestId('challenge-card-shimmer')).toBeNull();
+  });
 });
 
 // Both designs of the card take the same props and make the same decisions —

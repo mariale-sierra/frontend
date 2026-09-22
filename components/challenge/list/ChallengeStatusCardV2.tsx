@@ -6,6 +6,7 @@ import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
 import { ChallengeCard } from '../card/ChallengeCard';
 import { ChallengeCardProgress } from '../card/ChallengeCardProgress';
+import { ChallengeCardShimmer } from '../card/ChallengeCardShimmer';
 import { challengeCardText } from '../card/challengeCardText';
 import { getChallengeStatusCardModel } from './challengeStatusCardModel';
 import type { ChallengeStatusCardProps, StatusCardSidePanel } from './challengeStatusCardModel';
@@ -26,6 +27,14 @@ import { withAlpha } from '../../../utils/color';
  *
  * Same props and logic as the classic `ChallengeStatusCard` (both read
  * `getChallengeStatusCardModel`) — only the visuals differ.
+ *
+ * A finished (`won`) challenge's card is dimmed ("apagado") and gets a
+ * periodic light sweep (`ChallengeCardShimmer`) — per explicit request
+ * 2026-09-22, so a finished challenge reads as done/archival rather than
+ * competing visually with the ones still active, while still catching the
+ * eye a little (the sweep) for having been completed. The dimming is on the
+ * card content only, not the sweep itself, so the sweep stays crisp on top
+ * of the dimmed card instead of being dimmed along with it.
  */
 export const ChallengeStatusCardV2 = memo(function ChallengeStatusCardV2({
   challenge,
@@ -37,28 +46,34 @@ export const ChallengeStatusCardV2 = memo(function ChallengeStatusCardV2({
     challenge,
     t,
   );
+  const isFinished = challenge.state === 'won';
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
-      <ChallengeCard
-        accentColor={glowColor}
-        glowRecipe={getMeshRecipe('mine', glowKey)}
-        top={<AccentPill size="sm" uppercase icon={stateIcon} label={stateLabel} color={stateColor} />}
-        title={challenge.title}
-        titleLines={2}
-        footer={
-          <ChallengeCardProgress
-            progress={progress}
-            currentDay={challenge.currentDay}
-            totalDays={challenge.totalDays}
+      <View style={styles.cardWrap}>
+        <View style={isFinished && styles.dimmed}>
+          <ChallengeCard
             accentColor={glowColor}
-            track="light"
+            glowRecipe={getMeshRecipe('mine', glowKey)}
+            top={<AccentPill size="sm" uppercase icon={stateIcon} label={stateLabel} color={stateColor} />}
+            title={challenge.title}
+            titleLines={2}
+            footer={
+              <ChallengeCardProgress
+                progress={progress}
+                currentDay={challenge.currentDay}
+                totalDays={challenge.totalDays}
+                accentColor={glowColor}
+                track="light"
+              />
+            }
+            side={
+              <SidePanel kind={sidePanel} photoUrl={challenge.latestPhotoUrl} onPressAddPhoto={onPressAddPhoto} />
+            }
           />
-        }
-        side={
-          <SidePanel kind={sidePanel} photoUrl={challenge.latestPhotoUrl} onPressAddPhoto={onPressAddPhoto} />
-        }
-      />
+        </View>
+        {isFinished ? <ChallengeCardShimmer /> : null}
+      </View>
     </Pressable>
   );
 });
@@ -111,6 +126,16 @@ const PANEL_OPACITY = 0.62;
 const styles = StyleSheet.create({
   pressed: {
     opacity: 0.9,
+  },
+  // Plain wrapper so `ChallengeCardShimmer` (a sibling, only rendered when
+  // finished) can absolutely-fill the same bounds as the card below it.
+  cardWrap: {
+    position: 'relative',
+  },
+  // The "apagado" dim for a finished challenge's card — content only, not
+  // the shimmer sweep rendered alongside it (see the component doc comment).
+  dimmed: {
+    opacity: 0.78,
   },
   // `medium` radius: concentric with the card's `big` corners inside its `md` padding.
   panel: {

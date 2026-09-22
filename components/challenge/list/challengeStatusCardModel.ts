@@ -43,12 +43,18 @@ export type StatusCardSidePanel = 'addPhoto' | 'photo' | 'placeholder';
  *
  * `stateColor` is the shared `getChallengeCardColor()` (also used by Home's hero
  * card and the progress-ring eyebrow, so a palette tweak can't drift between
- * screens): `rest` / `completed` / `won` / `left` keep their own fixed meaning
+ * screens): `rest` / `completed` / `left` keep their own fixed meaning
  * (purple / green / neutral), and `active` resolves to the challenge's own
  * dominant-activity color (Activity Color System v2), falling back to
- * `colors.primary` when it has no dominant category yet. `won` and `left`
- * intentionally share one color (`neutral`) — one card variant covers every
- * "this challenge is no longer in progress" case.
+ * `colors.primary` when it has no dominant category yet. `won` used to share
+ * `left`'s neutral gray too ("one card variant covers every 'no longer in
+ * progress' case") but per explicit request 2026-09-22 ("the badge should be
+ * in the activity color although it says finished") now resolves the same
+ * way `active` does — the "Finished" label is unchanged, only the badge's
+ * fill color. `ChallengeStatusCardV2` also dims the whole card and adds a
+ * light-sweep overlay for `won` specifically (`ChallengeCardShimmer`) — that
+ * part is V2-only, not in this shared model, since the classic card has no
+ * glow mechanism to sweep.
  */
 export function getChallengeStatusCardModel(challenge: ChallengeMineCardViewModel, t: TFunction) {
   const stateLabel =

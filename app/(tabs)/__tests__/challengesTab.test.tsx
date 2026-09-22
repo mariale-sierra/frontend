@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithProviders } from '../../../test-utils/renderWithProviders';
 import Challenges from '../challenges';
 import { getMyChallenges } from '../../../services/user/user.service';
@@ -89,22 +89,37 @@ describe('the Challenges tab — a finished challenge', () => {
     return screen;
   }
 
-  it('stays in Mine, next to the challenges still going', async () => {
+  // Per explicit request 2026-09-22 ("I dont want them bunched up with the
+  // active ones"): a finished challenge stays in Mine's data, but collapsed
+  // behind a "Show N finished challenges" toggle at the end of the list by
+  // default, not shown next to the ones still going until that's tapped.
+  async function expandFinished(screen: Awaited<ReturnType<typeof renderTab>>) {
+    await fireEvent.press(screen.getByText('Show 1 finished challenge'));
+  }
+
+  it('stays in Mine, collapsed behind a toggle, and appears next to the challenges still going once revealed', async () => {
     const screen = await renderTab([GOING, FINISHED]);
 
-    expect(screen.getByText('Finished Marathon')).toBeTruthy();
     expect(screen.getByText('Morning Run')).toBeTruthy();
+    expect(screen.queryByText('Finished Marathon')).toBeNull();
+    expect(screen.getByText('Show 1 finished challenge')).toBeTruthy();
+
+    await expandFinished(screen);
+
+    expect(screen.getByText('Finished Marathon')).toBeTruthy();
+    expect(screen.getByText('Hide finished challenges')).toBeTruthy();
   });
 
-  it('is listed after the ones still going', async () => {
+  it('is listed after the ones still going once revealed', async () => {
     const screen = await renderTab([FINISHED, GOING]);
+    await expandFinished(screen);
 
     // In the order the cards are drawn, top to bottom.
     const titles = screen.getAllByText(/Morning Run|Finished Marathon/).map((node) => node.props.children);
     expect(titles).toEqual(['Morning Run', 'Finished Marathon']);
   });
 
-  it('is still there when its celebration is closed — it must not vanish with the popup', async () => {
+  it('is still there (once revealed) when its celebration is closed — it must not vanish with the popup', async () => {
     (hasShownCompletion as jest.Mock).mockResolvedValue(false);
     const screen = await renderTab([GOING, FINISHED]);
 
@@ -115,23 +130,29 @@ describe('the Challenges tab — a finished challenge', () => {
     // ...and closing it leaves the card where it was.
     await act(async () => useChallengeFinishedStore.getState().hide());
 
+    await expandFinished(screen);
     expect(screen.getByText('Finished Marathon')).toBeTruthy();
   });
 
-  it('is celebrated once and no more, and still listed after that', async () => {
+  it('is celebrated once and no more, and still listed (once revealed) after that', async () => {
     (hasShownCompletion as jest.Mock).mockResolvedValue(true);
     const screen = await renderTab([GOING, FINISHED]);
 
     expect(useChallengeFinishedStore.getState().visible).toBe(false);
     expect(markCompletionShown).not.toHaveBeenCalled();
+    await expandFinished(screen);
     expect(screen.getByText('Finished Marathon')).toBeTruthy();
   });
 
-  it('is the only card there when it is the only challenge, not an empty Mine', async () => {
+  it('is not an empty Mine when it is the only challenge, even though it starts collapsed', async () => {
     (getMyChallenges as jest.Mock).mockResolvedValue([FINISHED]);
     const screen = await renderWithProviders(<Challenges />);
 
-    await waitFor(() => expect(screen.getByText('Finished Marathon')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('Show 1 finished challenge')).toBeTruthy());
+    expect(screen.queryByText(/haven.t joined/i)).toBeNull();
+
+    await fireEvent.press(screen.getByText('Show 1 finished challenge'));
+    expect(screen.getByText('Finished Marathon')).toBeTruthy();
   });
 });
 

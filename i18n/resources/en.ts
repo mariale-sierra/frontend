@@ -89,6 +89,11 @@ const en = {
     view: 'View',
     emptyMine: "You haven't joined any challenges yet.",
     emptyExplore: 'No challenges to explore right now.',
+    // The Mine list's collapsed-by-default finished-challenges disclosure —
+    // see app/(tabs)/challenges.tsx.
+    showFinishedChallenges_one: 'Show {{count}} finished challenge',
+    showFinishedChallenges_other: 'Show {{count}} finished challenges',
+    hideFinishedChallenges: 'Hide finished challenges',
     allActiveTitle: 'Active',
     completed: 'Completed',
     left: 'Left',
