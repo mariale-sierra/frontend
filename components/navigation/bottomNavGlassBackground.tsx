@@ -16,13 +16,13 @@ import { BottomNavGlassSurface } from './bottomNavGlassSurface';
 import { BottomNavIndicator } from './bottomNavIndicator';
 
 /**
- * Production cross-platform island. Its visual shell spans the same five
- * equal slots as the navigator row, avoiding the old absolute-width/margin
- * mismatch that put Web tab buttons outside the visible bar.
+ * Production cross-platform navigation capsule. It contains exactly the
+ * four routable tabs; the add action is rendered in the separate navigator
+ * item after the capsule and its explicit gap.
  */
 export function BottomNavGlassBackground() {
   const { width } = useWindowDimensions();
-  const { shellWidth, tabSlotWidth, indicatorWidth } = getBottomNavGlassGeometry(width);
+  const { navCapsuleWidth, tabSlotWidth, indicatorWidth } = getBottomNavGlassGeometry(width);
   const { barExpansion } = useBottomNavContext();
   const insets = useSafeAreaInsets();
 
@@ -37,10 +37,10 @@ export function BottomNavGlassBackground() {
   return (
     <>
       <View style={styles.tabBarBase} />
-      {shellWidth > 0 ? (
+      {navCapsuleWidth > 0 ? (
         <Animated.View
           pointerEvents="none"
-          style={[styles.shell, { width: shellWidth, bottom: shellBottom }, shellAnimatedStyle]}
+          style={[styles.shell, { width: navCapsuleWidth, bottom: shellBottom }, shellAnimatedStyle]}
         >
           <BottomNavGlassSurface style={StyleSheet.absoluteFill} />
           <View pointerEvents="none" style={styles.sheen} />

@@ -8,9 +8,6 @@ import { spacing } from './theme';
 
 export const BOTTOM_NAV_TAB_COUNT = 4;
 
-/** The add action gets its own slot in the cross-platform glass variant. */
-export const BOTTOM_NAV_GLASS_SLOT_COUNT = BOTTOM_NAV_TAB_COUNT + 1;
-
 /** The active presentation; `legacy` remains available as a QA fallback. */
 export const BOTTOM_NAV_VARIANT = 'glass' as const;
 export type BottomNavVariant = 'glass' | 'legacy';
@@ -94,19 +91,18 @@ export function getBottomNavGeometry(screenWidth: number) {
 }
 
 /**
- * Geometry for the glass island. All five navigator items use equal flex
- * slots, so React Navigation and the decorative layer share coordinates on
- * Web, Android, and iOS.
+ * Geometry for the glass island. The four routable tabs share one capsule;
+ * the add action is intentionally outside it with a real visual gap.
  */
 export function getBottomNavGlassGeometry(screenWidth: number) {
-  const shellWidth = Math.max(screenWidth - BOTTOM_NAV_OUTER_MARGIN * 2, 0);
-  const tabSlotWidth = shellWidth / BOTTOM_NAV_GLASS_SLOT_COUNT;
-  const indicatorWidth = Math.max(
-    tabSlotWidth - BOTTOM_NAV_INDICATOR_INSET * 2 + BOTTOM_NAV_INDICATOR_EXTRA_WIDTH,
+  const navCapsuleWidth = Math.max(
+    screenWidth - BOTTOM_NAV_OUTER_MARGIN * 2 - BOTTOM_NAV_CAPSULE_GAP - BOTTOM_NAV_FAB_SIZE,
     0,
   );
+  const tabSlotWidth = navCapsuleWidth / BOTTOM_NAV_TAB_COUNT;
+  const indicatorWidth = Math.max(tabSlotWidth - BOTTOM_NAV_INDICATOR_INSET * 2, 0);
 
-  return { shellWidth, tabSlotWidth, indicatorWidth };
+  return { navCapsuleWidth, tabSlotWidth, indicatorWidth };
 }
 
 // Spring tuning — fast, physical, very little overshoot ("premium", not

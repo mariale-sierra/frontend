@@ -2,7 +2,8 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { colors } from '../../constants/theme';
+import { borderWidth, colors, glass } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import {
   BOTTOM_NAV_BOTTOM_INSET,
   BOTTOM_NAV_FAB_ICON_SIZE,
@@ -10,6 +11,7 @@ import {
   BOTTOM_NAV_FAB_SIZE,
   BOTTOM_NAV_PRESS_SPRING,
 } from '../../constants/bottomNav';
+import { BottomNavGlassSurface } from './bottomNavGlassSurface';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -17,6 +19,7 @@ interface BottomNavFabProps {
   onPress: () => void;
   accessibilityLabel?: string;
   centered?: boolean;
+  glass?: boolean;
 }
 
 /**
@@ -28,7 +31,12 @@ interface BottomNavFabProps {
  * other — the previous design's large negative-margin "poke above the bar"
  * treatment is intentionally gone.
  */
-export function BottomNavFab({ onPress, accessibilityLabel, centered = false }: BottomNavFabProps) {
+export function BottomNavFab({
+  onPress,
+  accessibilityLabel,
+  centered = false,
+  glass: glassVariant = false,
+}: BottomNavFabProps) {
   const scale = useSharedValue(1);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -53,9 +61,14 @@ export function BottomNavFab({ onPress, accessibilityLabel, centered = false }: 
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       hitSlop={8}
-      style={[styles.fab, centered && styles.centeredFab, pressStyle]}
+      style={[styles.fab, glassVariant && styles.glassFab, centered && styles.centeredFab, pressStyle]}
     >
-      <Ionicons name="add" size={BOTTOM_NAV_FAB_ICON_SIZE} color={colors.ink} />
+      {glassVariant ? <BottomNavGlassSurface style={StyleSheet.absoluteFill} /> : null}
+      <Ionicons
+        name="add"
+        size={BOTTOM_NAV_FAB_ICON_SIZE}
+        color={glassVariant ? colors.paper : colors.ink}
+      />
     </AnimatedPressable>
   );
 }
@@ -78,5 +91,11 @@ const styles = StyleSheet.create({
   centeredFab: {
     left: '50%',
     marginLeft: -BOTTOM_NAV_FAB_SIZE / 2,
+  },
+  glassFab: {
+    backgroundColor: 'transparent',
+    borderWidth: borderWidth.fine,
+    borderColor: withAlpha(colors.paper, glass.borderOpacity),
+    overflow: 'hidden',
   },
 });

@@ -114,7 +114,7 @@ export default function TabsLayout() {
   // options object (and re-triggering its own internal options-change
   // handling) on every unrelated re-render, e.g. a plain tab switch.
   const tabItemStyle = useMemo(
-    () => (isGlassVariant ? { flex: 1 as const } : { flex: 0 as const, width: tabSlotWidth }),
+    () => ({ flex: 0 as const, width: tabSlotWidth }),
     [isGlassVariant, tabSlotWidth],
   );
   const firstTabItemStyle = useMemo(
@@ -127,14 +127,19 @@ export default function TabsLayout() {
   const lastTabItemStyle = useMemo(
     () =>
       isGlassVariant
-        ? { ...tabItemStyle, marginRight: BOTTOM_NAV_OUTER_MARGIN }
+        ? tabItemStyle
         : { ...tabItemStyle, marginRight: legacyGeometry.tabEdgeInset },
     [isGlassVariant, legacyGeometry.tabEdgeInset, tabItemStyle],
   );
   const fabItemStyle = useMemo(
     () =>
       isGlassVariant
-        ? { flex: 1 as const }
+        ? {
+            flex: 0 as const,
+            width: BOTTOM_NAV_FAB_SIZE,
+            marginLeft: BOTTOM_NAV_CAPSULE_GAP,
+            marginRight: BOTTOM_NAV_OUTER_MARGIN,
+          }
         : {
             flex: 0 as const,
             width: BOTTOM_NAV_FAB_SIZE,
@@ -237,7 +242,7 @@ export default function TabsLayout() {
         <BottomNavFab
           onPress={handleFabPress}
           accessibilityLabel={t('navigation.addButtonA11y')}
-          centered={isGlassVariant}
+          glass={isGlassVariant}
         />
       ),
     }),
@@ -260,10 +265,9 @@ export default function TabsLayout() {
         <Tabs.Screen name="challenges" options={challengesOptions} />
         <Tabs.Screen name="profile" options={profileOptions} />
 
-        {/* FAB — not a real tab destination. It is declared LAST so it
-            occupies the fifth glass slot (or the separate right-hand slot
-            in the legacy fallback). tabPress is still prevented and onPress
-            still navigates straight to /log, exactly as before. */}
+        {/* FAB — not a real tab destination. It is declared LAST in a
+            separate right-hand item after the four-tab capsule. tabPress is
+            still prevented and onPress still navigates straight to /log. */}
         <Tabs.Screen
           name="add"
           options={addOptions}
