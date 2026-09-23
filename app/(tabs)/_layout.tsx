@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { Tabs, useRouter } from "expo-router";
 import type { BottomTabBarButtonProps } from 'expo-router/tabs';
-import { useWindowDimensions } from "react-native";
+import { Platform, useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { Ionicons } from "@expo/vector-icons";
 import { BottomNavProvider } from "../../components/navigation/bottomNavContext";
@@ -149,6 +149,27 @@ export default function TabsLayout() {
           },
     [isGlassVariant],
   );
+  // React Navigation normally reserves the tab bar's height below the scene.
+  // On Web and Android the glass bar is meant to float over the page, so make
+  // that container absolute and let the screen render behind it. iOS keeps
+  // the default container because adding any `tabBarStyle` there was proven
+  // to disable the native tab touch surface under Fabric.
+  const overlayTabBarStyle = useMemo(
+    () =>
+      Platform.OS === 'ios'
+        ? undefined
+        : {
+            position: 'absolute' as const,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'transparent',
+            borderTopWidth: 0,
+            elevation: 0,
+            shadowOpacity: 0,
+          },
+    [],
+  );
   const handleFabPress = useCallback(() => router.push('/log'), [router]);
 
   // Keep the navigator's option and render-prop identities stable across a
@@ -160,12 +181,13 @@ export default function TabsLayout() {
       headerShown: false,
       tabBarShowLabel: false,
       tabBarBackground: renderBottomNavBackground,
+      tabBarStyle: overlayTabBarStyle,
       // Inactive tabs can still receive context/state updates while another
       // tab is being opened. Suspending their React renders keeps that work
       // away from the active tab and the UI-thread navbar animation.
       freezeOnBlur: true,
     }),
-    [],
+    [overlayTabBarStyle],
   );
   const homeOptions = useMemo(
     () => ({
