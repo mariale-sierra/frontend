@@ -11,6 +11,7 @@ import {
   BOTTOM_NAV_FAB_SIZE,
   BOTTOM_NAV_PRESS_SPRING,
 } from '../../constants/bottomNav';
+import { BottomNavGlassSurface } from './bottomNavGlassSurface';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -63,6 +64,7 @@ export function BottomNavFab({
       hitSlop={8}
       style={[styles.fab, glassVariant && styles.glassFab, centered && styles.centeredFab, pressStyle]}
     >
+      {glassVariant ? <BottomNavGlassSurface tone="light" style={StyleSheet.absoluteFill} /> : null}
       <Ionicons
         name="add"
         size={BOTTOM_NAV_FAB_ICON_SIZE}
@@ -92,9 +94,9 @@ const styles = StyleSheet.create({
     marginLeft: -BOTTOM_NAV_FAB_SIZE / 2,
   },
   glassFab: {
-    backgroundColor: colors.paper,
+    backgroundColor: 'transparent',
     borderWidth: borderWidth.fine,
-    borderColor: withAlpha(colors.paper, glass.borderOpacity),
+    borderColor: withAlpha(colors.ink, glass.borderOpacity),
     overflow: 'hidden',
   },
 });

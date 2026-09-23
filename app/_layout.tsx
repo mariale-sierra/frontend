@@ -14,6 +14,7 @@ import { ErrorNotificationProvider } from '../components/ui/ErrorNotificationPro
 import i18n, { PREFERRED_LANGUAGE_KEY } from '../i18n';
 import type { SupportedLanguage } from '../i18n';
 import { storage } from '../utils/storage';
+import { colors } from '../constants/theme';
 
 function RootNavigator() {
   const router = useRouter();
@@ -39,7 +40,7 @@ function RootNavigator() {
   return (
     <Stack>
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false, contentStyle: { backgroundColor: colors.ink } }} />
       <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
       <Stack.Screen name="invitations" options={{ headerShown: false }} />
       <Stack.Screen name="home/streaks" options={{ headerShown: false }} />

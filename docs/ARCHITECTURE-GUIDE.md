@@ -67,10 +67,12 @@ Bottom tabs are defined in `app/(tabs)/_layout.tsx` using `Tabs` from Expo Route
 
 There are four routable tabs inside one capsule: `index` (Home), `search`, `challenges`, and `profile`. The `add` route remains registered only because Expo Router needs a file for it; its responsive fifth slot renders the separate right-hand `+` action, prevents `tabPress`, and opens `/log` directly. The glass background only covers the first four slots, leaving the action visually floating beside it. `BOTTOM_NAV_VARIANT` in `constants/bottomNav.ts` selects the new `glass` presentation by default. The original `BottomNavBackground` and its absolute geometry remain intact as the `legacy` fallback; switching that constant back to `legacy` also restores the matching legacy item geometry.
 
+The `(tabs)` stack screen keeps the navigator's area behind the transparent bar on Havit's `ink` surface, so the safe-area strip cannot fall back to the native light card background and appear as a white dead zone. The bar itself remains implemented through `tabBarBackground` and per-item buttons, preserving the iOS touch workaround described below.
+
 The navbar implementation is deliberately split across:
 - `components/navigation/bottomNavBackground.tsx`: decorative capsule, blur, and one shared indicator.
 - `components/navigation/bottomNavGlassBackground.tsx`: active cross-platform four-tab glass capsule.
-- `components/navigation/bottomNavGlassSurface.tsx` / `.ios.tsx`: shared Android/Web blur material and optional Expo native Liquid Glass on iOS 26+, used by both the capsule and the glass `+` action.
+- `components/navigation/bottomNavGlassSurface.tsx` / `.ios.tsx`: shared Android/Web blur material and optional Expo native Liquid Glass on iOS 26+, used by the capsule and by the `+` action with a light `paper` tint.
 - `components/navigation/bottomNavIndicator.tsx`: the single oval that translates between tab slots.
 - `components/navigation/bottomNavTabButton.tsx`: explicit `Tap` and `Pan` gestures for tab selection and horizontal dragging.
 - `components/navigation/bottomNavContext.tsx`: shared visual state and the UI-thread spring/stretch sequence.
