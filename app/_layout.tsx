@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, ThemeProvider as NavigationThemeProvider, useRouter, useSegments } from 'expo-router';
+import type { Theme as NavigationTheme } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { DMSans_400Regular, DMSans_500Medium, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { InterTight_700Bold } from '@expo-google-fonts/inter-tight';
@@ -14,7 +15,25 @@ import { ErrorNotificationProvider } from '../components/ui/ErrorNotificationPro
 import i18n, { PREFERRED_LANGUAGE_KEY } from '../i18n';
 import type { SupportedLanguage } from '../i18n';
 import { storage } from '../utils/storage';
-import { colors } from '../constants/theme';
+import { colors, fontFamily } from '../constants/theme';
+
+const navigationTheme: NavigationTheme = {
+  dark: true,
+  colors: {
+    primary: colors.primary,
+    background: colors.ink,
+    card: colors.ink,
+    text: colors.paper,
+    border: 'transparent',
+    notification: colors.accent,
+  },
+  fonts: {
+    regular: { fontFamily: fontFamily.regular, fontWeight: '400' },
+    medium: { fontFamily: fontFamily.medium, fontWeight: '500' },
+    bold: { fontFamily: fontFamily.bold, fontWeight: '700' },
+    heavy: { fontFamily: fontFamily.bold, fontWeight: '700' },
+  },
+};
 
 function RootNavigator() {
   const router = useRouter();
@@ -38,48 +57,50 @@ function RootNavigator() {
   }
 
   return (
-    <Stack>
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false, contentStyle: { backgroundColor: colors.ink } }} />
-      <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
-      <Stack.Screen name="invitations" options={{ headerShown: false }} />
-      <Stack.Screen name="home/streaks" options={{ headerShown: false }} />
-      <Stack.Screen name="messaging/index" options={{ headerShown: false }} />
-      <Stack.Screen name="messaging/[conversationId]" options={{ headerShown: false }} />
-      <Stack.Screen name="messaging/new" options={{ headerShown: false }} />
-      <Stack.Screen name="messaging/chat-details" options={{ headerShown: false }} />
-      <Stack.Screen name="messaging/spaces/index" options={{ headerShown: false }} />
-      <Stack.Screen name="messaging/spaces/create" options={{ headerShown: false }} />
-      <Stack.Screen name="messaging/spaces/[id]/index" options={{ headerShown: false }} />
-      <Stack.Screen name="messaging/spaces/[id]/members" options={{ headerShown: false }} />
-      <Stack.Screen name="messaging/spaces/[id]/manage" options={{ headerShown: false }} />
-      <Stack.Screen name="messaging/spaces/[id]/join-requests" options={{ headerShown: false }} />
-      <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
-      {/* Real bug, fixed 2026-08-29, per explicit report: this route had no
-          entry here at all, so it fell back to Expo Router's default native
-          header — the "expo top white bar" the user saw sitting on top of
-          this screen's own BackButton/header. Every other custom-header
-          screen in this app is registered the same way. */}
-      <Stack.Screen name="profile/[userId]" options={{ headerShown: false }} />
-      <Stack.Screen name="profile/about" options={{ headerShown: false }} />
-      <Stack.Screen name="exercises/index" options={{ headerShown: false }} />
-      <Stack.Screen name="exercises/[id]" options={{ headerShown: false }} />
-      <Stack.Screen name="exercises/muscles/index" options={{ headerShown: false }} />
-      <Stack.Screen name="exercises/muscles/[code]" options={{ headerShown: false }} />
-      <Stack.Screen name="exercises/muscles/region/[code]" options={{ headerShown: false }} />
-      {/* Top-level on purpose, not nested inside "(add)" — that group is
-          itself a `fullScreenModal` (opaque), so a transparentModal screen
-          nested inside it only reveals that opaque modal's own backdrop, not
-          the tabs screen underneath (confirmed on device: solid white).
-          Living as a direct sibling of "(tabs)" here makes the tabs
-          navigator the actual "previous screen" this reveals. See log.tsx. */}
-      <Stack.Screen
-        name="log"
-        options={{ headerShown: false, presentation: 'transparentModal', animation: 'fade', contentStyle: { backgroundColor: 'transparent' } }}
-      />
-      <Stack.Screen name="(add)" options={{ presentation: 'fullScreenModal', headerShown: false }} />
-      <Stack.Screen name="challenge" options={{ headerShown: false }} />
-    </Stack>
+    <NavigationThemeProvider value={navigationTheme}>
+      <Stack>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, contentStyle: { backgroundColor: colors.ink } }} />
+        <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="invitations" options={{ headerShown: false }} />
+        <Stack.Screen name="home/streaks" options={{ headerShown: false }} />
+        <Stack.Screen name="messaging/index" options={{ headerShown: false }} />
+        <Stack.Screen name="messaging/[conversationId]" options={{ headerShown: false }} />
+        <Stack.Screen name="messaging/new" options={{ headerShown: false }} />
+        <Stack.Screen name="messaging/chat-details" options={{ headerShown: false }} />
+        <Stack.Screen name="messaging/spaces/index" options={{ headerShown: false }} />
+        <Stack.Screen name="messaging/spaces/create" options={{ headerShown: false }} />
+        <Stack.Screen name="messaging/spaces/[id]/index" options={{ headerShown: false }} />
+        <Stack.Screen name="messaging/spaces/[id]/members" options={{ headerShown: false }} />
+        <Stack.Screen name="messaging/spaces/[id]/manage" options={{ headerShown: false }} />
+        <Stack.Screen name="messaging/spaces/[id]/join-requests" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
+        {/* Real bug, fixed 2026-08-29, per explicit report: this route had no
+            entry here at all, so it fell back to Expo Router's default native
+            header — the "expo top white bar" the user saw sitting on top of
+            this screen's own BackButton/header. Every other custom-header
+            screen in this app is registered the same way. */}
+        <Stack.Screen name="profile/[userId]" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/about" options={{ headerShown: false }} />
+        <Stack.Screen name="exercises/index" options={{ headerShown: false }} />
+        <Stack.Screen name="exercises/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="exercises/muscles/index" options={{ headerShown: false }} />
+        <Stack.Screen name="exercises/muscles/[code]" options={{ headerShown: false }} />
+        <Stack.Screen name="exercises/muscles/region/[code]" options={{ headerShown: false }} />
+        {/* Top-level on purpose, not nested inside "(add)" — that group is
+            itself a `fullScreenModal` (opaque), so a transparentModal screen
+            nested inside it only reveals that opaque modal's own backdrop, not
+            the tabs screen underneath (confirmed on device: solid white).
+            Living as a direct sibling of "(tabs)" here makes the tabs
+            navigator the actual "previous screen" this reveals. See log.tsx. */}
+        <Stack.Screen
+          name="log"
+          options={{ headerShown: false, presentation: 'transparentModal', animation: 'fade', contentStyle: { backgroundColor: 'transparent' } }}
+        />
+        <Stack.Screen name="(add)" options={{ presentation: 'fullScreenModal', headerShown: false }} />
+        <Stack.Screen name="challenge" options={{ headerShown: false }} />
+      </Stack>
+    </NavigationThemeProvider>
   );
 }
 
