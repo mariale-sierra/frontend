@@ -15,6 +15,7 @@ import { WebSafeCanvas } from '../ui/webSafeCanvas';
 
 interface RainbowGradientBackgroundProps {
   style?: StyleProp<ViewStyle>;
+  unmountOnBlur?: boolean;
 }
 
 // Whether the person has asked their phone to cut down on motion (a system
@@ -83,7 +84,7 @@ function RainbowFieldView({ field, phase, width, height }: RainbowFieldViewProps
  * tuned as. No blur filter, and no grain (a grain shader every frame is dear); the
  * fields are dithered against banding instead, which is what the grain was for.
  */
-export function RainbowGradientBackground({ style }: RainbowGradientBackgroundProps) {
+export function RainbowGradientBackground({ style, unmountOnBlur = false }: RainbowGradientBackgroundProps) {
   const { width, height } = useWindowDimensions();
   const focused = useIsFocused();
   const reduceMotion = useReduceMotion();
@@ -101,7 +102,7 @@ export function RainbowGradientBackground({ style }: RainbowGradientBackgroundPr
 
   return (
     <View style={[StyleSheet.absoluteFill, style]} pointerEvents="none">
-      <WebSafeCanvas style={StyleSheet.absoluteFill}>
+      <WebSafeCanvas style={StyleSheet.absoluteFill} unmountOnBlur={unmountOnBlur}>
         <Fill color={colors.ink} />
 
         {/* `plus` (additive), like the dome's bloom and the cards' fields:

@@ -24,6 +24,8 @@ interface PaperGradientBackgroundProps {
    * little stronger (`TINTED_GRADIENT`). */
   tint?: string;
   style?: StyleProp<ViewStyle>;
+  /** Unmount the web Skia surface while its route is covered. */
+  unmountOnBlur?: boolean;
 }
 
 /**
@@ -39,12 +41,17 @@ interface PaperGradientBackgroundProps {
  * so lights of different colors can be stacked and cross-faded
  * (`PagedGradientBackground`).
  */
-export function PaperGradientBackground({ edge = PAPER_GRADIENT_EDGE, tint, style }: PaperGradientBackgroundProps) {
+export function PaperGradientBackground({
+  edge = PAPER_GRADIENT_EDGE,
+  tint,
+  style,
+  unmountOnBlur = false,
+}: PaperGradientBackgroundProps) {
   const { width, height } = useWindowDimensions();
 
   return (
     <View style={[StyleSheet.absoluteFill, style]} pointerEvents="none">
-      <WebSafeCanvas style={StyleSheet.absoluteFill}>
+      <WebSafeCanvas style={StyleSheet.absoluteFill} unmountOnBlur={unmountOnBlur}>
         <AccentDome
           width={width}
           height={height}

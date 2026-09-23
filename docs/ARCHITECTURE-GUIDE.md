@@ -28,7 +28,7 @@ Scripts found in `package.json`:
 - Android: `npm run android` runs `expo start --android`.
 - iOS: `npm run ios` runs `expo start --ios`.
 - Web: `npm run web` runs `expo start --web`.
-- Web Skia setup: the custom `index.web.tsx` entry waits for CanvasKit/WASM via `LoadSkiaWeb()` before registering Expo Router; `postinstall` refreshes `public/canvaskit.wasm` after Skia upgrades. App canvases go through `components/ui/webSafeCanvas.tsx` on web so each draw waits for a non-zero layout, releases its WebGL context, and an unavailable surface does not crash the router with CanvasKit's `rangeMin` or zero-sized `drawImage` errors; native keeps Skia's regular renderer.
+- Web Skia setup: the custom `index.web.tsx` entry waits for CanvasKit/WASM via `LoadSkiaWeb()` before registering Expo Router; `postinstall` refreshes `public/canvaskit.wasm` after Skia upgrades. App canvases go through `components/ui/webSafeCanvas.tsx` on web so each draw waits for a non-zero layout, releases its WebGL context, and route-owned background canvases unmount while their screen is covered; this prevents CanvasKit's `rangeMin` or zero-sized `drawImage` errors during web navigation while native keeps Skia's regular renderer.
 - Lint: no script exists.
 - Typecheck: `npm run typecheck` (`tsc --noEmit`).
 - Test: `npm test` (Jest).

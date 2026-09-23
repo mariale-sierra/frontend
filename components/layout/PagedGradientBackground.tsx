@@ -12,6 +12,7 @@ export interface GradientPages {
 
 interface PagedGradientBackgroundProps extends GradientPages {
   edge?: 'top' | 'bottom';
+  unmountOnBlur?: boolean;
 }
 
 /**
@@ -23,7 +24,13 @@ interface PagedGradientBackgroundProps extends GradientPages {
  * dark. A carousel of pages of one color has a single light that never changes; more
  * than one page of a color (two challenges of the same activity) still share one light.
  */
-export function PagedGradientBackground({ colors: pageColors, scrollX, pageWidth, edge }: PagedGradientBackgroundProps) {
+export function PagedGradientBackground({
+  colors: pageColors,
+  scrollX,
+  pageWidth,
+  edge,
+  unmountOnBlur = false,
+}: PagedGradientBackgroundProps) {
   const lightColors = [...new Set(pageColors)];
   // Where each page's scroll offset is; one page has nothing to scroll between.
   const inputRange = pageColors.map((_, index) => index * pageWidth);
@@ -47,7 +54,7 @@ export function PagedGradientBackground({ colors: pageColors, scrollX, pageWidth
             },
           ]}
         >
-          <PaperGradientBackground edge={edge} tint={color} />
+          <PaperGradientBackground edge={edge} tint={color} unmountOnBlur={unmountOnBlur} />
         </Animated.View>
       ))}
     </View>

@@ -59,17 +59,25 @@ interface ScreenBackgroundProps extends ViewProps {
 
 // The gradient background in use: the paper light (in a carousel's colors when the
 // screen has pages), or, while `USE_PAPER_GRADIENT_BACKGROUND` is off, the mesh.
-function Gradient({ edge, pages, vivid }: { edge: 'top' | 'bottom'; pages?: GradientPages; vivid: boolean }) {
+function Gradient({
+  edge,
+  pages,
+  vivid,
+}: {
+  edge: 'top' | 'bottom';
+  pages?: GradientPages;
+  vivid: boolean;
+}) {
   if (vivid) {
-    return <MeshGradientBackground look="vivid" />;
+    return <MeshGradientBackground look="vivid" unmountOnBlur />;
   }
   if (!USE_PAPER_GRADIENT_BACKGROUND) {
-    return <MeshGradientBackground look={USE_VIVID_MESH_BACKGROUND ? 'vivid' : 'soft'} />;
+    return <MeshGradientBackground look={USE_VIVID_MESH_BACKGROUND ? 'vivid' : 'soft'} unmountOnBlur />;
   }
   return pages && pages.colors.length > 0 ? (
-    <PagedGradientBackground {...pages} edge={edge} />
+    <PagedGradientBackground {...pages} edge={edge} unmountOnBlur />
   ) : (
-    <PaperGradientBackground edge={edge} />
+    <PaperGradientBackground edge={edge} unmountOnBlur />
   );
 }
 

@@ -60,6 +60,7 @@ interface MeshGradientBackgroundProps {
   style?: StyleProp<ViewStyle>;
   /** `vivid` (the animated rainbow) or `soft` — see `MeshGradientLook`. Default `vivid`. */
   look?: MeshGradientLook;
+  unmountOnBlur?: boolean;
 }
 
 /**
@@ -70,8 +71,12 @@ interface MeshGradientBackgroundProps {
  * create-challenge flow, which asks for the `vivid` look outright (`vividGradient`,
  * `USE_VIVID_CREATE_FLOW_BACKGROUND`).
  */
-export function MeshGradientBackground({ style, look = 'vivid' }: MeshGradientBackgroundProps) {
-  return look === 'vivid' ? <RainbowGradientBackground style={style} /> : <SoftMeshBackground style={style} />;
+export function MeshGradientBackground({ style, look = 'vivid', unmountOnBlur = false }: MeshGradientBackgroundProps) {
+  return look === 'vivid' ? (
+    <RainbowGradientBackground style={style} unmountOnBlur={unmountOnBlur} />
+  ) : (
+    <SoftMeshBackground style={style} unmountOnBlur={unmountOnBlur} />
+  );
 }
 
 /**
@@ -82,7 +87,7 @@ export function MeshGradientBackground({ style, look = 'vivid' }: MeshGradientBa
  * blends softly toward the bottom, then vignetted to solid `colors.ink` with
  * a very faint grain layer.
  */
-function SoftMeshBackground({ style }: { style?: StyleProp<ViewStyle> }) {
+function SoftMeshBackground({ style, unmountOnBlur = false }: { style?: StyleProp<ViewStyle>; unmountOnBlur?: boolean }) {
   const { width, height } = useWindowDimensions();
   const { fieldPeakOpacity, paperLight } = SOFT_LOOK;
 
@@ -102,7 +107,7 @@ function SoftMeshBackground({ style }: { style?: StyleProp<ViewStyle> }) {
 
   return (
     <View style={[StyleSheet.absoluteFill, style]} pointerEvents="none">
-      <WebSafeCanvas style={StyleSheet.absoluteFill}>
+      <WebSafeCanvas style={StyleSheet.absoluteFill} unmountOnBlur={unmountOnBlur}>
         <Fill color={colors.ink} />
 
         <AccentDome
