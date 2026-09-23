@@ -28,7 +28,7 @@ Scripts found in `package.json`:
 - Android: `npm run android` runs `expo start --android`.
 - iOS: `npm run ios` runs `expo start --ios`.
 - Web: `npm run web` runs `expo start --web`.
-- Web Skia setup: the custom `index.web.tsx` entry waits for CanvasKit/WASM via `LoadSkiaWeb()` before registering Expo Router; `postinstall` refreshes `public/canvaskit.wasm` after Skia upgrades. App canvases go through `components/ui/webSafeCanvas.tsx` on web so each draw waits for a non-zero layout, releases its WebGL context, and route-owned background canvases unmount while their screen is covered; this prevents CanvasKit's `rangeMin` or zero-sized `drawImage` errors during web navigation while native keeps Skia's regular renderer.
+- Web Skia setup: the custom `index.web.tsx` entry waits for CanvasKit/WASM via `LoadSkiaWeb()` before registering Expo Router; `postinstall` refreshes `public/canvaskit.wasm` after Skia upgrades. App canvases go through `components/ui/webSafeCanvas.tsx` on web so each draw waits for a non-zero layout, releases its WebGL context, and route-owned background canvases unmount while their screen is covered. Card-only `AccentGlow` decorations use the flat card surface on web because CanvasKit can receive a stale zero-sized layout while cards mount or resize; native keeps Skia's regular renderer. This prevents CanvasKit's `rangeMin` or zero-sized `drawImage` errors without removing card interaction or content.
 - Lint: no script exists.
 - Typecheck: `npm run typecheck` (`tsc --noEmit`).
 - Test: `npm test` (Jest).
