@@ -8,6 +8,9 @@ import { spacing } from './theme';
 
 export const BOTTOM_NAV_TAB_COUNT = 4;
 
+/** The glass layout uses four tab slots plus one responsive action slot. */
+export const BOTTOM_NAV_GLASS_SLOT_COUNT = BOTTOM_NAV_TAB_COUNT + 1;
+
 /** The active presentation; `legacy` remains available as a QA fallback. */
 export const BOTTOM_NAV_VARIANT = 'glass' as const;
 export type BottomNavVariant = 'glass' | 'legacy';
@@ -95,11 +98,9 @@ export function getBottomNavGeometry(screenWidth: number) {
  * the add action is intentionally outside it with a real visual gap.
  */
 export function getBottomNavGlassGeometry(screenWidth: number) {
-  const navCapsuleWidth = Math.max(
-    screenWidth - BOTTOM_NAV_OUTER_MARGIN * 2 - BOTTOM_NAV_CAPSULE_GAP - BOTTOM_NAV_FAB_SIZE,
-    0,
-  );
-  const tabSlotWidth = navCapsuleWidth / BOTTOM_NAV_TAB_COUNT;
+  const contentWidth = Math.max(screenWidth - BOTTOM_NAV_OUTER_MARGIN * 2, 0);
+  const tabSlotWidth = contentWidth / BOTTOM_NAV_GLASS_SLOT_COUNT;
+  const navCapsuleWidth = tabSlotWidth * BOTTOM_NAV_TAB_COUNT;
   const indicatorWidth = Math.max(tabSlotWidth - BOTTOM_NAV_INDICATOR_INSET * 2, 0);
 
   return { navCapsuleWidth, tabSlotWidth, indicatorWidth };

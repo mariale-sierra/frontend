@@ -138,9 +138,7 @@ export default function TabsLayout() {
     () =>
       isGlassVariant
         ? {
-            flex: 0 as const,
-            width: BOTTOM_NAV_FAB_SIZE,
-            marginLeft: BOTTOM_NAV_CAPSULE_GAP,
+            flex: 1 as const,
             marginRight: BOTTOM_NAV_OUTER_MARGIN,
           }
         : {
@@ -246,6 +244,7 @@ export default function TabsLayout() {
           onPress={handleFabPress}
           accessibilityLabel={t('navigation.addButtonA11y')}
           glass={isGlassVariant}
+          centered={isGlassVariant}
         />
       ),
     }),
