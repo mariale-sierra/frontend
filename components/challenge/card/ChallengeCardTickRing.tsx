@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Canvas, Path } from '@shopify/react-native-skia';
+import { Path } from '@shopify/react-native-skia';
 import { spacing, textOpacity } from '../../../constants/theme';
 import { PROGRESS_RING } from '../../../constants/progressRing';
 import { buildTickRingPath } from '../../../utils/tickRing';
 import { withAlpha } from '../../../utils/color';
+import { WebSafeCanvas } from '../../ui/webSafeCanvas';
 
 const RING_SIZE = 104;
 
@@ -68,7 +69,7 @@ export function ChallengeCardTickRing({ accentColor, children, topOffset }: Chal
   return (
     <View style={styles.column}>
       <View style={[styles.ring, topOffset ? { top: topOffset } : null]}>
-        <Canvas style={StyleSheet.absoluteFill}>
+        <WebSafeCanvas style={StyleSheet.absoluteFill}>
           <Path
             path={ticks}
             style="stroke"
@@ -76,7 +77,7 @@ export function ChallengeCardTickRing({ accentColor, children, topOffset }: Chal
             strokeCap="round"
             color={withAlpha(accentColor, TICK_OPACITY)}
           />
-        </Canvas>
+        </WebSafeCanvas>
         {children}
       </View>
     </View>

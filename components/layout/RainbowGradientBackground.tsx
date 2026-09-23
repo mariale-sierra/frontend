@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo, StyleProp, StyleSheet, View, ViewStyle, useWindowDimensions } from 'react-native';
 import { useIsFocused } from 'expo-router';
-import { Canvas, Circle, Fill, Group, RadialGradient, vec } from '@shopify/react-native-skia';
+import { Circle, Fill, Group, RadialGradient, vec } from '@shopify/react-native-skia';
 import { useDerivedValue, useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
 import { MESH_FALLOFF } from '../ui/accentMesh';
@@ -11,6 +11,7 @@ import { RAINBOW_FIELDS, RAINBOW_LOOP_MS } from '../../constants/rainbowBackgrou
 import type { RainbowField } from '../../constants/rainbowBackground';
 import { boostSaturation, withAlpha } from '../../utils/color';
 import { rainbowFieldTransform } from '../../utils/rainbowMotion';
+import { WebSafeCanvas } from '../ui/webSafeCanvas';
 
 interface RainbowGradientBackgroundProps {
   style?: StyleProp<ViewStyle>;
@@ -100,7 +101,7 @@ export function RainbowGradientBackground({ style }: RainbowGradientBackgroundPr
 
   return (
     <View style={[StyleSheet.absoluteFill, style]} pointerEvents="none">
-      <Canvas style={StyleSheet.absoluteFill}>
+      <WebSafeCanvas style={StyleSheet.absoluteFill}>
         <Fill color={colors.ink} />
 
         {/* `plus` (additive), like the dome's bloom and the cards' fields:
@@ -110,7 +111,7 @@ export function RainbowGradientBackground({ style }: RainbowGradientBackgroundPr
             <RainbowFieldView key={field.activity} field={field} phase={phase} width={width} height={height} />
           ))}
         </Group>
-      </Canvas>
+      </WebSafeCanvas>
     </View>
   );
 }

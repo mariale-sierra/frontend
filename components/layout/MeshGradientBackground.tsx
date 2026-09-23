@@ -1,7 +1,8 @@
 import { StyleProp, StyleSheet, View, ViewStyle, useWindowDimensions } from 'react-native';
-import { Blur, Canvas, Fill, FractalNoise, Group, Oval, RadialGradient, Rect, vec } from '@shopify/react-native-skia';
+import { Blur, Fill, FractalNoise, Group, Oval, RadialGradient, Rect, vec } from '@shopify/react-native-skia';
 import { AccentDome } from '../ui/accentDome';
 import { RainbowGradientBackground } from './RainbowGradientBackground';
+import { WebSafeCanvas } from '../ui/webSafeCanvas';
 import { activityColors, colors } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
@@ -101,7 +102,7 @@ function SoftMeshBackground({ style }: { style?: StyleProp<ViewStyle> }) {
 
   return (
     <View style={[StyleSheet.absoluteFill, style]} pointerEvents="none">
-      <Canvas style={StyleSheet.absoluteFill}>
+      <WebSafeCanvas style={StyleSheet.absoluteFill}>
         <Fill color={colors.ink} />
 
         <AccentDome
@@ -159,7 +160,7 @@ function SoftMeshBackground({ style }: { style?: StyleProp<ViewStyle> }) {
             <FractalNoise freqX={0.9} freqY={0.9} octaves={4} seed={7} tileWidth={width} tileHeight={height} />
           </Rect>
         </Group>
-      </Canvas>
+      </WebSafeCanvas>
     </View>
   );
 }

@@ -1,6 +1,7 @@
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
-import { Canvas, Fill } from '@shopify/react-native-skia';
+import { Fill } from '@shopify/react-native-skia';
 import { AccentDome } from '../ui/accentDome';
+import { WebSafeCanvas } from '../ui/webSafeCanvas';
 import { colors } from '../../constants/theme';
 
 interface ExerciseAccentBackdropProps {
@@ -30,7 +31,7 @@ export function ExerciseAccentBackdrop({ color }: ExerciseAccentBackdropProps) {
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Canvas style={StyleSheet.absoluteFill}>
+      <WebSafeCanvas style={StyleSheet.absoluteFill}>
         <Fill color={colors.ink} />
 
         <AccentDome
@@ -44,7 +45,7 @@ export function ExerciseAccentBackdrop({ color }: ExerciseAccentBackdropProps) {
           bloomBlur={width * BLOOM_BLUR_RATIO}
           grainOpacity={GRAIN_OPACITY}
         />
-      </Canvas>
+      </WebSafeCanvas>
     </View>
   );
 }

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
-import { Canvas } from '@shopify/react-native-skia';
+import { WebSafeCanvas } from './webSafeCanvas';
 
 interface AccentGlowProps {
   /** Draws the glow (Skia nodes, e.g. `AccentDome` or `AccentMesh`) at the size
@@ -27,7 +27,7 @@ export function AccentGlow({ children }: AccentGlowProps) {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none" onLayout={handleLayout}>
       {size.width > 0 && size.height > 0 ? (
-        <Canvas style={StyleSheet.absoluteFill}>{children(size)}</Canvas>
+        <WebSafeCanvas style={StyleSheet.absoluteFill}>{children(size)}</WebSafeCanvas>
       ) : null}
     </View>
   );

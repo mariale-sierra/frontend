@@ -1,6 +1,6 @@
 import { StyleProp, StyleSheet, View, ViewStyle, useWindowDimensions } from 'react-native';
-import { Canvas } from '@shopify/react-native-skia';
 import { AccentDome } from '../ui/accentDome';
+import { WebSafeCanvas } from '../ui/webSafeCanvas';
 import { colors } from '../../constants/theme';
 import { PAPER_GRADIENT, PAPER_GRADIENT_EDGE, TINTED_GRADIENT } from '../../constants/screenBackground';
 
@@ -44,7 +44,7 @@ export function PaperGradientBackground({ edge = PAPER_GRADIENT_EDGE, tint, styl
 
   return (
     <View style={[StyleSheet.absoluteFill, style]} pointerEvents="none">
-      <Canvas style={StyleSheet.absoluteFill}>
+      <WebSafeCanvas style={StyleSheet.absoluteFill}>
         <AccentDome
           width={width}
           height={height}
@@ -54,7 +54,7 @@ export function PaperGradientBackground({ edge = PAPER_GRADIENT_EDGE, tint, styl
           bloomBlur={width * BLOOM_BLUR}
           grainOpacity={GRAIN_OPACITY}
         />
-      </Canvas>
+      </WebSafeCanvas>
     </View>
   );
 }

@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { Canvas, Circle, Group, RadialGradient, vec } from '@shopify/react-native-skia';
+import { Circle, Group, RadialGradient, vec } from '@shopify/react-native-skia';
 import { useDerivedValue } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
 import { ACCENT_VIVID_FACTOR } from '../ui/accentDome';
@@ -8,6 +8,7 @@ import { MESH_FALLOFF } from '../ui/accentMesh';
 import { DECK_HALO_PEAK } from '../../constants/challengeDeck';
 import { boostSaturation, withAlpha } from '../../utils/color';
 import { deckHaloOpacity } from '../../utils/challengeDeck';
+import { WebSafeCanvas } from '../ui/webSafeCanvas';
 
 interface ChallengeDeckHaloProps {
   /** One color per card of the deck, in its order: the card's activity color. */
@@ -61,11 +62,11 @@ export function ChallengeDeckHalo({ colors, progress, radius, style }: Challenge
 
   return (
     <View pointerEvents="none" style={[styles.halo, { width: diameter, height: diameter }, style]}>
-      <Canvas style={StyleSheet.absoluteFill}>
+      <WebSafeCanvas style={StyleSheet.absoluteFill}>
         {colors.map((color, index) => (
           <HaloDisc key={`${index}-${color}`} color={color} index={index} progress={progress} radius={radius} />
         ))}
-      </Canvas>
+      </WebSafeCanvas>
     </View>
   );
 }

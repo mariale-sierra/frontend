@@ -1,6 +1,7 @@
 import { StyleSheet, View, useWindowDimensions } from 'react-native';
-import { Canvas, Fill } from '@shopify/react-native-skia';
+import { Fill } from '@shopify/react-native-skia';
 import { AccentMesh } from '../ui/accentMesh';
+import { WebSafeCanvas } from '../ui/webSafeCanvas';
 import { getMeshRecipe } from '../../constants/meshRecipes';
 import { colors } from '../../constants/theme';
 import { getChallengeGlowColor, getChallengeGlowKey } from '../../services/adapters/challengeState';
@@ -31,7 +32,7 @@ export function ChallengeMeshBackdrop({ category }: ChallengeMeshBackdropProps) 
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Canvas style={StyleSheet.absoluteFill}>
+      <WebSafeCanvas style={StyleSheet.absoluteFill}>
         <Fill color={colors.ink} />
 
         <AccentMesh
@@ -41,7 +42,7 @@ export function ChallengeMeshBackdrop({ category }: ChallengeMeshBackdropProps) 
           recipe={getMeshRecipe('screen', glowKey)}
           grainOpacity={GRAIN_OPACITY}
         />
-      </Canvas>
+      </WebSafeCanvas>
     </View>
   );
 }
