@@ -28,6 +28,7 @@ Scripts found in `package.json`:
 - Android: `npm run android` runs `expo start --android`.
 - iOS: `npm run ios` runs `expo start --ios`.
 - Web: `npm run web` runs `expo start --web`.
+- Web Skia setup: the custom `index.web.tsx` entry waits for CanvasKit/WASM via `LoadSkiaWeb()` before registering Expo Router; `postinstall` refreshes `public/canvaskit.wasm` after Skia upgrades.
 - Lint: no script exists.
 - Typecheck: `npm run typecheck` (`tsc --noEmit`).
 - Test: `npm test` (Jest).

@@ -1,8 +1,9 @@
 {
   "name": "frontend",
   "version": "1.0.0",
-  "main": "expo-router/entry",
+  "main": "index",
   "scripts": {
+    "postinstall": "setup-skia-web",
     "start": "node scripts/dev-server.js && expo start",
     "start:local": "node scripts/dev-local.js && expo start",
     "start:server": "node scripts/dev-server.js && expo start",
