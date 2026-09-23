@@ -65,10 +65,12 @@ New screens should first be matched to an existing route group. Put tab-level sc
 ## 6. Bottom Navigation
 Bottom tabs are defined in `app/(tabs)/_layout.tsx` using `Tabs` from Expo Router.
 
-There are four routable tabs inside one capsule: `index` (Home), `search`, `challenges`, and `profile`. The `add` route remains registered only because Expo Router needs a file for it, but its separate right-hand `+` action prevents `tabPress` and opens `/log` directly.
+There are four routable tabs inside one capsule: `index` (Home), `search`, `challenges`, and `profile`. The `add` route remains registered only because Expo Router needs a file for it; its fifth equal slot renders the `+` action, prevents `tabPress`, and opens `/log` directly. `BOTTOM_NAV_VARIANT` in `constants/bottomNav.ts` selects the new `glass` presentation by default. The original `BottomNavBackground` and its absolute geometry remain intact as the `legacy` fallback; switching that constant back to `legacy` also restores the matching legacy item geometry.
 
 The navbar implementation is deliberately split across:
 - `components/navigation/bottomNavBackground.tsx`: decorative capsule, blur, and one shared indicator.
+- `components/navigation/bottomNavGlassBackground.tsx`: active cross-platform five-slot glass island.
+- `components/navigation/bottomNavGlassSurface.tsx` / `.ios.tsx`: Android/Web blur material and optional Expo native Liquid Glass on iOS 26+.
 - `components/navigation/bottomNavIndicator.tsx`: the single oval that translates between tab slots.
 - `components/navigation/bottomNavTabButton.tsx`: explicit `Tap` and `Pan` gestures for tab selection and horizontal dragging.
 - `components/navigation/bottomNavContext.tsx`: shared visual state and the UI-thread spring/stretch sequence.

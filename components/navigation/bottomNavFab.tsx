@@ -16,6 +16,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 interface BottomNavFabProps {
   onPress: () => void;
   accessibilityLabel?: string;
+  centered?: boolean;
 }
 
 /**
@@ -27,7 +28,7 @@ interface BottomNavFabProps {
  * other — the previous design's large negative-margin "poke above the bar"
  * treatment is intentionally gone.
  */
-export function BottomNavFab({ onPress, accessibilityLabel }: BottomNavFabProps) {
+export function BottomNavFab({ onPress, accessibilityLabel, centered = false }: BottomNavFabProps) {
   const scale = useSharedValue(1);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -52,7 +53,7 @@ export function BottomNavFab({ onPress, accessibilityLabel }: BottomNavFabProps)
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       hitSlop={8}
-      style={[styles.fab, pressStyle]}
+      style={[styles.fab, centered && styles.centeredFab, pressStyle]}
     >
       <Ionicons name="add" size={BOTTOM_NAV_FAB_ICON_SIZE} color={colors.ink} />
     </AnimatedPressable>
@@ -73,5 +74,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,
+  },
+  centeredFab: {
+    left: '50%',
+    marginLeft: -BOTTOM_NAV_FAB_SIZE / 2,
   },
 });

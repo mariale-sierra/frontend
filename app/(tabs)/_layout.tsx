@@ -6,12 +6,15 @@ import { useTranslation } from "react-i18next";
 import type { Ionicons } from "@expo/vector-icons";
 import { BottomNavProvider } from "../../components/navigation/bottomNavContext";
 import { BottomNavBackground } from "../../components/navigation/bottomNavBackground";
+import { BottomNavGlassBackground } from "../../components/navigation/bottomNavGlassBackground";
 import { BottomNavTabButton } from "../../components/navigation/bottomNavTabButton";
 import { BottomNavFab } from "../../components/navigation/bottomNavFab";
 import {
+  BOTTOM_NAV_VARIANT,
   BOTTOM_NAV_CAPSULE_GAP,
   BOTTOM_NAV_FAB_SIZE,
   BOTTOM_NAV_OUTER_MARGIN,
+  getBottomNavGlassGeometry,
   getBottomNavGeometry,
 } from "../../constants/bottomNav";
 
@@ -84,13 +87,17 @@ const ROUTE_INDEX: Record<string, number> = {
   profile: 3,
 };
 
-const renderBottomNavBackground = () => <BottomNavBackground />;
+const renderBottomNavBackground = () =>
+  BOTTOM_NAV_VARIANT === 'glass' ? <BottomNavGlassBackground /> : <BottomNavBackground />;
 
 export default function TabsLayout() {
   const router = useRouter();
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
-  const { tabEdgeInset, tabSlotWidth } = getBottomNavGeometry(width);
+  const legacyGeometry = getBottomNavGeometry(width);
+  const glassGeometry = getBottomNavGlassGeometry(width);
+  const isGlassVariant = BOTTOM_NAV_VARIANT === 'glass';
+  const tabSlotWidth = isGlassVariant ? glassGeometry.tabSlotWidth : legacyGeometry.tabSlotWidth;
 
   // Only `width` (+ margins, for the outer-edge/gap items) matters here —
   // each real button (BottomNavTabButton / BottomNavFab) positions itself
@@ -106,23 +113,35 @@ export default function TabsLayout() {
   // change the screen width — avoids handing React Navigation a "new"
   // options object (and re-triggering its own internal options-change
   // handling) on every unrelated re-render, e.g. a plain tab switch.
-  const tabItemStyle = useMemo(() => ({ flex: 0 as const, width: tabSlotWidth }), [tabSlotWidth]);
+  const tabItemStyle = useMemo(
+    () => (isGlassVariant ? { flex: 1 as const } : { flex: 0 as const, width: tabSlotWidth }),
+    [isGlassVariant, tabSlotWidth],
+  );
   const firstTabItemStyle = useMemo(
-    () => ({ ...tabItemStyle, marginLeft: BOTTOM_NAV_OUTER_MARGIN + tabEdgeInset }),
-    [tabEdgeInset, tabItemStyle],
+    () =>
+      isGlassVariant
+        ? { ...tabItemStyle, marginLeft: BOTTOM_NAV_OUTER_MARGIN }
+        : { ...tabItemStyle, marginLeft: BOTTOM_NAV_OUTER_MARGIN + legacyGeometry.tabEdgeInset },
+    [isGlassVariant, legacyGeometry.tabEdgeInset, tabItemStyle],
   );
   const lastTabItemStyle = useMemo(
-    () => ({ ...tabItemStyle, marginRight: tabEdgeInset }),
-    [tabEdgeInset, tabItemStyle],
+    () =>
+      isGlassVariant
+        ? { ...tabItemStyle, marginRight: BOTTOM_NAV_OUTER_MARGIN }
+        : { ...tabItemStyle, marginRight: legacyGeometry.tabEdgeInset },
+    [isGlassVariant, legacyGeometry.tabEdgeInset, tabItemStyle],
   );
   const fabItemStyle = useMemo(
-    () => ({
-      flex: 0 as const,
-      width: BOTTOM_NAV_FAB_SIZE,
-      marginLeft: BOTTOM_NAV_CAPSULE_GAP,
-      marginRight: BOTTOM_NAV_OUTER_MARGIN,
-    }),
-    [],
+    () =>
+      isGlassVariant
+        ? { flex: 1 as const }
+        : {
+            flex: 0 as const,
+            width: BOTTOM_NAV_FAB_SIZE,
+            marginLeft: BOTTOM_NAV_CAPSULE_GAP,
+            marginRight: BOTTOM_NAV_OUTER_MARGIN,
+          },
+    [isGlassVariant],
   );
   const handleFabPress = useCallback(() => router.push('/log'), [router]);
 
@@ -215,10 +234,14 @@ export default function TabsLayout() {
       title: 'Add',
       tabBarItemStyle: fabItemStyle,
       tabBarButton: () => (
-        <BottomNavFab onPress={handleFabPress} accessibilityLabel={t('navigation.addButtonA11y')} />
+        <BottomNavFab
+          onPress={handleFabPress}
+          accessibilityLabel={t('navigation.addButtonA11y')}
+          centered={isGlassVariant}
+        />
       ),
     }),
-    [fabItemStyle, handleFabPress, t],
+    [fabItemStyle, handleFabPress, isGlassVariant, t],
   );
   const preventAddTabPress = useMemo(
     () => ({
@@ -237,13 +260,10 @@ export default function TabsLayout() {
         <Tabs.Screen name="challenges" options={challengesOptions} />
         <Tabs.Screen name="profile" options={profileOptions} />
 
-        {/* FAB — not a real tab destination, and (per this redesign) no
-            longer positioned between other tabs: it's declared LAST so it
-            renders as the rightmost item, visually separated from the tab
-            capsule by BOTTOM_NAV_CAPSULE_GAP (see fabItemStyle above) —
-            "+", conceptually an action, not part of the tab set. tabPress
-            is still prevented and onPress still navigates straight to
-            /log, exactly as before; only where/how it's drawn changed. */}
+        {/* FAB — not a real tab destination. It is declared LAST so it
+            occupies the fifth glass slot (or the separate right-hand slot
+            in the legacy fallback). tabPress is still prevented and onPress
+            still navigates straight to /log, exactly as before. */}
         <Tabs.Screen
           name="add"
           options={addOptions}
