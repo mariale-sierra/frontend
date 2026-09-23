@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { Tabs, useRouter } from "expo-router";
 import type { BottomTabBarButtonProps } from 'expo-router/tabs';
-import { Platform, useWindowDimensions } from "react-native";
+import { useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { Ionicons } from "@expo/vector-icons";
 import { BottomNavProvider } from "../../components/navigation/bottomNavContext";
@@ -30,13 +30,11 @@ import {
 // prop hit what was very likely this same underlying issue from a different
 // angle and was scrapped in favor of this.
 //
-// DO NOT set `tabBarStyle` (directly, via screenOptions, or per-screen
-// options) without re-testing touch on a real iOS device first. Get visual
-// styling for the bar via `tabBarBackground` + `tabBarItemStyle` instead, as
-// below. This includes the default hairline top border `tabBarStyle` would
-// normally suppress — that border is baked into React Navigation's own
-// BottomTabBar.tsx (drawn on the same outer container `tabBarStyle` would
-// target), and CANNOT be turned off via any prop that isn't `tabBarStyle`.
+// The historical iOS/Fabric touch issue above is why this layout keeps the
+// visual work in `tabBarBackground` and per-item buttons. The transparent
+// absolute style below is now deliberately applied to every platform so the
+// screen can extend behind the floating bar. Native touch behavior must be
+// re-checked whenever this option changes.
 //
 // 2026-09-04 redesign: this file used to render its own tabBarBackground/
 // icon/FAB inline. Both are now components/navigation/* (BottomNavBackground,
@@ -150,24 +148,19 @@ export default function TabsLayout() {
     [isGlassVariant],
   );
   // React Navigation normally reserves the tab bar's height below the scene.
-  // On Web and Android the glass bar is meant to float over the page, so make
-  // that container absolute and let the screen render behind it. iOS keeps
-  // the default container because adding any `tabBarStyle` there was proven
-  // to disable the native tab touch surface under Fabric.
+  // The glass bar is meant to float over the page on every platform, so make
+  // that container absolute and let the screen render behind it.
   const overlayTabBarStyle = useMemo(
-    () =>
-      Platform.OS === 'ios'
-        ? undefined
-        : {
-            position: 'absolute' as const,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'transparent',
-            borderTopWidth: 0,
-            elevation: 0,
-            shadowOpacity: 0,
-          },
+    () => ({
+      position: 'absolute' as const,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'transparent',
+      borderTopWidth: 0,
+      elevation: 0,
+      shadowOpacity: 0,
+    }),
     [],
   );
   const handleFabPress = useCallback(() => router.push('/log'), [router]);
