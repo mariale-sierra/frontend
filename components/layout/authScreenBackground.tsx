@@ -9,7 +9,7 @@ interface AuthScreenBackgroundProps extends ViewProps {
 }
 
 /**
- * Full-bleed illustrated background (`assets/images/login&register.jpg`,
+ * Full-bleed illustrated background (`assets/images/login-register.jpg`,
  * user-provided) behind the auth screens (login/register). Was a
  * code-generated six-glow SVG gradient (one per activity color) — replaced
  * with this real asset per explicit request. Not a token-driven gradient
@@ -46,7 +46,7 @@ export function AuthScreenBackground({
 
   return (
     <ImageBackground
-      source={require('../../assets/images/login&register.jpg')}
+      source={require('../../assets/images/login-register.jpg')}
       resizeMode="cover"
       style={[styles.container, style]}
       {...props}

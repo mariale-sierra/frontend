@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import type { LayoutChangeEvent, ViewProps } from 'react-native';
 import { BlurView } from 'expo-blur';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
@@ -32,10 +32,19 @@ interface GlassBackdropProps {
  * radius, or via `GlassSurface` below, which does all of that.
  */
 export function GlassBackdrop({ tintOpacity = glass.tintOpacity }: GlassBackdropProps) {
+  const nativePointerEvents = Platform.OS === 'web' ? {} : { pointerEvents: 'none' as const };
+
   return (
     <>
       <BlurView intensity={glass.blurIntensity} tint={glass.tint} style={StyleSheet.absoluteFill} />
-      <View pointerEvents="none" style={[styles.tint, { backgroundColor: withAlpha(colors.surface, tintOpacity) }]} />
+      <View
+        {...nativePointerEvents}
+        style={[
+          styles.tint,
+          Platform.OS === 'web' && styles.nonInteractive,
+          { backgroundColor: withAlpha(colors.surface, tintOpacity) },
+        ]}
+      />
     </>
   );
 }
@@ -115,9 +124,13 @@ export function GlassHighlight({ cornerRadius, kind = 'card' }: GlassHighlightPr
 
   const rimHeight = size ? size.height * (isSheet ? SHEET_RIM_HEIGHT_SHARE : 1) : 0;
   const rimRadius = size ? Math.min(cornerRadius, size.width / 2, rimHeight / 2) : cornerRadius;
+  const nativeSvgProps =
+    Platform.OS === 'web'
+      ? {}
+      : { pointerEvents: 'none' as const, onLayout: handleLayout };
 
   return (
-    <Svg testID="glass-highlight" pointerEvents="none" style={StyleSheet.absoluteFill} onLayout={handleLayout}>
+    <Svg testID="glass-highlight" {...nativeSvgProps} style={StyleSheet.absoluteFill}>
       <Defs>
         {!isSheet ? (
           <LinearGradient id="glassSheen" x1="0" y1="0" x2="1" y2="1">
@@ -173,5 +186,8 @@ const styles = StyleSheet.create({
   },
   tint: {
     ...StyleSheet.absoluteFill,
+  },
+  nonInteractive: {
+    pointerEvents: 'none',
   },
 });
