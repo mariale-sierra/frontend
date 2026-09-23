@@ -114,7 +114,10 @@ export default function TabsLayout() {
   // options object (and re-triggering its own internal options-change
   // handling) on every unrelated re-render, e.g. a plain tab switch.
   const tabItemStyle = useMemo(
-    () => ({ flex: 0 as const, width: tabSlotWidth }),
+    () =>
+      isGlassVariant
+        ? { flex: 1 as const }
+        : { flex: 0 as const, width: tabSlotWidth },
     [isGlassVariant, tabSlotWidth],
   );
   const firstTabItemStyle = useMemo(
