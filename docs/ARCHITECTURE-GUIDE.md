@@ -81,6 +81,7 @@ Do not set `tabBarStyle` or use a fully custom `tabBar`: on iOS with Fabric enab
 - API client: `services/api.ts`.
 - Base URL: currently hardcoded as `http://20.63.84.1:3000` in `services/api.ts`.
 - Token injection: `services/api.ts` has an Axios request interceptor that calls `getAccessToken()` and sets `Authorization: Bearer <token>`.
+- Timezone header: native clients send `X-Timezone`; web omits it so browser requests remain compatible with older API deployments whose CORS allow-list does not include that custom header. The backend falls back to UTC when it is absent.
 - 401 handling: the Axios response interceptor logs 401s and rejects the error.
 - Token storage: `services/auth/token.service.ts` keeps the access token in memory and hydrates it from `utils/storage.ts`.
 - AsyncStorage wrapper: `utils/storage.ts` wraps `AsyncStorage.getItem`, `setItem`, and `removeItem`.
