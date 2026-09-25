@@ -20,6 +20,12 @@ jest.mock('react-i18next', () => ({
   }),
 }));
 jest.mock('../../../hooks/useMetricsScreen', () => ({ useMetricsScreen: jest.fn() }));
+// Stage 5's log-screen coach mark — not under test here, and pulls in the
+// real AsyncStorage native module (via utils/storage.ts) if left unmocked.
+jest.mock('../../../utils/logScreenCoachMark', () => ({
+  hasSeenLogScreenCoachMark: jest.fn().mockResolvedValue(true),
+  markLogScreenCoachMarkSeen: jest.fn(),
+}));
 // What the backdrop is told is what matters here; the mesh itself is tested on its own.
 jest.mock('../../../components/challenge/challengeMeshBackdrop', () => ({
   ChallengeMeshBackdrop: ({ category }: { category: string | null | undefined }) => {

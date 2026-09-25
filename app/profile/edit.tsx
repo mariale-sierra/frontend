@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { safeBack } from '../../utils/navigation';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
@@ -41,6 +42,7 @@ const BIO_MAX = 1000;
  */
 export default function EditProfile() {
   const { t } = useTranslation();
+  const router = useRouter();
 
   const [profile, setProfile] = useState<MyProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
@@ -282,6 +284,22 @@ export default function EditProfile() {
             </View>
           </View>
 
+          <Pressable
+            onPress={() => router.push('/onboarding/practices?mode=edit')}
+            style={({ pressed }) => [pressed && styles.pressedRow]}
+            accessibilityRole="button"
+          >
+            <Row align="center" justify="space-between">
+              <View style={styles.privacyText}>
+                <Text variant="subheader">{t('profileEdit.practices')}</Text>
+                <Text variant="caption" tone="secondary">
+                  {t('profileEdit.practicesHint')}
+                </Text>
+              </View>
+              <Icon name="chevron-forward-outline" size={20} color={colors.paper} />
+            </Row>
+          </Pressable>
+
           <Row align="center" justify="space-between">
             <View style={styles.privacyText}>
               <Text variant="subheader">{t('profileEdit.privacy')}</Text>
@@ -392,6 +410,9 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
     paddingRight: spacing.md,
+  },
+  pressedRow: {
+    opacity: 0.85,
   },
   center: {
     flex: 1,

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -9,10 +10,13 @@ import { Text } from '../../components/ui/text';
 import { LogMetricsExerciseCard } from '../../components/add/logMetricsExerciseCard';
 import { ChallengeMeshBackdrop } from '../../components/challenge/challengeMeshBackdrop';
 import { CreateFlowPrimaryButton } from '../../components/challenge/create';
+import { CoachMark } from '../../components/onboarding/CoachMark';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { useMetricsScreen } from '../../hooks/useMetricsScreen';
 import { countAdjustedSets } from '../../services/adapters/index';
+import { hasSeenLogScreenCoachMark, markLogScreenCoachMarkSeen } from '../../utils/logScreenCoachMark';
+import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../constants/onboardingDebug';
 
 export default function Metrics() {
   const { t } = useTranslation();
@@ -35,6 +39,25 @@ export default function Metrics() {
   const hasChallenges = challenges.length > 0;
   const isEmpty = !isLoadingData && !challengeLoadError && !hasChallenges;
   const totalAdjusted = exerciseMetrics.reduce((sum, exercise) => sum + countAdjustedSets(exercise), 0);
+
+  // Onboarding Stage 5's coach mark — teaches the non-obvious part of this
+  // screen's flow (the "Log day" button leads to a quick confirmation photo
+  // next, it doesn't save directly), shown once ever per device
+  // (utils/logScreenCoachMark.ts), same shape as Stages 2-4's coach marks.
+  const [showLogScreenCoachMark, setShowLogScreenCoachMark] = useState(false);
+  useEffect(() => {
+    if (FORCE_SHOW_ONBOARDING_PREVIEWS) {
+      setShowLogScreenCoachMark(true);
+      return;
+    }
+    hasSeenLogScreenCoachMark().then((seen) => {
+      if (!seen) setShowLogScreenCoachMark(true);
+    });
+  }, []);
+  function dismissLogScreenCoachMark() {
+    setShowLogScreenCoachMark(false);
+    markLogScreenCoachMarkSeen();
+  }
 
   function renderContent() {
     if (isLoadingData) {
@@ -123,6 +146,13 @@ export default function Metrics() {
       <View style={styles.contentWrap}>{renderContent()}</View>
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+        {showLogScreenCoachMark && hasChallenges && (
+          <CoachMark
+            message={t('logMetrics.entry.logCoachMark')}
+            onDismiss={dismissLogScreenCoachMark}
+            arrowPlacement="none"
+          />
+        )}
         <Text variant="caption" tone="secondary" align="center">
           {t('logMetrics.entry.footerCaption', { count: totalAdjusted })}
         </Text>

@@ -8,6 +8,8 @@ const es = {
       continue: 'Continuar',
       share: 'Compartir',
       done: 'Listo',
+      dismiss: 'Descartar',
+      gotIt: 'Entendido',
     },
     fields: {
       email: 'Correo',
@@ -33,6 +35,32 @@ const es = {
       networkErrorMessage: 'No se puede conectar al servidor. Verifica tu conexión a internet.',
     },
   },
+  welcome: {
+    skip: 'Omitir',
+    next: 'Siguiente',
+    getStarted: 'Empezar',
+    page1: {
+      title: 'Retos reales, rutinas reales',
+      description: 'Únete a un reto de fitness con una rutina de verdad. Tu deporte, tu ritmo, tu gente.',
+    },
+    page2: {
+      title: 'Registra cada día, construye una racha',
+      description: 'Una foto rápida cada día te mantiene honesto y mantiene viva tu racha.',
+    },
+    page3: {
+      title: 'Mejor con amigos',
+      description: 'Sigue a tus amigos, compara rachas y celebra cada meta juntos.',
+    },
+  },
+  onboardingPractices: {
+    title: '¿Qué practicas?',
+    editTitle: 'Editar insignias de interés',
+    subtitle: 'Elige hasta 6 para mostrar como insignias en tu perfil.',
+    selectedCount: '{{count}}/6 seleccionadas',
+    skip: 'Omitir',
+    continue: 'Continuar',
+    saveError: 'No pudimos guardar tus prácticas. Siempre puedes agregarlas después desde tu perfil.',
+  },
   auth: {
     login: {
       title: 'Havit',
@@ -42,11 +70,16 @@ const es = {
       invalidCredentials: 'Correo o contraseña inválidos',
     },
     register: {
-      title: 'Crea una cuenta',
-      subtitle: 'Empieza tu primer reto',
-      switchPrompt: 'Ya tienes una cuenta?',
-      switchAction: 'Inicia sesión',
       createAccountFailed: 'No se pudo crear la cuenta',
+      createAccountCta: 'Crear cuenta',
+      step: {
+        emailTitle: '¿Cuál es tu correo?',
+        emailSubtitle: 'Lo usaremos para mantener tu cuenta segura.',
+        usernameTitle: 'Elige un nombre de usuario',
+        usernameSubtitle: 'Así te encontrarán y reconocerán otros usuarios.',
+        passwordTitle: 'Crea una contraseña',
+        passwordSubtitle: 'Que sea algo que solo tú recuerdes.',
+      },
     },
   },
   challenges: {
@@ -55,6 +88,7 @@ const es = {
     exploreTitle: 'Explorar retos',
     seeAll: 'Ver todos',
     joinOrCreate: 'Unirte o crear',
+    exploreTip: 'Explora retos a los que puedes unirte, o toca el botón + Nuevo para crear el tuyo.',
     dayLabel: 'Día {{day}}',
     memberAuthor: 'miembro',
     members: 'miembros',
@@ -167,6 +201,7 @@ const es = {
     exerciseCount_other: '{{count}} ejercicios',
     exerciseSummary: '{{exercises}} · {{location}}',
     joinChallengeButton: 'Unirse al reto',
+    joinCallout: 'Unirte agrega este reto a tu lista y comienza tu racha de progreso.',
     shareMessage: '¡Mira "{{name}}" en Havit!',
   },
   challengeProgress: {
@@ -267,6 +302,7 @@ const es = {
       targetLabel: 'meta {{value}}',
       footerCaption: 'Las series sin tocar se registran con la meta — {{count}} ajustadas hasta ahora',
       logDayCta: 'Registrar día',
+      logCoachMark: 'Registrar hoy te pedirá una foto rápida después, para confirmar tu progreso.',
     },
   },
   challengeCreate: {
@@ -490,7 +526,8 @@ const es = {
     restDay: 'Día de descanso',
     todayLogged: 'Progreso registrado hoy',
     dayOf: 'Día {{current}}',
-    noActiveChallenge: 'Sin reto activo',
+    noActiveChallenge: 'Todavía no tienes un reto activo',
+    logCoachMark: 'Aquí registras tu progreso de hoy.',
     logProgressA11y: 'Registrar progreso de {{name}}',
     openChallengeA11y: 'Abrir {{name}}',
     communityTitle: 'Comunidad',
@@ -564,6 +601,7 @@ const es = {
     goBack: '← Volver',
     uploadSuccessTitle: '¡Registrado!',
     uploadSuccessMessage: '¡Buen trabajo! El progreso de hoy se guardó.',
+    uploadSuccessMessageWithChallenge: 'Día {{currentDay}} de {{totalDays}} registrado para "{{name}}".',
     uploadSuccessCta: 'Listo',
   },
   invites: {
@@ -662,6 +700,8 @@ const es = {
     language: 'Idioma',
     languageEn: 'Inglés',
     languageEs: 'Español',
+    practices: 'Insignias de interés',
+    practicesHint: 'Las insignias de deporte/fitness que se muestran en tu perfil.',
     privacy: 'Perfil privado',
     privacyHint: 'Oculta tu biografía a otros usuarios.',
     changePhoto: 'Cambiar foto',
@@ -687,6 +727,7 @@ const es = {
     startConversationError: 'No se pudo iniciar esta conversación.',
     searchPlaceholder: 'Buscar',
     composeA11y: 'Iniciar una conversación nueva',
+    composeCoachMark: 'Toca el botón de avión arriba para iniciar una conversación nueva.',
     newMessageTitle: 'Mensaje nuevo',
     noResultsForSearch: 'Ninguna conversación coincide con tu búsqueda.',
     spacesTitle: 'Espacios',

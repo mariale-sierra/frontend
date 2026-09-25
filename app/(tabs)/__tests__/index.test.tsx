@@ -2,7 +2,18 @@ import { renderWithProviders } from '../../../test-utils/renderWithProviders';
 import Home from '../index';
 import { getMyChallenges } from '../../../services/user/user.service';
 import { getHomeFeed } from '../../../services/feed/feed.service';
+import { getFollowingStreaks } from '../../../services/follow/follow.service';
 import type { ChallengeContract } from '../../../types/challenge';
+
+// Pre-existing gap, unrelated to Stage 2: this suite never mocked
+// react-native-reanimated/react-native-worklets, which ScreenBackground
+// pulls in transitively (screenBackground.tsx -> MeshGradientBackground ->
+// RainbowGradientBackground -> reanimated) — the whole suite failed to even
+// load as a result, with or without this session's changes. Same two mock
+// lines `challengesTab.test.tsx` already uses successfully for the same
+// import chain.
+jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
+jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 
 // Home reads the username from useAuth() (context/authContext.tsx). The real
 // AuthProvider does async storage/network calls on mount, which is more than
@@ -25,14 +36,21 @@ jest.mock('../../../services/user/user.service', () => ({
 jest.mock('../../../services/feed/feed.service', () => ({
   getHomeFeed: jest.fn(),
 }));
+// Home's third focus effect (friend streaks) — also unmocked before, same
+// pre-existing gap as the reanimated mocks above.
+jest.mock('../../../services/follow/follow.service', () => ({
+  getFollowingStreaks: jest.fn(),
+}));
 
 const mockedGetMyChallenges = getMyChallenges as jest.Mock;
 const mockedGetHomeFeed = getHomeFeed as jest.Mock;
+const mockedGetFollowingStreaks = getFollowingStreaks as jest.Mock;
 
 describe('Home screen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockedGetHomeFeed.mockResolvedValue({ posts: [], nextCursor: undefined });
+    mockedGetFollowingStreaks.mockResolvedValue([]);
   });
 
   it('renders the current username', async () => {
@@ -70,12 +88,20 @@ describe('Home screen', () => {
 
     // While the challenges request is still pending the loader is shown, so the
     // loaded empty-state copy is not on screen yet.
-    expect(screen.queryByText('No active challenge')).toBeNull();
+    expect(screen.queryByText("You don't have an active challenge yet")).toBeNull();
 
     resolveChallenges([]);
 
     // Once loading finishes with no challenges, the loader is replaced by the
     // empty-state content.
-    expect(await screen.findByText('No active challenge')).toBeTruthy();
+    expect(await screen.findByText("You don't have an active challenge yet")).toBeTruthy();
+  });
+
+  it('shows a "join or create" CTA in the empty-challenge state', async () => {
+    mockedGetMyChallenges.mockResolvedValue([]);
+
+    const screen = await renderWithProviders(<Home />);
+
+    expect(await screen.findByText('Join or create')).toBeTruthy();
   });
 });

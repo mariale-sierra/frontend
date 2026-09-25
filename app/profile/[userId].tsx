@@ -17,7 +17,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
-
+
 const BAN_ICON_SIZE = 16;
 
 /**
@@ -152,6 +152,7 @@ export default function UserProfile() {
               streakDays={profile.streak_days}
               followersCount={profile.followers_count}
               followingCount={profile.following_count}
+              practices={profile.practice_preferences}
               actions={
                 <View style={styles.actionsWrap}>
                   <FollowButton

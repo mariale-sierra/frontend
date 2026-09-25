@@ -140,6 +140,7 @@ export default function Profile() {
               followingCount={profile?.following_count ?? 0}
               onPressFollowers={() => router.push('/profile/followers')}
               onPressFollowing={() => router.push('/profile/following')}
+              practices={profile?.practice_preferences}
             />
             <PostsViewToggle view={view} onViewChange={setView} />
             <PostsGrid view={view} onPhotoPress={setSelectedPhoto} refreshSignal={postsRefreshSignal} />

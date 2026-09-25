@@ -7,6 +7,7 @@ import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { Row } from '../../components/layout/row';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
+import { CoachMark } from '../../components/onboarding/CoachMark';
 import { ExploreCard, MineCard } from '../../components/challenge/list/challengeCards';
 import { ChallengesViewToggle } from '../../components/challenge/list/ChallengesViewToggle';
 import { ChallengesContentSkeleton } from '../../components/challenge/list/ChallengesContentSkeleton';
@@ -28,6 +29,8 @@ import {
   hasSeenChallengeMembership,
   markChallengeMembershipSeen,
 } from '../../utils/seenChallengeMemberships';
+import { hasSeenExploreTip, markExploreTipSeen } from '../../utils/exploreTip';
+import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../constants/onboardingDebug';
 import { useAuth } from '../../hooks/useAuth';
 
 function ChallengeListSeparator() {
@@ -65,6 +68,26 @@ export default function Challenges() {
   // Finished challenges are collapsed out of the main Mine list by default —
   // see FinishedChallengesToggle's own doc comment.
   const [showFinished, setShowFinished] = useState(false);
+
+  // Onboarding Stage 3's first-visit tip — shown on BOTH the Mine and
+  // Explore segments (per explicit follow-up request; both share one "seen"
+  // flag, not two, since it's the same one-time tip either way), once ever
+  // per device (utils/exploreTip.ts), same shape as Stage 2's Home coach
+  // mark. Loaded once on mount regardless of which segment is active first.
+  const [showExploreTip, setShowExploreTip] = useState(false);
+  useEffect(() => {
+    if (FORCE_SHOW_ONBOARDING_PREVIEWS) {
+      setShowExploreTip(true);
+      return;
+    }
+    hasSeenExploreTip().then((seen) => {
+      if (!seen) setShowExploreTip(true);
+    });
+  }, []);
+  const dismissExploreTip = useCallback(() => {
+    setShowExploreTip(false);
+    markExploreTipSeen();
+  }, []);
 
   // `mineChallenges` is already sorted active -> rest -> completed -> won
   // (toChallengeMineViewModels), so `finishedChallenges` stays in that same
@@ -258,9 +281,16 @@ export default function Challenges() {
         mineLabel={t('challenges.mineTab')}
         exploreLabel={t('challenges.exploreTab')}
       />
+
+      {showExploreTip && (
+        // `topRight` — points up at the toggle's "Explore" segment (the
+        // second/right entry in ChallengesViewToggle's own segment order),
+        // per explicit request.
+        <CoachMark message={t('challenges.exploreTip')} onDismiss={dismissExploreTip} arrowPlacement="topRight" />
+      )}
       </View>
     ),
-    [handleCreateChallenge, t, view],
+    [handleCreateChallenge, t, view, showExploreTip, dismissExploreTip],
   );
 
   if (loading) {
@@ -363,6 +393,11 @@ const styles = StyleSheet.create({
   newButtonPressed: {
     opacity: 0.9,
   },
+  // CoachMark's own default wrapper is sized/aligned for a floating bubble
+  // pointing at something (maxWidth 260, right-aligned) — an inline
+  // first-visit tip sitting in the list header wants the opposite: full
+  // width, no cap. Both keys are explicitly overridden here (an RN style
+  // array only overrides keys the later object actually sets).
   // Real, fixed padding of its own now, not relying on also being nested
   // inside listContent's own paddingHorizontal to reach its final inset
   // (that stacking only actually happened once the FlatList took over

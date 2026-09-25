@@ -40,6 +40,30 @@ function RootNavigator() {
   const segments = useSegments();
   const { isAuthenticated, isRestoring } = useAuth();
 
+  // Simplified 2026-09-24, per explicit "the first thing the user will see
+  // is the login screen" request: the standalone pre-login welcome carousel
+  // is gone — its 3 pages are now the first steps of the register wizard
+  // itself (app/(auth)/register.tsx), reached only by tapping "Register" on
+  // this same login screen, not shown to everyone up front. Back to the
+  // simple pre-onboarding rule: unauthenticated and outside `(auth)` → login;
+  // authenticated and still inside `(auth)` → tabs.
+  //
+  // Real bug, fixed 2026-09-24, per explicit "you didn't add the profile
+  // badges screen! WHY?" report: register.tsx creates the account, then
+  // calls `router.replace('/onboarding/practices')` itself, directly,
+  // right after — the assumption was that this always lands in the SAME
+  // render batch as the isAuthenticated flip it just caused, so this
+  // effect would only ever see the post-navigation state. That held in
+  // testing before, but evidently isn't guaranteed — if this effect's
+  // `isAuthenticated && inAuthGroup` check ever fires while `segments`
+  // still says `register` (the flip landing one render ahead of the
+  // navigation, however that happens), it would redirect straight to
+  // `/(tabs)` and the badges screen would never be reached at all: from the
+  // outside, indistinguishable from it never having been built. Fixed by
+  // making this effect refuse to act on `register` specifically — it's the
+  // one `(auth)` screen that always manages its OWN post-authentication
+  // navigation, so this waits for register.tsx's own call to actually move
+  // `segments` off of it, instead of racing to get there first.
   useEffect(() => {
     if (isRestoring) return;
 
@@ -49,7 +73,10 @@ function RootNavigator() {
       return;
     }
     if (isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)');
+      const onRegisterScreen = (segments as string[])[1] === 'register';
+      if (!onRegisterScreen) {
+        router.replace('/(tabs)');
+      }
     }
   }, [isAuthenticated, isRestoring, segments]);
   if (isRestoring) {
@@ -75,6 +102,11 @@ function RootNavigator() {
         <Stack.Screen name="messaging/spaces/[id]/manage" options={{ headerShown: false }} />
         <Stack.Screen name="messaging/spaces/[id]/join-requests" options={{ headerShown: false }} />
         <Stack.Screen name="profile/edit" options={{ headerShown: false }} />
+        {/* Post-registration practice picker — lives outside both "(auth)"
+            and "(tabs)", same top-level-registration precedent as
+            "home/streaks" below. `gestureEnabled: false` so it can't be
+            swiped away back to the register screen. */}
+        <Stack.Screen name="onboarding/practices" options={{ headerShown: false, gestureEnabled: false }} />
         {/* Real bug, fixed 2026-08-29, per explicit report: this route had no
             entry here at all, so it fell back to Expo Router's default native
             header — the "expo top white bar" the user saw sitting on top of

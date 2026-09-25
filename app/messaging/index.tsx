@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -11,6 +11,8 @@ import { Button } from '../../components/ui/button';
 import { SearchBar } from '../../components/ui/searchBar';
 import { Row } from '../../components/layout/row';
 import { Divider } from '../../components/ui/divider';
+import { BottomSheetModal } from '../../components/ui/bottomSheetModal';
+import { CoachMark } from '../../components/onboarding/CoachMark';
 import { ConversationListItem } from '../../components/chats/ConversationListItem';
 import { SpaceCard } from '../../components/spaces/SpaceCard';
 import { SpaceCardSkeleton } from '../../components/spaces/SpaceCardSkeleton';
@@ -25,6 +27,8 @@ import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { joinSpace } from '../../services/spaces/spaces.service';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
+import { hasSeenComposeCoachMark, markComposeCoachMarkSeen } from '../../utils/composeCoachMark';
+import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../constants/onboardingDebug';
 import type { ConversationSummaryContract } from '../../types/chat';
 import type { SpaceContract } from '../../types/space';
 
@@ -67,6 +71,24 @@ export default function Messaging() {
   const [query, setQuery] = useState('');
   const [composeMenuVisible, setComposeMenuVisible] = useState(false);
   const [joiningSpaceId, setJoiningSpaceId] = useState<string | null>(null);
+
+  // Onboarding coach mark — points at the compose (airplane) button, shown
+  // once ever per device (utils/composeCoachMark.ts), same shape as Stages
+  // 2-5's coach marks.
+  const [showComposeCoachMark, setShowComposeCoachMark] = useState(false);
+  useEffect(() => {
+    if (FORCE_SHOW_ONBOARDING_PREVIEWS) {
+      setShowComposeCoachMark(true);
+      return;
+    }
+    hasSeenComposeCoachMark().then((seen) => {
+      if (!seen) setShowComposeCoachMark(true);
+    });
+  }, []);
+  const dismissComposeCoachMark = useCallback(() => {
+    setShowComposeCoachMark(false);
+    markComposeCoachMarkSeen();
+  }, []);
 
   // "Spaces" is for exploring ones you haven't joined — a space you're
   // already a member/owner of moves down into "Messages" instead (see
@@ -170,6 +192,16 @@ export default function Messaging() {
           accessibilityLabel={t('chats.composeA11y')}
         />
       </Row>
+
+      {showComposeCoachMark && (
+        <View style={styles.composeCoachMarkWrap}>
+          <CoachMark
+            message={t('chats.composeCoachMark')}
+            onDismiss={dismissComposeCoachMark}
+            arrowPlacement="none"
+          />
+        </View>
+      )}
 
       <FlatList
         data={initialLoading || error ? [] : messagingRows}
@@ -288,42 +320,36 @@ export default function Messaging() {
         }
       />
 
-      <Modal
-        visible={composeMenuVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setComposeMenuVisible(false)}
-      >
-        <Pressable style={styles.composeBackdrop} onPress={() => setComposeMenuVisible(false)}>
-          <View style={styles.composeMenu}>
-            <Pressable
-              style={styles.composeMenuRow}
-              onPress={() => {
-                setComposeMenuVisible(false);
-                router.push('/messaging/new');
-              }}
-            >
-              <Icon name="chatbubble-outline" size={20} color={colors.paper} />
-              <Text variant="body" weight="bold">
-                {t('chats.newMessageTitle')}
-              </Text>
-            </Pressable>
-            <Divider marginVertical="xs" />
-            <Pressable
-              style={styles.composeMenuRow}
-              onPress={() => {
-                setComposeMenuVisible(false);
-                router.push('/messaging/spaces/create');
-              }}
-            >
-              <Icon name="add-circle-outline" size={20} color={colors.paper} />
-              <Text variant="body" weight="bold">
-                {t('spaces.createCta')}
-              </Text>
-            </Pressable>
-          </View>
+      {/* Glass, per explicit request: match CommentsSheet's own
+          `BottomSheetModal ... glass` treatment instead of the plain opaque
+          `surface` panel this used to be. */}
+      <BottomSheetModal visible={composeMenuVisible} onClose={() => setComposeMenuVisible(false)} glass maxHeight="35%">
+        <Pressable
+          style={styles.composeMenuRow}
+          onPress={() => {
+            setComposeMenuVisible(false);
+            router.push('/messaging/new');
+          }}
+        >
+          <Icon name="chatbubble-outline" size={20} color={colors.paper} />
+          <Text variant="body" weight="bold">
+            {t('chats.newMessageTitle')}
+          </Text>
         </Pressable>
-      </Modal>
+        <Divider marginVertical="xs" />
+        <Pressable
+          style={styles.composeMenuRow}
+          onPress={() => {
+            setComposeMenuVisible(false);
+            router.push('/messaging/spaces/create');
+          }}
+        >
+          <Icon name="add-circle-outline" size={20} color={colors.paper} />
+          <Text variant="body" weight="bold">
+            {t('spaces.createCta')}
+          </Text>
+        </Pressable>
+      </BottomSheetModal>
     </ScreenBackground>
   );
 }
@@ -343,6 +369,10 @@ const styles = StyleSheet.create({
   composeButton: {
     backgroundColor: colors.primary,
     borderRadius: radius.big,
+  },
+  composeCoachMarkWrap: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
   },
   // No horizontal padding of their own anymore — this whole section now
   // renders inside the Messages FlatList's own ListHeaderComponent (so the
@@ -380,19 +410,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
-  },
-  composeBackdrop: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: withAlpha(colors.ink, 0.75),
-  },
-  composeMenu: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radius.big,
-    borderTopRightRadius: radius.big,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing['2xl'],
   },
   composeMenuRow: {
     flexDirection: 'row',

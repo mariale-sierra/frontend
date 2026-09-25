@@ -8,6 +8,8 @@ const en = {
       continue: 'Continue',
       share: 'Share',
       done: 'Done',
+      dismiss: 'Dismiss',
+      gotIt: 'Got it',
     },
     fields: {
       email: 'Email',
@@ -33,6 +35,32 @@ const en = {
       networkErrorMessage: 'Could not connect to the server. Check your internet connection.',
     },
   },
+  welcome: {
+    skip: 'Skip',
+    next: 'Next',
+    getStarted: 'Get started',
+    page1: {
+      title: 'Real challenges, real routines',
+      description: 'Join a fitness challenge built around an actual routine. Your sport, your pace, your people.',
+    },
+    page2: {
+      title: 'Log daily, build a streak',
+      description: 'A quick photo each day keeps you honest and keeps your streak alive.',
+    },
+    page3: {
+      title: 'Better with friends',
+      description: 'Follow friends, compare streaks, and celebrate every finish line together.',
+    },
+  },
+  onboardingPractices: {
+    title: 'What do you practice?',
+    editTitle: 'Edit interest badges',
+    subtitle: 'Pick up to 6 to show as badges on your profile.',
+    selectedCount: '{{count}}/6 selected',
+    skip: 'Skip',
+    continue: 'Continue',
+    saveError: 'Could not save your practices. You can always add them later from your profile.',
+  },
   auth: {
     login: {
       title: 'Havit',
@@ -42,11 +70,16 @@ const en = {
       invalidCredentials: 'Invalid email or password',
     },
     register: {
-      title: 'Create an account',
-      subtitle: 'Start your first challenge',
-      switchPrompt: 'Already have an account?',
-      switchAction: 'Log in',
       createAccountFailed: 'Could not create account',
+      createAccountCta: 'Create account',
+      step: {
+        emailTitle: "What's your email?",
+        emailSubtitle: "We'll use this to keep your account secure.",
+        usernameTitle: 'Pick a username',
+        usernameSubtitle: 'This is how others will find and recognize you.',
+        passwordTitle: 'Create a password',
+        passwordSubtitle: 'Make it something only you would remember.',
+      },
     },
   },
   challenges: {
@@ -55,6 +88,7 @@ const en = {
     exploreTitle: 'Explore challenges',
     seeAll: 'See all',
     joinOrCreate: 'Join or create',
+    exploreTip: 'Browse challenges you can join, or tap the + New button to start your own.',
     dayLabel: 'Day {{day}}',
     memberAuthor: 'member',
     members: 'members',
@@ -172,6 +206,7 @@ const en = {
     exerciseCount_other: '{{count}} exercises',
     exerciseSummary: '{{exercises}} · {{location}}',
     joinChallengeButton: 'Join challenge',
+    joinCallout: 'Joining adds this challenge to your list and starts your progress streak.',
     shareMessage: 'Check out "{{name}}" on Havit!',
   },
   challengeProgress: {
@@ -275,6 +310,7 @@ const en = {
       targetLabel: 'target {{value}}',
       footerCaption: 'Untouched sets log at target — {{count}} adjusted so far',
       logDayCta: 'Log day',
+      logCoachMark: 'Logging today asks for a quick photo next, to confirm your progress.',
     },
   },
   challengeCreate: {
@@ -502,7 +538,8 @@ const en = {
     restDay: 'Rest day',
     todayLogged: 'Progress logged today',
     dayOf: 'Day {{current}}',
-    noActiveChallenge: 'No active challenge',
+    noActiveChallenge: "You don't have an active challenge yet",
+    logCoachMark: "This is where you log today's progress.",
     logProgressA11y: 'Log progress for {{name}}',
     openChallengeA11y: 'Open {{name}}',
     communityTitle: 'Community',
@@ -576,6 +613,7 @@ const en = {
     goBack: '← Go Back',
     uploadSuccessTitle: 'Logged!',
     uploadSuccessMessage: "Nice work! Today's progress is saved.",
+    uploadSuccessMessageWithChallenge: 'Day {{currentDay}} of {{totalDays}} logged for "{{name}}".',
     uploadSuccessCta: 'Done',
   },
   invites: {
@@ -674,6 +712,8 @@ const en = {
     language: 'Language',
     languageEn: 'English',
     languageEs: 'Spanish',
+    practices: 'Interest badges',
+    practicesHint: 'The sport/fitness badges shown on your profile.',
     privacy: 'Private profile',
     privacyHint: 'Hides your bio from other users.',
     changePhoto: 'Change photo',
@@ -699,6 +739,7 @@ const en = {
     startConversationError: 'Could not start this conversation.',
     searchPlaceholder: 'Search',
     composeA11y: 'Start a new conversation',
+    composeCoachMark: 'Tap the airplane button above to start a new conversation.',
     newMessageTitle: 'New message',
     noResultsForSearch: 'No conversations match your search.',
     spacesTitle: 'Spaces',

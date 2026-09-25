@@ -31,6 +31,13 @@ export interface MyProfileContract {
    * streak badge/stat entirely when absent rather than showing a fabricated 0.
    */
   streak_days?: number;
+  /** Self-reported sport/fitness practices (onboarding's "what do you do"
+   * step) — shown as colored badges on the profile screen, resolved via
+   * `constants/practiceOptions.ts`. Never privacy-gated — always sent, an
+   * identity tag like display_name/photo, not activity data like
+   * streak_days. Defaults to `[]` server-side, but still optional here for
+   * an older cached response predating this field. */
+  practice_preferences?: string[];
 }
 
 /** What the backend exposes about OTHER users (never includes email). */
@@ -51,6 +58,9 @@ export interface PublicProfileContract {
    * viewing a private profile gets no `streak_days` at all, same as every
    * other profile stat. */
   streak_days?: number;
+  /** See MyProfileContract.practice_preferences — never privacy-gated,
+   * shown even on a private profile a stranger can't otherwise see into. */
+  practice_preferences?: string[];
 }
 
 export interface UpdateProfilePayload {
@@ -58,4 +68,8 @@ export interface UpdateProfilePayload {
   bio?: string;
   preferred_language?: string;
   is_private?: boolean;
+  /** Capped at `MAX_PRACTICE_PREFERENCES` (constants/practiceOptions.ts) —
+   * the backend enforces the same cap independently, this is just the
+   * client staying in sync with it. */
+  practice_preferences?: string[];
 }

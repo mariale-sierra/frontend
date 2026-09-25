@@ -41,6 +41,12 @@ jest.mock('../../../services/challenge/challenge.service', () => ({
 jest.mock('../../../services/user/user.service', () => ({ getMyChallenges: jest.fn() }));
 jest.mock('../../../components/challenge/challengeAccentBackdrop', () => ({ ChallengeAccentBackdrop: () => null }));
 jest.mock('../../../utils/seenChallengeMemberships', () => ({ markChallengeMembershipSeen: jest.fn() }));
+// Stage 4's join callout — not under test here, and pulls in the real
+// AsyncStorage native module (via utils/storage.ts) if left unmocked.
+jest.mock('../../../utils/challengeJoinCallout', () => ({
+  hasSeenChallengeJoinCallout: jest.fn().mockResolvedValue(true),
+  markChallengeJoinCalloutSeen: jest.fn(),
+}));
 
 const challenge = (overrides: Record<string, unknown> = {}) => ({
   id: 'ch-1',

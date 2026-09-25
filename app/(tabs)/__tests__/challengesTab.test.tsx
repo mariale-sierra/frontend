@@ -44,6 +44,12 @@ jest.mock('../../../utils/seenChallengeMemberships', () => ({
   hasSeenChallengeMembership: jest.fn(),
   markChallengeMembershipSeen: jest.fn(),
 }));
+// Stage 3's Explore-tab tip — not under test here, and pulls in the real
+// AsyncStorage native module (via utils/storage.ts) if left unmocked.
+jest.mock('../../../utils/exploreTip', () => ({
+  hasSeenExploreTip: jest.fn().mockResolvedValue(true),
+  markExploreTipSeen: jest.fn(),
+}));
 jest.mock('../../../hooks/useAuth', () => ({ useAuth: () => ({ userId: 'owner-1' }) }));
 // A card's glow is drawn once it has been measured; there is nothing to check in it here.
 jest.mock('../../../components/ui/accentGlow', () => ({ AccentGlow: () => null }));

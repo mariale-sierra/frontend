@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { Icon } from '../../../components/ui/icon';
 import { Text } from '../../../components/ui/text';
 import { ChallengeHeader, ChallengeAboutSection, ChallengeRoutineList, ChallengeInfoContentSkeleton } from '../../../components/challenge/detail';
 import { ChallengeAccentBackdrop } from '../../../components/challenge/challengeAccentBackdrop';
+import { CoachMark } from '../../../components/onboarding/CoachMark';
 import type { ChallengeInfoRow } from '../../../components/challenge/detail';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
@@ -24,6 +25,8 @@ import { useAuth } from '../../../hooks/useAuth';
 import { useIsAdmin } from '../../../hooks/useIsAdmin';
 import { useErrorNotificationStore } from '../../../store/errorNotificationStore';
 import { markChallengeMembershipSeen } from '../../../utils/seenChallengeMemberships';
+import { hasSeenChallengeJoinCallout, markChallengeJoinCalloutSeen } from '../../../utils/challengeJoinCallout';
+import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../../constants/onboardingDebug';
 import type { ChallengeContract } from '../../../types/challenge';
 
 type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
@@ -47,6 +50,25 @@ export default function ChallengeDetail() {
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('none');
   const [membershipLoading, setMembershipLoading] = useState(true);
   const { showSuccess } = useErrorNotificationStore();
+
+  // Onboarding Stage 4's join callout — teaches the general concept of
+  // joining (not tied to this specific challenge), shown once ever per
+  // device (utils/challengeJoinCallout.ts), same shape as Stage 2/3's coach
+  // marks/tips.
+  const [showJoinCallout, setShowJoinCallout] = useState(false);
+  useEffect(() => {
+    if (FORCE_SHOW_ONBOARDING_PREVIEWS) {
+      setShowJoinCallout(true);
+      return;
+    }
+    hasSeenChallengeJoinCallout().then((seen) => {
+      if (!seen) setShowJoinCallout(true);
+    });
+  }, []);
+  const dismissJoinCallout = useCallback(() => {
+    setShowJoinCallout(false);
+    markChallengeJoinCalloutSeen();
+  }, []);
   const { userId } = useAuth();
   const isAdmin = useIsAdmin();
   const isOwner = isChallengeOwner(challenge, userId);
@@ -314,6 +336,14 @@ export default function ChallengeDetail() {
 
       {showsBottomBar && membershipStatus === 'none' && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+          {showJoinCallout && (
+            <CoachMark
+              message={t('challengeInfo.joinCallout')}
+              onDismiss={dismissJoinCallout}
+              arrowPlacement="none"
+              style={styles.joinCallout}
+            />
+          )}
           <Pressable
             onPress={joinPopup.show}
             style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}
@@ -381,6 +411,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: withAlpha(colors.paper, 0.08),
+  },
+  // CoachMark is already full-width for `arrowPlacement="none"` — this just
+  // adds the gap before the Join button below it.
+  joinCallout: {
+    marginBottom: spacing.sm,
   },
   joinButton: {
     height: 52,

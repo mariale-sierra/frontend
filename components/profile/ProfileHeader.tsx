@@ -1,7 +1,10 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, radius, spacing } from '../../constants/theme';
+import { activityColors, colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
+import { getPracticeOption } from '../../constants/practiceOptions';
+import { ACTIVITY_ICON_NAME } from '../icons/activityIcon';
+import { AccentPill } from '../ui/accentPill';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
@@ -23,6 +26,11 @@ interface ProfileHeaderProps {
   followingCount: number;
   onPressFollowers?: () => void;
   onPressFollowing?: () => void;
+  /** Self-reported sport/fitness practices (see constants/practiceOptions.ts) —
+   * rendered as a row of colored badges, one per entry still in the current
+   * options list (see `getPracticeOption`). Omit or pass an empty array to
+   * hide the row entirely — never privacy-gated, same tier as the name/photo. */
+  practices?: string[];
   /** Extra content below the stats row — e.g. a FollowButton on another user's profile. */
   actions?: React.ReactNode;
 }
@@ -81,9 +89,13 @@ export function ProfileHeader({
   followingCount,
   onPressFollowers,
   onPressFollowing,
+  practices,
   actions,
 }: ProfileHeaderProps) {
   const { t } = useTranslation();
+  const practiceBadges = (practices ?? [])
+    .map((value) => getPracticeOption(value))
+    .filter((option): option is NonNullable<typeof option> => option !== null);
 
   return (
     <View style={styles.wrapper}>
@@ -127,6 +139,21 @@ export function ProfileHeader({
           </>
         )}
       </View>
+
+      {practiceBadges.length > 0 && (
+        <View style={styles.badgesRow}>
+          {practiceBadges.map((option) => (
+            <AccentPill
+              key={option.value}
+              label={option.label}
+              color={activityColors[option.activityType]}
+              variant="filled"
+              size="md"
+              icon={ACTIVITY_ICON_NAME[option.activityType]}
+            />
+          ))}
+        </View>
+      )}
 
       {actions}
     </View>
@@ -183,5 +210,11 @@ const styles = StyleSheet.create({
     width: 1,
     height: 32,
     backgroundColor: withAlpha(colors.paper, 0.08),
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.xs,
   },
 });

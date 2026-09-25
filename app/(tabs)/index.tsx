@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,11 +6,13 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import ScreenBackground from '../../components/layout/screenBackground';
+import { AccentPill } from '../../components/ui/accentPill';
 import { Divider } from '../../components/ui/divider';
 import { Icon } from '../../components/ui/icon';
 import { Loader } from '../../components/ui/loader';
 import { Text } from '../../components/ui/text';
 import { Row } from '../../components/layout/row';
+import { CoachMark } from '../../components/onboarding/CoachMark';
 import { ACTIVE_CHALLENGE_SNAP_INTERVAL, ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
 import { FeedPostCard } from '../../components/home/FeedPostCard';
 import { FriendsStreakSection } from '../../components/home/FriendsStreakSection';
@@ -28,9 +30,13 @@ import { toFeedPostViewModels } from '../../services/adapters/feedAdapter';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
 import { getFollowingStreaks } from '../../services/follow/follow.service';
 import { toFriendStreakViewModels } from '../../services/adapters/followAdapter';
-import { colors, spacing } from '../../constants/theme';
+import { colors, spacing, textOpacity } from '../../constants/theme';
 import { HOME_GRADIENT_EDGE, HOME_GRADIENT_SCROLLS, USE_HOME_ACTIVITY_GRADIENT } from '../../constants/screenBackground';
+import { BOTTOM_NAV_HEIGHT } from '../../constants/bottomNav';
+import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../constants/onboardingDebug';
 import { formatTodayLabel, hoursUntilMidnight } from '../../utils/time';
+import { withAlpha } from '../../utils/color';
+import { hasSeenLogCoachMark, markLogCoachMarkSeen } from '../../utils/logCoachMark';
 
 function FeedSeparator() {
   return <View style={styles.separator} />;
@@ -77,6 +83,25 @@ export default function Home() {
   const [friendStreaks, setFriendStreaks] = useState<FriendStreakViewModel[]>([]);
   const [friendStreaksLoading, setFriendStreaksLoading] = useState(true);
   const [friendStreaksError, setFriendStreaksError] = useState(false);
+
+  // Onboarding Stage 2's one coach mark — points at the tab bar's Log FAB,
+  // shown once ever per device (utils/logCoachMark.ts). Checked once on
+  // mount, not tied to `isReady`'s own loading gate below (loading it in
+  // parallel is fine; it only ever RENDERS once `isReady` is true, see JSX).
+  const [showLogCoachMark, setShowLogCoachMark] = useState(false);
+  useEffect(() => {
+    if (FORCE_SHOW_ONBOARDING_PREVIEWS) {
+      setShowLogCoachMark(true);
+      return;
+    }
+    hasSeenLogCoachMark().then((seen) => {
+      if (!seen) setShowLogCoachMark(true);
+    });
+  }, []);
+  const dismissLogCoachMark = useCallback(() => {
+    setShowLogCoachMark(false);
+    markLogCoachMarkSeen();
+  }, []);
 
   const hoursLeft = hoursUntilMidnight();
 
@@ -264,7 +289,16 @@ export default function Home() {
               <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} scrollX={carouselScrollX} />
             ) : (
               <View style={styles.center}>
-                <Text variant="body" tone="secondary">{t('home.noActiveChallenge')}</Text>
+                <Icon name="trophy-outline" size={32} color={withAlpha(colors.paper, textOpacity.tertiary)} />
+                <Text variant="body" tone="secondary" align="center">{t('home.noActiveChallenge')}</Text>
+                <View style={styles.emptyStateCta}>
+                  <AccentPill
+                    label={t('challenges.joinOrCreate')}
+                    color={colors.paper}
+                    variant="filled"
+                    onPress={() => router.push('/(tabs)/challenges?view=explore')}
+                  />
+                </View>
               </View>
             )}
           </View>
@@ -326,6 +360,23 @@ export default function Home() {
         contentContainerStyle={listContentStyle}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       />
+
+      {isReady && showLogCoachMark && (
+        <CoachMark
+          message={t('home.logCoachMark')}
+          onDismiss={dismissLogCoachMark}
+          // Real bug, fixed 2026-09-24, per "I click it and nothing
+          // displays and it goes away": the FAB (components/navigation/
+          // bottomNavFab.tsx) fills almost the full BOTTOM_NAV_HEIGHT and
+          // has its own `hitSlop={8}`, reaching 8px above the tab bar's own
+          // top edge. This bubble's card padding pushed its actual touch
+          // area close enough to that hitSlop zone that a tap could land on
+          // the FAB underneath instead of the bubble (or vice versa) —
+          // `spacing.md` (12px) of clearance wasn't enough of a margin.
+          // `spacing.xl` (32px) leaves the FAB's hit zone with real room.
+          style={[styles.logCoachMark, { bottom: insets.bottom + BOTTOM_NAV_HEIGHT + spacing.xl }]}
+        />
+      )}
     </ScreenBackground>
   );
 }
@@ -373,7 +424,11 @@ const styles = StyleSheet.create({
   },
   center: {
     alignItems: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing['2xl'],
+  },
+  emptyStateCta: {
+    marginTop: spacing.xs,
   },
   friendsArea: {},
   divider: {
@@ -384,5 +439,13 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: spacing['2xl'],
+  },
+  // Anchored bottom-right, pointing down toward the tab bar's Log FAB — see
+  // constants/bottomNav.ts's BOTTOM_NAV_HEIGHT for why the offset is
+  // `insets.bottom + BOTTOM_NAV_HEIGHT` (the exact reserved height of the
+  // floating glass tab bar), computed inline where insets is in scope.
+  logCoachMark: {
+    position: 'absolute',
+    right: spacing.lg,
   },
 });
