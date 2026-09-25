@@ -1,10 +1,8 @@
 import { fireEvent } from '@testing-library/react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { SpaceCard } from '../SpaceCard';
-import { getMeshRecipe } from '../../../constants/meshRecipes';
 import { activityColors } from '../../../constants/theme';
-import { ACCENT_VIVID_FACTOR } from '../../ui/accentDome';
-import { boostSaturation, rotateHue, withAlpha } from '../../../utils/color';
+import { boostSaturation } from '../../../utils/color';
 import type { SpaceContract } from '../../../types/space';
 
 // The glow is drawn once the card has been measured; this hands it a size at once.
@@ -111,7 +109,12 @@ describe('SpaceCard', () => {
     expect(screen.getByText('spaces.membersCount:50,50')).toBeTruthy();
   });
 
-  it("lights the card with orbs in the space's own category color", async () => {
+  // The plain diagonal `linearGlow` gradient (`AccentCard`'s), matching a
+  // reference image — real change 2026-09-25 (see SpaceCardView.tsx's own
+  // doc comment for the fuller history; SpaceCardView.test.tsx has the
+  // fuller "its glow" coverage — this is just SpaceCard's own smoke test
+  // that the color reaches the glow at all).
+  it("lights the card with its glow in the space's own category color", async () => {
     const screen = await renderWithTheme(
       <SpaceCard
         space={buildSpace({ activityCategory: { id: 5, code: 'mind-body', name: 'Mind-Body' } })}
@@ -119,10 +122,10 @@ describe('SpaceCard', () => {
         onPressCta={jest.fn()}
       />,
     );
-    const dominant = getMeshRecipe('space', 'mindBody').blobs.find((orb) => orb.hue === 0)!;
+    // `AccentCard`'s `linearGlow` end color — `boostSaturation(color,
+    // ACCENT_VIVID_FACTOR)` (see accentCard.tsx).
+    const DOME_VIVID_FACTOR = 1.25;
 
-    expect(JSON.stringify(screen.toJSON())).toContain(
-      withAlpha(rotateHue(boostSaturation(activityColors.mindBody, ACCENT_VIVID_FACTOR), 0), dominant.peak),
-    );
+    expect(JSON.stringify(screen.toJSON())).toContain(boostSaturation(activityColors.mindBody, DOME_VIVID_FACTOR));
   });
 });

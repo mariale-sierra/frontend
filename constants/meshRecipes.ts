@@ -150,13 +150,35 @@ const LAYOUTS: Record<MeshCardKind, Layout> = {
   // the bottom-right corner, and the third is a faint touch up the left. The top
   // fade is nearly full strength and reaches all the way down, so the color thins
   // out gradually over the whole card and the top is left dark.
+  //
+  // Peaks/scrim pushed to this file's own tested ceiling 2026-09-25, per
+  // explicit "the explore cards are still very not saturated, are you sure
+  // you matched those?" — a real gap in the first pass: that pass left the
+  // dominant field's peak completely UNCHANGED (0.38) and only nudged the
+  // two weaker fields, pulling back further the moment the overlap-sum test
+  // (fields added together where they overlap, `blendMode="plus"` — the
+  // same additive model `AccentDome`'s wash+bloom use) tripped past 0.5 for
+  // a couple of activity keys. That test's 0.4/0.5 ceiling explicitly cites
+  // "the dome light... a wash of 0.39 and a bloom of 0.26" as its own
+  // reference (`ChallengeAccentBackdrop`'s full-screen dome, which has
+  // always been this strong — not `AccentCard`'s card-level one, which only
+  // just caught up to it) — so the ceiling itself was ALREADY calibrated to
+  // the right target from the start; the fix was pushing the actual peaks
+  // up to meet it, not raising the ceiling further. Dominant now sits at
+  // the individual cap (0.4) instead of stopping short of it; the other two
+  // pushed up to the ratio floor (max/min >= 2.5, so min = 0.4 / 2.5 =
+  // 0.16) and as high as the overlap-sum ceiling allows from there — scrim
+  // eased further too (0.15 -> 0.1) so the text side doesn't mute the extra
+  // brightness back out. `topFade` is still UNCHANGED — its own tested
+  // floor (>= 0.8) is for a different reason (keeps the top-right, where
+  // the tick ring sits, dark and readable), not a brightness knob.
   explore: {
     blobs: [
-      { hue: 0, x: 0.4, y: 1.05, rx: 1.1, ry: 0.5, angle: -14, peak: 0.38 },
-      { hue: 1, x: 0.95, y: 0.95, rx: 0.75, ry: 0.4, angle: 12, peak: 0.25 },
-      { hue: 2, x: 0.02, y: 0.7, rx: 0.5, ry: 0.3, angle: 35, peak: 0.11 },
+      { hue: 0, x: 0.4, y: 1.05, rx: 1.1, ry: 0.5, angle: -14, peak: 0.4 },
+      { hue: 1, x: 0.95, y: 0.95, rx: 0.75, ry: 0.4, angle: 12, peak: 0.3 },
+      { hue: 2, x: 0.02, y: 0.7, rx: 0.5, ry: 0.3, angle: 35, peak: 0.16 },
     ],
-    scrim: { peak: 0.2, reach: 0.45 },
+    scrim: { peak: 0.1, reach: 0.45 },
     topFade: { peak: 0.9, reach: 1 },
   },
   // A little square, about as tall as it is wide, its light at the TOP: two long

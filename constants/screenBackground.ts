@@ -48,6 +48,15 @@ export const HOME_GRADIENT_EDGE: 'top' | 'bottom' = 'top';
 /**
  * The paper spotlight's numbers — an `AccentDome`'s. Tuned by eye: the light has
  * to stay quiet enough that `paper` text and the cards on it keep their contrast.
+ *
+ * Briefly bumped to 0.39/0.26 on 2026-09-25 chasing a "make the gradients
+ * match stage 0" request, then reverted the same day — real scope mistake,
+ * per explicit "you modified the plain background gradient in the search,
+ * challenges and profile screen. You weren't supposed to touch those, they
+ * were fine before": the request was about Home's background and the
+ * challenge CARDS specifically, not this shared screen-level backdrop
+ * (Search/Challenges/Profile all use it, none of which were mentioned).
+ * Left at its original numbers.
  */
 export const PAPER_GRADIENT = {
   /** How wide the half-moon is where it meets the screen's edge, as a fraction of
@@ -64,18 +73,23 @@ export const PAPER_GRADIENT = {
 } as const;
 
 /**
- * The spotlight in a color (Home's activity color): a little stronger than the paper
- * one, since a color at the alpha `paper` gets reads dimmer. It keeps the shape and
- * strength it has always had — Home's light is as it was when the paper light on the
- * other screens was made gentler and flatter (2026-09-20, explicit request: 'too
- * strong and looks too much like a circle instead of a half moon'), so it does not
- * follow `PAPER_GRADIENT`.
+ * The spotlight in a color (Home's activity color). `washPeak`/`bloomPeak`
+ * bumped 2026-09-25, per explicit "the gradients in the home background...
+ * don't have the saturation/brightness as the gradients in the stage 0 /
+ * register flow... I want their saturation/brightness to match" — now the
+ * exact same numbers `WelcomeGlowBackground` uses (`WASH_PEAK`/
+ * `BLOOM_PEAK` there), which were already tuned for a COLORED (not paper/
+ * white) dome. Unlike `PAPER_GRADIENT` (reverted the same day — a scope
+ * mistake, that request was never about the shared Search/Challenges/
+ * Profile backdrop), this one WAS explicitly asked for: "the home
+ * background" names this constant directly. Shape (`domeHalfWidth`/
+ * `domeDepth`) untouched — only brightness was asked for.
  */
 export const TINTED_GRADIENT = {
   domeHalfWidth: 0.5,
   domeDepth: 0.5,
-  washPeak: 0.2,
-  bloomPeak: 0.16,
+  washPeak: 0.39,
+  bloomPeak: 0.26,
 } as const;
 
 /**

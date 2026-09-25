@@ -2,9 +2,7 @@ import { StyleSheet, Text as RNText } from 'react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { SpaceCardView } from '../SpaceCardView';
 import { activityColors, colors, fontSize, spacing } from '../../../constants/theme';
-import { getMeshRecipe } from '../../../constants/meshRecipes';
-import { ACCENT_VIVID_FACTOR } from '../../ui/accentDome';
-import { boostSaturation, rotateHue, withAlpha } from '../../../utils/color';
+import { boostSaturation } from '../../../utils/color';
 
 // The glow is drawn once the card has been measured; this hands it a size at once.
 jest.mock('../../ui/accentGlow', () => ({
@@ -78,48 +76,53 @@ describe('SpaceCardView', () => {
     expect(tree).toContain(`"paddingVertical":${spacing.base}`);
   });
 
-  describe('its glow — orbs of light', () => {
+  // Real change 2026-09-25, replacing a long chain of attempts at
+  // `AccentCard`'s dome/bloom system (a half-moon from the bottom edge,
+  // matching Home's hero card and Mine's cards) with `linearGlow` — a
+  // plain diagonal `LinearGradient`, `ink` at the top-left to the space's
+  // own full, vivid activity color at the bottom-right. See SpaceCardView
+  // itself for the fuller "why" (an attached reference image showed a
+  // completely different, much simpler shape than the dome was ever
+  // going to produce).
+  describe('its glow — a plain diagonal gradient, ink to the activity color', () => {
     const treeOf = async (props: Partial<Parameters<typeof SpaceCardView>[0]> = {}) =>
       JSON.stringify((await renderWithTheme(<SpaceCardView {...baseProps} {...props} />)).toJSON());
-    const orbColor = (type: keyof typeof activityColors, hue: number, peak: number) =>
-      withAlpha(rotateHue(boostSaturation(activityColors[type], ACCENT_VIVID_FACTOR), hue), peak);
+    // `AccentCard`'s `linearGlow` colors are `[colors.ink,
+    // boostSaturation(color, ACCENT_VIVID_FACTOR)]` — see accentCard.tsx.
+    const DOME_VIVID_FACTOR = 1.25;
+    const endColor = (type: keyof typeof activityColors) => boostSaturation(activityColors[type], DOME_VIVID_FACTOR);
 
-    it("draws the `space` mesh recipe, in the space's activity color", async () => {
+    it("draws a diagonal gradient ending in the space's own activity color", async () => {
       const tree = await treeOf();
-      const dominant = getMeshRecipe('space', 'cardioLow').blobs.find((orb) => orb.hue === 0)!;
 
-      expect(tree).toContain(orbColor('cardioLow', 0, dominant.peak));
+      expect(tree).toContain(`"colors":["${colors.ink}","${endColor('cardioLow')}"]`);
     });
 
-    it('draws every one of its orbs, one gradient each', async () => {
-      const tree = await treeOf();
-      const { blobs } = getMeshRecipe('space', 'cardioLow');
-
-      // One dithered gradient per orb, and one more for the scrim.
-      expect(tree.match(/"dither":true/g)).toHaveLength(blobs.length + 1);
-    });
-
-    it("takes another activity's colors, and its own composition", async () => {
+    it("takes another activity's colors", async () => {
       const strength = await treeOf({ activityType: 'strength' });
-      const dominant = getMeshRecipe('space', 'strength').blobs.find((orb) => orb.hue === 0)!;
 
-      expect(strength).toContain(orbColor('strength', 0, dominant.peak));
+      expect(strength).toContain(`"colors":["${colors.ink}","${endColor('strength')}"]`);
       expect(strength).not.toBe(await treeOf());
     });
 
-    it('is the neutral, quieter orbs for a space with no activity yet', async () => {
+    it('is the neutral color for a space with no activity yet', async () => {
       const tree = await treeOf({ activityType: null });
-      const dominant = getMeshRecipe('space', 'default').blobs.find((orb) => orb.hue === 0)!;
-      const base = boostSaturation(colors.primary, ACCENT_VIVID_FACTOR);
 
-      expect(tree).toContain(withAlpha(rotateHue(base, 0), dominant.peak));
+      expect(tree).toContain(`"colors":["${colors.ink}","${boostSaturation(colors.primary, DOME_VIVID_FACTOR)}"]`);
     });
 
-    it('is no longer the twin half-moons: no dome light', async () => {
+    it('runs corner to corner, top-left to bottom-right — not the retired dome, mesh orbs, or twin dome', async () => {
       const tree = await treeOf();
 
-      // The dome is a single tall gradient; the orbs are radial ones scaled into circles.
-      expect(tree).not.toContain('RadialGradient","props":{"cx"');
+      expect(tree).toContain('"start":{"__typename__":"Point","ref":{"0":0,"1":0}}');
+      expect(tree).toContain('"end":{"__typename__":"Point","ref":{"0":342,"1":140}}');
+      // A single flat `Rect` fill — none of the dome's own layered
+      // Group/Rect/mask structure, the mesh's per-blob Circles, or the
+      // twin dome's two domes.
+      expect(tree.match(/"type":"skRect"/g)).toHaveLength(1);
+      expect(tree).not.toContain('"type":"skOval"');
+      expect(tree).not.toContain('"type":"skCircle"');
+      expect(tree).not.toContain('"type":"skRadialGradient"');
     });
   });
 });

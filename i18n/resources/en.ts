@@ -3,7 +3,6 @@ const en = {
     actions: {
       login: 'Log in',
       register: 'Create account',
-      continueAsGuest: 'Continue as guest',
       back: 'Back',
       continue: 'Continue',
       share: 'Share',
@@ -63,11 +62,15 @@ const en = {
   },
   auth: {
     login: {
-      title: 'Havit',
-      subtitle: 'Welcome back',
       switchPrompt: "Don't have an account?",
       switchAction: 'Register',
       invalidCredentials: 'Invalid email or password',
+      step: {
+        emailTitle: 'Log in',
+        emailSubtitle: 'Welcome back! Enter your email to continue.',
+        passwordTitle: 'Enter your password',
+        passwordSubtitle: 'Enter your password for {{email}}.',
+      },
     },
     register: {
       createAccountFailed: 'Could not create account',
@@ -668,7 +671,6 @@ const en = {
   profile: {
     editButtonA11y: 'Edit profile',
     invitationsButtonA11y: 'Invitations',
-    streakLabel: 'Day streak',
     logoutButton: 'Log out',
     logoutButtonA11y: 'Log out',
     logoutConfirmTitle: 'Log out?',

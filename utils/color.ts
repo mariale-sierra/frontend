@@ -66,6 +66,31 @@ export function boostSaturation(hex: string, factor: number) {
   return transformHsl(hex, (h, s, l) => [h, Math.min(1, s * factor), l]);
 }
 
+/** Mixes a 6-digit hex color toward white by `amount` (0 = unchanged, 1 =
+ * pure white) — a straight per-channel RGB lerp, not an HSL lightness bump
+ * (which can visibly shift hue/saturation as it approaches white). For a
+ * "hot" highlight core — a light source's own center reads near-white, with
+ * its actual color showing more in the surrounding halo, not at the core
+ * itself. Non-6-digit hex values are returned unchanged. */
+export function lighten(hex: string, amount: number) {
+  const normalized = hex.replace('#', '');
+
+  if (normalized.length !== 6) {
+    return hex;
+  }
+
+  const t = Math.max(0, Math.min(1, amount));
+  const mix = (start: number) => {
+    const value = parseInt(normalized.slice(start, start + 2), 16);
+    return Math.round(value + (255 - value) * t)
+      .toString(16)
+      .padStart(2, '0')
+      .toUpperCase();
+  };
+
+  return `#${mix(0)}${mix(2)}${mix(4)}`;
+}
+
 /** Rotates a hex color's hue by `degrees` (positive or negative), keeping
  * saturation and lightness — for neighboring, harmonious tones of one color.
  * Grays and non-6-digit hex values are returned unchanged. */

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, TextInput } from 'react-native';
 import type { TextInputProps } from 'react-native';
+import { Icon } from '../ui/icon';
 import { colors, radius, spacing, textOpacity, typography } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
@@ -12,12 +13,29 @@ interface FloatingLabelInputProps extends Omit<TextInputProps, 'placeholder' | '
   error?: boolean;
 }
 
-const HEIGHT = 64;
+// 64 -> 44 (matching `Button`'s own natural rendered height at size="md":
+// `lineHeight.sm` (20) + 2x `spacing.md` (12) padding = 44, see button.tsx)
+// -> 50 ("a tinsy bit taller" follow-up). All the internal label/input
+// offsets below are recomputed for this height, not proportionally scaled —
+// see each constant's own comment.
+const HEIGHT = 50;
 const ANIM_MS = 180;
-const LABEL_REST_TOP = 21;
-const LABEL_FLOAT_TOP = 10;
+// Centers the resting (placeholder-style) label's ~20px line within the
+// pill: (50 - 20) / 2 = 15.
+const LABEL_REST_TOP = 15;
+// Floated (small-caption) label and the real input beneath it split the
+// pill edge-to-edge with no gap or overlap: label spans
+// LABEL_FLOAT_TOP -> LABEL_FLOAT_TOP + lineHeight.xs (6 -> 22), input spans
+// exactly where that ends -> HEIGHT - INPUT_BOTTOM (22 -> 44).
+const LABEL_FLOAT_TOP = 6;
+const INPUT_BOTTOM = 6;
+const INPUT_HEIGHT = 22;
 const REST_RISE = 4;
 const FLOAT_SETTLE = 4;
+const EYE_ICON_SIZE = 20;
+// Room the input's own text reserves on the right when the reveal-password
+// button is showing, so typed text never runs under the icon.
+const INPUT_RIGHT_WITH_ICON = spacing.lg + 28;
 
 /**
  * Single-pill text field with an animated floating label — replaces the
@@ -40,6 +58,15 @@ const FLOAT_SETTLE = 4;
  * left-anchored labels (same `left: spacing.lg` on both) can't drift
  * relative to each other or to the input below them; only their opacity (and
  * a small settling `translateY`, both native-driver-safe) is animated.
+ *
+ * A password field (`secureTextEntry` passed by the caller) gets a
+ * reveal/hide eye button on the right, per explicit "there should be an eye
+ * button to be able to see the password you're writing." `secureTextEntry`
+ * is intercepted here rather than left to flow through `...props` straight
+ * to the underlying `TextInput` — this component owns a `revealed` toggle
+ * and computes the EFFECTIVE `secureTextEntry` from both, so the caller
+ * still just says "this is a password field" (unchanged from before) and
+ * doesn't need to know the reveal toggle exists.
  */
 export function FloatingLabelInput({
   label,
@@ -47,10 +74,13 @@ export function FloatingLabelInput({
   error = false,
   onFocus,
   onBlur,
+  secureTextEntry,
   ...props
 }: FloatingLabelInputProps) {
   const inputRef = useRef<TextInput>(null);
   const [focused, setFocused] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const isPassword = Boolean(secureTextEntry);
   const floated = focused || Boolean(value);
   const anim = useRef(new Animated.Value(floated ? 1 : 0)).current;
 
@@ -102,10 +132,26 @@ export function FloatingLabelInput({
           setFocused(false);
           onBlur?.(e);
         }}
-        style={styles.input}
+        secureTextEntry={isPassword && !revealed}
+        style={[styles.input, isPassword && styles.inputWithIcon]}
         placeholderTextColor="transparent"
         {...props}
       />
+      {isPassword && (
+        <Pressable
+          onPress={() => setRevealed((r) => !r)}
+          hitSlop={8}
+          style={styles.eyeButton}
+          accessibilityRole="button"
+          accessibilityLabel={revealed ? 'Hide password' : 'Show password'}
+        >
+          <Icon
+            name={revealed ? 'eye-off-outline' : 'eye-outline'}
+            size={EYE_ICON_SIZE}
+            color={withAlpha(colors.paper, textOpacity.secondary)}
+          />
+        </Pressable>
+      )}
     </Pressable>
   );
 }
@@ -148,11 +194,26 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: spacing.lg,
     right: spacing.lg,
-    bottom: 12,
-    height: 24,
+    bottom: INPUT_BOTTOM,
+    height: INPUT_HEIGHT,
     padding: 0,
     fontFamily: typography.fontFamily.regular,
     fontSize: typography.fontSize.base,
     color: colors.paper,
+  },
+  // Leaves room for the eye button so typed text never runs under it.
+  inputWithIcon: {
+    right: INPUT_RIGHT_WITH_ICON,
+  },
+  // Vertically centered in the WHOLE pill (not just the input's own short
+  // row) — reads correctly regardless of whether the label is currently
+  // resting or floated above it.
+  eyeButton: {
+    position: 'absolute',
+    right: spacing.md,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

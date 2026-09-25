@@ -132,16 +132,10 @@ export function ProfileHeader({
         <StatColumn value={followersCount} label={t('profile.followersLabel')} onPress={onPressFollowers} />
         <StatDivider />
         <StatColumn value={followingCount} label={t('profile.followingLabel')} onPress={onPressFollowing} />
-        {streakDays != null && (
-          <>
-            <StatDivider />
-            <StatColumn value={streakDays} label={t('profile.streakLabel')} highlight />
-          </>
-        )}
       </View>
 
       {practiceBadges.length > 0 && (
-        <View style={styles.badgesRow}>
+        <View style={[styles.badgesRow, styles.badgesRowGap]}>
           {practiceBadges.map((option) => (
             <AccentPill
               key={option.value}
@@ -216,5 +210,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: spacing.xs,
+  },
+  // On top of `wrapper`'s own uniform `spacing.md` gap (12) — a single
+  // `gap` on that wrapper applies the same spacing between every child, so
+  // this adds `spacing.md` more specifically above the badges row, per
+  // explicit "make the gap between those two elements [stats row] and the
+  // badges a bit bigger" — total effective gap now `spacing.lg` (24).
+  badgesRowGap: {
+    marginTop: spacing.md,
   },
 });

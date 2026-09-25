@@ -3,7 +3,6 @@ const es = {
     actions: {
       login: 'Iniciar sesión',
       register: 'Crear cuenta',
-      continueAsGuest: 'Continuar como invitado',
       back: 'Atrás',
       continue: 'Continuar',
       share: 'Compartir',
@@ -63,11 +62,15 @@ const es = {
   },
   auth: {
     login: {
-      title: 'Havit',
-      subtitle: 'Bienvenido de vuelta',
       switchPrompt: 'No tienes cuenta?',
       switchAction: 'Registrarte',
       invalidCredentials: 'Correo o contraseña inválidos',
+      step: {
+        emailTitle: 'Inicia sesión',
+        emailSubtitle: '¡Bienvenido de nuevo! Ingresa tu correo para continuar.',
+        passwordTitle: 'Ingresa tu contraseña',
+        passwordSubtitle: 'Ingresa tu contraseña para {{email}}.',
+      },
     },
     register: {
       createAccountFailed: 'No se pudo crear la cuenta',
@@ -656,7 +659,6 @@ const es = {
   profile: {
     editButtonA11y: 'Editar perfil',
     invitationsButtonA11y: 'Invitaciones',
-    streakLabel: 'Racha de días',
     logoutButton: 'Cerrar sesión',
     logoutButtonA11y: 'Cerrar sesión',
     logoutConfirmTitle: '¿Cerrar sesión?',

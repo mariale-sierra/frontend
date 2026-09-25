@@ -362,9 +362,14 @@ export default function Register() {
           // Distinct from Skip (which only skips the intro pages, landing on
           // the email step) — this exits the whole register flow and
           // returns to login, per explicit request, same text-button style.
+          // Label fixed 2026-09-25, per explicit "call it login instead" —
+          // this reused `auth.login.switchAction` ("Register", the LOGIN
+          // screen's own link TO register), so the button read "Register"
+          // while actually doing the opposite: exiting register and
+          // returning to login.
           <Pressable onPress={() => router.back()} hitSlop={8} accessibilityRole="button">
             <Text variant="label" weight="bold" tone="secondary">
-              {t('auth.login.switchAction')}
+              {t('common.actions.login')}
             </Text>
           </Pressable>
         )}

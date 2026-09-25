@@ -4,6 +4,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   View,
 } from 'react-native';
@@ -125,12 +126,25 @@ export default function Chat() {
     <ScreenBackground variant="default">
       <View style={styles.header}>
         <BackButton />
-        <Row align="center" gap="sm" style={styles.headerInfo} justify="flex-start">
-          <UserAvatar username={otherUsername ?? ''} imageUrl={otherProfileImageUrl || null} size={HEADER_AVATAR_SIZE} />
-          <Text variant="body" weight="bold" numberOfLines={1} style={styles.headerName}>
-            {name}
-          </Text>
-        </Row>
+        {/* Tapping the avatar/name goes to their profile — same
+            `/profile/${otherUserId}` navigation chat-details.tsx's own
+            "View profile" row already uses, per explicit request. Only
+            pressable when `otherUserId` actually came through (same
+            string/string[] unwrap this screen already does for the other
+            route params — see `unwrap` above). */}
+        <Pressable
+          onPress={() => otherUserId && router.push(`/profile/${otherUserId}`)}
+          disabled={!otherUserId}
+          accessibilityRole="button"
+          style={styles.headerInfo}
+        >
+          <Row align="center" gap="sm" justify="flex-start">
+            <UserAvatar username={otherUsername ?? ''} imageUrl={otherProfileImageUrl || null} size={HEADER_AVATAR_SIZE} />
+            <Text variant="body" weight="bold" numberOfLines={1} style={styles.headerName}>
+              {name}
+            </Text>
+          </Row>
+        </Pressable>
         {/* Chats-47A's header also shows an "Active now" presence indicator
             next to the name — no online/presence data exists anywhere in
             the backend (chats or otherwise), so it's left out rather than

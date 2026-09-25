@@ -5,20 +5,17 @@ import { AccentCard } from '../ui/accentCard';
 import { Text } from '../ui/text';
 import { ChallengeCardMembers } from '../challenge/card/ChallengeCardMembers';
 import { challengeCardText } from '../challenge/card/challengeCardText';
-import { USE_MESH_CARD_GLOW } from '../../constants/challengeCards';
-import { getMeshRecipe } from '../../constants/meshRecipes';
 import { spacing } from '../../constants/theme';
 import { formatCount } from '../../utils/format';
-import { getChallengeGlowColor, getChallengeGlowKey } from '../../services/adapters/challengeState';
+import { getChallengeGlowColor } from '../../services/adapters/challengeState';
 import type { ActivityType } from '../../types/activity';
 
 interface SpaceCardViewProps {
   name: string;
   description?: string | null;
   membersCount: number;
-  /** The space's own Activity Type: its color is the card's outline and its orbs of
-   * light, and the type picks the orbs' composition (the neutral color and a quieter
-   * set of orbs when the space has none). */
+  /** The space's own Activity Type: its color is the card's outline and its glow
+   * (the neutral color when the space has none). */
   activityType: ActivityType | null;
   /** The Join / Request / Pending pill, top right. None for a member or owner,
    * and in the form's live preview. */
@@ -28,15 +25,47 @@ interface SpaceCardViewProps {
 /**
  * What a Space looks like as a card: the glow card look shared with the challenge
  * cards (`AccentCard` — dark, the space's Activity Color as a fine outline and as
- * a glow) with a glow of its own, a scatter of soft ORBS of light (the `space` mesh
- * recipe: seven round bubbles of different sizes, a playful cousin of the Explore
- * cards' mesh; a half-moon from the top AND the bottom edge, `twinGlow`, when
- * `USE_MESH_CARD_GLOW` is off), in the Space card's compact layout, based on wireframe Chats-46A:
- * the name on the left, the Join / Request / Pending pill on the right of the same
+ * a glow), in the Space card's compact layout, based on wireframe Chats-46A: the
+ * name on the left, the Join / Request / Pending pill on the right of the same
  * row, then the description, then the member count. No activity badge (the color
  * says it), and roomier padding than the challenge cards. Sized by its content.
  * Presentational only — `SpaceCard` adds the press handling, and the space form
  * shows it as its live preview.
+ *
+ * The glow is `AccentCard`'s `linearGlow` — a plain diagonal `LinearGradient`,
+ * `ink` at the top-left to the space's own full, vivid activity color at the
+ * bottom-right. Real change 2026-09-25, replacing a long chain of attempts at
+ * getting there through `AccentCard`'s dome/bloom system instead (a half-moon
+ * from the bottom edge, matching Home's hero card and Mine's cards): after
+ * seven rounds of tuning peaks, falloff curves, a hot core and a real blur —
+ * still not saturated, not concentrated, not "colorful" enough — working out
+ * the dome's own geometry by hand (not eyeballing another guess) found a
+ * genuine bug: for this card's real short/wide size, its own math put the
+ * wash's brightest point ~900px below the visible card, meaning the ONE part
+ * of the dome that actually carries any hue variation was rendering at ~5%
+ * strength the entire time, no matter how the bloom (a single flat color) was
+ * tuned. When an attached reference image ("I want something like this, only
+ * gradient wise... with their activity colors") showed a plain corner-to-corner
+ * gradient card, not a radial glow at all, that turned out to be a completely
+ * different, much simpler shape — no falloff curve to tighten, no bloom/wash
+ * balance, no "circle" to ever be visible — that matches what was actually
+ * being asked for far more directly than the dome ever could. This card's own
+ * former dome tuning history (and everything learned about `AccentDome`'s
+ * circle-through-three-points geometry along the way) isn't reproduced here —
+ * see this file's git history if it's ever needed again. Uses Skia's own
+ * `LinearGradient` (the same primitive `AccentDome`'s own wash already draws
+ * successfully) — NOT `expo-linear-gradient`, confirmed to render nothing at
+ * all in this app's actual build (see `ChallengeCardShimmer.tsx`'s own doc
+ * comment for that already-diagnosed bug) — see `linearGlow`'s own prop doc
+ * on `AccentCard` for the rest.
+ *
+ * This used to be its own thing before the dome, too: a scatter of soft ORBS
+ * of light (the `space` mesh recipe: seven round bubbles of different sizes —
+ * kept in meshRecipes.ts for reference/reversion, same pattern as
+ * `LAYOUTS.mine`), or, with `USE_MESH_CARD_GLOW` off, a half-moon from BOTH
+ * the top and bottom edge (`twinGlow`). None of that is drawn here anymore —
+ * layout, padding and every other part of this card are unchanged throughout
+ * all of this.
  */
 export function SpaceCardView({
   name,
@@ -46,10 +75,9 @@ export function SpaceCardView({
   cta,
 }: SpaceCardViewProps) {
   const { t } = useTranslation();
-  const glowRecipe = USE_MESH_CARD_GLOW ? getMeshRecipe('space', getChallengeGlowKey('active', activityType)) : undefined;
 
   return (
-    <AccentCard color={getChallengeGlowColor('active', activityType)} glowRecipe={glowRecipe} twinGlow style={styles.card}>
+    <AccentCard color={getChallengeGlowColor('active', activityType)} linearGlow style={styles.card}>
       {/* The name on the left, in the SAME row as the CTA pill, the CTA anchored
           to its top edge (the wireframe's shape). */}
       <View style={styles.headerRow}>

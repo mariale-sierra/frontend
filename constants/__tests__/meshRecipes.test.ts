@@ -155,10 +155,15 @@ describe('MESH_RECIPES', () => {
     for (const blob of blobs) {
       expect(blob.peak).toBeLessThanOrEqual(0.4);
     }
-    // Added up where the fields overlap, still well short of that anywhere.
+    // Added up where the fields overlap. Ceiling raised 0.5 -> 0.55 2026-09-25
+    // for `explore` specifically (per explicit "the explore cards are still
+    // very not saturated... ignore them in the gradient capacity and do what
+    // you want" — full latitude on that recipe), whose peaks now sit right at
+    // this file's own individual cap; the other kinds' peaks are unchanged
+    // and stay well clear of either number.
     for (let y = 0; y <= 1; y += 0.1) {
       for (let x = 0; x <= 1; x += 0.1) {
-        expect(glowAt(blobs, x, y, ASPECT[kind])).toBeLessThanOrEqual(0.5);
+        expect(glowAt(blobs, x, y, ASPECT[kind])).toBeLessThanOrEqual(0.55);
       }
     }
   });
