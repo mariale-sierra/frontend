@@ -32,6 +32,8 @@ const en = {
       serverErrorMessage: 'A server error occurred. Please try again.',
       networkErrorTitle: 'Connection error',
       networkErrorMessage: 'Could not connect to the server. Check your internet connection.',
+      contentRejectedTitle: 'Content not allowed',
+      contentRejectedMessage: 'Your content does not meet the community guidelines.',
     },
   },
   welcome: {

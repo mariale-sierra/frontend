@@ -32,6 +32,8 @@ const es = {
       serverErrorMessage: 'Ha ocurrido un error en el servidor. Intenta nuevamente.',
       networkErrorTitle: 'Error de conexión',
       networkErrorMessage: 'No se puede conectar al servidor. Verifica tu conexión a internet.',
+      contentRejectedTitle: 'Contenido no permitido',
+      contentRejectedMessage: 'Tu contenido no cumple con las normas de la comunidad.',
     },
   },
   welcome: {

@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import i18n from '../i18n';
 import { getAccessToken } from './auth/token.service';
 import { useErrorNotificationStore } from '../store/errorNotificationStore';
+import { isContentRejectedError } from '../utils/contentModeration';
 
 // Lets a specific call opt out of the global error toast below — for
 // best-effort writes a caller already handles on its own (catches, logs, and
@@ -61,7 +62,13 @@ api.interceptors.response.use(
     const errorStore = useErrorNotificationStore.getState();
 
     // Handle different error types
-    if (error?.response?.status === 401) {
+    if (isContentRejectedError(error)) {
+      errorStore.show({
+        title: i18n.t('common.errors.contentRejectedTitle'),
+        message: i18n.t('common.errors.contentRejectedMessage'),
+        duration: 5000,
+      });
+    } else if (error?.response?.status === 401) {
       errorStore.show({
         title: i18n.t('common.errors.sessionExpiredTitle'),
         message: i18n.t('common.errors.sessionExpiredMessage'),

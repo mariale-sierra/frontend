@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { buildCreateChallengePayload } from '../services/adapters/index';
 import { createChallenge } from '../services/challenge/challenge.service';
+import { isContentRejectedError } from '../utils/contentModeration';
 import type { ChallengeVisibility } from '../types/challenge';
 import { useChallengeBuilder } from '../store/challengeBuilderStore';
 import { getRoutineLocationSummary, useRoutineBuilder } from '../store/routineBuilderStore';
@@ -309,6 +310,10 @@ export function useCreateChallengeFlow() {
       };
       const e = err as AxiosLike;
       console.error('[createChallenge] error:', err);
+
+      // Rejected by automatic moderation (B3): the global interceptor already
+      // showed the i18n toast via errorNotificationStore — skip the duplicate Alert.
+      if (isContentRejectedError(err)) return;
 
       const raw = e?.response?.data?.message;
       const backendMessage = Array.isArray(raw) ? raw.join('\n') : (raw ?? e?.message);

@@ -23,6 +23,7 @@ import {
   updateMyProfilePhoto,
 } from '../../services/user/user.service';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
+import { isContentRejectedError } from '../../utils/contentModeration';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
@@ -115,8 +116,12 @@ export default function EditProfile() {
         showSuccess({ message: t('profileEdit.saved') });
       }
       safeBack('/(tabs)/profile');
-    } catch {
-      show({ message: t('profileEdit.saveError') });
+    } catch (error) {
+      // A bio rejected by moderation (B3) already got its own toast from the
+      // global interceptor — don't overwrite it with the generic save error.
+      if (!isContentRejectedError(error)) {
+        show({ message: t('profileEdit.saveError') });
+      }
     } finally {
       setSaving(false);
     }
