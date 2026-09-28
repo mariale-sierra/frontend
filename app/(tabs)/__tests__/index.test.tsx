@@ -33,6 +33,8 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('../../../services/user/user.service', () => ({
   getMyChallenges: jest.fn(),
 }));
+// FeedPostCard's report sheet would otherwise pull in the real axios client.
+jest.mock('../../../services/reports/reports.service', () => ({ createReport: jest.fn() }));
 jest.mock('../../../services/feed/feed.service', () => ({
   getHomeFeed: jest.fn(),
 }));

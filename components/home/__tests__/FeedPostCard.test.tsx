@@ -18,6 +18,8 @@ jest.mock('../../../hooks/useAuth', () => ({
   useAuth: () => ({ userId: 'viewer-1' }),
 }));
 
+// The report sheet's service would otherwise pull in the real axios client.
+jest.mock('../../../services/reports/reports.service', () => ({ createReport: jest.fn() }));
 jest.mock('../../../services/workout-posts/workout-posts.service', () => ({
   reactToPost: jest.fn(),
   unreactToPost: jest.fn(),
@@ -27,6 +29,9 @@ jest.mock('../../../services/workout-posts/workout-posts.service', () => ({
 // calls — irrelevant to this card's own reaction-toggle behavior, and its
 // mapping logic already has its own coverage (workoutPostSocialAdapter.test.ts).
 // Stubbed to a no-op so this test can mount FeedPostCard in isolation.
+jest.mock('../../reports/ReportReasonSheet', () => ({
+  ReportReasonSheet: () => null,
+}));
 jest.mock('../CommentsSheet', () => ({
   CommentsSheet: () => null,
 }));

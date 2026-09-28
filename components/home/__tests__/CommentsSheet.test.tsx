@@ -15,6 +15,8 @@ jest.mock('react-i18next', () => ({
 jest.mock('../../../hooks/useAuth', () => ({
   useAuth: () => ({ userId: 'viewer-1' }),
 }));
+// The report sheet's service would otherwise pull in the real axios client.
+jest.mock('../../../services/reports/reports.service', () => ({ createReport: jest.fn() }));
 jest.mock('../../../services/workout-posts/workout-posts.service', () => ({
   listAllComments: jest.fn(),
   createComment: jest.fn(),
