@@ -7,6 +7,7 @@ import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 import { Row } from '../layout/row';
 import { CommentsSheet } from './CommentsSheet';
+import { ReportReasonSheet } from '../reports/ReportReasonSheet';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { reactToPost, unreactToPost } from '../../services/workout-posts/workout-posts.service';
@@ -40,6 +41,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
   const [likesCount, setLikesCount] = useState(post.likesCount);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
   // A ref, not state, for the in-flight guard below — two taps fired back to
   // back (before React has committed a re-render) would both read the same
   // stale `false` from a state variable's closure, letting both through.
@@ -132,9 +134,20 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
         </Row>
 
         {isOwnPost ? null : (
-          <Row pressable onPress={handleSendMessage} gap="xs">
-            <Icon name="paper-plane-outline" size={20} color={colors.paper} />
-            <Text variant="caption" tone="secondary">{t('home.sendMessage')}</Text>
+          <Row gap="lg">
+            <Row pressable onPress={handleSendMessage} gap="xs">
+              <Icon name="paper-plane-outline" size={20} color={colors.paper} />
+              <Text variant="caption" tone="secondary">{t('home.sendMessage')}</Text>
+            </Row>
+            <Row
+              pressable
+              onPress={() => setReportVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t('reports.reportPostA11y')}
+              testID="post-report"
+            >
+              <Icon name="flag-outline" size={20} color={colors.paper} />
+            </Row>
           </Row>
         )}
       </Row>
@@ -144,6 +157,13 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
         postId={post.id}
         onClose={() => setCommentsVisible(false)}
         onCommentsCountChange={setCommentsCount}
+      />
+
+      <ReportReasonSheet
+        visible={reportVisible}
+        targetType="post"
+        targetId={post.id}
+        onClose={() => setReportVisible(false)}
       />
     </View>
   );

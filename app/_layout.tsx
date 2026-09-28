@@ -114,6 +114,7 @@ function RootNavigator() {
             screen in this app is registered the same way. */}
         <Stack.Screen name="profile/[userId]" options={{ headerShown: false }} />
         <Stack.Screen name="profile/about" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/moderation" options={{ headerShown: false }} />
         <Stack.Screen name="exercises/index" options={{ headerShown: false }} />
         <Stack.Screen name="exercises/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="exercises/muscles/index" options={{ headerShown: false }} />

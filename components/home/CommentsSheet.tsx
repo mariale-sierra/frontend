@@ -9,6 +9,7 @@ import { Input } from '../ui/input';
 import { Text } from '../ui/text';
 import { Row } from '../layout/row';
 import { CommentRow } from './CommentRow';
+import { ReportReasonSheet } from '../reports/ReportReasonSheet';
 import { colors, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { useAuth } from '../../hooks/useAuth';
@@ -66,6 +67,8 @@ export function CommentsSheet({
 
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  const [reportCommentId, setReportCommentId] = useState<number | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -164,6 +167,7 @@ export function CommentsSheet({
                   comment={item}
                   isMine={item.authorId === userId}
                   onDelete={() => setPendingDeleteId(item.id)}
+                  onReport={() => setReportCommentId(item.id)}
                 />
               )}
               ItemSeparatorComponent={ItemSeparator}
@@ -225,6 +229,13 @@ export function CommentsSheet({
           disabled: deleting,
         }}
         onDismiss={() => setPendingDeleteId(null)}
+      />
+
+      <ReportReasonSheet
+        visible={reportCommentId !== null}
+        targetType="comment"
+        targetId={reportCommentId === null ? null : String(reportCommentId)}
+        onClose={() => setReportCommentId(null)}
       />
     </>
   );

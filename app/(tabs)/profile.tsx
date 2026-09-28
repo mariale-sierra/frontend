@@ -14,6 +14,7 @@ import type { PostsView } from '../../components/profile';
 import type { ChallengePhoto } from '../../types/challenge';
 import { Row } from '../../components/layout/row';
 import { useAuth } from '../../hooks/useAuth';
+import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 /**
@@ -25,6 +26,7 @@ export default function Profile() {
   const { t } = useTranslation();
   const router = useRouter();
   const { username: sessionUsername } = useAuth();
+  const isAdmin = useIsAdmin();
   const [profile, setProfile] = useState<MyProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +95,17 @@ export default function Profile() {
 
   const topBar = (
     <Row justify="flex-end" gap="sm" style={styles.topBar}>
+      {isAdmin && (
+        <IconButton
+          name="shield-checkmark-outline"
+          iconSize={22}
+          onPress={() => router.push('/profile/moderation')}
+          accessibilityRole="button"
+          accessibilityLabel={t('moderation.openA11y')}
+          hitSlop={10}
+          testID="open-moderation"
+        />
+      )}
       <IconButton
         name="pencil-outline"
         iconSize={22}
