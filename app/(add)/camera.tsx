@@ -124,6 +124,14 @@ export default function Camera() {
 
   const cameraRef = useRef<CameraView>(null);
   const isBusy = isTakingPicture || uploadingImage || submittingProgress;
+  // B5: a double tap fired back-to-back (before React has committed the
+  // `isBusy` re-render that disables the button) would both read the same
+  // stale `false` and both call submitWorkoutProgress — `useRef` updates
+  // are visible synchronously, so the second tap's check always sees the
+  // first tap's write. Same pattern as FeedPostCard's `reactingRef`. This
+  // is UX defense only — the actual guarantee against a duplicate is the
+  // backend's uq_workout_logs_user_challenge_local_day constraint.
+  const confirmingRef = useRef(false);
 
   function toggleVisibility() {
     setVisibility((v) => (v === 'followers' ? 'private' : 'followers'));
@@ -159,7 +167,7 @@ export default function Camera() {
   }
 
   async function handleConfirm() {
-    if (isBusy || !capturedUri) return;
+    if (isBusy || !capturedUri || confirmingRef.current) return;
 
     if (!selectedChallengeId) {
       setError(t('camera.selectChallengeError'));
@@ -167,6 +175,15 @@ export default function Camera() {
       return;
     }
 
+    confirmingRef.current = true;
+    try {
+      await confirmProgress(capturedUri, selectedChallengeId);
+    } finally {
+      confirmingRef.current = false;
+    }
+  }
+
+  async function confirmProgress(capturedUri: string, selectedChallengeId: string) {
     setError(null);
     setUploadingImage(true);
     let publicUrl: string;
