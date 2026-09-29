@@ -22,6 +22,9 @@ jest.mock('../../../services/workout-posts/workout-posts.service', () => ({
 jest.mock('../../reports/ReportReasonSheet', () => ({
   ReportReasonSheet: () => null,
 }));
+jest.mock('../PostOptionsSheet', () => ({
+  PostOptionsSheet: () => null,
+}));
 jest.mock('../CommentsSheet', () => ({
   CommentsSheet: () => null,
 }));

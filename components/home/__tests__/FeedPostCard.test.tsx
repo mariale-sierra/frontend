@@ -32,6 +32,9 @@ jest.mock('../../../services/workout-posts/workout-posts.service', () => ({
 jest.mock('../../reports/ReportReasonSheet', () => ({
   ReportReasonSheet: () => null,
 }));
+jest.mock('../PostOptionsSheet', () => ({
+  PostOptionsSheet: () => null,
+}));
 jest.mock('../CommentsSheet', () => ({
   CommentsSheet: () => null,
 }));
@@ -70,6 +73,19 @@ describe('FeedPostCard — send message action', () => {
   it('hides the "Message" action for your own post', async () => {
     const screen = await renderWithTheme(<FeedPostCard post={basePost({ userId: 'viewer-1' })} />);
     expect(screen.queryByText('home.sendMessage')).toBeNull();
+  });
+});
+
+describe('FeedPostCard — options menu', () => {
+  it('shows the "..." options button on another user\'s post', async () => {
+    const screen = await renderWithTheme(<FeedPostCard post={basePost({ userId: 'user-1' })} />);
+    expect(screen.queryByTestId('post-options')).toBeTruthy();
+  });
+
+  // Report is its only option, and you can't report your own post.
+  it('hides the "..." options button on your own post', async () => {
+    const screen = await renderWithTheme(<FeedPostCard post={basePost({ userId: 'viewer-1' })} />);
+    expect(screen.queryByTestId('post-options')).toBeNull();
   });
 });
 

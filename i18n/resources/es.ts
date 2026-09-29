@@ -539,6 +539,12 @@ const es = {
     emptyFeedMessage: 'Aún no hay publicaciones. ¡Sé el primero en compartir!',
     feedErrorMessage: 'No se pudo cargar el feed. Intenta de nuevo más tarde.',
     sendMessage: 'Enviar un mensaje',
+    postOptions: {
+      title: 'Opciones de la publicación',
+      report: 'Reportar publicación',
+      openA11y: 'Opciones de la publicación',
+    },
+    openAuthorProfileA11y: 'Abrir el perfil de {{name}}',
     reactionA11y: 'Reaccionar a esta publicación',
     commentsA11y: 'Ver comentarios',
     streaksTitle: 'Rachas de hoy',

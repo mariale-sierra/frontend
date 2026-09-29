@@ -3,12 +3,10 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { BottomSheetModal } from '../ui/bottomSheetModal';
 import { Button } from '../ui/button';
-import { Icon } from '../ui/icon';
 import { Input } from '../ui/input';
 import { Text } from '../ui/text';
 import { Row } from '../layout/row';
-import { colors, radius, spacing, textOpacity } from '../../constants/theme';
-import { withAlpha } from '../../utils/color';
+import { colors, radius, spacing } from '../../constants/theme';
 import { createReport } from '../../services/reports/reports.service';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { REPORT_REASONS } from '../../types/content-report';
@@ -81,7 +79,7 @@ export function ReportReasonSheet({ visible, targetType, targetId, onClose }: Re
               key={r}
               pressable
               onPress={() => setReason(r)}
-              justify="space-between"
+              justify="flex-start"
               align="center"
               style={[styles.option, selected && styles.optionSelected]}
               accessibilityRole="radio"
@@ -89,11 +87,6 @@ export function ReportReasonSheet({ visible, targetType, targetId, onClose }: Re
               testID={`report-reason-${r}`}
             >
               <Text variant="body">{t(`reports.reasons.${r}`)}</Text>
-              <Icon
-                name={selected ? 'radio-button-on' : 'radio-button-off'}
-                size={20}
-                color={selected ? colors.primary : withAlpha(colors.paper, textOpacity.tertiary)}
-              />
             </Row>
           );
         })}
@@ -137,14 +130,17 @@ const styles = StyleSheet.create({
   listContent: {
     gap: spacing.sm,
   },
+  // No surface card behind each reason — only the selected one gets an
+  // outline. The border is always 1px (transparent until selected) so
+  // selecting a reason doesn't nudge the text by a pixel.
   option: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.base,
     borderRadius: radius.medium,
-    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   optionSelected: {
-    borderWidth: 1,
     borderColor: colors.primary,
   },
   detailsInput: {

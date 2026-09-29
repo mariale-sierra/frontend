@@ -551,6 +551,12 @@ const en = {
     emptyFeedMessage: 'No posts yet. Be the first to share!',
     feedErrorMessage: 'Could not load the feed. Try again later.',
     sendMessage: 'Send a message',
+    postOptions: {
+      title: 'Post options',
+      report: 'Report post',
+      openA11y: 'Post options',
+    },
+    openAuthorProfileA11y: "Open {{name}}'s profile",
     reactionA11y: 'Like this post',
     commentsA11y: 'View comments',
     streaksTitle: 'Streaks today',
