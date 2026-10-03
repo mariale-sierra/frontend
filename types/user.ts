@@ -5,6 +5,8 @@ export interface UserProfileContract {
   is_active?: boolean;
   /** Bloque 1 — global platform admin (GET /users/me only). */
   is_admin?: boolean;
+  /** True when the user never accepted the current Terms / Privacy Policy. */
+  requires_terms_acceptance?: boolean;
   created_at?: string;
   updated_at?: string;
   [key: string]: unknown;

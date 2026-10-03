@@ -1022,6 +1022,51 @@ const en = {
     anatomyTitle: 'Anatomy illustrations',
     anatomyCredit: 'Anatomy illustrations by muscle_mapper (MIT license).',
   },
+  legal: {
+    version: 'Version {{version}}',
+    docs: {
+      terms: 'Terms and Conditions',
+      privacy: 'Privacy Policy',
+      community: 'Community Guidelines',
+    },
+    consent: {
+      accept: 'I have read and accept the Terms and Conditions, the Privacy Policy and the Community Guidelines.',
+      age: 'I am 16 years old or older.',
+      required: 'You must accept the terms and confirm you are 16 or older to continue.',
+    },
+    accept: {
+      title: 'Our terms have been updated',
+      subtitle: 'To keep using Havit, please review and accept the Terms, the Privacy Policy and the Community Guidelines.',
+      cta: 'Accept and continue',
+      failed: 'Could not save your acceptance. Please try again.',
+    },
+  },
+  deleteAccount: {
+    row: 'Delete account',
+    rowA11y: 'Delete your account',
+    title: 'Delete account',
+    whatHappens: 'What happens when you delete your account',
+    consequence: {
+      posts: 'Your posts, photos, comments and reactions are deleted.',
+      metrics: 'Your workout logs and metrics are deleted.',
+      messages: 'Your messages in chats and spaces are deleted.',
+      social: 'You are removed from challenges, spaces, followers and following.',
+      irreversible: 'After the waiting period this cannot be undone.',
+    },
+    gracePeriod: 'You have 30 days to change your mind. During that time your profile is hidden, and you can cancel by logging in and opening this screen.',
+    passwordLabel: 'Confirm your password',
+    requestCta: 'Delete my account',
+    confirmTitle: 'Delete your account?',
+    confirmMessage: 'Your account and data will be permanently deleted in 30 days. You can cancel until then.',
+    confirmCta: 'Yes, delete',
+    wrongPassword: 'That password is not correct.',
+    alreadyRequested: 'You already requested deletion of this account.',
+    failed: 'We could not process your request. Please try again.',
+    pendingTitle: 'Deletion scheduled',
+    pendingBody: 'Your account and data will be permanently deleted on {{date}}. Until then you can cancel.',
+    cancelCta: 'Cancel deletion',
+    cancelFailed: 'Could not cancel the deletion. Please try again.',
+  },
 } as const;
 
 export default en;

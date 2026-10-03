@@ -3,6 +3,7 @@ import { clearAccessToken, getAccessToken, setAccessToken } from './token.servic
 import { storage } from '../../utils/storage';
 import type {
   AuthSessionResponse,
+  LegalConsent,
   LoginRequest,
   RegisterRequest,
 } from '../../types/auth';
@@ -27,8 +28,13 @@ export async function login(email: string, password: string) {
   }
 }
 
-export async function register(email: string, username: string, password: string) {
-  const payload: RegisterRequest = { email, username, password };
+export async function register(
+  email: string,
+  username: string,
+  password: string,
+  consent: LegalConsent,
+) {
+  const payload: RegisterRequest = { email, username, password, ...consent };
   const response = await api.post<AuthSessionResponse>('/auth/register', payload);
   const { accessToken, user } = response.data;
   await setAccessToken(accessToken);
@@ -38,6 +44,12 @@ export async function register(email: string, username: string, password: string
   if (user?.username) {
     await storage.setItem('username', user.username);
   }
+  return response.data;
+}
+
+/** For accounts that never accepted the current Terms (GET /users/me -> requires_terms_acceptance). */
+export async function acceptTerms(consent: LegalConsent) {
+  const response = await api.post('/auth/accept-terms', consent);
   return response.data;
 }
 

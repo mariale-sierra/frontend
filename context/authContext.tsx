@@ -9,6 +9,7 @@ import {
   register as registerService,
 } from '../services/auth/auth.service';
 import { invalidateChallengeProgressCache } from '../hooks/useChallengeProgress';
+import type { LegalConsent } from '../types/auth';
 
 interface AuthContextValue {
   token: string | null;
@@ -17,7 +18,12 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isRestoring: boolean;
   login: (email: string, password: string) => Promise<any>;
-  register: (email: string, username: string, password: string) => Promise<any>;
+  register: (
+    email: string,
+    username: string,
+    password: string,
+    consent: LegalConsent,
+  ) => Promise<any>;
   logout: () => Promise<void>;
   restoreSession: () => Promise<void>;
 }
@@ -101,13 +107,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return result;
   }, []);
 
-  const register = useCallback(async (email: string, username: string, password: string) => {
-    const result = await registerService(email, username, password);
+  const register = useCallback(
+    async (email: string, username: string, password: string, consent: LegalConsent) => {
+    const result = await registerService(email, username, password, consent);
     setToken(result?.accessToken ?? (await getStoredToken()));
     setUserId(result?.user?.id ?? (await getStoredUserId()));
     setUsername(result?.user?.username ?? (await getStoredUsername()));
     return result;
-  }, []);
+    },
+    [],
+  );
 
   const logout = useCallback(async () => {
     await logoutService();

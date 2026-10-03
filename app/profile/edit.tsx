@@ -16,6 +16,7 @@ import { Divider } from '../../components/ui/divider';
 import { Row } from '../../components/layout/row';
 import { Stack } from '../../components/layout/stack';
 import { LogoutButton } from '../../components/profile/LogoutButton';
+import { DeleteAccountRow } from '../../components/profile/DeleteAccountRow';
 import { ControlledFormField } from '../../components/form/ControlledFormField';
 import {
   getMyProfile,
@@ -334,6 +335,7 @@ export default function EditProfile() {
         <Divider variant="section" marginVertical="sm" />
 
         <LogoutButton />
+        <DeleteAccountRow />
       </ScrollView>
     </ScreenBackground>
   );

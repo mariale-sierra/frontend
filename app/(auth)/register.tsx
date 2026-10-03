@@ -29,6 +29,7 @@ import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { activityColors, colors, fillOpacity, radius, shadows, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { createRegisterSchema, type RegisterFormValues } from '../../validation/authSchemas';
+import { LegalConsent, type LegalConsentValue } from '../../components/legal/LegalConsent';
 
 const INTRO_COUNT = 3;
 // Page 1 ("Real challenges, real routines") got a second photo, per explicit
@@ -195,6 +196,14 @@ export default function Register() {
     setLoadedImageCount((c) => c + 1);
   }
 
+  // Both consents are mandatory (T&C + Privacy/Community docs, and 16+); the
+  // account is not created until both are checked. The backend enforces it too.
+  const [consent, setConsent] = useState<LegalConsentValue>({
+    acceptTerms: false,
+    confirmAge16: false,
+  });
+  const consentGiven = consent.acceptTerms && consent.confirmAge16;
+
   const schema = useMemo(() => createRegisterSchema(t), [t]);
   const { control, trigger, getValues } = useForm<RegisterFormValues>({
     resolver: zodResolver(schema),
@@ -305,11 +314,19 @@ export default function Register() {
       return;
     }
 
-    // Last step (password) just validated — create the account.
+    // Last step (password) just validated — create the account, but only
+    // with both legal consents given.
+    if (!consentGiven) {
+      show({ message: t('legal.consent.required') });
+      return;
+    }
     setSubmitting(true);
     try {
       const { email, username, password } = getValues();
-      await register(email, username, password);
+      await register(email, username, password, {
+        acceptTerms: consent.acceptTerms,
+        confirmAge16: consent.confirmAge16,
+      });
       // Direct, synchronous call right after register() resolves — lands in
       // the same batch as the isAuthenticated flip it just caused, so
       // RootNavigator's own effect never gets a chance to send this
@@ -512,6 +529,10 @@ export default function Register() {
               />
             )}
           />
+
+          {fieldKey === 'password' && (
+            <LegalConsent value={consent} onChange={setConsent} />
+          )}
         </View>
       )}
 
@@ -524,7 +545,14 @@ export default function Register() {
           </View>
         )}
 
-        <Button variant="primary" size="md" onPress={handleNext} loading={submitting} style={styles.button}>
+        <Button
+          variant="primary"
+          size="md"
+          onPress={handleNext}
+          loading={submitting}
+          disabled={step === TOTAL_STEPS - 1 && !consentGiven}
+          style={styles.button}
+        >
           {buttonLabel}
         </Button>
       </View>

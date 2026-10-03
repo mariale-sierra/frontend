@@ -986,6 +986,51 @@ const es = {
     anatomyTitle: 'Ilustraciones de anatomía',
     anatomyCredit: 'Ilustraciones de anatomía por muscle_mapper (licencia MIT).',
   },
+  legal: {
+    version: 'Versión {{version}}',
+    docs: {
+      terms: 'Términos y Condiciones',
+      privacy: 'Política de Privacidad',
+      community: 'Normas de la Comunidad',
+    },
+    consent: {
+      accept: 'He leído y acepto los Términos y Condiciones, la Política de Privacidad y las Normas de la Comunidad.',
+      age: 'Tengo 16 años o más.',
+      required: 'Debes aceptar los términos y confirmar que tienes 16 años o más para continuar.',
+    },
+    accept: {
+      title: 'Actualizamos nuestros términos',
+      subtitle: 'Para seguir usando Havit, revisa y acepta los Términos, la Política de Privacidad y las Normas de la Comunidad.',
+      cta: 'Aceptar y continuar',
+      failed: 'No pudimos guardar tu aceptación. Inténtalo de nuevo.',
+    },
+  },
+  deleteAccount: {
+    row: 'Eliminar cuenta',
+    rowA11y: 'Eliminar tu cuenta',
+    title: 'Eliminar cuenta',
+    whatHappens: 'Qué pasa al eliminar tu cuenta',
+    consequence: {
+      posts: 'Se eliminan tus publicaciones, fotos, comentarios y reacciones.',
+      metrics: 'Se eliminan tus registros de entrenamiento y métricas.',
+      messages: 'Se eliminan tus mensajes en chats y espacios.',
+      social: 'Sales de retos, espacios, seguidores y seguidos.',
+      irreversible: 'Pasado el plazo, no se puede deshacer.',
+    },
+    gracePeriod: 'Tienes 30 días para arrepentirte. Durante ese tiempo tu perfil se oculta y puedes cancelar iniciando sesión y abriendo esta pantalla.',
+    passwordLabel: 'Confirma tu contraseña',
+    requestCta: 'Eliminar mi cuenta',
+    confirmTitle: '¿Eliminar tu cuenta?',
+    confirmMessage: 'Tu cuenta y tus datos se eliminarán definitivamente en 30 días. Puedes cancelar hasta entonces.',
+    confirmCta: 'Sí, eliminar',
+    wrongPassword: 'La contraseña no es correcta.',
+    alreadyRequested: 'Ya solicitaste la eliminación de esta cuenta.',
+    failed: 'No pudimos procesar tu solicitud. Inténtalo de nuevo.',
+    pendingTitle: 'Eliminación programada',
+    pendingBody: 'Tu cuenta y tus datos se eliminarán definitivamente el {{date}}. Hasta entonces puedes cancelar.',
+    cancelCta: 'Cancelar eliminación',
+    cancelFailed: 'No se pudo cancelar la eliminación. Inténtalo de nuevo.',
+  },
 } as const;
 
 export default es;
