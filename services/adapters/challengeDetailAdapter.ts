@@ -41,6 +41,14 @@ export type ChallengeDetailAdapterResult =
 
 function getAuthorName(challenge: ChallengeContract): string | undefined {
   const candidates: Array<unknown> = [
+    // The real field, now that GET /challenges/:id embeds it
+    // (ChallengeAuthorDto) — prefer a display name, then the username.
+    // Checked before every other candidate below, which were all
+    // speculative field names that never actually existed on the response
+    // (this function's last resort, `created_by_user_id`, is a raw UUID —
+    // ugly, but kept as the final fallback for an even older cached response).
+    challenge.author?.displayName,
+    challenge.author?.username,
     challenge.created_by_username,
     challenge.creator_name,
     challenge.author_name,
@@ -149,4 +157,30 @@ export function toChallengeDetailViewModel(
       days: mapDays(challenge, locationsLabel),
     },
   };
+}
+
+/**
+ * What comes up after a day in the cycle, for the routine screen's "Next in the cycle":
+ * the next day and, if that is a REST day, the rest days that follow it and then the
+ * first routine after them — so a rest day is never the only thing shown, the routine
+ * it leads to always is. A routine day next is just itself. The cycle wraps round
+ * (the day after its last is its first), and it is followed for at most one lap.
+ */
+export function getUpcomingDays(
+  days: ChallengeDaySummary[],
+  cycleLengthDays: number,
+  fromDay: number,
+): ChallengeDaySummary[] {
+  const upcoming: ChallengeDaySummary[] = [];
+  if (cycleLengthDays <= 0) return upcoming;
+
+  let day = fromDay;
+  for (let step = 0; step < cycleLengthDays; step += 1) {
+    day = (day % cycleLengthDays) + 1;
+    const summary = days.find((item) => item.day === day);
+    if (!summary) break;
+    upcoming.push(summary);
+    if (!summary.isRestDay) break;
+  }
+  return upcoming;
 }

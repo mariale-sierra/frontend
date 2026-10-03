@@ -1,10 +1,11 @@
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
-import { colors, radius, shadows, spacing } from '../../constants/theme';
+import type { ReactNode } from 'react';
+import { Modal, Pressable, StyleSheet } from 'react-native';
+import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { Row } from '../layout/row';
 import { Stack } from '../layout/stack';
 import { Button } from './button';
+import { GlassSurface } from './glassSurface';
 import { Icon } from './icon';
 import { Text } from './text';
 
@@ -27,78 +28,55 @@ interface ConfirmationPopupProps {
   primaryButton: ConfirmationButtonConfig;
   secondaryButton?: ConfirmationButtonConfig;
   onDismiss?: () => void;
-  /** `success` tints the card's glow `success`-green instead of the default
-   * neutral `primary` tint — both are the same dark-card-with-a-glow
-   * shape now (see the 2026-08-30 redesign note below), not two visually
-   * distinct card treatments the way `success` used to be (a flat solid
-   * green fill). */
+  /** `success` makes the icon `success`-green instead of the neutral `primary`
+   * — the only place the tone shows. The card is the same glass for both. */
   tone?: 'default' | 'success';
   /** Optional icon shown centered above the title. Per explicit "make them
    * pop, once in a while" request — deliberately NOT added to every call
    * site mechanically; most popups still have none, and that's fine. */
   icon?: PopupIconName;
-  /** Overrides the icon's default color (the tone's own glow color). */
+  /** Overrides the icon's default color (the tone's own). */
   iconColor?: string;
+  /** Optional decorative content drawn over the whole modal (backdrop AND
+   * card), e.g. a confetti burst — `ChallengeFinishedPopup`'s own doc
+   * comment. Rendered inside the same `Modal`, since RN's `Modal` is its own
+   * native layer — a sibling outside `ConfirmationPopup` would render
+   * behind it, not on top. Must be non-interactive on its own (this popup
+   * doesn't add `pointerEvents` around it) so it never blocks the buttons.
+   * Nothing passes this today except that one popup — every other call site
+   * is unaffected. */
+  overlay?: ReactNode;
 }
 
-// Tone → the glow's own tint. Was `success` = a flat solid `colors.success`
-// card fill with `ink` (dark) text — replaced 2026-08-30, per explicit
-// "the gray feels too flat/meh, lacks depth" request (which named the
-// default tone, but the old success treatment had the exact same flatness
-// problem from the other direction — a flat block instead of anything with
-// depth). Both tones are now the same dark `ink` card with a radial glow in
-// the tone's own color, so `paper` (light) text works for both — no more
-// per-tone text-color branching anywhere in this component.
-const GLOW_COLOR = {
+// The tone shows in the icon and nowhere else. The card used to carry a radial
+// glow in the tone's color (neutral, or `success` green) behind everything, which
+// was far too loud for a confirmation — a standard popup is a card with a title, a
+// line of text and its buttons, and a status color, if any, on a small icon. So: a
+// frosted-glass card (the blur and tint of the nav bar and the comments sheet, plus
+// the light of a popup: a `paper` sheen and a gradient rim) over the dimmed
+// backdrop, so what is behind the popup shows through it. (It was a plain solid
+// `surface` card with a hairline: bland.)
+const ICON_COLOR = {
   default: colors.primary,
   success: colors.success,
 } as const;
 
-// Tunable glow parameters, named rather than left as inline magic numbers —
-// per explicit "check for no hardcoded stuff" request. These aren't shared
-// design tokens (no other component reuses this exact shape, same as
-// ChallengeAccentGlow's own local `widenFactor`/`r` constants) — they're
-// this one glow's own art-direction knobs, named so a future "make it
-// softer/bigger" request (like the two rounds that already happened) is a
-// one-line change instead of hunting through JSX for a bare number.
-// Revision history: r 90%→160% (2026-08-30, "too dark at the bottom"),
-// r 160%→220% + both stop opacities lowered (2026-08-30, "softer" + "bigger
-// radius" follow-up, same day — color mix itself explicitly kept as-is).
-const POPUP_GLOW_RADIUS = '220%';
-const POPUP_GLOW_PEAK_OPACITY = 0.22;
-const POPUP_GLOW_MID_OPACITY = 0.08;
+// The popup is sized like a standard alert (iOS's is 270 wide, Material's smallest 280):
+// it was 360 wide with 32px padding and a 30px title (`title`), which read as a
+// whole card, not a popup. Now 300 wide, 24px padding, a `subheader` title, a 14px
+// description and a 32px icon — about a fifth smaller each way.
+const ICON_SIZE = 32;
+
+// Not on the `spacing` scale on purpose — a WIDTH cap, like a per-component sizing
+// constant (`FAB_SIZE`/`AVATAR_SIZE` elsewhere), not a gap/padding value.
+const POPUP_MAX_WIDTH = 300;
 
 // Not on the `spacing` scale on purpose — a minimum WIDTH constraint so a
 // short label ("OK") doesn't render a visibly narrower button next to a
 // longer one in the same row, not a gap/padding value. Same "per-component
-// sizing constant" category as `FAB_SIZE`/`AVATAR_SIZE` elsewhere.
-const ACTION_BUTTON_MIN_WIDTH = 110;
-
-/**
- * The card's own soft top-down glow — same `react-native-svg` `RadialGradient`
- * mechanism `ScreenBackground`/`ChallengeAccentGlow` already use (the one
- * approved gradient technique in this app; never `expo-linear-gradient`,
- * removed elsewhere on purpose — see design system → Explicitly Rejected
- * Patterns). New exception for this component specifically, per explicit
- * "a gradient would look nice, a darker look" request — not a general
- * license to add gradients elsewhere without asking first.
- */
-function PopupGlow({ color }: { color: string }) {
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <Svg width="100%" height="100%">
-        <Defs>
-          <RadialGradient id="popupGlow" cx="50%" cy="0%" r={POPUP_GLOW_RADIUS}>
-            <Stop offset="0%" stopColor={color} stopOpacity={POPUP_GLOW_PEAK_OPACITY} />
-            <Stop offset="55%" stopColor={color} stopOpacity={POPUP_GLOW_MID_OPACITY} />
-            <Stop offset="100%" stopColor={color} stopOpacity={0} />
-          </RadialGradient>
-        </Defs>
-        <Rect width="100%" height="100%" fill="url(#popupGlow)" />
-      </Svg>
-    </View>
-  );
-}
+// sizing constant" category as `FAB_SIZE`/`AVATAR_SIZE` elsewhere. Two of them
+// and their gap still fit inside the card's padding at `POPUP_MAX_WIDTH`.
+const ACTION_BUTTON_MIN_WIDTH = 100;
 
 export function ConfirmationPopup({
   visible,
@@ -110,8 +88,8 @@ export function ConfirmationPopup({
   tone = 'default',
   icon,
   iconColor,
+  overlay,
 }: ConfirmationPopupProps) {
-  const glowColor = GLOW_COLOR[tone];
   const handleBackdropPress = () => {
     if (!primaryButton.loading && !secondaryButton?.loading) {
       onDismiss?.();
@@ -137,19 +115,14 @@ export function ConfirmationPopup({
         onPress={handleBackdropPress}
         disabled={!!(primaryButton.loading || secondaryButton?.loading)}
       >
-        {/* Two layers, not one: `shadows.lg` needs `overflow: visible` to
-            actually render (iOS clips a shadow the same as any other
-            content once its view has `overflow: hidden`), but the glow
-            below needs `overflow: hidden` to stay inside the rounded
-            corners instead of painting a visible square behind them. Same
-            "outer shadow wrapper + inner clipped fill" split `Card`'s own
-            glass/glow variants already use for the identical reason. */}
-        <Pressable style={styles.cardShadowWrap}>
-          <View style={styles.card}>
-            <PopupGlow color={glowColor} />
-            <Stack gap="lg" align="center">
+        {/* The wrapper takes the taps on the card, so they don't reach the
+            backdrop and dismiss the popup. (No shadow: a see-through card
+            can't cast one, and the glass rim does the lifting.) */}
+        <Pressable style={styles.cardWrap}>
+          <GlassSurface highlight style={styles.card}>
+            <Stack gap="base" align="center">
               {/* Icon-to-title gap is deliberately its OWN, smaller `Stack`
-                  (`md`, 12) nested inside the outer one (`lg`, 24) — per
+                  (`md`, 12) nested inside the outer one (`base`, 16) — per
                   explicit "the gap between icon and content feels too big"
                   follow-up. A single `Stack` can only apply one uniform
                   gap to every child, so shrinking just this one pairing
@@ -157,13 +130,13 @@ export function ConfirmationPopup({
                   row, which wasn't part of the complaint) needs this split
                   rather than one shared gap value. */}
               <Stack gap="md" align="center">
-                {icon && <Icon name={icon} size={40} color={iconColor ?? glowColor} />}
-                <Stack gap="sm" align="center" style={styles.textContent}>
-                  <Text variant="title" align="center">
+                {icon && <Icon name={icon} size={ICON_SIZE} color={iconColor ?? ICON_COLOR[tone]} />}
+                <Stack gap="xs" align="center">
+                  <Text variant="subheader" align="center">
                     {title}
                   </Text>
                   {description && (
-                    <Text variant="body" tone="secondary" align="center">
+                    <Text variant="body" size="sm" tone="secondary" align="center">
                       {description}
                     </Text>
                   )}
@@ -195,26 +168,27 @@ export function ConfirmationPopup({
                 </Button>
               </Row>
             </Stack>
-          </View>
+          </GlassSurface>
         </Pressable>
       </Pressable>
+      {overlay}
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  // The same dim as the bottom sheets' backdrop: the glass card needs something
+  // behind it to show through it, which a near-black .75 dim left nothing of.
   backdrop: {
     flex: 1,
-    backgroundColor: withAlpha(colors.ink, 0.75),
+    backgroundColor: withAlpha(colors.ink, fillOpacity.dim),
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.lg,
   },
-  cardShadowWrap: {
+  cardWrap: {
     width: '100%',
-    maxWidth: 360,
-    borderRadius: radius.xl,
-    ...shadows.lg,
+    maxWidth: POPUP_MAX_WIDTH,
   },
   // `radius.xl` (40, new 2026-08-30) — was `radius.big` (28), the scale's
   // previous top tier and the standard "hero card" radius used everywhere
@@ -223,14 +197,9 @@ const styles = StyleSheet.create({
   // theme.ts for why a new tier, not a `big` value change.
   card: {
     borderRadius: radius.xl,
-    padding: spacing.xl,
-    backgroundColor: colors.ink,
-    overflow: 'hidden',
+    padding: spacing.lg,
   },
   actionButton: {
     minWidth: ACTION_BUTTON_MIN_WIDTH,
-  },
-  textContent: {
-    paddingTop: spacing.sm,
   },
 });

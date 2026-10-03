@@ -28,6 +28,7 @@ Scripts found in `package.json`:
 - Android: `npm run android` runs `expo start --android`.
 - iOS: `npm run ios` runs `expo start --ios`.
 - Web: `npm run web` runs `expo start --web`.
+- Web Skia setup: the custom `index.web.tsx` entry waits for CanvasKit/WASM via `LoadSkiaWeb()` before registering Expo Router; `postinstall` refreshes `public/canvaskit.wasm` after Skia upgrades. App canvases go through `components/ui/webSafeCanvas.tsx` on web so each draw waits for a non-zero layout, releases its WebGL context, and route-owned background canvases unmount while their screen is covered. Card-only `AccentGlow` decorations use the flat card surface on web because CanvasKit can receive a stale zero-sized layout while cards mount or resize; native keeps Skia's regular renderer. This prevents CanvasKit's `rangeMin` or zero-sized `drawImage` errors without removing card interaction or content.
 - Lint: no script exists.
 - Typecheck: `npm run typecheck` (`tsc --noEmit`).
 - Test: `npm test` (Jest).
@@ -64,10 +65,14 @@ New screens should first be matched to an existing route group. Put tab-level sc
 ## 6. Bottom Navigation
 Bottom tabs are defined in `app/(tabs)/_layout.tsx` using `Tabs` from Expo Router.
 
-There are four routable tabs inside one capsule: `index` (Home), `search`, `challenges`, and `profile`. The `add` route remains registered only because Expo Router needs a file for it, but its separate right-hand `+` action prevents `tabPress` and opens `/log` directly.
+There are four routable tabs inside one capsule: `index` (Home), `search`, `challenges`, and `profile`. The `add` route remains registered only because Expo Router needs a file for it; its responsive fifth slot renders the separate right-hand `+` action, prevents `tabPress`, and opens `/log` directly. The glass background only covers the first four slots, leaving the action visually floating beside it. `BOTTOM_NAV_VARIANT` in `constants/bottomNav.ts` selects the new `glass` presentation by default. The original `BottomNavBackground` and its absolute geometry remain intact as the `legacy` fallback; switching that constant back to `legacy` also restores the matching legacy item geometry.
+
+The `(tabs)` stack screen keeps the navigator's area behind the transparent bar on Havit's `ink` surface, and the root navigation theme makes its card/background `ink` with a transparent border. Every platform uses an absolute transparent `tabBarStyle`, so scenes continue behind the floating bar instead of ending at a reserved strip. The bar itself remains implemented through `tabBarBackground` and per-item buttons; this preserves the custom visual and gesture layers while the native touch behavior is re-checked after any tab-bar style change.
 
 The navbar implementation is deliberately split across:
 - `components/navigation/bottomNavBackground.tsx`: decorative capsule, blur, and one shared indicator.
+- `components/navigation/bottomNavGlassBackground.tsx`: active cross-platform four-tab glass capsule.
+- `components/navigation/bottomNavGlassSurface.tsx` / `.ios.tsx`: shared Android/Web blur material and optional Expo native Liquid Glass on iOS 26+, used by the capsule and by the `+` action with a light `paper` tint.
 - `components/navigation/bottomNavIndicator.tsx`: the single oval that translates between tab slots.
 - `components/navigation/bottomNavTabButton.tsx`: explicit `Tap` and `Pan` gestures for tab selection and horizontal dragging.
 - `components/navigation/bottomNavContext.tsx`: shared visual state and the UI-thread spring/stretch sequence.
@@ -75,12 +80,13 @@ The navbar implementation is deliberately split across:
 
 `activeIndex` is a Reanimated `SharedValue` representing only the visual position (continuous from 0 through 3), not React Navigation's discrete route state. The selector, outline/filled icon wrapper opacity, and label color all derive directly from that same shared value on the UI thread, with no React-state or intermediate-derived visual state. Each Ionicon itself remains static inside an `Animated.View`, avoiding delayed animated-style reconciliation through the vector icon's nested native `Text` under Fabric. A drag writes this value on the UI thread, bounds it to the first/last tab, then rounds and springs to the nearest slot on release before a single JS bridge requests navigation. A tap starts that same spring before navigation. Route selection is only a fallback synchronizer for external navigation; a matching route update from the gesture is ignored so it cannot reset or restart an in-flight animation. Tab option render props are memoized and inactive screens use `freezeOnBlur` so opening a screen does not also reconcile inactive tab content. `BOTTOM_NAV_HEIGHT` is the single shared outer-height source: the capsule uses it directly and the FAB derives both width and height from it, with half-height radii so the pair remains aligned as a capsule and a true circle. Its labels use a local compact treatment so their visual weight remains balanced in the taller capsule. `BOTTOM_NAV_INDICATOR_EXTRA_WIDTH` widens the selector while recalculating the four tab slots and their outer insets from the same geometry: icons and selector centers remain aligned, including Home and Profile. It never changes route state or spring behavior.
 
-Do not set `tabBarStyle` or use a fully custom `tabBar`: on iOS with Fabric enabled, both have historically made the whole bar unresponsive. Preserve the existing `tabBarBackground` plus custom `tabBarButton` extension points. To change tab metadata, icons, ordering, or behavior, edit `app/(tabs)/_layout.tsx`; keep geometry and indicator motion synchronized through `constants/bottomNav.ts` rather than duplicating values.
+Avoid a fully custom `tabBar`: on iOS with Fabric enabled, it has historically made the whole bar unresponsive. The current `tabBarStyle` is intentionally limited to the transparent absolute overlay needed for the floating layout; preserve the existing `tabBarBackground` plus custom `tabBarButton` extension points. To change tab metadata, icons, ordering, or behavior, edit `app/(tabs)/_layout.tsx`; keep geometry and indicator motion synchronized through `constants/bottomNav.ts` rather than duplicating values.
 
 ## 7. API and Backend Integration
 - API client: `services/api.ts`.
 - Base URL: currently hardcoded as `http://20.63.84.1:3000` in `services/api.ts`.
 - Token injection: `services/api.ts` has an Axios request interceptor that calls `getAccessToken()` and sets `Authorization: Bearer <token>`.
+- Timezone header: native clients send `X-Timezone`; web omits it so browser requests remain compatible with older API deployments whose CORS allow-list does not include that custom header. The backend falls back to UTC when it is absent.
 - 401 handling: the Axios response interceptor logs 401s and rejects the error.
 - Token storage: `services/auth/token.service.ts` keeps the access token in memory and hydrates it from `utils/storage.ts`.
 - AsyncStorage wrapper: `utils/storage.ts` wraps `AsyncStorage.getItem`, `setItem`, and `removeItem`.

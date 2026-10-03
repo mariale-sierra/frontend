@@ -26,22 +26,54 @@ export function useConversationMessages(conversationId: string) {
   const [hasMore, setHasMore] = useState(false);
   const oldestIdRef = useRef<number | null>(null);
   const latestIdRef = useRef<number | null>(null);
+  // Real, reported bug: "clicking the username to check out the profile
+  // works, but when you go back to the chat, you are sent to the beginning
+  // of the chat thread again." Root cause traced to this hook, not the
+  // scroll logic itself (`useScrollToLatestMessage` correctly declines to
+  // re-scroll here, since nothing genuinely changed at the tail): the old
+  // `loadLatest` called `setLoading(true)` unconditionally, including from
+  // `useFocusEffect` — which fires on EVERY re-focus, not just the first
+  // mount, so navigating to the profile screen and back flipped `loading`
+  // back to `true`. The chat screen's own JSX is a ternary that fully
+  // UNMOUNTS the `FlatList` while `loading` is true (`app/messaging/
+  // [conversationId].tsx`) — so returning from the profile screen genuinely
+  // remounted a fresh `FlatList` instance with no scroll history, landing
+  // at its own default top position. Same class of bug, same fix, as Home's
+  // own feed re-focus effect (`app/(tabs)/index.tsx`) already documents:
+  // only flip the loading flag for the GENUINE first load; every focus
+  // after that refreshes `messages` silently in place.
+  const hasLoadedOnceRef = useRef(false);
+  // Defensive: resets the "silent refresh" flag if this hook instance were
+  // ever reused across a different `conversationId` (e.g. via
+  // `router.setParams` instead of pushing a new screen) — otherwise a
+  // genuinely different conversation's first load would wrongly skip the
+  // spinner using the PREVIOUS conversation's `hasLoadedOnceRef` state.
+  const conversationIdRef = useRef(conversationId);
+  if (conversationIdRef.current !== conversationId) {
+    conversationIdRef.current = conversationId;
+    hasLoadedOnceRef.current = false;
+  }
 
-  const loadLatest = useCallback(() => {
-    setLoading(true);
-    setError(false);
-    getMessages(conversationId)
-      .then((page) => {
-        setMessages(page.messages);
-        oldestIdRef.current = page.messages[0]?.id ?? null;
-        latestIdRef.current =
-          page.messages[page.messages.length - 1]?.id ?? null;
-        setHasMore(page.nextBefore !== null);
-        return markConversationRead(conversationId);
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, [conversationId]);
+  const loadLatest = useCallback(
+    (options?: { silent?: boolean }) => {
+      if (!options?.silent) setLoading(true);
+      setError(false);
+      getMessages(conversationId)
+        .then((page) => {
+          setMessages(page.messages);
+          oldestIdRef.current = page.messages[0]?.id ?? null;
+          latestIdRef.current =
+            page.messages[page.messages.length - 1]?.id ?? null;
+          setHasMore(page.nextBefore !== null);
+          return markConversationRead(conversationId);
+        })
+        .catch(() => setError(true))
+        .finally(() => {
+          if (!options?.silent) setLoading(false);
+        });
+    },
+    [conversationId],
+  );
 
   const poll = useCallback(() => {
     getMessages(conversationId, { limit: POLL_PAGE_SIZE })
@@ -66,7 +98,8 @@ export function useConversationMessages(conversationId: string) {
 
   useFocusEffect(
     useCallback(() => {
-      loadLatest();
+      loadLatest({ silent: hasLoadedOnceRef.current });
+      hasLoadedOnceRef.current = true;
       const interval = setInterval(poll, POLL_INTERVAL_MS);
       return () => clearInterval(interval);
       // eslint-disable-next-line react-hooks/exhaustive-deps

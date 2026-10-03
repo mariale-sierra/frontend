@@ -2,6 +2,7 @@ import {
   activityTypeForCategoryCode,
   findCategoryForActivityType,
   getSpaceAccentColor,
+  getSpaceActivityType,
   getSpaceMembershipCta,
 } from '../spaceAdapter';
 import { activityColors, colors } from '../../../constants/theme';
@@ -24,10 +25,18 @@ const baseSpace = (overrides: Partial<SpaceContract> = {}): SpaceContract => ({
 });
 
 describe('activityTypeForCategoryCode', () => {
-  it('maps every known exercise_categories.code to its ActivityType', () => {
+  // The real, live convention (verified directly against the API,
+  // 2026-09-21) — a space using one of these three colors couldn't load it
+  // back when this map was still keyed by the hyphenated form.
+  it("maps every known exercise_categories.code (the live, canonical underscored form) to its ActivityType", () => {
+    expect(activityTypeForCategoryCode('cardio_low')).toBe('cardioLow');
+    expect(activityTypeForCategoryCode('mind_body')).toBe('mindBody');
+    expect(activityTypeForCategoryCode('strength')).toBe('strength');
+  });
+
+  it('also resolves a stray legacy hyphenated code, defensively', () => {
     expect(activityTypeForCategoryCode('cardio-low')).toBe('cardioLow');
     expect(activityTypeForCategoryCode('mind-body')).toBe('mindBody');
-    expect(activityTypeForCategoryCode('strength')).toBe('strength');
   });
 
   it('returns null for an unknown code instead of throwing', () => {
@@ -58,6 +67,29 @@ describe('getSpaceAccentColor', () => {
 
   it('falls back to the neutral primary color when no category is set', () => {
     expect(getSpaceAccentColor(baseSpace())).toBe(colors.primary);
+  });
+});
+
+describe('getSpaceActivityType', () => {
+  it('is the activity type of the space\'s chosen category', () => {
+    const space = baseSpace({ activityCategory: { id: 1, code: 'mind-body', name: 'Mind-Body' } });
+
+    expect(getSpaceActivityType(space)).toBe('mindBody');
+  });
+
+  it('is null when no category is set, or one the app does not know', () => {
+    expect(getSpaceActivityType(baseSpace())).toBeNull();
+    expect(getSpaceActivityType(baseSpace({ activityCategory: { id: 9, code: 'unknown', name: 'Unknown' } }))).toBeNull();
+  });
+
+  it('is what the accent color comes from: the two agree for every category', () => {
+    for (const code of ['strength', 'cardio-intense', 'cardio-low', 'flexibility', 'mind-body', 'functional']) {
+      const space = baseSpace({ activityCategory: { id: 1, code, name: code } });
+      const type = getSpaceActivityType(space);
+
+      expect(type).not.toBeNull();
+      expect(getSpaceAccentColor(space)).toBe(activityColors[type!]);
+    }
   });
 });
 

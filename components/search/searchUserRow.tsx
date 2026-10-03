@@ -19,8 +19,10 @@ interface SearchUserRowProps {
  * shipped on the other-user profile screen) rather than a new follow
  * control. The flame/streak badge only renders when `streak_days` is
  * present, same graceful-hide rule `ProfileHeader`'s own streak badge
- * already follows — the backend field isn't reliably populated yet (see
- * the skill's Open Items Tracker).
+ * already follows — GET /users/search sends it batched (one query for the
+ * whole result page) since 2026-09-22, but omits it for a private account
+ * the caller doesn't follow, same as any other profile stat (see
+ * `PublicProfileContract.streak_days`).
  */
 export function SearchUserRow({ user }: SearchUserRowProps) {
   const router = useRouter();

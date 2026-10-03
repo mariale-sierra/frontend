@@ -1,6 +1,5 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-import { colors, radius, spacing } from '../../../constants/theme';
-import { Text } from '../../ui/text';
+import { useMemo } from 'react';
+import { GlassSegmentedControl } from '../../ui/glassSegmentedControl';
 
 export type ChallengesView = 'mine' | 'explore';
 
@@ -11,49 +10,16 @@ interface ChallengesViewToggleProps {
   exploreLabel: string;
 }
 
-// Segmented control, per design system → Components → Segmented control —
-// same track/padding/radius as Profile's posts/photos toggle, but text
-// segments that fill the available width instead of fixed-size icon slots.
-// Active segment background is `primary`.
+// The Mine / Explore switch — a glass segmented control that behaves like the
+// bottom nav bar (sliding chip, haptic, drag). See `GlassSegmentedControl`.
 export function ChallengesViewToggle({ view, onViewChange, mineLabel, exploreLabel }: ChallengesViewToggleProps) {
-  return (
-    <View style={styles.track}>
-      <Segment label={mineLabel} active={view === 'mine'} onPress={() => onViewChange('mine')} />
-      <Segment label={exploreLabel} active={view === 'explore'} onPress={() => onViewChange('explore')} />
-    </View>
+  const segments = useMemo(
+    () => [
+      { key: 'mine' as const, label: mineLabel },
+      { key: 'explore' as const, label: exploreLabel },
+    ],
+    [mineLabel, exploreLabel],
   );
-}
 
-function Segment({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={[styles.segment, active && styles.segmentActive]}
-      accessibilityRole="button"
-    >
-      <Text variant="label" weight={active ? 'bold' : 'medium'} inverse={active} tone={active ? 'primary' : 'tertiary'}>
-        {label}
-      </Text>
-    </Pressable>
-  );
+  return <GlassSegmentedControl<ChallengesView> segments={segments} value={view} onChange={onViewChange} />;
 }
-
-const styles = StyleSheet.create({
-  track: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-    padding: spacing.xs,
-    borderRadius: radius.big,
-    backgroundColor: colors.surface,
-  },
-  segment: {
-    flex: 1,
-    height: 40,
-    borderRadius: radius.big,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segmentActive: {
-    backgroundColor: colors.primary,
-  },
-});

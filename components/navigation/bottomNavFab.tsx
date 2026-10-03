@@ -2,7 +2,8 @@ import { Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { colors } from '../../constants/theme';
+import { borderWidth, colors, glass } from '../../constants/theme';
+import { withAlpha } from '../../utils/color';
 import {
   BOTTOM_NAV_BOTTOM_INSET,
   BOTTOM_NAV_FAB_ICON_SIZE,
@@ -10,24 +11,33 @@ import {
   BOTTOM_NAV_FAB_SIZE,
   BOTTOM_NAV_PRESS_SPRING,
 } from '../../constants/bottomNav';
+import { BottomNavGlassSurface } from './bottomNavGlassSurface';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface BottomNavFabProps {
   onPress: () => void;
   accessibilityLabel?: string;
+  centered?: boolean;
+  glass?: boolean;
 }
 
 /**
  * The "+" action — deliberately its own separate circle, not a 5th tab: no
- * label, never receives the shared tab indicator, solid `primary` (unlike
- * the translucent tab capsule) so it reads as the higher-contrast CTA.
+ * label, never receives the shared tab indicator, and uses the design system's
+ * white `paper` fill in the glass variant so it remains the high-contrast CTA
+ * from the reference design while sharing the capsule's rim treatment.
  * Same height as the tab capsule (`BOTTOM_NAV_FAB_SIZE` ===
  * `BOTTOM_NAV_HEIGHT`) so the two read as siblings, not one dominating the
  * other — the previous design's large negative-margin "poke above the bar"
  * treatment is intentionally gone.
  */
-export function BottomNavFab({ onPress, accessibilityLabel }: BottomNavFabProps) {
+export function BottomNavFab({
+  onPress,
+  accessibilityLabel,
+  centered = false,
+  glass: glassVariant = false,
+}: BottomNavFabProps) {
   const scale = useSharedValue(1);
   const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -52,9 +62,14 @@ export function BottomNavFab({ onPress, accessibilityLabel }: BottomNavFabProps)
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       hitSlop={8}
-      style={[styles.fab, pressStyle]}
+      style={[styles.fab, glassVariant && styles.glassFab, centered && styles.centeredFab, pressStyle]}
     >
-      <Ionicons name="add" size={BOTTOM_NAV_FAB_ICON_SIZE} color={colors.ink} />
+      {glassVariant ? <BottomNavGlassSurface tone="light" style={StyleSheet.absoluteFill} /> : null}
+      <Ionicons
+        name="add"
+        size={BOTTOM_NAV_FAB_ICON_SIZE}
+        color={colors.ink}
+      />
     </AnimatedPressable>
   );
 }
@@ -73,5 +88,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,
+  },
+  centeredFab: {
+    left: '50%',
+    marginLeft: -BOTTOM_NAV_FAB_SIZE / 2,
+  },
+  glassFab: {
+    backgroundColor: 'transparent',
+    borderWidth: borderWidth.fine,
+    borderColor: withAlpha(colors.ink, glass.borderOpacity),
+    overflow: 'hidden',
   },
 });

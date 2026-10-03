@@ -15,8 +15,8 @@ import { ACTIVITY_METRIC_CONFIG } from '../../types/metrics';
 import type { LocationType } from '../../components/icons/locationIcon';
 import type { ChallengeContract, ChallengePhoto, TodayRoutineContract } from '../../types/challenge';
 import type { ActivityType } from '../../types/activity';
-import { asString } from './adapterUtils';
-import { pickChallengeStatus, pickDominantActivityCategory } from './challengeState';
+import { asNumber, asString } from './adapterUtils';
+import { deriveChallengeCardState, pickChallengeStatus, pickDominantActivityCategory } from './challengeState';
 import { pickCurrentDay, pickIsRestDay, pickTodayCompleted } from './homeAdapter';
 
 const ALLOWED_ACTIVITY_CATEGORIES = new Set<ActivityCategory>(
@@ -36,13 +36,12 @@ function sanitizeLocations(locations: unknown[]): LocationType[] {
   );
 }
 
-/** Log-today's-progress bottom sheet — one row per active challenge that
- * can actually receive a log today (rest days and already-logged-today
+/** Log-today's-progress picker — one card per active challenge that can
+ * actually receive a log today (rest days and already-logged-today
  * challenges excluded, see below). */
 export interface LogChallengeQuickPick {
   id: string;
   name: string;
-  currentDay: number;
   /** From the same `GET /workout-posts/mine` grouping the challenge cards
    * already use (challengeState.ts's groupLatestPhotoByChallengeId) — this
    * user's own latest photo for the challenge, or null if they haven't
@@ -60,36 +59,41 @@ export interface LogChallengeQuickPick {
  * per-challenge, would — an N+1 fetch this list can't afford). See the
  * design system skill's Open Items Tracker for the backend gap.
  *
- * Rest-day challenges are excluded entirely, not just visually de-emphasized
- * — there's nothing to log on a rest day, so it's not a valid quick-pick
- * target at all. Same for a challenge whose TODAY already has a logged
- * photo (this user's own latest photo's `.day` matches today's cycle day,
- * the same "completed" check `deriveChallengeCardState()` uses) — logging
- * again would just be a second entry for a day that's already done.
+ * Only a challenge in the `active` state (`deriveChallengeCardState`, the one
+ * state machine Home's and Mine's cards use too) gets a card, so this list can
+ * never disagree with them. Everything else is left out entirely, not just
+ * visually de-emphasized: a finished (`won`) or abandoned (`left`) challenge, one
+ * whose TODAY is `completed` — already logged, by a photo (this user's own latest
+ * photo's `.day` matches today's cycle day) or by a submitted rest day (the
+ * server's `completedToday`; fixed 2026-08-29, a real bug, because an ad-hoc rest
+ * day has no photo) — and a `rest` day, when there is nothing to log. Logging again
+ * would just be a second entry for a day that's already done.
  *
- * Also excludes a challenge whose today is already `completedToday`
- * server-side (fixed 2026-08-29, real bug) — a submitted ad-hoc rest day
- * (via the Log-Metrics screen's own "Rest day" button) has no photo and
- * isn't a cycle-scheduled rest day either, so neither check above caught
- * it; the challenge kept showing here as if nothing had been logged. */
+ * Also left out: a challenge whose days have run out (`currentDay` past its
+ * length) but was never marked completed — it is over, whatever its status says. */
 export function getLogChallengeQuickPicks(
   challenges: ChallengeContract[],
   latestPhotoByChallengeId: Map<string, ChallengePhoto>,
 ): LogChallengeQuickPick[] {
   return challenges
     .filter((challenge) => {
-      if (pickChallengeStatus(challenge) !== 'active') return false;
-      if (pickIsRestDay(challenge)) return false;
-      if (pickTodayCompleted(challenge)) return false;
       const currentDay = pickCurrentDay(challenge);
-      const latestPhotoDay = latestPhotoByChallengeId.get(String(challenge.id))?.day ?? null;
-      if (latestPhotoDay != null && latestPhotoDay === currentDay) return false;
-      return true;
+      const totalDays = asNumber(challenge.duration_days) ?? 0;
+      if (totalDays > 0 && currentDay > totalDays) return false;
+
+      return (
+        deriveChallengeCardState({
+          status: pickChallengeStatus(challenge),
+          isRestDay: pickIsRestDay(challenge),
+          currentDay,
+          latestPhotoDay: latestPhotoByChallengeId.get(String(challenge.id))?.day ?? null,
+          completedToday: pickTodayCompleted(challenge),
+        }) === 'active'
+      );
     })
     .map((challenge) => ({
       id: String(challenge.id),
       name: asString(challenge.name) || 'Challenge',
-      currentDay: pickCurrentDay(challenge),
       photoUrl: latestPhotoByChallengeId.get(String(challenge.id))?.imageUrl ?? null,
       dominantActivityCategory: pickDominantActivityCategory(challenge),
     }));
@@ -114,6 +118,7 @@ export function adaptChallengesForMetrics(contracts: ChallengeContract[]): Chall
     locations: sanitizeLocations(
       Array.isArray(contract.locations) ? contract.locations : [],
     ),
+    dominantActivityCategory: pickDominantActivityCategory(contract),
   }));
   console.log('[adaptChallengesForMetrics] output', result);
   return result;
@@ -154,9 +159,21 @@ export function activityTypeFromMetricCodes(codes: string[]): ActivityType {
   // 'distanceKm'/'duration' from the old seed file — those never matched
   // anything, so every cardio/flexibility exercise silently fell through to
   // the 'strength' default below. Fixed 2026-08-28, see havit-design-system-SKILL.md.
+  //
+  // 'weight' is checked AFTER 'time', not with 'reps' any more: a `loaded_duration`
+  // exercise (see backend's exercise-metric-profiles.ts — farmer's walks, carries,
+  // sled work) targets 'time'+'weight', no 'reps'. Checking weight alongside reps
+  // routed those to 'strength' (reps+lbs columns), which has no duration column at
+  // all — there was no way to log how long the carry lasted. None of
+  // ACTIVITY_METRIC_CONFIG's buckets has a duration+lbs combo, so this falls to
+  // 'flexibility' (duration only) instead: the exercise's required primary metric
+  // (time) gets a field; its optional secondary one (weight) doesn't, same trade-off
+  // `buildMetricTemplateFromExerciseMetrics`/`buildActivityMetricTemplate` already
+  // make for schema exercises. Found 2026-09-22 auditing every exercise's metrics.
   if (set.has('distance')) return 'cardioIntense'; // time + distance
-  if (set.has('reps') || set.has('weight')) return 'strength'; // reps + lbs
-  if (set.has('time')) return 'flexibility'; // time only
+  if (set.has('reps')) return 'strength'; // reps (+ optional weight)
+  if (set.has('time')) return 'flexibility'; // time only, or time + weight
+  if (set.has('weight')) return 'strength'; // weight with no reps/time (shouldn't happen today)
   return 'strength';
 }
 
@@ -184,7 +201,15 @@ export interface TodayRoutineSet {
 interface TodayRoutineExerciseRow {
   id?: number | string;
   notes?: string | null;
-  exercise?: { id?: number | string; name?: string } | null;
+  exercise?: {
+    id?: number | string;
+    name?: string;
+    // The exercise's own reviewed metrics (exercise-metric-profiles.ts on the
+    // backend) — `RoutineService.getTodayRoutine()` joins these in. See
+    // `adaptTodayRoutineExercises`'s own comment for why this, not the saved
+    // targets, is now the PRIMARY source for which columns to show.
+    exercise_metrics?: Array<{ metricType?: { code?: string } | null }> | null;
+  } | null;
   sets?: TodayRoutineSet[] | null;
   targets?: TodayRoutineTarget[] | null;
 }
@@ -245,7 +270,23 @@ export function adaptTodayRoutineExercises(
         if (code) metricCodes.push(code);
       }
 
-      const activityType = activityTypeFromMetricCodes(metricCodes);
+      // Real bug found 2026-09-22, reported directly: a duration-only exercise
+      // (e.g. Camel Pose, a mind-body stretch) correctly showed just a duration
+      // field while being ADDED to the routine — that screen reads
+      // GET /exercises/:id/full's real per-exercise metrics directly — but this
+      // screen (reading the routine's SAVED targets instead) showed duration +
+      // distance for the same exercise. `activityTypeFromMetricCodes` itself
+      // was never wrong; it was being fed the wrong input here — the exercise's
+      // own reviewed metrics are the authoritative source of what it tracks,
+      // not whatever ended up saved as a target (which can't drift once this is
+      // the source, whereas a save path bug or partial/legacy data always
+      // could). Falls back to the saved-target codes only when an exercise has
+      // no exercise_metrics rows at all (an older manually-created exercise
+      // that predates the RepDB metric review).
+      const ownMetricCodes = (ex.exercise?.exercise_metrics ?? [])
+        .map((m) => m.metricType?.code)
+        .filter((code): code is string => Boolean(code));
+      const activityType = activityTypeFromMetricCodes(ownMetricCodes.length > 0 ? ownMetricCodes : metricCodes);
       // Per-exercise location isn't returned by this endpoint; default to a
       // valid value so sanitizeHydratedExercises keeps the row.
       const location = 'anywhere' as LocationType;

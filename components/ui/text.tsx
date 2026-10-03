@@ -8,8 +8,8 @@ import type { FontSizeToken, FontWeightToken } from '../../constants/theme';
 /**
  * TextVariant picks the font family/weight/size for a content role, per the
  * design system's Typography scale:
- * - title: Bebas Neue display heading — screen titles (H1)
- * - subheader: Bebas Neue display heading, smaller — section headings (H2/H3)
+ * - title: Inter Tight display heading — screen titles (H1)
+ * - subheader: Inter Tight display heading, smaller — section headings (H2/H3)
  * - header: DM Sans bold, small, uppercase — eyebrow/section labels
  * - body: DM Sans regular — default body text
  * - label: DM Sans medium, small — tags, form labels, buttons
@@ -51,7 +51,7 @@ interface TextProps extends RNTextProps {
   inverse?: boolean;
   /** Override the variant's default size with another token from the fontSize scale. */
   size?: FontSizeToken;
-  /** Override the variant's default weight with another DM Sans weight token. Has no visible effect on `title`/`subheader` (Bebas Neue only ships one weight). */
+  /** Override the variant's default weight with another DM Sans weight token. Has no visible effect on `title`/`subheader` — display text is always Inter Tight Bold. */
   weight?: FontWeightToken;
   /**
    * @deprecated Workout category is icon + name only, never color-coded —
@@ -85,13 +85,13 @@ const VARIANT_STYLE = {
     fontFamily: typography.fontFamily.display,
     fontSize: typography.fontSize['3xl'],
     lineHeight: typography.lineHeight['3xl'],
-    letterSpacing: typography.bebasLetterSpacing(typography.fontSize['3xl']),
+    letterSpacing: typography.displayLetterSpacing(typography.fontSize['3xl']),
   },
   subheader: {
     fontFamily: typography.fontFamily.display,
     fontSize: typography.fontSize.xl,
     lineHeight: typography.lineHeight.xl,
-    letterSpacing: typography.bebasLetterSpacing(typography.fontSize.xl),
+    letterSpacing: typography.displayLetterSpacing(typography.fontSize.xl),
   },
   header: {
     ...dmSans('bold'),
@@ -142,7 +142,7 @@ export function Text({
   const sizeOverride = size && {
     fontSize: typography.fontSize[size],
     lineHeight: typography.lineHeight[size],
-    ...(isDisplay && { letterSpacing: typography.bebasLetterSpacing(typography.fontSize[size]) }),
+    ...(isDisplay && { letterSpacing: typography.displayLetterSpacing(typography.fontSize[size]) }),
   };
 
   return (

@@ -1,27 +1,31 @@
 import { Pressable, StyleSheet, type TextInputProps } from 'react-native';
-import { Input } from './input';
+import { GlassInput } from './glassInput';
 import { Icon } from './icon';
 import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
+import { triggerLightHaptic } from '../../utils/haptics';
 import { withAlpha } from '../../utils/color';
 
 interface SearchBarProps extends Pick<TextInputProps, 'value' | 'onChangeText' | 'placeholder'> {}
 
-/** `big`-radius `surface` search field — outline `search-outline` icon (not
- * the filled `search` this used to render), and a clear (×) button that
- * appears once there's text to clear, matching the wireframe. */
+/** A `GlassInput` search field — same frosted look as the bottom nav bar, with
+ * an outline `search-outline` icon and a clear (×) button that appears once
+ * there's text to clear. Focus feedback (haptic, spring grow, brighter rim)
+ * comes from `GlassInput`. */
 export function SearchBar({ value, onChangeText, placeholder = 'Search' }: SearchBarProps) {
   return (
-    <Input
+    <GlassInput
       value={value}
       onChangeText={onChangeText}
       placeholder={placeholder}
       placeholderVariant="secondary"
-      variant="filled"
       leftIcon={<Icon name="search-outline" size={20} color={colors.paper} />}
       rightIcon={
         value ? (
           <Pressable
-            onPress={() => onChangeText?.('')}
+            onPress={() => {
+              triggerLightHaptic();
+              onChangeText?.('');
+            }}
             style={styles.clearButton}
             hitSlop={8}
             accessibilityRole="button"
@@ -37,8 +41,6 @@ export function SearchBar({ value, onChangeText, placeholder = 'Search' }: Searc
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: radius.big,
-    backgroundColor: colors.surface,
     paddingHorizontal: spacing.base,
     minHeight: 48,
   },

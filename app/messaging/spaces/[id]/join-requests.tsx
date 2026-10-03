@@ -101,6 +101,8 @@ export default function SpaceJoinRequestsScreen() {
               request={item}
               onApprove={() => handleApprove(item.id)}
               onReject={() => handleReject(item.id)}
+              approveA11yLabel={t('spaces.approveA11y')}
+              rejectA11yLabel={t('spaces.rejectA11y')}
               pendingAction={pendingRowId === item.id ? pendingAction : null}
             />
           )}

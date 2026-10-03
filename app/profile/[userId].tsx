@@ -4,14 +4,21 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { BackButton } from '../../components/ui/backButton';
+import { Button } from '../../components/ui/button';
+import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
+import { ConfirmationPopup } from '../../components/ui/confirmationPopup';
 import { colors, spacing } from '../../constants/theme';
-import { getPublicProfile } from '../../services/user/user.service';
+import { banUser, getPublicProfile } from '../../services/user/user.service';
 import type { PublicProfileContract } from '../../types/user';
 import { ProfileHeader, FollowButton, UserPostsGrid, ProfilePhotoModal } from '../../components/profile';
 import type { ChallengePhoto } from '../../types/challenge';
 import { useAuth } from '../../hooks/useAuth';
+import { useIsAdmin } from '../../hooks/useIsAdmin';
+import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+
+const BAN_ICON_SIZE = 16;
 
 /**
  * Another user's profile — GET /users/:userId/profile plus their visible
@@ -38,11 +45,15 @@ export default function UserProfile() {
   const { t } = useTranslation();
   const router = useRouter();
   const { userId: sessionUserId } = useAuth();
+  const isAdmin = useIsAdmin();
+  const { showSuccess } = useErrorNotificationStore();
 
   const [profile, setProfile] = useState<PublicProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState<ChallengePhoto | null>(null);
+  const [banPopupVisible, setBanPopupVisible] = useState(false);
+  const [banning, setBanning] = useState(false);
 
   const isOwnProfile = Boolean(sessionUserId && userId && sessionUserId === userId);
 
@@ -96,6 +107,20 @@ export default function UserProfile() {
   }, [userId]);
   const { refreshing, onRefresh } = usePullToRefresh(refreshUserProfile);
 
+  async function handleBan() {
+    if (!userId) return;
+    setBanning(true);
+    try {
+      await banUser(userId);
+      setBanPopupVisible(false);
+      showSuccess({ message: t('profile.banUserSuccess') });
+    } catch {
+      // Global api.ts interceptor already surfaces an error toast.
+    } finally {
+      setBanning(false);
+    }
+  }
+
   if (isOwnProfile) {
     return null;
   }
@@ -127,6 +152,7 @@ export default function UserProfile() {
               streakDays={profile.streak_days}
               followersCount={profile.followers_count}
               followingCount={profile.following_count}
+              practices={profile.practice_preferences}
               actions={
                 <View style={styles.actionsWrap}>
                   <FollowButton
@@ -143,6 +169,19 @@ export default function UserProfile() {
                       )
                     }
                   />
+                  {/* An admin-only action, kept quiet: the app's soft destructive button
+                      (a translucent `error` fill and rim), not a bare red link. */}
+                  {isAdmin && (
+                    <Button
+                      variant="dangerSubtle"
+                      size="sm"
+                      leftIcon={<Icon name="ban-outline" size={BAN_ICON_SIZE} color={colors.error} />}
+                      onPress={() => setBanPopupVisible(true)}
+                      accessibilityLabel={t('profile.banUserA11y')}
+                    >
+                      {t('profile.banUserButton')}
+                    </Button>
+                  )}
                 </View>
               }
             />
@@ -151,6 +190,26 @@ export default function UserProfile() {
         )}
       </ScrollView>
       <ProfilePhotoModal photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
+      <ConfirmationPopup
+        visible={banPopupVisible}
+        title={t('profile.banUserTitle')}
+        description={t('profile.banUserDescription')}
+        icon="ban-outline"
+        iconColor={colors.error}
+        onDismiss={() => !banning && setBanPopupVisible(false)}
+        primaryButton={{
+          label: t('profile.banUserConfirm'),
+          onPress: handleBan,
+          variant: 'danger',
+          loading: banning,
+        }}
+        secondaryButton={{
+          label: t('profile.banUserCancel'),
+          onPress: () => setBanPopupVisible(false),
+          variant: 'neutral',
+          disabled: banning,
+        }}
+      />
     </ScreenBackground>
   );
 }
@@ -175,5 +234,6 @@ const styles = StyleSheet.create({
   actionsWrap: {
     alignItems: 'center',
     paddingTop: spacing.sm,
+    gap: spacing.sm,
   },
 });

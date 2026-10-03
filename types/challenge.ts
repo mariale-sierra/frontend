@@ -110,6 +110,18 @@ export interface ChallengeDayContract {
   [key: string]: unknown;
 }
 
+/** Who created a challenge — the same public-profile fields (username, display
+ * name, photo) visible on any profile, private or not. Embedded on every
+ * challenge GET /challenges and GET /challenges/:id return (`ChallengeAuthorDto`
+ * on the backend); `null` when the creator's account no longer exists. Shown on
+ * the Explore cards. */
+export interface ChallengeAuthorContract {
+  id: string;
+  username: string;
+  displayName: string | null;
+  profileImageUrl: string | null;
+}
+
 export interface ChallengeContract {
   id: number | string;
   name: string;
@@ -117,6 +129,7 @@ export interface ChallengeContract {
   visibility?: string;
   duration_days?: number;
   created_by_user_id?: string;
+  author?: ChallengeAuthorContract | null;
   cycle_length_days?: number;
   categories?: string[];
   locations?: string[];
@@ -139,12 +152,18 @@ export interface ChallengeContract {
    * ever looked at whether today had a PHOTO. See `pickTodayCompleted()`
    * (homeAdapter.ts). */
   today_completed?: boolean;
+  /** 'open' | 'closed' — admin-only action (Bloque 1). Absent on older
+   * cached responses treated as 'open'. */
+  status?: string;
   [key: string]: unknown;
 }
 
 export interface JoinChallengeResponse {
   success?: boolean;
   message?: string;
+  /** Public: joins directly ('joined'). Private: files a pending request for
+   * the owner to approve instead ('requested') — see ChallengesService.joinChallenge. */
+  status?: 'joined' | 'requested';
   [key: string]: unknown;
 }
 
@@ -170,6 +189,10 @@ export interface ChallengeProgressContract {
   totalDays: number;
   completedToday?: boolean;
   hoursLeftToday?: number;
+  /** The CALLER's own challenge_user_map.status ('active' | 'completed' |
+   * 'left') — deliberately separate from `challenge.status` above, which is
+   * the challenge's own, unrelated 'open' | 'closed' admin field. */
+  relationStatus?: string;
   [key: string]: unknown;
 }
 
@@ -180,6 +203,24 @@ export interface ProgressSubmissionRequest {
   caption?: string;
   visibility?: 'private' | 'followers';
   isRestDay?: boolean;
+  /** Bloque 1 — joint owner posts. Only the challenge owner can set this;
+   * the backend rejects it otherwise. Omit for a normal solo post. */
+  taggedUserIds?: string[];
+}
+
+/** Raw backend contract for a pending challenge join request (see GET
+ * /challenges/{id}/join-requests) — same shape as the spaces equivalent. */
+export interface ChallengeJoinRequestContract {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  user: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    profileImageUrl: string | null;
+  };
+  requestedAt: string;
+  respondedAt: string | null;
 }
 
 export interface TodayRoutineExerciseContract {

@@ -37,14 +37,18 @@ export const colors = {
   // hue/saturation (~75° olive-green, ~15%), lightness taken from ~5.1% down
   // to ~3% so it reads as a deep near-black instead of "a gray with a green
   // tint." Keep the hue/saturation if this ever needs adjusting again — only
-  // lightness was the complaint.
-  ink: '#080906',
-  surface: '#191A13', // elevated surface (cards, nav, tab tracks) — confirmed correct as-is, don't touch
+  // lightness was the complaint. Deepened once more 2026-09-19 (L ~2.9% →
+  // ~2%, same hue/saturation): #0E0F0B → #080906 → #050604 (current).
+  ink: '#050604',
+  // Elevated surface (cards, nav, tab tracks). Made less yellow 2026-09-19,
+  // per explicit request: same lightness (~8.8%), saturation ~16% → ~7% so it
+  // reads as a neutral warm gray instead of olive — was #191A13 → #181815 (current).
+  surface: '#181815',
   paper: '#FFFFFF', // primary text on dark backgrounds / light-theme background — swapped with `primary`, see note above
   success: '#5DCB85', // re-saturated slightly 2026-09-04, per explicit "a tiny more saturated" follow-up (was desaturated to ~43% of original S earlier the same day, now ~56%) — was #37E0A4 → #1E9E70 → #4ADE80 → #76EAA0 → #4ADE80 → #66C288 → #5DCB85 (current), a brighter teal-green originally
   warning: '#E39454', // re-saturated slightly 2026-09-04 (S now ~72% of original, was ~60%) — was #F2A93B amber → #C9540F → #FB923C → #F9B176 → #FB923C → #D79660 → #E39454 (current). Still no confirmed use case — see Open Items Tracker
   error: '#DA5959', // re-saturated slightly 2026-09-04 (S now ~63% of original, was ~52%) — was #DE2B2B → #A31E1E → #EF4444 → #F67575 → #EF4444 → #CF6464 → #DA5959 (current)
-  rest: '#B9A6F2', // re-saturated slightly 2026-09-04 (S now ~75% of original, was ~62%) — was #B49BFF → #B399FF → #C9B6FF → #B399FF → #BDACEC → #B9A6F2 (current), per explicit request each time. Rest/recovery states, day-level only — "no activity today". Never a whole challenge's identity color, even for a mostly-rest-day challenge.
+  rest: '#C1ACFF', // lavender, more saturated twice 2026-09-20, per explicit request (same lightness, HSV saturation .24 → .31 → .33) — was #B49BFF → #B399FF → #C9B6FF → #B399FF → #BDACEC → #B9A6F2 → #D1C2FF → #C4B0FF → #C1ACFF (current), per explicit request each time. Rest/recovery states, day-level only — "no activity today". Never a whole challenge's identity color, even for a mostly-rest-day challenge.
   neutral: '#8A8C82', // paused/inactive states — positive/neutral, not a problem
 } as const;
 
@@ -63,21 +67,29 @@ export type ColorToken = keyof Colors;
  * category (e.g. zero exercises yet) falls back to `primary`, not one of
  * these — there is no "neutral" entry in this map on purpose.
  *
- * Each color pairs with `ink` text only — never `paper`/white — per the
- * confirmed 6:1+ contrast pairing.
+ * Each color pairs with `ink` text only — never `paper`/white. Every one is at
+ * least 9:1 against `ink` (the weakest are flexibility and mindBody; a test keeps
+ * it so).
  */
 export const activityColors: Record<ActivityType, string> = {
-  // Re-saturated slightly 2026-09-04, per explicit "a tiny more saturated"
-  // follow-up (each was desaturated to ~62% of its original saturation
-  // earlier the same day, now ~75% — still muted relative to the original,
-  // just less so). Same hue and lightness throughout both passes — every
-  // entry's own trailing hex is the prior value this replaced.
-  strength: '#C7C93E', // muted lime, slightly more yellow (power/alertness) — was #F2653A → #DEE027 → #E9EB54 → #DEE027 → #BCBD4A → #C7C93E (current)
-  cardioIntense: '#D8B14B', // muted golden-orange (fast/electric energy) — was #F0B429 → #F0BC33 → #F7CF64 → #F0BC33 → #CCAC57 → #D8B14B (current)
-  cardioLow: '#33C4B2', // muted aqua-turquoise (steady/calm endurance) — was #5CD97A → #9ADB4F → #1BDCC4 → #43EDD7 → #1BDCC4 → #40B7A8 → #33C4B2 (current)
-  flexibility: '#6B90DB', // muted electric blue (open/breath) — was #3DDBEE → #588AEE → #88ADF6 → #588AEE → #7493D2 → #6B90DB (current)
-  mindBody: '#DB6BC8', // muted magenta-pink (calm/balance) — was #F17FE0 → #EE58D5 → #F688E4 → #EE58D5 → #D274C2 → #DB6BC8 (current)
-  functional: '#4AB2D4', // muted sky blue (versatile/utility) — was #D8EE3C → #33BDEB → #63CFF3 → #33BDEB → #56ACC8 → #4AB2D4 (current)
+  // Set 2026-09-19, per explicit request, to a new brighter, more saturated
+  // palette — these are the same values the system used before the
+  // 2026-09-04 desaturation passes, so each entry's history below reads
+  // back to them. Every entry's own trailing hex is the prior value this
+  // replaced. (The muted set this replaced was ~75% of these saturations.)
+  // 2026-09-20, per explicit request: strength and cardioIntense swapped colors.
+  // Then, the same day, per explicit request: every color's saturation bumped a
+  // little (HSV saturation about 1.05x, with the brightness put back where the
+  // gamut allows, so each still pairs with `ink` text), and strength made a bit
+  // warmer (hue 44 -> 38 degrees, gold toward amber). A first try at about 1.16x
+  // was "way too much" and was cut back to this. Each entry's last "was" is the
+  // value before that bump.
+  strength: '#FFC460', // amber-gold (power/alertness) — was #F7CF64 (golden-orange, swapped from cardioIntense) → #E9EB54 (lime, before the swap)
+  cardioIntense: '#E9EB4D', // lime (fast/electric energy) — was #E9EB54 (lime, swapped from strength) → #F7CF64 (golden-orange, before the swap)
+  cardioLow: '#3BEED6', // aqua-turquoise (steady/calm endurance) — was #43EDD7 → #5CD97A → #9ADB4F → #1BDCC4 → #43EDD7 → #1BDCC4 → #40B7A8 → #33C4B2 → #43EDD7
+  flexibility: '#85ADFB', // electric blue (open/breath) — was #88ADF6 → #3DDBEE → #588AEE → #88ADF6 → #588AEE → #7493D2 → #6B90DB → #88ADF6
+  mindBody: '#FA85E7', // magenta-pink (calm/balance) — was #F688E4 → #F17FE0 → #EE58D5 → #F688E4 → #EE58D5 → #D274C2 → #DB6BC8 → #F688E4
+  functional: '#5DCFF6', // sky blue (versatile/utility) — was #63CFF3 → #D8EE3C → #33BDEB → #63CFF3 → #33BDEB → #56ACC8 → #4AB2D4 → #63CFF3
 } as const;
 
 /**
@@ -123,7 +135,7 @@ export type FillOpacityToken = keyof typeof fillOpacity;
 
 /**
  * Font family tokens. Loaded via @expo-google-fonts/dm-sans and
- * @expo-google-fonts/bebas-neue (Expo-managed — do not hand-link fonts).
+ * @expo-google-fonts/inter-tight (Expo-managed — do not hand-link fonts).
  *
  * NOTE: these packages are not installed yet and no useFonts() wiring exists
  * in app/_layout.tsx as of this file's creation — that's a follow-up step,
@@ -131,7 +143,10 @@ export type FillOpacityToken = keyof typeof fillOpacity;
  * an actual loaded font and RN will fall back to the system font.
  */
 export const fontFamily = {
-  display: 'BebasNeue_400Regular', // headings/display ONLY — do not use below `xl` size, illegible at small sizes
+  // Headings/display ONLY (`title`/`subheader`) — body, labels and captions stay DM Sans.
+  // Was Bebas Neue until 2026-09-19 (explicit request); Inter Tight Bold now.
+  // (News Cycle was tried briefly the same day and switched back.)
+  display: 'InterTight_700Bold',
   regular: 'DMSans_400Regular',
   medium: 'DMSans_500Medium',
   bold: 'DMSans_700Bold',
@@ -173,14 +188,15 @@ export const lineHeight = {
 export type FontSizeToken = keyof typeof fontSize;
 
 /**
- * Bebas Neue MUST always carry this letter-spacing — not optional, it reads
- * cramped without it. RN's `letterSpacing` style is in px, so derive it from
- * whatever `fontSize` the display text is using (skill spec is 0.02em).
+ * Display text carries a slight negative tracking — Inter Tight is already
+ * tightly spaced, so this is subtle. RN's `letterSpacing` style is in px, so
+ * derive it from whatever `fontSize` the display text is using. (Bebas Neue,
+ * the original display font, needed +0.02em instead.)
  */
-export const BEBAS_LETTER_SPACING_EM = 0.02;
+export const DISPLAY_LETTER_SPACING_EM = -0.01;
 
-export function bebasLetterSpacing(size: number): number {
-  return size * BEBAS_LETTER_SPACING_EM;
+export function displayLetterSpacing(size: number): number {
+  return size * DISPLAY_LETTER_SPACING_EM;
 }
 
 export const typography = {
@@ -189,7 +205,7 @@ export const typography = {
   fontSize,
   lineHeight,
   textOpacity,
-  bebasLetterSpacing,
+  displayLetterSpacing,
 } as const;
 
 export type Typography = typeof typography;
@@ -254,17 +270,60 @@ export const radius = {
   // cards), so bumping it directly would have re-rounded every one of those
   // too, not just the two components that got the complaint. A real new
   // tier for the small set of "showcase" surfaces that want to read as
-  // noticeably rounder than even a hero card — ConfirmationPopup's card,
-  // the toast notification, and (merged in from the chats feature branch,
+  // noticeably rounder than even a hero card — ConfirmationPopup's card
+  // and (merged in from the chats feature branch,
   // 2026-08-31) MessageBubble's chat bubbles — a heavily-rounded bubble
   // shape happened to already reference this exact token name pre-merge,
   // a genuine coincidence confirmed by reading that branch's own code, not
   // a deliberate reuse decided here. Don't reach for this as a default;
   // `big` stays the standard "very rounded" token for everything else.
-  xl: 40, // ConfirmationPopup's card, the toast notification, MessageBubble's chat bubbles
+  xl: 40, // ConfirmationPopup's card, MessageBubble's chat bubbles (the toast was here too, until it read as a pill: it is `medium` now)
 } as const;
 
 export type RadiusToken = keyof typeof radius;
+
+// ---------------------------------------------------------------------------
+// Glass
+// ---------------------------------------------------------------------------
+
+/**
+ * The frosted-glass recipe first built for the bottom nav bar, shared so every
+ * glass surface (the nav capsule, the segmented toggle, search bars) looks the
+ * same: a blur, a dark translucent `surface` tint over it, and a hairline `paper`
+ * rim. Real blur on iOS; on Android `expo-blur` falls back to a plain
+ * translucent view, which the tint still makes read as glass.
+ */
+export const glass = {
+  blurIntensity: 28,
+  tint: 'dark',
+  tintOpacity: 0.72, // `surface` over the blur
+  // A small badge over a colored light (the exercise screen's location badges): a
+  // lighter `surface` tint, so the light behind reads through it — at the sheets'
+  // .72 a badge over a soft gradient is nearly a solid dark pill.
+  badgeTintOpacity: 0.4,
+  borderOpacity: 0.08, // hairline `paper` rim
+  // The extra light of the popups and toasts (`GlassSurface`'s `highlight`): a soft
+  // `paper` sheen across the glass, brightest at its top-left corner, and a rim that
+  // catches the light there, fades through the middle and picks up a fainter echo at
+  // the bottom-right — a gradient outline in place of the plain hairline all round.
+  sheenOpacity: 0.14,
+  rimOpacity: { bright: 0.5, dim: 0.05, echo: 0.2 },
+} as const;
+
+// ---------------------------------------------------------------------------
+// Border width
+// ---------------------------------------------------------------------------
+
+/**
+ * `fine` — the soft activity-color outline on the glow cards (challenge and
+ * Space cards, see `AccentCard`): 1px at first, thinned to half of that on
+ * 2026-09-20 on explicit request ("a bit thinner"). `thin` — the plain 1px
+ * outline.
+ */
+export const borderWidth = {
+  fine: 0.5,
+  thin: 1,
+} as const;
 
 // ---------------------------------------------------------------------------
 // Shadows

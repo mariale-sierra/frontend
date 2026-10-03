@@ -1,7 +1,10 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, radius, spacing } from '../../constants/theme';
+import { activityColors, colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
+import { getPracticeOption } from '../../constants/practiceOptions';
+import { ACTIVITY_ICON_NAME } from '../icons/activityIcon';
+import { AccentPill } from '../ui/accentPill';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
@@ -12,16 +15,22 @@ interface ProfileHeaderProps {
   bio?: string | null;
   imageUrl?: string | null;
   /**
-   * Overall daily-activity streak. No backend field sends this yet (see
-   * types/user.ts) — omit it and both the flame badge on the avatar and the
-   * "Day streak" stat column hide themselves rather than showing a
-   * fabricated 0.
+   * Overall daily-activity streak — see types/user.ts's `streak_days` for
+   * where the backend now sends it from. Still optional here: omit it and
+   * both the flame badge on the avatar and the "Day streak" stat column
+   * hide themselves rather than showing a fabricated 0 (a stranger viewing
+   * a private profile, or an older cached response).
    */
   streakDays?: number;
   followersCount: number;
   followingCount: number;
   onPressFollowers?: () => void;
   onPressFollowing?: () => void;
+  /** Self-reported sport/fitness practices (see constants/practiceOptions.ts) —
+   * rendered as a row of colored badges, one per entry still in the current
+   * options list (see `getPracticeOption`). Omit or pass an empty array to
+   * hide the row entirely — never privacy-gated, same tier as the name/photo. */
+  practices?: string[];
   /** Extra content below the stats row — e.g. a FollowButton on another user's profile. */
   actions?: React.ReactNode;
 }
@@ -80,9 +89,13 @@ export function ProfileHeader({
   followingCount,
   onPressFollowers,
   onPressFollowing,
+  practices,
   actions,
 }: ProfileHeaderProps) {
   const { t } = useTranslation();
+  const practiceBadges = (practices ?? [])
+    .map((value) => getPracticeOption(value))
+    .filter((option): option is NonNullable<typeof option> => option !== null);
 
   return (
     <View style={styles.wrapper}>
@@ -119,13 +132,22 @@ export function ProfileHeader({
         <StatColumn value={followersCount} label={t('profile.followersLabel')} onPress={onPressFollowers} />
         <StatDivider />
         <StatColumn value={followingCount} label={t('profile.followingLabel')} onPress={onPressFollowing} />
-        {streakDays != null && (
-          <>
-            <StatDivider />
-            <StatColumn value={streakDays} label={t('profile.streakLabel')} highlight />
-          </>
-        )}
       </View>
+
+      {practiceBadges.length > 0 && (
+        <View style={[styles.badgesRow, styles.badgesRowGap]}>
+          {practiceBadges.map((option) => (
+            <AccentPill
+              key={option.value}
+              label={option.label}
+              color={activityColors[option.activityType]}
+              variant="filled"
+              size="md"
+              icon={ACTIVITY_ICON_NAME[option.activityType]}
+            />
+          ))}
+        </View>
+      )}
 
       {actions}
     </View>
@@ -182,5 +204,19 @@ const styles = StyleSheet.create({
     width: 1,
     height: 32,
     backgroundColor: withAlpha(colors.paper, 0.08),
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.xs,
+  },
+  // On top of `wrapper`'s own uniform `spacing.md` gap (12) — a single
+  // `gap` on that wrapper applies the same spacing between every child, so
+  // this adds `spacing.md` more specifically above the badges row, per
+  // explicit "make the gap between those two elements [stats row] and the
+  // badges a bit bigger" — total effective gap now `spacing.lg` (24).
+  badgesRowGap: {
+    marginTop: spacing.md,
   },
 });

@@ -1,8 +1,15 @@
 import { fireEvent } from '@testing-library/react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { SpaceCard } from '../SpaceCard';
+import { activityColors } from '../../../constants/theme';
+import { boostSaturation } from '../../../utils/color';
 import type { SpaceContract } from '../../../types/space';
 
+// The glow is drawn once the card has been measured; this hands it a size at once.
+jest.mock('../../ui/accentGlow', () => ({
+  AccentGlow: ({ children }: { children: (size: { width: number; height: number }) => React.ReactNode }) =>
+    children({ width: 342, height: 140 }),
+}));
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, params?: Record<string, unknown>) =>
@@ -85,12 +92,12 @@ describe('SpaceCard', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('renders the member count and category badge', async () => {
+  it('renders the member count, and no category badge', async () => {
     const screen = await renderWithTheme(
       <SpaceCard space={buildSpace()} onPress={jest.fn()} onPressCta={jest.fn()} />,
     );
 
-    expect(screen.getByText('Cardio Low')).toBeTruthy();
+    expect(screen.queryByText('Cardio Low')).toBeNull();
     // Real bug this test previously couldn't catch: `react-i18next` is
     // mocked here (no real pluralization), so this assertion used to encode
     // the ACTUAL production bug (passing `formatCount()`'s string output as
@@ -100,5 +107,25 @@ describe('SpaceCard', () => {
     // string) are now passed separately — both show up in this mock's
     // `key:val1,val2` output.
     expect(screen.getByText('spaces.membersCount:50,50')).toBeTruthy();
+  });
+
+  // The plain diagonal `linearGlow` gradient (`AccentCard`'s), matching a
+  // reference image — real change 2026-09-25 (see SpaceCardView.tsx's own
+  // doc comment for the fuller history; SpaceCardView.test.tsx has the
+  // fuller "its glow" coverage — this is just SpaceCard's own smoke test
+  // that the color reaches the glow at all).
+  it("lights the card with its glow in the space's own category color", async () => {
+    const screen = await renderWithTheme(
+      <SpaceCard
+        space={buildSpace({ activityCategory: { id: 5, code: 'mind-body', name: 'Mind-Body' } })}
+        onPress={jest.fn()}
+        onPressCta={jest.fn()}
+      />,
+    );
+    // `AccentCard`'s `linearGlow` end color — `boostSaturation(color,
+    // ACCENT_VIVID_FACTOR)` (see accentCard.tsx).
+    const DOME_VIVID_FACTOR = 1.25;
+
+    expect(JSON.stringify(screen.toJSON())).toContain(boostSaturation(activityColors.mindBody, DOME_VIVID_FACTOR));
   });
 });

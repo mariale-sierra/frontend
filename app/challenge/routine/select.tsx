@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.fontFamily.display,
     fontSize: typography.fontSize['3xl'],
     lineHeight: typography.lineHeight['3xl'],
-    letterSpacing: typography.bebasLetterSpacing(typography.fontSize['3xl']),
+    letterSpacing: typography.displayLetterSpacing(typography.fontSize['3xl']),
     opacity: textOpacity.primary,
   },
   trailingSpacer: {

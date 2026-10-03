@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -7,10 +7,11 @@ import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { Row } from '../../components/layout/row';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
-import { ChallengeStatusCard } from '../../components/challenge/list/ChallengeStatusCard';
-import { ExploreChallengeCard } from '../../components/challenge/list/ExploreChallengeCard';
+import { CoachMark } from '../../components/onboarding/CoachMark';
+import { ExploreCard, MineCard } from '../../components/challenge/list/challengeCards';
 import { ChallengesViewToggle } from '../../components/challenge/list/ChallengesViewToggle';
 import { ChallengesContentSkeleton } from '../../components/challenge/list/ChallengesContentSkeleton';
+import { FinishedChallengesToggle } from '../../components/challenge/list/FinishedChallengesToggle';
 import type { ChallengesView } from '../../components/challenge/list/ChallengesViewToggle';
 import type { ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import type { ChallengeMineCardViewModel } from '../../services/adapters/challengeListAdapter';
@@ -19,15 +20,18 @@ import { getChallenges, getMyProgressPhotos } from '../../services/challenge/cha
 import { getMyChallenges } from '../../services/user/user.service';
 import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../../services/adapters';
 import { groupLatestPhotoByChallengeId } from '../../services/adapters/challengeState';
-import { useChallengeCompletion } from '../../hooks/useConfirmationPopup';
-import { storage } from '../../utils/storage';
-
-// Persisted (not just in-memory) so a challenge that already showed its
-// completion celebration doesn't show it again on every fresh app launch —
-// a real bug: the old in-memory-only `useRef` Set reset on every cold start,
-// so the SAME "you finished it!" popup re-appeared every day the user
-// reopened the app, for every already-won challenge, forever. Fixed 2026-08-28.
-const SHOWN_COMPLETIONS_KEY = 'shown_challenge_completions';
+import { useChallengeFinishedStore } from '../../store/challengeFinishedStore';
+import { useChallengeJoinApprovedStore } from '../../store/challengeJoinApprovedStore';
+import { hasShownCompletion, markCompletionShown } from '../../utils/shownCompletions';
+import {
+  establishMembershipBaseline,
+  hasEstablishedMembershipBaseline,
+  hasSeenChallengeMembership,
+  markChallengeMembershipSeen,
+} from '../../utils/seenChallengeMemberships';
+import { hasSeenExploreTip, markExploreTipSeen } from '../../utils/exploreTip';
+import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../constants/onboardingDebug';
+import { useAuth } from '../../hooks/useAuth';
 
 function ChallengeListSeparator() {
   return <View style={styles.separator} />;
@@ -61,42 +65,50 @@ export default function Challenges() {
   const [exploreChallenges, setExploreChallenges] = useState<ExploreChallengeViewModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Finished challenges are collapsed out of the main Mine list by default —
+  // see FinishedChallengesToggle's own doc comment.
+  const [showFinished, setShowFinished] = useState(false);
 
-  // Celebration popup for a challenge that just flipped to `won` (the whole
-  // challenge finished — see challengeState.ts's deriveChallengeCardState),
-  // NOT the per-day `completed` state. Tracks which challengeIds have
-  // already shown it — persisted to storage (SHOWN_COMPLETIONS_KEY above),
-  // not just an in-memory Set, so it doesn't re-trigger on every fresh app
-  // launch, only genuinely once per challenge ever.
-  const completion = useChallengeCompletion();
-  const { show: showCompletion } = completion;
-  const shownCompletions = useRef(new Set<string>());
-  const [shownCompletionsLoaded, setShownCompletionsLoaded] = useState(false);
-
-  // Load the persisted "already shown" set once on mount, before the focus
-  // effect below is allowed to show anything — otherwise the first focus
-  // could show a popup for a challenge that was already celebrated in a
-  // previous session, in the brief window before this resolves.
+  // Onboarding Stage 3's first-visit tip — shown on BOTH the Mine and
+  // Explore segments (per explicit follow-up request; both share one "seen"
+  // flag, not two, since it's the same one-time tip either way), once ever
+  // per device (utils/exploreTip.ts), same shape as Stage 2's Home coach
+  // mark. Loaded once on mount regardless of which segment is active first.
+  const [showExploreTip, setShowExploreTip] = useState(false);
   useEffect(() => {
-    let active = true;
-    storage
-      .getItem(SHOWN_COMPLETIONS_KEY)
-      .then((raw) => {
-        if (!active || !raw) return;
-        try {
-          const ids = JSON.parse(raw);
-          if (Array.isArray(ids)) shownCompletions.current = new Set(ids);
-        } catch {
-          // Corrupt/old value — treat as empty, not fatal.
-        }
-      })
-      .finally(() => {
-        if (active) setShownCompletionsLoaded(true);
-      });
-    return () => {
-      active = false;
-    };
+    if (FORCE_SHOW_ONBOARDING_PREVIEWS) {
+      setShowExploreTip(true);
+      return;
+    }
+    hasSeenExploreTip().then((seen) => {
+      if (!seen) setShowExploreTip(true);
+    });
   }, []);
+  const dismissExploreTip = useCallback(() => {
+    setShowExploreTip(false);
+    markExploreTipSeen();
+  }, []);
+
+  // `mineChallenges` is already sorted active -> rest -> completed -> won
+  // (toChallengeMineViewModels), so `finishedChallenges` stays in that same
+  // relative order once revealed. `left` (abandoned) challenges never reach
+  // this array at all — that adapter filters them out entirely (per explicit
+  // request), so there's no separate "left stays inline" case to handle here.
+  const activeMineChallenges = useMemo(() => mineChallenges.filter((c) => c.state !== 'won'), [mineChallenges]);
+  const finishedMineChallenges = useMemo(() => mineChallenges.filter((c) => c.state === 'won'), [mineChallenges]);
+  const mineListData = showFinished ? mineChallenges : activeMineChallenges;
+
+  // The "Challenge complete" popup is global (`ChallengeFinishedPopup`, at the app
+  // root) and normally shows the moment the last day is logged. This is the
+  // fallback for a challenge that finished without this device seeing it (another
+  // device, or an older build), so it is shown here once — `shownCompletions`
+  // keeps it to once per challenge EVER, across launches and across the two places.
+  const showChallengeFinished = useChallengeFinishedStore((state) => state.show);
+  // Same idea for "You're in!": the only place a private challenge's owner
+  // approving a join request can ever be discovered, since that happens
+  // asynchronously on the OWNER's device — see utils/seenChallengeMemberships.ts.
+  const showChallengeJoinApproved = useChallengeJoinApprovedStore((state) => state.show);
+  const { userId } = useAuth();
 
   // Shared fetch used both by the focus-refetch effect below and by
   // pull-to-refresh — `isActive` mirrors the effect's own `active` closure
@@ -114,18 +126,42 @@ export default function Challenges() {
         const enrolled = enrolledRaw ?? [];
         const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(myPhotos ?? []);
         const mineViewModels = toChallengeMineViewModels(enrolled, latestPhotoByChallengeId);
+        // A finished challenge (`won`) stays in Mine, as its "Finished" card after the
+        // ones still going — the card must not vanish when the celebration is closed.
         setMineChallenges(mineViewModels);
 
-        if (shownCompletionsLoaded) {
-          for (const challenge of mineViewModels) {
-            if (challenge.state === 'won' && !shownCompletions.current.has(challenge.challengeId)) {
-              shownCompletions.current.add(challenge.challengeId);
-              storage.setItem(SHOWN_COMPLETIONS_KEY, JSON.stringify(Array.from(shownCompletions.current)));
-              showCompletion({
-                challengeId: challenge.challengeId,
-                challengeName: challenge.title,
-                totalDays: challenge.totalDays,
-              });
+        for (const challenge of mineViewModels) {
+          if (challenge.state === 'won' && !(await hasShownCompletion(challenge.challengeId))) {
+            await markCompletionShown(challenge.challengeId);
+            showChallengeFinished({
+              challengeId: challenge.challengeId,
+              challengeName: challenge.title,
+              totalDays: challenge.totalDays,
+            });
+          }
+          if (!isActive()) return;
+        }
+
+        // "You're in!" — a private challenge's owner can approve a pending
+        // join request at any time, on their own device; this is the only
+        // place the requester ever finds out. Only ever considers a
+        // challenge the user didn't create themselves; a direct join or an
+        // accepted invite already marks itself seen at its own success
+        // point (see markChallengeMembershipSeen's other call sites), so it
+        // never doubles up with this.
+        if (userId) {
+          const notCreatedByMe = mineViewModels.filter((c) => c.createdByUserId !== userId);
+          if (!(await hasEstablishedMembershipBaseline())) {
+            // First run ever on this device: every current membership is
+            // pre-existing, not a new approval — record it silently, no popups.
+            await establishMembershipBaseline(notCreatedByMe.map((c) => c.challengeId));
+          } else {
+            for (const challenge of notCreatedByMe) {
+              if (!(await hasSeenChallengeMembership(challenge.challengeId))) {
+                await markChallengeMembershipSeen(challenge.challengeId);
+                showChallengeJoinApproved({ challengeId: challenge.challengeId, challengeName: challenge.title });
+              }
+              if (!isActive()) return;
             }
           }
         }
@@ -147,7 +183,7 @@ export default function Challenges() {
         setError(t('challenges.loadError'));
       }
     },
-    [t, showCompletion, shownCompletionsLoaded],
+    [t, showChallengeFinished, showChallengeJoinApproved, userId],
   );
 
   // Refetches on focus (not just on mount) so joining/leaving/completing a
@@ -197,7 +233,7 @@ export default function Challenges() {
   const renderMineItem = useCallback(
     ({ item }: { item: ChallengeMineCardViewModel }) => (
       <View style={styles.itemWrap}>
-        <ChallengeStatusCard
+        <MineCard
           challenge={item}
           onPress={() => handleOpenMineChallenge(item.challengeId)}
           onPressAddPhoto={() => handleAddPhoto(item.challengeId)}
@@ -210,7 +246,7 @@ export default function Challenges() {
   const renderExploreItem = useCallback(
     ({ item }: { item: ExploreChallengeViewModel }) => (
       <View style={styles.itemWrap}>
-        <ExploreChallengeCard challenge={item} onPress={() => handleOpenExploreChallenge(item.challengeId)} />
+        <ExploreCard challenge={item} onPress={() => handleOpenExploreChallenge(item.challengeId)} />
       </View>
     ),
     [handleOpenExploreChallenge],
@@ -245,50 +281,71 @@ export default function Challenges() {
         mineLabel={t('challenges.mineTab')}
         exploreLabel={t('challenges.exploreTab')}
       />
+
+      {showExploreTip && (
+        // `topRight` — points up at the toggle's "Explore" segment (the
+        // second/right entry in ChallengesViewToggle's own segment order),
+        // per explicit request.
+        <CoachMark message={t('challenges.exploreTip')} onDismiss={dismissExploreTip} arrowPlacement="topRight" />
+      )}
       </View>
     ),
-    [handleCreateChallenge, t, view],
+    [handleCreateChallenge, t, view, showExploreTip, dismissExploreTip],
   );
 
   if (loading) {
     return (
-      <ScreenBackground variant="default">
+      <ScreenBackground variant="default" gradientBackground>
         {listHeader}
         <View style={styles.skeletonWrap}>
           <ChallengesContentSkeleton />
         </View>
-        <completion.Component />
       </ScreenBackground>
     );
   }
 
   if (error) {
     return (
-      <ScreenBackground variant="default">
+      <ScreenBackground variant="default" gradientBackground>
         {listHeader}
         <View style={styles.center}>
           <Text tone="secondary">{error}</Text>
         </View>
-        <completion.Component />
       </ScreenBackground>
     );
   }
 
   return (
-    <ScreenBackground variant="default">
+    <ScreenBackground variant="default" gradientBackground>
       {view === 'mine' ? (
         <FlatList
-          data={mineChallenges}
+          data={mineListData}
           keyExtractor={(item) => item.challengeId}
           renderItem={renderMineItem}
           ListHeaderComponent={listHeader}
           ItemSeparatorComponent={ChallengeListSeparator}
+          // Only the TRUE empty state (no challenges at all) shows this —
+          // `mineListData` can be empty just because every challenge is
+          // finished and still collapsed, which isn't "no challenges."
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text variant="body" tone="secondary" align="center">
-                {t('challenges.emptyMine')}
-              </Text>
-            </View>
+            mineChallenges.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text variant="body" tone="secondary" align="center">
+                  {t('challenges.emptyMine')}
+                </Text>
+              </View>
+            ) : undefined
+          }
+          ListFooterComponent={
+            finishedMineChallenges.length > 0 ? (
+              <View style={styles.itemWrap}>
+                <FinishedChallengesToggle
+                  count={finishedMineChallenges.length}
+                  expanded={showFinished}
+                  onToggle={() => setShowFinished((current) => !current)}
+                />
+              </View>
+            ) : undefined
           }
           contentContainerStyle={styles.listContent}
           initialNumToRender={3}
@@ -319,8 +376,6 @@ export default function Challenges() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         />
       )}
-
-      <completion.Component />
     </ScreenBackground>
   );
 }
@@ -338,6 +393,11 @@ const styles = StyleSheet.create({
   newButtonPressed: {
     opacity: 0.9,
   },
+  // CoachMark's own default wrapper is sized/aligned for a floating bubble
+  // pointing at something (maxWidth 260, right-aligned) — an inline
+  // first-visit tip sitting in the list header wants the opposite: full
+  // width, no cap. Both keys are explicitly overridden here (an RN style
+  // array only overrides keys the later object actually sets).
   // Real, fixed padding of its own now, not relying on also being nested
   // inside listContent's own paddingHorizontal to reach its final inset
   // (that stacking only actually happened once the FlatList took over

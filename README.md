@@ -109,6 +109,13 @@ This detects your machine's LAN IPv4 address and writes it to `.env.local` as `E
 
 If the wrong IP gets picked (e.g. a VPN adapter), edit `EXPO_PUBLIC_API_URL` in `.env.local` by hand.
 
+For browser testing against the backend running through `raiz`, use the loopback URL
+explicitly so the web bundle does not fall back to the shared Azure server:
+
+```bash
+EXPO_PUBLIC_API_URL=http://localhost:3000 npm run web
+```
+
 ---
 
 ## 🧹 If Something Breaks

@@ -1,5 +1,5 @@
-import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../challengeListAdapter';
-import type { ChallengeContract, ChallengePhoto } from '../../../types/challenge';
+import { pickAuthor, toChallengeMineViewModels, toExploreChallengeViewModels } from '../challengeListAdapter';
+import type { ChallengeAuthorContract, ChallengeContract, ChallengePhoto } from '../../../types/challenge';
 
 function buildChallenge(overrides: Partial<ChallengeContract> & { id: string }): ChallengeContract {
   return {
@@ -72,5 +72,111 @@ describe('toExploreChallengeViewModels', () => {
     const viewModels = toExploreChallengeViewModels(challenges);
 
     expect(viewModels.map((v) => v.challengeId)).toEqual(['most', 'some', 'few', 'none']);
+  });
+
+  it("carries the challenge's author through to the card", () => {
+    const author: ChallengeAuthorContract = {
+      id: 'u1',
+      username: 'ana',
+      displayName: 'Ana Ruiz',
+      profileImageUrl: 'https://cdn/ana.jpg',
+    };
+    const [viewModel] = toExploreChallengeViewModels([buildChallenge({ id: 'A', author })]);
+
+    // No `id` on the card's view model — see ChallengeAuthorViewModel's own doc comment.
+    expect(viewModel.author).toEqual({
+      username: 'ana',
+      displayName: 'Ana Ruiz',
+      profileImageUrl: 'https://cdn/ana.jpg',
+    });
+  });
+
+  it('has no author for a challenge whose creator account is gone (backend sends `author: null`)', () => {
+    const [viewModel] = toExploreChallengeViewModels([buildChallenge({ id: 'A', author: null })]);
+
+    expect(viewModel.author).toBeNull();
+  });
+
+  it('has no author for an older cached response with no `author` field at all', () => {
+    const [viewModel] = toExploreChallengeViewModels([buildChallenge({ id: 'A' })]);
+
+    expect(viewModel.author).toBeNull();
+  });
+});
+
+describe('pickAuthor', () => {
+  it('drops a malformed author with no usable username rather than crashing the card', () => {
+    expect(pickAuthor(buildChallenge({ id: 'A', author: { username: '' } as ChallengeAuthorContract }))).toBeNull();
+    expect(pickAuthor(buildChallenge({ id: 'A', author: 'ana' as unknown as ChallengeAuthorContract }))).toBeNull();
+  });
+
+  it('falls back displayName/profileImageUrl to null rather than undefined, for a plain equality check', () => {
+    const author = pickAuthor(
+      buildChallenge({ id: 'A', author: { id: 'u1', username: 'ana' } as ChallengeAuthorContract }),
+    );
+
+    expect(author).toEqual({ username: 'ana', displayName: null, profileImageUrl: null });
+  });
+});
+
+// A left (abandoned) challenge has no place in Challenges-Mine at all, per explicit
+// request 2026-09-22 — filtered out entirely, not just sorted to the bottom.
+describe('a left (abandoned) challenge in Challenges-Mine', () => {
+  it('never appears in the list at all', () => {
+    const mine = toChallengeMineViewModels(
+      [
+        buildChallenge({ id: 'LEFT', status: 'left', current_day: 3 }),
+        buildChallenge({ id: 'GOING', status: 'active', current_day: 5 }),
+      ],
+      NO_PHOTOS,
+    );
+
+    expect(mine.map((challenge) => challenge.challengeId)).toEqual(['GOING']);
+  });
+
+  it('leaves an empty Mine list when every challenge was left, rather than showing them', () => {
+    const mine = toChallengeMineViewModels([buildChallenge({ id: 'LEFT', status: 'left' })], NO_PHOTOS);
+
+    expect(mine).toEqual([]);
+  });
+});
+
+// A finished challenge must not vanish from Mine when its celebration is closed: it stays,
+// as its "Finished" card, after the challenges still going.
+describe('a finished challenge in Challenges-Mine', () => {
+  const mine = () =>
+    toChallengeMineViewModels(
+      [
+        buildChallenge({ id: 'FINISHED', status: 'completed', current_day: 30 }),
+        buildChallenge({ id: 'GOING', status: 'active', current_day: 5 }),
+      ],
+      NO_PHOTOS,
+    );
+
+  it('stays in the list, as a `won` card', () => {
+    const finished = mine().find((challenge) => challenge.challengeId === 'FINISHED');
+
+    expect(finished).toBeDefined();
+    expect(finished?.state).toBe('won');
+  });
+
+  it('comes after the challenges still going', () => {
+    expect(mine().map((challenge) => challenge.challengeId)).toEqual(['GOING', 'FINISHED']);
+  });
+
+  it('is the only card there when it is the only challenge', () => {
+    const viewModels = toChallengeMineViewModels([buildChallenge({ id: 'A', status: 'completed' })], NO_PHOTOS);
+
+    expect(viewModels.map((challenge) => challenge.state)).toEqual(['won']);
+  });
+
+  it('keeps what the card shows: how far it got', () => {
+    const [finished] = toChallengeMineViewModels(
+      [buildChallenge({ id: 'A', status: 'completed', current_day: 30, duration_days: 30 })],
+      NO_PHOTOS,
+    );
+
+    expect(finished.currentDay).toBe(30);
+    expect(finished.totalDays).toBe(30);
   });
 });

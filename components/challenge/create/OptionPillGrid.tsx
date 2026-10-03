@@ -25,6 +25,11 @@ interface OptionPillGridProps<TOption extends SelectablePillOption> {
    * category, no "which one wins" question to answer. Leave unset for a
    * grid with no per-option color (e.g. the Location grid). */
   getSelectedFill?: (option: TOption) => string;
+  /** Overrides the top-right "N selected" text — e.g. a picker with a hard
+   * cap wants "N/6 selected" instead. Defaults to the plain
+   * `challengeCreate.fields.selectedCount` count every existing caller
+   * already shows, so this is purely additive — no existing grid changes. */
+  countLabel?: (count: number) => string;
 }
 
 /** Flex-wrap pill selector — icon + label, selected = fill / ink text (see
@@ -36,6 +41,7 @@ export function OptionPillGrid<TOption extends SelectablePillOption>({
   onToggle,
   renderIcon,
   getSelectedFill,
+  countLabel,
 }: OptionPillGridProps<TOption>) {
   const { t } = useTranslation();
 
@@ -44,7 +50,9 @@ export function OptionPillGrid<TOption extends SelectablePillOption>({
       <Row justify="space-between" align="flex-end">
         <Text variant="header" tone="secondary">{label}</Text>
         <Text variant="caption" tone="secondary">
-          {t('challengeCreate.fields.selectedCount', { count: selectedValues.length })}
+          {countLabel
+            ? countLabel(selectedValues.length)
+            : t('challengeCreate.fields.selectedCount', { count: selectedValues.length })}
         </Text>
       </Row>
 
@@ -59,7 +67,17 @@ export function OptionPillGrid<TOption extends SelectablePillOption>({
               style={({ pressed }) => [styles.pill, selected && { backgroundColor: fill }, pressed && styles.pressed]}
             >
               {renderIcon(option, selected)}
-              <Text variant="label" tone={selected ? 'inverse' : 'primary'} weight={selected ? 'bold' : 'medium'}>
+              {/* Real bug, fixed 2026-09-24, per explicit "when you select a
+                  badge the layout shifts" report: `weight` used to flip
+                  medium->bold on selection — bold renders wider than medium
+                  for the same string, so a pill's own width changed the
+                  instant it got selected, which could reflow every pill
+                  after it in this flex-wrap grid onto a different row.
+                  Selection is already unambiguous via the fill color +
+                  inverted text color below; the weight doesn't need to
+                  change too, and keeping it constant means a pill's width
+                  never changes on tap. */}
+              <Text variant="label" tone={selected ? 'inverse' : 'primary'} weight="bold">
                 {option.label}
               </Text>
             </Pressable>

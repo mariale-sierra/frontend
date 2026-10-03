@@ -2,7 +2,7 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { colors } from '../../constants/theme';
+import { colors, glass } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import {
   BOTTOM_NAV_BOTTOM_INSET,
@@ -73,7 +73,7 @@ export function BottomNavBackground() {
               experimental (perf/graphics-risk) native Android blur — paired
               with the solid tint below, this still reads as a deliberate
               translucent glass bar on both platforms, never a broken one. */}
-          <BlurView intensity={28} tint="dark" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={glass.blurIntensity} tint={glass.tint} style={StyleSheet.absoluteFill} />
           <View style={styles.navCapsuleTint} />
           <BottomNavIndicator tabSlotWidth={tabSlotWidth} indicatorWidth={indicatorWidth} />
         </Animated.View>
@@ -98,10 +98,10 @@ const styles = StyleSheet.create({
     borderRadius: BOTTOM_NAV_HEIGHT / 2,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: withAlpha(colors.paper, 0.08),
+    borderColor: withAlpha(colors.paper, glass.borderOpacity),
   },
   navCapsuleTint: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: withAlpha(colors.surface, 0.72),
+    backgroundColor: withAlpha(colors.surface, glass.tintOpacity),
   },
 });

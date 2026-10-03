@@ -7,8 +7,7 @@ import { withAlpha } from '../../../utils/color';
 // Bigger than the previous 44 — the row no longer has its own card padding
 // around it (see below), so the freed horizontal space goes to the image
 // instead. Radius stays `small` regardless of size, per the standing
-// "photo tiles ALWAYS radius.small" rule (same precedent as
-// ChallengeQuickPickRow's own THUMB_SIZE bump).
+// "photo tiles ALWAYS radius.small" rule.
 const THUMB_SIZE = 64;
 
 interface ExerciseListItemProps {

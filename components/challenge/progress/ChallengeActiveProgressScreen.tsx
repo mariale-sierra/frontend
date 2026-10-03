@@ -11,7 +11,8 @@ import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
 import { getChallengeAccentColor } from '../../../services/adapters/challengeState';
 import { leaveChallenge } from '../../../services/challenge/challenge.service';
 import ScreenBackground from '../../layout/screenBackground';
-import { ChallengeAccentGlow } from '../challengeAccentGlow';
+import { ChallengeAccentBackdrop } from '../challengeAccentBackdrop';
+import { ConfettiBurst } from './ConfettiBurst';
 import { ChallengeProgressHeader } from './ChallengeProgressHeader';
 import { ChallengePhotoGalleryModal } from './ChallengePhotoGalleryModal';
 import { ChallengePhotoMosaicSkeleton } from './ChallengePhotoMosaicSkeleton';
@@ -49,6 +50,12 @@ export function ChallengeActiveProgressScreen() {
   function handlePressInfo() {
     if (data.challengeId) {
       router.push(`/challenge/${data.challengeId}`);
+    }
+  }
+
+  function handlePressSettings() {
+    if (data.challengeId) {
+      router.push(`/challenge/${data.challengeId}/manage`);
     }
   }
 
@@ -97,7 +104,7 @@ export function ChallengeActiveProgressScreen() {
 
   return (
     <ScreenBackground variant="challenges" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
-      <ChallengeAccentGlow color={accentColor} />
+      <ChallengeAccentBackdrop color={accentColor} />
 
       {/* The whole screen scrolls as one — the grid/calendar below are plain
           content Views, not their own independently-scrolling pager pages,
@@ -116,10 +123,12 @@ export function ChallengeActiveProgressScreen() {
           todayRoutineName={data.todayRoutineName}
           isTodayRestDay={data.isTodayRestDay}
           dominantActivityCategory={data.dominantActivityCategory}
+          isOwner={data.isOwner}
           onPressRoutine={handlePressRoutine}
           onPressMembers={handlePressMembers}
           onPressInfo={handlePressInfo}
           onPressLeave={leavePopup.show}
+          onPressSettings={handlePressSettings}
         />
 
         <View style={styles.consistencyHeader}>
@@ -165,6 +174,16 @@ export function ChallengeActiveProgressScreen() {
       />
 
       <leavePopup.Component />
+
+      {/* Rendered LAST, not right after ChallengeAccentBackdrop — real bug,
+          found 2026-09-22: it used to sit before the ScrollView, so the
+          Consistency section's photos painted OVER the confetti instead of
+          under it (RN stacks siblings in document order, same as the web,
+          with no z-index here to override it). Replays every time a
+          finished challenge's progress screen is opened — see ConfettiBurst's
+          own doc comment for why that's the intended behavior here, unlike
+          the once-ever "Challenge complete" popup. */}
+      <ConfettiBurst active={data.state === 'won'} />
     </ScreenBackground>
   );
 }

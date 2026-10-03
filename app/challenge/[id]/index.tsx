@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,22 +7,29 @@ import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../../components/layout/screenBackground';
 import { Row } from '../../../components/layout/row';
 import { BackButton } from '../../../components/ui/backButton';
+import { Button } from '../../../components/ui/button';
 import { Icon } from '../../../components/ui/icon';
 import { Text } from '../../../components/ui/text';
 import { ChallengeHeader, ChallengeAboutSection, ChallengeRoutineList, ChallengeInfoContentSkeleton } from '../../../components/challenge/detail';
-import { ChallengeAccentGlow } from '../../../components/challenge/challengeAccentGlow';
+import { ChallengeAccentBackdrop } from '../../../components/challenge/challengeAccentBackdrop';
+import { CoachMark } from '../../../components/onboarding/CoachMark';
 import type { ChallengeInfoRow } from '../../../components/challenge/detail';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
-import { getChallenge, joinChallenge } from '../../../services/challenge/challenge.service';
+import { closeChallenge, getChallenge, isChallengeOwner, joinChallenge } from '../../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../../services/user/user.service';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
 import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
+import { useAuth } from '../../../hooks/useAuth';
+import { useIsAdmin } from '../../../hooks/useIsAdmin';
 import { useErrorNotificationStore } from '../../../store/errorNotificationStore';
+import { markChallengeMembershipSeen } from '../../../utils/seenChallengeMemberships';
+import { hasSeenChallengeJoinCallout, markChallengeJoinCalloutSeen } from '../../../utils/challengeJoinCallout';
+import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../../constants/onboardingDebug';
 import type { ChallengeContract } from '../../../types/challenge';
 
-type MembershipStatus = 'creator' | 'joined' | 'none';
+type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
 
 /**
  * Challenge info screen — title, info rows (duration/location/focus/proof),
@@ -44,6 +51,46 @@ export default function ChallengeDetail() {
   const [membershipLoading, setMembershipLoading] = useState(true);
   const { showSuccess } = useErrorNotificationStore();
 
+  // Onboarding Stage 4's join callout — teaches the general concept of
+  // joining (not tied to this specific challenge), shown once ever per
+  // device (utils/challengeJoinCallout.ts), same shape as Stage 2/3's coach
+  // marks/tips.
+  const [showJoinCallout, setShowJoinCallout] = useState(false);
+  useEffect(() => {
+    if (FORCE_SHOW_ONBOARDING_PREVIEWS) {
+      setShowJoinCallout(true);
+      return;
+    }
+    hasSeenChallengeJoinCallout().then((seen) => {
+      if (!seen) setShowJoinCallout(true);
+    });
+  }, []);
+  const dismissJoinCallout = useCallback(() => {
+    setShowJoinCallout(false);
+    markChallengeJoinCalloutSeen();
+  }, []);
+  const { userId } = useAuth();
+  const isAdmin = useIsAdmin();
+  const isOwner = isChallengeOwner(challenge, userId);
+  // Closed by an admin: no one can join or log new progress any more.
+  const isClosed = challenge?.status === 'closed';
+
+  const closeChallengePopup = useConfirmationPopup({
+    type: 'closeChallenge',
+    challengeName: challenge?.name ?? t('challenges.fallbackName'),
+    onConfirm: async () => {
+      const challengeId = typeof id === 'string' ? id : '';
+      if (!challengeId) return;
+      try {
+        await closeChallenge(challengeId);
+        setChallenge((prev) => (prev ? { ...prev, status: 'closed' } : prev));
+        showSuccess({ message: t('challengeProgress.closeChallengeSuccess') });
+      } catch {
+        // The confirmation popup itself surfaces failure via its own error state; nothing else to do here.
+      }
+    },
+  });
+
   const joinPopup = useConfirmationPopup({
     type: 'join',
     challengeName: challenge?.name ?? t('challenges.fallbackName'),
@@ -51,8 +98,27 @@ export default function ChallengeDetail() {
       const challengeId = typeof id === 'string' ? id : '';
       if (!challengeId) return;
       try {
-        await joinChallenge(challengeId);
+        const response = await joinChallenge(challengeId);
+        const name = challenge?.name ?? t('challenges.fallbackName');
+
+        // Private challenge: files a pending request instead of joining
+        // directly (see ChallengesService.joinChallenge) — the real,
+        // confirmed bug this fixes: joining a private challenge used to
+        // report success and drop the requester straight in, with nothing
+        // left for the owner to approve.
+        if (response?.status === 'requested') {
+          setMembershipStatus('requested');
+          showSuccess({ message: t('challenges.joinConfirm.requestSent', { name }) });
+          return;
+        }
+
         setMembershipStatus('joined');
+        // This device already has explicit, immediate feedback for this
+        // membership (the toast right below) — mark it seen up front so the
+        // Challenges tab's own "You're in!" popup (for an approval found
+        // out about asynchronously, with no other feedback at all) never
+        // also fires for this same challenge.
+        void markChallengeMembershipSeen(challengeId);
         // Per explicit report: joining silently worked with no feedback and
         // no way to see the new challenge without manually finding it —
         // confirm it worked, then land on the exact list it now appears in
@@ -62,7 +128,7 @@ export default function ChallengeDetail() {
         // underneath this one (its `useState` initializer alone wouldn't
         // re-run on an already-mounted screen) — see its own matching
         // `useEffect` for the other half of this.
-        showSuccess({ message: t('challenges.joinConfirm.success', { name: challenge?.name ?? t('challenges.fallbackName') }) });
+        showSuccess({ message: t('challenges.joinConfirm.success', { name }) });
         router.replace('/(tabs)/challenges?view=mine');
       } catch {
         // The confirmation popup itself surfaces failure via its own error state; nothing else to do here.
@@ -131,6 +197,11 @@ export default function ChallengeDetail() {
   }
 
   const view = result.value;
+  // Whether the bottom bar (Join button or "Request sent" pill) renders at
+  // all — used both to gate it and to size the scroll content's own bottom
+  // padding so nothing sits underneath it.
+  const showsBottomBar =
+    !isClosed && !membershipLoading && (membershipStatus === 'none' || membershipStatus === 'requested');
   // Activity Color System v2 — this challenge's own resolved accent color,
   // used for the title, the "Lasts" row's calendar icon, the "Read more"
   // toggle, and each workout day's numbered badge below.
@@ -151,15 +222,27 @@ export default function ChallengeDetail() {
     { icon: 'location-outline', label: t('challengeInfo.doItAtLabel'), value: view.locationsLabel },
     { icon: 'flash-outline', label: t('challengeInfo.focusLabel'), value: view.categoriesLabel },
     { icon: 'camera-outline', label: t('challengeInfo.dailyProofLabel'), value: t('challengeInfo.dailyProofValue') },
+    // A closed challenge says so, in the same rows as the rest of what there is to know
+    // about it, so it is not a silent state.
+    ...(isClosed
+      ? [
+          {
+            icon: 'lock-closed-outline' as const,
+            iconColor: colors.error,
+            label: t('challengeInfo.statusLabel'),
+            value: t('challengeInfo.closedValue'),
+          },
+        ]
+      : []),
   ];
 
   return (
     <ScreenBackground variant="default" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
-      <ChallengeAccentGlow color={accentColor} />
+      <ChallengeAccentBackdrop color={accentColor} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: membershipStatus === 'none' ? spacing['2xl'] : insets.bottom + spacing.xl }}
+        contentContainerStyle={{ paddingBottom: showsBottomBar ? spacing['2xl'] : insets.bottom + spacing.xl }}
       >
         <Row justify="space-between" align="center" style={styles.topBar}>
           <BackButton style={styles.backButton} />
@@ -195,6 +278,26 @@ export default function ChallengeDetail() {
             >
               <Icon name="share-outline" size={22} color={colors.paper} />
             </Pressable>
+            {isOwner && (
+              <Pressable
+                onPress={() => router.push(`/challenge/${id}/manage`)}
+                style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel={t('challengeProgress.manageA11y')}
+              >
+                <Icon name="settings-outline" size={22} color={colors.paper} />
+              </Pressable>
+            )}
+            {isAdmin && challenge?.status !== 'closed' && (
+              <Pressable
+                onPress={closeChallengePopup.show}
+                style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel={t('challengeProgress.closeChallengeA11y')}
+              >
+                <Icon name="lock-closed-outline" size={22} color={colors.error} />
+              </Pressable>
+            )}
           </Row>
         </Row>
 
@@ -219,9 +322,28 @@ export default function ChallengeDetail() {
 
       {/* Per explicit request: an already-joined (or creator) user sees no
           button at all here, not a disabled/relabeled one — the wireframe
-          only shows this bar for someone who hasn't joined yet. */}
-      {!membershipLoading && membershipStatus === 'none' && (
+          only shows this bar for someone who hasn't joined yet. Nor does anyone
+          when the challenge is closed: there is nothing to join. A private
+          challenge's own pending request gets the same "Request sent" pill
+          Spaces already uses (Chats-49B) instead of the primary button. */}
+      {showsBottomBar && membershipStatus === 'requested' && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+          <Button variant="subtle" size="md" disabled leftIcon={<Icon name="time-outline" size={20} color={colors.paper} />}>
+            {t('challenges.requestPendingLabel')}
+          </Button>
+        </View>
+      )}
+
+      {showsBottomBar && membershipStatus === 'none' && (
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+          {showJoinCallout && (
+            <CoachMark
+              message={t('challengeInfo.joinCallout')}
+              onDismiss={dismissJoinCallout}
+              arrowPlacement="none"
+              style={styles.joinCallout}
+            />
+          )}
           <Pressable
             onPress={joinPopup.show}
             style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}
@@ -236,6 +358,7 @@ export default function ChallengeDetail() {
       )}
 
       <joinPopup.Component />
+      <closeChallengePopup.Component />
     </ScreenBackground>
   );
 }
@@ -288,6 +411,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: withAlpha(colors.paper, 0.08),
+  },
+  // CoachMark is already full-width for `arrowPlacement="none"` — this just
+  // adds the gap before the Join button below it.
+  joinCallout: {
+    marginBottom: spacing.sm,
   },
   joinButton: {
     height: 52,

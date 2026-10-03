@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -8,18 +8,18 @@ import { Text } from '../../components/ui/text';
 import { StreakGridItem, StreaksGridSkeleton } from '../../components/home';
 import { getFollowingStreaks } from '../../services/follow/follow.service';
 import { toFriendStreakViewModels, type FriendStreakViewModel } from '../../services/adapters/followAdapter';
+import { STREAK_GRID_COLUMNS } from '../../constants/streaksGrid';
 import { spacing } from '../../constants/theme';
+import { getStreakGridLayout } from '../../utils/streaksGrid';
 
 type GridRow = FriendStreakViewModel | { userId: string; filler: true };
 
-const GRID_COLUMNS = 4;
-
-/** Pads to a multiple of `GRID_COLUMNS` so a partial last row still lines up
- * under the same 4 flex columns as every full row above it. */
+/** Pads to a multiple of `STREAK_GRID_COLUMNS` so a partial last row still lines up
+ * under the same flex columns as every full row above it. */
 function padToGridColumns(entries: FriendStreakViewModel[]): GridRow[] {
-  const remainder = entries.length % GRID_COLUMNS;
+  const remainder = entries.length % STREAK_GRID_COLUMNS;
   if (remainder === 0) return entries;
-  const fillerCount = GRID_COLUMNS - remainder;
+  const fillerCount = STREAK_GRID_COLUMNS - remainder;
   const fillers: GridRow[] = Array.from({ length: fillerCount }, (_, i) => ({
     userId: `filler-${i}`,
     filler: true,
@@ -29,6 +29,8 @@ function padToGridColumns(entries: FriendStreakViewModel[]): GridRow[] {
 
 export default function StreaksAllScreen() {
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+  const { avatarSize } = getStreakGridLayout(width);
   const [friends, setFriends] = useState<FriendStreakViewModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -76,7 +78,7 @@ export default function StreaksAllScreen() {
 
       {loading ? (
         <View style={styles.skeletonWrap}>
-          <StreaksGridSkeleton />
+          <StreaksGridSkeleton avatarSize={avatarSize} />
         </View>
       ) : error ? (
         <View style={styles.center}>
@@ -86,7 +88,7 @@ export default function StreaksAllScreen() {
         <FlatList
           data={gridData}
           keyExtractor={(item) => item.userId}
-          numColumns={GRID_COLUMNS}
+          numColumns={STREAK_GRID_COLUMNS}
           contentContainerStyle={styles.grid}
           renderItem={({ item }) => (
             <View style={styles.cell}>
@@ -96,6 +98,7 @@ export default function StreaksAllScreen() {
                   avatarUrl={item.avatarUrl}
                   streakDays={item.streakDays}
                   loggedToday={item.loggedToday}
+                  size={avatarSize}
                 />
               )}
             </View>

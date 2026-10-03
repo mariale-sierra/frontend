@@ -9,6 +9,10 @@ export default function ChallengeLayout() {
       <Stack.Screen name="invite" options={{ headerShown: false }} />
       <Stack.Screen name="routine/[day]" options={{ headerShown: false }} />
       <Stack.Screen name="members" options={{ headerShown: false }} />
+      {/* Join requests render directly inside Manage now — no separate
+          screen (per explicit feedback that two screens for one job was
+          redundant). */}
+      <Stack.Screen name="manage" options={{ headerShown: false }} />
     </Stack>
   );
 }

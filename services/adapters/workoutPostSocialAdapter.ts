@@ -24,3 +24,11 @@ export function toCommentViewModel(comment: CommentContract): CommentViewModel {
 export function toCommentViewModels(comments: CommentContract[]): CommentViewModel[] {
   return comments.map(toCommentViewModel);
 }
+
+/**
+ * A post's comments as the sheet shows them: a stack, the NEWEST on top, scrolling down to
+ * the older ones (like Instagram's). The API lists them oldest first.
+ */
+export function toCommentThread(comments: CommentContract[]): CommentViewModel[] {
+  return toCommentViewModels(comments).reverse();
+}

@@ -33,7 +33,10 @@ export function RestDayContent({
         <Ionicons name="moon-outline" size={72} color={colors.ink} />
 
         <View style={styles.textGroup}>
-          <Text variant="body" size="2xl" weight="bold" align="center" inverse>
+          {/* A heading, in the display font like the titles of the screens
+              around it (Plan your rest, Today's already done) — it was body text
+              set bold. Same size as before. */}
+          <Text variant="title" size="2xl" align="center" inverse>
             {t('restDay.title')}
           </Text>
           <Text variant="body" tone="secondary" align="center" inverse style={styles.subtitle}>

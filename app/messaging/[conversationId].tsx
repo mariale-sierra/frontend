@@ -4,6 +4,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   View,
 } from 'react-native';
@@ -15,7 +16,7 @@ import ScreenBackground from '../../components/layout/screenBackground';
 import { BackButton } from '../../components/ui/backButton';
 import { Text } from '../../components/ui/text';
 import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
+import { GlassInput } from '../../components/ui/glassInput';
 import { IconButton } from '../../components/ui/iconButton';
 import { UserAvatar } from '../../components/ui/userAvatar';
 import { ConfirmationPopup } from '../../components/ui/confirmationPopup';
@@ -125,12 +126,25 @@ export default function Chat() {
     <ScreenBackground variant="default">
       <View style={styles.header}>
         <BackButton />
-        <Row align="center" gap="sm" style={styles.headerInfo} justify="flex-start">
-          <UserAvatar username={otherUsername ?? ''} imageUrl={otherProfileImageUrl || null} size={HEADER_AVATAR_SIZE} />
-          <Text variant="body" weight="bold" numberOfLines={1} style={styles.headerName}>
-            {name}
-          </Text>
-        </Row>
+        {/* Tapping the avatar/name goes to their profile — same
+            `/profile/${otherUserId}` navigation chat-details.tsx's own
+            "View profile" row already uses, per explicit request. Only
+            pressable when `otherUserId` actually came through (same
+            string/string[] unwrap this screen already does for the other
+            route params — see `unwrap` above). */}
+        <Pressable
+          onPress={() => otherUserId && router.push(`/profile/${otherUserId}`)}
+          disabled={!otherUserId}
+          accessibilityRole="button"
+          style={styles.headerInfo}
+        >
+          <Row align="center" gap="sm" justify="flex-start">
+            <UserAvatar username={otherUsername ?? ''} imageUrl={otherProfileImageUrl || null} size={HEADER_AVATAR_SIZE} />
+            <Text variant="body" weight="bold" numberOfLines={1} style={styles.headerName}>
+              {name}
+            </Text>
+          </Row>
+        </Pressable>
         {/* Chats-47A's header also shows an "Active now" presence indicator
             next to the name — no online/presence data exists anywhere in
             the backend (chats or otherwise), so it's left out rather than
@@ -278,7 +292,7 @@ export default function Chat() {
                   is tiny/doesn't work" bug, not a cosmetic one. */}
               <Row align="center" gap="sm" justify="flex-start">
                 <View style={styles.inputWrapper}>
-                  <Input
+                  <GlassInput
                     containerStyle={styles.input}
                     style={styles.inputText}
                     placeholderVariant="caption"
@@ -382,8 +396,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.md,
   },
+  // Transparent on purpose (2026-09-19): the message field is frosted glass
+  // (`GlassInput`), and glass over a solid `surface` bar would vanish into it.
   inputBar: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: withAlpha(colors.paper, 0.08),
     paddingHorizontal: spacing.lg,
@@ -392,10 +408,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   // Message request (Instagram-style) — replaces inputBar entirely while
-  // `isPending`, same surface/border chrome so the footer reads as one
+  // `isPending`, same transparent/border chrome so the footer reads as one
   // consistent "bottom bar" family either way.
   requestBar: {
-    backgroundColor: colors.surface,
+    backgroundColor: 'transparent',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: withAlpha(colors.paper, 0.08),
     paddingHorizontal: spacing.lg,
@@ -438,9 +454,8 @@ const styles = StyleSheet.create({
     // breathing room, rather than a raw pixel value.
     paddingLeft: spacing.xs,
   },
+  // The glass fill, radius and rim come from `GlassInput` itself.
   input: {
-    backgroundColor: colors.ink,
-    borderRadius: radius.big,
     // Tightened from Input's own default `spacing.md`, per explicit "row is
     // too tall" request — paired with the smaller `sendButton` below so the
     // pill and the button land on close to the same height.

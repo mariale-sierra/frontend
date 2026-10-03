@@ -1,8 +1,10 @@
 import axios from 'axios';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import i18n from '../i18n';
 import { getAccessToken } from './auth/token.service';
 import { useErrorNotificationStore } from '../store/errorNotificationStore';
+import { isContentRejectedError } from '../utils/contentModeration';
 
 // Lets a specific call opt out of the global error toast below — for
 // best-effort writes a caller already handles on its own (catches, logs, and
@@ -24,6 +26,14 @@ const baseURL = (Constants.expoConfig?.extra?.apiUrl as string | undefined) ?? F
 
 const api = axios.create({
   baseURL,
+  // ngrok's free tier interstitial warning page intercepts every request
+  // (not just browser navigations) to a *.ngrok-free.* domain unless this
+  // header is present — without it, API calls get back an HTML warning page
+  // instead of JSON. Harmless to send against the real backend, which just
+  // ignores unknown headers.
+  headers: baseURL.includes('ngrok-free')
+    ? { 'ngrok-skip-browser-warning': 'true' }
+    : undefined,
 });
 
 api.interceptors.request.use(async (config) => {
@@ -31,18 +41,14 @@ api.interceptors.request.use(async (config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  // Real day-boundary bug, not just unintuitive UX: every "is today done"
-  // check (current day, streaks, today_completed) is computed backend-side
-  // against a fixed UTC calendar day, with no idea what timezone the user
-  // is actually in — so for anyone ahead of UTC, there's a real window
-  // right after local midnight where a challenge still reads as "completed
-  // today" from yesterday's photo, because the server's UTC day hasn't
-  // rolled over yet. Sent fresh on every request (not cached/stored) so it
-  // stays correct across DST changes and travel without any extra
-  // client-side bookkeeping — the backend is expected to fall back to UTC
-  // if this header is ever missing (older app builds, etc.), matching
-  // today's existing behavior exactly.
-  config.headers['X-Timezone'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // Browsers send a CORS preflight for this custom header. The public API may
+  // still be running a deployment from before X-Timezone was added to its
+  // allow-list, so keep web login and requests compatible with that server.
+  // Native clients are not subject to CORS and retain timezone-aware day
+  // boundaries; the backend falls back to UTC when web omits this header.
+  if (Platform.OS !== 'web') {
+    config.headers['X-Timezone'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  }
   return config;
 });
 
@@ -56,7 +62,13 @@ api.interceptors.response.use(
     const errorStore = useErrorNotificationStore.getState();
 
     // Handle different error types
-    if (error?.response?.status === 401) {
+    if (isContentRejectedError(error)) {
+      errorStore.show({
+        title: i18n.t('common.errors.contentRejectedTitle'),
+        message: i18n.t('common.errors.contentRejectedMessage'),
+        duration: 5000,
+      });
+    } else if (error?.response?.status === 401) {
       errorStore.show({
         title: i18n.t('common.errors.sessionExpiredTitle'),
         message: i18n.t('common.errors.sessionExpiredMessage'),

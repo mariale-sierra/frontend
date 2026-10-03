@@ -39,7 +39,7 @@ type PlaceholderVariant = 'body' | 'secondary' | 'caption';
  * @property multiline - Whether the input supports multiple lines; adjusts height dynamically (default: false)
  * @property maxLength - Maximum character limit; displays character count below input when set (default: undefined)
  */
-interface InputProps extends TextInputProps {
+export interface InputProps extends TextInputProps {
   label?: string;
   labelVariant?: LabelVariant;
   placeholder?: string;
@@ -50,6 +50,11 @@ interface InputProps extends TextInputProps {
   rightIcon?: React.ReactNode;
 
   variant?: InputVariant;
+
+  /** Rendered as the first child of the input container, for a custom
+   * background layer (e.g. glass). The container should also clip
+   * (`overflow: 'hidden'`) so the layer follows its rounded corners. */
+  backdrop?: React.ReactNode;
 
   multiline?: boolean;
   maxLength?: number;
@@ -68,6 +73,7 @@ export function Input({
   containerStyle,
   leftIcon,
   rightIcon,
+  backdrop,
   variant = 'default',
   multiline = false,
   maxLength,
@@ -109,6 +115,7 @@ export function Input({
           containerStyle,
         ]}
       >
+        {backdrop}
         {leftIcon}
 
         <TextInput

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { safeBack, safeBackTimes } from '../../utils/navigation';
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,7 +24,40 @@ import type { WorkoutLogContract } from '../../types/workout-log';
 import { applyExerciseMetrics } from '../../services/metrics/applyExerciseMetrics';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
-import { useUploadSuccessStore } from '../../store/uploadSuccessStore';
+import { showProgressLoggedFeedback } from '../../utils/progressLoggedFeedback';
+import { useAuth } from '../../hooks/useAuth';
+import { useChallengeParticipants } from '../../hooks/useChallengeParticipants';
+import { getChallenge, isChallengeOwner } from '../../services/challenge/challenge.service';
+import { TagParticipantsSheet } from '../../components/challenge/TagParticipantsSheet';
+import type { ChallengeContract } from '../../types/challenge';
+
+const CHIP_ICON_SIZE = 19;
+
+/** A chip over the captured photo — an icon and a label in a dark, rimmed pill: the
+ * visibility toggle (top right) and, for a challenge's owner, the tag picker (top left)
+ * are both this one, so they cannot drift apart. `style` places it; `scale` lets it pulse. */
+function CameraChip({
+  icon,
+  label,
+  onPress,
+  style,
+  scale,
+}: {
+  icon: React.ComponentProps<typeof Icon>['name'];
+  label: string;
+  onPress: () => void;
+  style: StyleProp<ViewStyle>;
+  scale?: Animated.Value;
+}) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [style, pressed && styles.pressed]} hitSlop={8}>
+      <Animated.View style={[styles.chipInner, scale && { transform: [{ scale }] }]}>
+        <Icon name={icon} size={CHIP_ICON_SIZE} color={colors.paper} />
+        <Text style={styles.chipLabel}>{label}</Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 function VisibilityToggle({
   visibility,
@@ -37,22 +71,13 @@ function VisibilityToggle({
   const { t } = useTranslation();
   const isFollowers = visibility === 'followers';
   return (
-    <Pressable
+    <CameraChip
+      icon={isFollowers ? 'eye-outline' : 'eye-off-outline'}
+      label={isFollowers ? t('camera.visibilityFollowers') : t('camera.visibilityPrivate')}
       onPress={onToggle}
-      style={({ pressed }) => [styles.visibilityToggle, pressed && styles.pressed]}
-      hitSlop={8}
-    >
-      <Animated.View style={[styles.visibilityInner, { transform: [{ scale: anim }] }]}>
-        <Icon
-          name={isFollowers ? 'eye-outline' : 'eye-off-outline'}
-          size={19}
-          color={colors.paper}
-        />
-        <Text style={styles.visibilityLabel}>
-          {isFollowers ? t('camera.visibilityFollowers') : t('camera.visibilityPrivate')}
-        </Text>
-      </Animated.View>
-    </Pressable>
+      style={styles.visibilityToggle}
+      scale={anim}
+    />
   );
 }
 
@@ -74,8 +99,39 @@ export default function Camera() {
   const [visibility, setVisibility] = useState<'followers' | 'private'>('followers');
   const visAnim = useRef(new Animated.Value(1)).current;
 
+  // Bloque 1 — joint owner posts: only shown/usable when the current user
+  // owns the selected challenge. `getChallengeUsers`-backed participants
+  // list (same hook members.tsx uses) doubles as the tag picker's source —
+  // tagging only makes sense among people already in the challenge.
+  const { userId } = useAuth();
+  const [selectedChallenge, setSelectedChallenge] = useState<ChallengeContract | null>(null);
+  const [taggedUserIds, setTaggedUserIds] = useState<string[]>([]);
+  const [tagSheetVisible, setTagSheetVisible] = useState(false);
+
+  useEffect(() => {
+    if (!selectedChallengeId) {
+      setSelectedChallenge(null);
+      return;
+    }
+    getChallenge(selectedChallengeId).then(setSelectedChallenge).catch(() => setSelectedChallenge(null));
+  }, [selectedChallengeId]);
+
+  const isOwner = isChallengeOwner(selectedChallenge, userId);
+  // Only the owner tags, so only the owner's camera asks for the participants — and the
+  // owner is not among the people to tag.
+  const { participants } = useChallengeParticipants(isOwner ? selectedChallengeId ?? null : null);
+  const taggable = useMemo(() => participants.filter((participant) => participant.id !== userId), [participants, userId]);
+
   const cameraRef = useRef<CameraView>(null);
   const isBusy = isTakingPicture || uploadingImage || submittingProgress;
+  // B5: a double tap fired back-to-back (before React has committed the
+  // `isBusy` re-render that disables the button) would both read the same
+  // stale `false` and both call submitWorkoutProgress — `useRef` updates
+  // are visible synchronously, so the second tap's check always sees the
+  // first tap's write. Same pattern as FeedPostCard's `reactingRef`. This
+  // is UX defense only — the actual guarantee against a duplicate is the
+  // backend's uq_workout_logs_user_challenge_local_day constraint.
+  const confirmingRef = useRef(false);
 
   function toggleVisibility() {
     setVisibility((v) => (v === 'followers' ? 'private' : 'followers'));
@@ -111,7 +167,7 @@ export default function Camera() {
   }
 
   async function handleConfirm() {
-    if (isBusy || !capturedUri) return;
+    if (isBusy || !capturedUri || confirmingRef.current) return;
 
     if (!selectedChallengeId) {
       setError(t('camera.selectChallengeError'));
@@ -119,6 +175,15 @@ export default function Camera() {
       return;
     }
 
+    confirmingRef.current = true;
+    try {
+      await confirmProgress(capturedUri, selectedChallengeId);
+    } finally {
+      confirmingRef.current = false;
+    }
+  }
+
+  async function confirmProgress(capturedUri: string, selectedChallengeId: string) {
     setError(null);
     setUploadingImage(true);
     let publicUrl: string;
@@ -140,6 +205,7 @@ export default function Camera() {
       isRestDay: false as const,
       visibility,
       routineId: currentRoutineId ?? undefined,
+      taggedUserIds: isOwner && taggedUserIds.length > 0 ? taggedUserIds : undefined,
     };
 
     setSubmittingProgress(true);
@@ -179,9 +245,6 @@ export default function Camera() {
       }
     }
     invalidateChallengeProgressCache();
-    // The success popup itself is global (mounted at app root), so it shows
-    // on top of wherever the back() calls below land.
-    useUploadSuccessStore.getState().show();
     setSubmittingProgress(false);
     try {
       // Closes the whole (add) modal group, back to whatever screen the user
@@ -207,6 +270,10 @@ export default function Camera() {
     } catch (navError) {
       console.error('[Camera] closing the (add) modal failed after a successful save:', navError);
     }
+    // The popup itself is global (mounted at app root), so it shows on top of
+    // wherever the back() calls above landed: "Challenge complete" if that was
+    // the challenge's last day (it is marked completed first), else "logged!".
+    void showProgressLoggedFeedback(selectedChallengeId);
   }
 
   if (!permission) {
@@ -251,12 +318,25 @@ export default function Camera() {
         <View style={styles.cameraContainer}>
           <Image source={{ uri: capturedUri }} style={styles.cameraFill} resizeMode="cover" />
           <VisibilityToggle visibility={visibility} anim={visAnim} onToggle={toggleVisibility} />
+          {isOwner && (
+            <CameraChip
+              icon="pricetag-outline"
+              label={
+                taggedUserIds.length > 0
+                  ? t('challengeProgress.tagParticipantsSelectedCount', { count: taggedUserIds.length })
+                  : t('challengeProgress.tagParticipantsChip')
+              }
+              onPress={() => setTagSheetVisible(true)}
+              style={styles.tagToggle}
+            />
+          )}
         </View>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
         <View style={styles.bottomBar}>
           <Pressable
+            testID="camera-confirm"
             onPress={handleConfirm}
             disabled={isBusy}
             style={({ pressed }) => [
@@ -272,6 +352,14 @@ export default function Camera() {
             )}
           </Pressable>
         </View>
+
+        <TagParticipantsSheet
+          visible={tagSheetVisible}
+          participants={taggable}
+          selectedIds={taggedUserIds}
+          onChange={setTaggedUserIds}
+          onClose={() => setTagSheetVisible(false)}
+        />
       </View>
     );
   }
@@ -304,6 +392,7 @@ export default function Camera() {
 
       <View style={styles.bottomBar}>
         <Pressable
+          testID="camera-capture"
           onPress={handleCapture}
           disabled={isBusy}
           style={({ pressed }) => [
@@ -393,7 +482,13 @@ const styles = StyleSheet.create({
     top: spacing.md,
     right: spacing.md,
   },
-  visibilityInner: {
+  // The tag picker's chip sits at the top left, the visibility chip's mirror.
+  tagToggle: {
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.md,
+  },
+  chipInner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -408,7 +503,7 @@ const styles = StyleSheet.create({
   // No `opacity: 1` alongside this custom color, unlike the usual rule for
   // Text custom-color overrides — kept exactly as shipped (already rendering
   // at the tone's default 85%) per an explicit "don't change this visually" request.
-  visibilityLabel: {
+  chipLabel: {
     color: colors.paper,
     fontSize: 14,
     fontWeight: '600',

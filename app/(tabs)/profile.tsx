@@ -14,6 +14,7 @@ import type { PostsView } from '../../components/profile';
 import type { ChallengePhoto } from '../../types/challenge';
 import { Row } from '../../components/layout/row';
 import { useAuth } from '../../hooks/useAuth';
+import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 
 /**
@@ -25,6 +26,7 @@ export default function Profile() {
   const { t } = useTranslation();
   const router = useRouter();
   const { username: sessionUsername } = useAuth();
+  const isAdmin = useIsAdmin();
   const [profile, setProfile] = useState<MyProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,14 +95,17 @@ export default function Profile() {
 
   const topBar = (
     <Row justify="flex-end" gap="sm" style={styles.topBar}>
-      <IconButton
-        name="barbell-outline"
-        iconSize={22}
-        onPress={() => router.push('/exercises')}
-        accessibilityRole="button"
-        accessibilityLabel={t('profile.exercisesButtonA11y')}
-        hitSlop={10}
-      />
+      {isAdmin && (
+        <IconButton
+          name="shield-checkmark-outline"
+          iconSize={22}
+          onPress={() => router.push('/profile/moderation')}
+          accessibilityRole="button"
+          accessibilityLabel={t('moderation.openA11y')}
+          hitSlop={10}
+          testID="open-moderation"
+        />
+      )}
       <IconButton
         name="pencil-outline"
         iconSize={22}
@@ -124,7 +129,7 @@ export default function Profile() {
   );
 
   return (
-    <ScreenBackground variant="default">
+    <ScreenBackground variant="default" gradientBackground>
       {topBar}
       <ScrollView
         contentContainerStyle={styles.container}
@@ -148,6 +153,7 @@ export default function Profile() {
               followingCount={profile?.following_count ?? 0}
               onPressFollowers={() => router.push('/profile/followers')}
               onPressFollowing={() => router.push('/profile/following')}
+              practices={profile?.practice_preferences}
             />
             <PostsViewToggle view={view} onViewChange={setView} />
             <PostsGrid view={view} onPhotoPress={setSelectedPhoto} refreshSignal={postsRefreshSignal} />

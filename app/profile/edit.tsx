@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { safeBack } from '../../utils/navigation';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
@@ -22,6 +23,7 @@ import {
   updateMyProfilePhoto,
 } from '../../services/user/user.service';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
+import { isContentRejectedError } from '../../utils/contentModeration';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
@@ -41,6 +43,7 @@ const BIO_MAX = 1000;
  */
 export default function EditProfile() {
   const { t } = useTranslation();
+  const router = useRouter();
 
   const [profile, setProfile] = useState<MyProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,8 +116,12 @@ export default function EditProfile() {
         showSuccess({ message: t('profileEdit.saved') });
       }
       safeBack('/(tabs)/profile');
-    } catch {
-      show({ message: t('profileEdit.saveError') });
+    } catch (error) {
+      // A bio rejected by moderation (B3) already got its own toast from the
+      // global interceptor — don't overwrite it with the generic save error.
+      if (!isContentRejectedError(error)) {
+        show({ message: t('profileEdit.saveError') });
+      }
     } finally {
       setSaving(false);
     }
@@ -282,6 +289,22 @@ export default function EditProfile() {
             </View>
           </View>
 
+          <Pressable
+            onPress={() => router.push('/onboarding/practices?mode=edit')}
+            style={({ pressed }) => [pressed && styles.pressedRow]}
+            accessibilityRole="button"
+          >
+            <Row align="center" justify="space-between">
+              <View style={styles.privacyText}>
+                <Text variant="subheader">{t('profileEdit.practices')}</Text>
+                <Text variant="caption" tone="secondary">
+                  {t('profileEdit.practicesHint')}
+                </Text>
+              </View>
+              <Icon name="chevron-forward-outline" size={20} color={colors.paper} />
+            </Row>
+          </Pressable>
+
           <Row align="center" justify="space-between">
             <View style={styles.privacyText}>
               <Text variant="subheader">{t('profileEdit.privacy')}</Text>
@@ -392,6 +415,9 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
     paddingRight: spacing.md,
+  },
+  pressedRow: {
+    opacity: 0.85,
   },
   center: {
     flex: 1,

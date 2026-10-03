@@ -102,3 +102,34 @@ export function adaptMuscleExerciseRow(
     locationCode: null,
   };
 }
+
+/**
+ * The catalog exercise a routine's exercise stands for, from a name search's rows:
+ * the row whose name is the same (ignoring case and spaces at the ends — routines
+ * carry the catalog's own name, "HIP THRUST", but the case is not worth relying
+ * on), or, failing that, the only row there is. `null` when there is no such
+ * exercise, or the search left several and none matches.
+ */
+export function pickExerciseIdByName(rows: Pick<ExerciseListRow, 'id' | 'name'>[], name: string): number | null {
+  const wanted = name.trim().toLowerCase();
+  const exact = rows.find((row) => row.name.trim().toLowerCase() === wanted);
+  if (exact) return exact.id;
+  return rows.length === 1 ? rows[0].id : null;
+}
+
+/**
+ * The live catalog's code for a location is not always the one the UI keys its label
+ * and icon by: the "any location" entry is 'cualquier-lugar' there, not 'anywhere'
+ * (see backend/database/seeds/2026-08-28-02). Left as it is, its badge came out as a
+ * raw translation key with no icon.
+ */
+const LOCATION_CODE_ALIASES: Record<string, string> = { 'cualquier-lugar': 'anywhere' };
+
+export function normalizeLocationCode(code: string): string {
+  return LOCATION_CODE_ALIASES[code] ?? code;
+}
+
+// Category-code normalization moved to constants/challengeFilters.ts
+// (`normalizeCategoryCode`/`activityTypeForCategoryCode`) — that's the one
+// place `CATEGORY_CODE_TO_ACTIVITY` itself lives, so the normalization and
+// the map it feeds can never drift out of sync with each other again.

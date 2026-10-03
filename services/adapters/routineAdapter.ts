@@ -1,9 +1,11 @@
-import { CATEGORY_CODE_TO_ACTIVITY, CATEGORY_TO_ACTIVITY } from '../../constants/challengeFilters';
+import { CATEGORY_TO_ACTIVITY, activityTypeForCategoryCode } from '../../constants/challengeFilters';
+import { ACTIVITY_METRIC_CONFIG } from '../../types/metrics';
 import type { ActivityType } from '../../types/activity';
 import type {
   ExerciseEntry,
   ExerciseMetrics,
   MetricFieldDefinition,
+  MetricTemplate,
   RoutineCatalogExerciseContract,
   RoutineContract,
   RoutineExerciseContract,
@@ -31,9 +33,8 @@ function getPrimaryCategory(exercise: RoutineCatalogExerciseContract | null | un
 function getActivityType(exercise: RoutineCatalogExerciseContract | null | undefined): ActivityType {
   const category = getPrimaryCategory(exercise);
   const categoryCode = category?.code?.trim().toLowerCase();
-  if (categoryCode && CATEGORY_CODE_TO_ACTIVITY[categoryCode]) {
-    return CATEGORY_CODE_TO_ACTIVITY[categoryCode];
-  }
+  const byCode = categoryCode ? activityTypeForCategoryCode(categoryCode) : undefined;
+  if (byCode) return byCode;
 
   const categoryName = category?.name?.trim().toLowerCase();
   const matchingName = Object.entries(CATEGORY_TO_ACTIVITY).find(
@@ -152,6 +153,61 @@ function mapSchemaMetrics(
       fields,
     },
     values,
+  };
+}
+
+/**
+ * Real, confirmed bug (2026-09-21, reported live: "why does the stair
+ * climber / a bench ankle stretch have distance and duration?"): every
+ * schema-kind (non-'sets') exercise added while BUILDING a challenge's
+ * routine (app/challenge/routine/exercises.tsx's handleAddSelected) starts
+ * from `routineBuilderStore.ts`'s `MOCK_SCHEMA_TEMPLATE` — a single
+ * hardcoded distance+duration template — and only gets replaced once
+ * `GET /exercises/:id/full` returns real per-exercise `metrics[]`. The
+ * RepDB importer never writes `exercise_metrics` rows at all (confirmed live
+ * — `metrics: []` for every checked exercise, stair-climber included), so
+ * that replacement never happens for ANY RepDB exercise: the same
+ * one-size-fits-all distance+duration fields showed up regardless of the
+ * exercise's real category — a stretch got a distance field it has no use
+ * for exactly as often as a locomotion cardio exercise did, and those wrong
+ * defaults (5 km / 20 min) were what actually got PERSISTED as the
+ * routine's real targets on submit, not just a display glitch.
+ *
+ * This builds the SAME category-aware fallback the Log-Metrics screen
+ * already gets right (`ACTIVITY_METRIC_CONFIG`, `types/metrics.ts`) instead
+ * of the blind mock, so a schema exercise with no real per-exercise metrics
+ * still gets the fields that make sense for its own activity: duration only
+ * for flexibility/mind-body, duration+distance for cardio, reps for
+ * functional. `'rounds'` and `'lbs'` are deliberately dropped — no backend
+ * `metric_types` row backs `'rounds'` yet (see
+ * database/seeds/2026-08-28-01-expand-exercise-catalog.sql's own note on
+ * this), and `'lbs'`/strength exercises never reach the schema path at all
+ * (they're 'sets'-tracked, handled by the reps/sets editor instead).
+ */
+export function buildActivityMetricTemplate(
+  exerciseId: number | string,
+  activityType: ActivityType,
+): MetricTemplate | null {
+  const config = ACTIVITY_METRIC_CONFIG[activityType];
+  const fields: MetricFieldDefinition[] = [];
+
+  for (const column of config.columns) {
+    if (column.key === 'duration') {
+      fields.push({ key: 'time', label: 'Duration', type: 'duration', defaultMinutes: 10, defaultSeconds: 0 });
+    } else if (column.key === 'distance') {
+      fields.push({ key: 'distance', label: 'Distance', type: 'number', defaultValue: 5, unit: 'km', min: 0 });
+    } else if (column.key === 'reps') {
+      fields.push({ key: 'reps', label: 'Reps', type: 'number', defaultValue: 10, min: 0 });
+    }
+    // 'lbs' and 'rounds' intentionally excluded — see doc comment above.
+  }
+
+  if (fields.length === 0) return null;
+
+  return {
+    id: `exercise-${exerciseId}-activity-metrics`,
+    title: 'Exercise metrics',
+    fields,
   };
 }
 

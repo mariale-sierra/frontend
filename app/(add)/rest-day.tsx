@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { safeBack, safeBackTimes } from '../../utils/navigation';
@@ -14,7 +14,7 @@ import { getChallengeProgress } from '../../services/challenge/challenge.service
 import { submitWorkoutProgress } from '../../services/workout-log/workout-log.service';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
-import { useUploadSuccessStore } from '../../store/uploadSuccessStore';
+import { showProgressLoggedFeedback } from '../../utils/progressLoggedFeedback';
 
 export default function RestDay() {
   const router = useRouter();
@@ -25,6 +25,13 @@ export default function RestDay() {
   const [submitting, setSubmitting] = useState(false);
   const [completedToday, setCompletedToday] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // B5: a double tap fired back-to-back (before React has committed the
+  // `submitting` re-render that disables the button) would both read the
+  // same stale `false` and both call submitWorkoutProgress — `useRef`
+  // updates are visible synchronously, so the second tap's check always
+  // sees the first tap's write. Same pattern as camera.tsx's
+  // `confirmingRef` / FeedPostCard's `reactingRef`.
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     // Real bug, fixed 2026-08-29, per explicit report ("it made other
@@ -46,7 +53,8 @@ export default function RestDay() {
   }, [selectedChallengeId]);
 
   async function handleJustToday() {
-    if (!selectedChallengeId || submitting) return;
+    if (!selectedChallengeId || submitting || submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     setError(null);
     try {
@@ -58,6 +66,7 @@ export default function RestDay() {
     } catch (e: any) {
       setError(e?.response?.data?.message ?? t('restDay.saveFailedMessage'));
       setSubmitting(false);
+      submittingRef.current = false;
       return;
     }
 
@@ -67,8 +76,8 @@ export default function RestDay() {
     // hiccup used to be caught by the same try/catch as the actual submit
     // and misreported as a failed save).
     invalidateChallengeProgressCache();
-    useUploadSuccessStore.getState().show();
     setSubmitting(false);
+    submittingRef.current = false;
     try {
       // NOT router.dismissAll() — see camera.tsx's handleConfirm for the
       // full explanation (fixed 2026-08-29, same bug: dismissAll()'s
@@ -81,6 +90,9 @@ export default function RestDay() {
     } catch (navError) {
       console.error('[RestDay] closing the (add) modal failed after a successful save:', navError);
     }
+    // The popup itself is global (mounted at app root): "Challenge complete" if
+    // that was the challenge's last day (it is marked completed first), else "logged!".
+    void showProgressLoggedFeedback(selectedChallengeId);
   }
 
   function handlePlanRestDays() {

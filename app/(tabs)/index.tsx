@@ -1,17 +1,19 @@
-import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import ScreenBackground from '../../components/layout/screenBackground';
+import { AccentPill } from '../../components/ui/accentPill';
 import { Divider } from '../../components/ui/divider';
 import { Icon } from '../../components/ui/icon';
 import { Loader } from '../../components/ui/loader';
 import { Text } from '../../components/ui/text';
 import { Row } from '../../components/layout/row';
-import { ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
+import { CoachMark } from '../../components/onboarding/CoachMark';
+import { ACTIVE_CHALLENGE_SNAP_INTERVAL, ActiveChallengeSection } from '../../components/home/ActiveChallengeSection';
 import { FeedPostCard } from '../../components/home/FeedPostCard';
 import { FriendsStreakSection } from '../../components/home/FriendsStreakSection';
 import type { FriendStreakViewModel } from '../../services/adapters/followAdapter';
@@ -19,7 +21,7 @@ import { HomeContentSkeleton } from '../../components/home/HomeContentSkeleton';
 import { EmptyFeed } from '../../components/home/EmptyFeed';
 import { FeedErrorState } from '../../components/home/FeedErrorState';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
-import { getHomeChallengesSorted } from '../../services/adapters/homeAdapter';
+import { getHomeChallengesSorted, getHomeGlowColors } from '../../services/adapters/homeAdapter';
 import { groupLatestPhotoByChallengeId } from '../../services/adapters/challengeState';
 import { getMyChallenges } from '../../services/user/user.service';
 import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
@@ -28,8 +30,13 @@ import { toFeedPostViewModels } from '../../services/adapters/feedAdapter';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
 import { getFollowingStreaks } from '../../services/follow/follow.service';
 import { toFriendStreakViewModels } from '../../services/adapters/followAdapter';
-import { colors, spacing } from '../../constants/theme';
+import { colors, spacing, textOpacity } from '../../constants/theme';
+import { HOME_GRADIENT_EDGE, HOME_GRADIENT_SCROLLS, USE_HOME_ACTIVITY_GRADIENT } from '../../constants/screenBackground';
+import { BOTTOM_NAV_HEIGHT } from '../../constants/bottomNav';
+import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../constants/onboardingDebug';
 import { formatTodayLabel, hoursUntilMidnight } from '../../utils/time';
+import { withAlpha } from '../../utils/color';
+import { hasSeenLogCoachMark, markLogCoachMarkSeen } from '../../utils/logCoachMark';
 
 function FeedSeparator() {
   return <View style={styles.separator} />;
@@ -48,6 +55,25 @@ export default function Home() {
   const [challenges, setChallenges] = useState<HomeActiveChallengeViewModel[]>([]);
   const [challengeLoading, setChallengeLoading] = useState(true);
 
+  // The carousel's scroll offset, which the background light follows: it takes
+  // the color of the card in view, cross-fading to the next as the carousel scrolls.
+  const carouselScrollX = useRef(new Animated.Value(0)).current;
+
+  // How far the feed is scrolled, so the background light rides up with the page
+  // instead of staying fixed behind the posts.
+  const listScrollY = useRef(new Animated.Value(0)).current;
+  const handleListScroll = useMemo(
+    () => Animated.event([{ nativeEvent: { contentOffset: { y: listScrollY } } }], { useNativeDriver: true }),
+    [listScrollY],
+  );
+  const backgroundPages = useMemo(
+    () =>
+      USE_HOME_ACTIVITY_GRADIENT
+        ? { colors: getHomeGlowColors(challenges), scrollX: carouselScrollX, pageWidth: ACTIVE_CHALLENGE_SNAP_INTERVAL }
+        : undefined,
+    [carouselScrollX, challenges],
+  );
+
   const [feedPosts, setFeedPosts] = useState<FeedPostViewModel[]>([]);
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedError, setFeedError] = useState(false);
@@ -57,6 +83,25 @@ export default function Home() {
   const [friendStreaks, setFriendStreaks] = useState<FriendStreakViewModel[]>([]);
   const [friendStreaksLoading, setFriendStreaksLoading] = useState(true);
   const [friendStreaksError, setFriendStreaksError] = useState(false);
+
+  // Onboarding Stage 2's one coach mark — points at the tab bar's Log FAB,
+  // shown once ever per device (utils/logCoachMark.ts). Checked once on
+  // mount, not tied to `isReady`'s own loading gate below (loading it in
+  // parallel is fine; it only ever RENDERS once `isReady` is true, see JSX).
+  const [showLogCoachMark, setShowLogCoachMark] = useState(false);
+  useEffect(() => {
+    if (FORCE_SHOW_ONBOARDING_PREVIEWS) {
+      setShowLogCoachMark(true);
+      return;
+    }
+    hasSeenLogCoachMark().then((seen) => {
+      if (!seen) setShowLogCoachMark(true);
+    });
+  }, []);
+  const dismissLogCoachMark = useCallback(() => {
+    setShowLogCoachMark(false);
+    markLogCoachMarkSeen();
+  }, []);
 
   const hoursLeft = hoursUntilMidnight();
 
@@ -241,10 +286,19 @@ export default function Home() {
         <>
           <View style={styles.challengeArea}>
             {challenges.length > 0 ? (
-              <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} />
+              <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} scrollX={carouselScrollX} />
             ) : (
               <View style={styles.center}>
-                <Text variant="body" tone="secondary">{t('home.noActiveChallenge')}</Text>
+                <Icon name="trophy-outline" size={32} color={withAlpha(colors.paper, textOpacity.tertiary)} />
+                <Text variant="body" tone="secondary" align="center">{t('home.noActiveChallenge')}</Text>
+                <View style={styles.emptyStateCta}>
+                  <AccentPill
+                    label={t('challenges.joinOrCreate')}
+                    color={colors.paper}
+                    variant="filled"
+                    onPress={() => router.push('/(tabs)/challenges?view=explore')}
+                  />
+                </View>
               </View>
             )}
           </View>
@@ -262,7 +316,7 @@ export default function Home() {
       )}
       </View>
     ),
-    [challenges, friendStreaks, friendStreaksError, hoursLeft, isReady, router, t, username],
+    [carouselScrollX, challenges, friendStreaks, friendStreaksError, hoursLeft, isReady, router, t, username],
   );
   const listEmptyComponent = useMemo(
     () => (!isReady ? null : feedError ? <FeedErrorState /> : <EmptyFeed />),
@@ -274,8 +328,14 @@ export default function Home() {
   );
 
   return (
-    <ScreenBackground variant="default">
-      <FlatList
+    <ScreenBackground
+      variant="default"
+      gradientBackground
+      gradientEdge={HOME_GRADIENT_EDGE}
+      gradientPages={backgroundPages}
+      gradientScrollY={HOME_GRADIENT_SCROLLS ? listScrollY : undefined}
+    >
+      <Animated.FlatList
         data={isReady ? feedPosts : []}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
@@ -289,6 +349,8 @@ export default function Home() {
             </View>
           ) : null
         }
+        onScroll={handleListScroll}
+        scrollEventThrottle={16}
         onEndReached={loadMoreFeed}
         onEndReachedThreshold={0.4}
         initialNumToRender={4}
@@ -298,6 +360,23 @@ export default function Home() {
         contentContainerStyle={listContentStyle}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       />
+
+      {isReady && showLogCoachMark && (
+        <CoachMark
+          message={t('home.logCoachMark')}
+          onDismiss={dismissLogCoachMark}
+          // Real bug, fixed 2026-09-24, per "I click it and nothing
+          // displays and it goes away": the FAB (components/navigation/
+          // bottomNavFab.tsx) fills almost the full BOTTOM_NAV_HEIGHT and
+          // has its own `hitSlop={8}`, reaching 8px above the tab bar's own
+          // top edge. This bubble's card padding pushed its actual touch
+          // area close enough to that hitSlop zone that a tap could land on
+          // the FAB underneath instead of the bubble (or vice versa) —
+          // `spacing.md` (12px) of clearance wasn't enough of a margin.
+          // `spacing.xl` (32px) leaves the FAB's hit zone with real room.
+          style={[styles.logCoachMark, { bottom: insets.bottom + BOTTOM_NAV_HEIGHT + spacing.xl }]}
+        />
+      )}
     </ScreenBackground>
   );
 }
@@ -345,7 +424,11 @@ const styles = StyleSheet.create({
   },
   center: {
     alignItems: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing['2xl'],
+  },
+  emptyStateCta: {
+    marginTop: spacing.xs,
   },
   friendsArea: {},
   divider: {
@@ -356,5 +439,13 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: spacing['2xl'],
+  },
+  // Anchored bottom-right, pointing down toward the tab bar's Log FAB — see
+  // constants/bottomNav.ts's BOTTOM_NAV_HEIGHT for why the offset is
+  // `insets.bottom + BOTTOM_NAV_HEIGHT` (the exact reserved height of the
+  // floating glass tab bar), computed inline where insets is in scope.
+  logCoachMark: {
+    position: 'absolute',
+    right: spacing.lg,
   },
 });

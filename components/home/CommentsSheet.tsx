@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { BottomSheetModal } from '../ui/bottomSheetModal';
@@ -9,17 +9,18 @@ import { Input } from '../ui/input';
 import { Text } from '../ui/text';
 import { Row } from '../layout/row';
 import { CommentRow } from './CommentRow';
+import { ReportReasonSheet } from '../reports/ReportReasonSheet';
 import { colors, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { useAuth } from '../../hooks/useAuth';
 import {
   createComment,
   deleteComment,
-  listComments,
+  listAllComments,
 } from '../../services/workout-posts/workout-posts.service';
 import {
+  toCommentThread,
   toCommentViewModel,
-  toCommentViewModels,
 } from '../../services/adapters/workoutPostSocialAdapter';
 import type { CommentViewModel } from '../../services/adapters/workoutPostSocialAdapter';
 
@@ -41,6 +42,11 @@ const SEND_BUTTON_SIZE = 40;
  * three-way branch FeedErrorState/EmptyFeed already establish for the feed
  * itself — just reused inline here instead of as separate components, since
  * neither is shared outside its own screen either.
+ *
+ * The thread is a stack, like Instagram's: the NEWEST comment on top, and you scroll
+ * down to the older ones. It opens on the newest (the top), and a comment you send goes
+ * on the top and is scrolled to. The API pages oldest-first, so the whole thread is read
+ * (`listAllComments`) and turned round (`toCommentThread`) before it is shown.
  */
 export function CommentsSheet({
   visible,
@@ -54,8 +60,7 @@ export function CommentsSheet({
   const [comments, setComments] = useState<CommentViewModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [nextAfter, setNextAfter] = useState<number | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const listRef = useRef<FlatList<CommentViewModel>>(null);
 
   const [draft, setDraft] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -63,14 +68,13 @@ export function CommentsSheet({
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  const [reportCommentId, setReportCommentId] = useState<number | null>(null);
+
   const load = useCallback(() => {
     setLoading(true);
     setError(false);
-    listComments(postId)
-      .then(({ comments: page, nextAfter: next }) => {
-        setComments(toCommentViewModels(page));
-        setNextAfter(next);
-      })
+    listAllComments(postId)
+      .then((all) => setComments(toCommentThread(all)))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, [postId]);
@@ -79,33 +83,20 @@ export function CommentsSheet({
     if (visible) load();
   }, [visible, load]);
 
-  function loadMore() {
-    if (loadingMore || nextAfter === null) return;
-    setLoadingMore(true);
-    listComments(postId, nextAfter)
-      .then(({ comments: page, nextAfter: next }) => {
-        setComments((prev) => [...prev, ...toCommentViewModels(page)]);
-        setNextAfter(next);
-      })
-      .catch(() => {
-        // Global axios interceptor already surfaced a toast — pagination
-        // simply stops here, the already-loaded comments stay visible.
-      })
-      .finally(() => setLoadingMore(false));
-  }
-
   async function handleSend() {
     const content = draft.trim();
     if (!content || submitting) return;
     setSubmitting(true);
     try {
       const created = await createComment(postId, content);
+      // The newest goes on top of the stack, and the list is taken up to it.
       setComments((prev) => {
-        const next = [...prev, toCommentViewModel(created)];
+        const next = [toCommentViewModel(created), ...prev];
         onCommentsCountChange(next.length);
         return next;
       });
       setDraft('');
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
     } catch {
       // Global axios interceptor already shows the error toast.
     } finally {
@@ -138,12 +129,14 @@ export function CommentsSheet({
           sheet up above it (see its own doc comment) — a KeyboardAvoidingView
           in here doesn't work reliably nested inside a Modal, and would
           double up with that anyway. */}
-      <BottomSheetModal visible={visible} onClose={onClose} height="50%">
+      {/* Glass: the feed shows through the sheet instead of being covered by it. */}
+      <BottomSheetModal visible={visible} onClose={onClose} height="50%" glass>
         <View style={styles.flexFill}>
-          <Row justify="space-between" style={styles.header}>
-            <Text variant="subheader">{t('comments.title')}</Text>
-            <IconButton name="close-outline" onPress={onClose} />
-          </Row>
+          {/* No close button: a tap outside the sheet (its backdrop), or the Android
+              back button, closes it. */}
+          <Text variant="subheader" align="center" style={styles.header}>
+            {t('comments.title')}
+          </Text>
 
           {loading ? (
             <View style={[styles.centered, styles.flexFill]}>
@@ -165,6 +158,7 @@ export function CommentsSheet({
             </View>
           ) : (
             <FlatList
+              ref={listRef}
               style={styles.flexFill}
               data={comments}
               keyExtractor={(item) => String(item.id)}
@@ -173,14 +167,10 @@ export function CommentsSheet({
                   comment={item}
                   isMine={item.authorId === userId}
                   onDelete={() => setPendingDeleteId(item.id)}
+                  onReport={() => setReportCommentId(item.id)}
                 />
               )}
               ItemSeparatorComponent={ItemSeparator}
-              onEndReached={loadMore}
-              onEndReachedThreshold={0.4}
-              ListFooterComponent={
-                loadingMore ? <ActivityIndicator color={colors.paper} style={styles.footerLoader} /> : null
-              }
             />
           )}
 
@@ -197,6 +187,7 @@ export function CommentsSheet({
               />
             </View>
             <IconButton
+              testID="comment-send"
               name="send-outline"
               size={SEND_BUTTON_SIZE}
               iconSize={18}
@@ -239,6 +230,13 @@ export function CommentsSheet({
         }}
         onDismiss={() => setPendingDeleteId(null)}
       />
+
+      <ReportReasonSheet
+        visible={reportCommentId !== null}
+        targetType="comment"
+        targetId={reportCommentId === null ? null : String(reportCommentId)}
+        onClose={() => setReportCommentId(null)}
+      />
     </>
   );
 }
@@ -259,14 +257,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.md,
   },
-  footerLoader: {
-    marginVertical: spacing.md,
-  },
+  // No divider line above it: just the gap the line and its two paddings made (`md` + `md`).
   composer: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: withAlpha(colors.paper, textOpacity.tertiary),
+    marginTop: spacing.lg,
   },
   inputWrapper: {
     flex: 1,

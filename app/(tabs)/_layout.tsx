@@ -6,12 +6,15 @@ import { useTranslation } from "react-i18next";
 import type { Ionicons } from "@expo/vector-icons";
 import { BottomNavProvider } from "../../components/navigation/bottomNavContext";
 import { BottomNavBackground } from "../../components/navigation/bottomNavBackground";
+import { BottomNavGlassBackground } from "../../components/navigation/bottomNavGlassBackground";
 import { BottomNavTabButton } from "../../components/navigation/bottomNavTabButton";
 import { BottomNavFab } from "../../components/navigation/bottomNavFab";
 import {
+  BOTTOM_NAV_VARIANT,
   BOTTOM_NAV_CAPSULE_GAP,
   BOTTOM_NAV_FAB_SIZE,
   BOTTOM_NAV_OUTER_MARGIN,
+  getBottomNavGlassGeometry,
   getBottomNavGeometry,
 } from "../../constants/bottomNav";
 
@@ -27,13 +30,11 @@ import {
 // prop hit what was very likely this same underlying issue from a different
 // angle and was scrapped in favor of this.
 //
-// DO NOT set `tabBarStyle` (directly, via screenOptions, or per-screen
-// options) without re-testing touch on a real iOS device first. Get visual
-// styling for the bar via `tabBarBackground` + `tabBarItemStyle` instead, as
-// below. This includes the default hairline top border `tabBarStyle` would
-// normally suppress — that border is baked into React Navigation's own
-// BottomTabBar.tsx (drawn on the same outer container `tabBarStyle` would
-// target), and CANNOT be turned off via any prop that isn't `tabBarStyle`.
+// The historical iOS/Fabric touch issue above is why this layout keeps the
+// visual work in `tabBarBackground` and per-item buttons. The transparent
+// absolute style below is now deliberately applied to every platform so the
+// screen can extend behind the floating bar. Native touch behavior must be
+// re-checked whenever this option changes.
 //
 // 2026-09-04 redesign: this file used to render its own tabBarBackground/
 // icon/FAB inline. Both are now components/navigation/* (BottomNavBackground,
@@ -84,13 +85,17 @@ const ROUTE_INDEX: Record<string, number> = {
   profile: 3,
 };
 
-const renderBottomNavBackground = () => <BottomNavBackground />;
+const renderBottomNavBackground = () =>
+  BOTTOM_NAV_VARIANT === 'glass' ? <BottomNavGlassBackground /> : <BottomNavBackground />;
 
 export default function TabsLayout() {
   const router = useRouter();
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
-  const { tabEdgeInset, tabSlotWidth } = getBottomNavGeometry(width);
+  const legacyGeometry = getBottomNavGeometry(width);
+  const glassGeometry = getBottomNavGlassGeometry(width);
+  const isGlassVariant = BOTTOM_NAV_VARIANT === 'glass';
+  const tabSlotWidth = isGlassVariant ? glassGeometry.tabSlotWidth : legacyGeometry.tabSlotWidth;
 
   // Only `width` (+ margins, for the outer-edge/gap items) matters here —
   // each real button (BottomNavTabButton / BottomNavFab) positions itself
@@ -106,21 +111,55 @@ export default function TabsLayout() {
   // change the screen width — avoids handing React Navigation a "new"
   // options object (and re-triggering its own internal options-change
   // handling) on every unrelated re-render, e.g. a plain tab switch.
-  const tabItemStyle = useMemo(() => ({ flex: 0 as const, width: tabSlotWidth }), [tabSlotWidth]);
+  const tabItemStyle = useMemo(
+    () =>
+      isGlassVariant
+        ? { flex: 1 as const }
+        : { flex: 0 as const, width: tabSlotWidth },
+    [isGlassVariant, tabSlotWidth],
+  );
   const firstTabItemStyle = useMemo(
-    () => ({ ...tabItemStyle, marginLeft: BOTTOM_NAV_OUTER_MARGIN + tabEdgeInset }),
-    [tabEdgeInset, tabItemStyle],
+    () =>
+      isGlassVariant
+        ? { ...tabItemStyle, marginLeft: BOTTOM_NAV_OUTER_MARGIN }
+        : { ...tabItemStyle, marginLeft: BOTTOM_NAV_OUTER_MARGIN + legacyGeometry.tabEdgeInset },
+    [isGlassVariant, legacyGeometry.tabEdgeInset, tabItemStyle],
   );
   const lastTabItemStyle = useMemo(
-    () => ({ ...tabItemStyle, marginRight: tabEdgeInset }),
-    [tabEdgeInset, tabItemStyle],
+    () =>
+      isGlassVariant
+        ? tabItemStyle
+        : { ...tabItemStyle, marginRight: legacyGeometry.tabEdgeInset },
+    [isGlassVariant, legacyGeometry.tabEdgeInset, tabItemStyle],
   );
   const fabItemStyle = useMemo(
+    () =>
+      isGlassVariant
+        ? {
+            flex: 1 as const,
+            marginRight: BOTTOM_NAV_OUTER_MARGIN,
+          }
+        : {
+            flex: 0 as const,
+            width: BOTTOM_NAV_FAB_SIZE,
+            marginLeft: BOTTOM_NAV_CAPSULE_GAP,
+            marginRight: BOTTOM_NAV_OUTER_MARGIN,
+          },
+    [isGlassVariant],
+  );
+  // React Navigation normally reserves the tab bar's height below the scene.
+  // The glass bar is meant to float over the page on every platform, so make
+  // that container absolute and let the screen render behind it.
+  const overlayTabBarStyle = useMemo(
     () => ({
-      flex: 0 as const,
-      width: BOTTOM_NAV_FAB_SIZE,
-      marginLeft: BOTTOM_NAV_CAPSULE_GAP,
-      marginRight: BOTTOM_NAV_OUTER_MARGIN,
+      position: 'absolute' as const,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'transparent',
+      borderTopWidth: 0,
+      elevation: 0,
+      shadowOpacity: 0,
     }),
     [],
   );
@@ -135,12 +174,13 @@ export default function TabsLayout() {
       headerShown: false,
       tabBarShowLabel: false,
       tabBarBackground: renderBottomNavBackground,
+      tabBarStyle: overlayTabBarStyle,
       // Inactive tabs can still receive context/state updates while another
       // tab is being opened. Suspending their React renders keeps that work
       // away from the active tab and the UI-thread navbar animation.
       freezeOnBlur: true,
     }),
-    [],
+    [overlayTabBarStyle],
   );
   const homeOptions = useMemo(
     () => ({
@@ -215,10 +255,15 @@ export default function TabsLayout() {
       title: 'Add',
       tabBarItemStyle: fabItemStyle,
       tabBarButton: () => (
-        <BottomNavFab onPress={handleFabPress} accessibilityLabel={t('navigation.addButtonA11y')} />
+        <BottomNavFab
+          onPress={handleFabPress}
+          accessibilityLabel={t('navigation.addButtonA11y')}
+          glass={isGlassVariant}
+          centered={isGlassVariant}
+        />
       ),
     }),
-    [fabItemStyle, handleFabPress, t],
+    [fabItemStyle, handleFabPress, isGlassVariant, t],
   );
   const preventAddTabPress = useMemo(
     () => ({
@@ -237,13 +282,9 @@ export default function TabsLayout() {
         <Tabs.Screen name="challenges" options={challengesOptions} />
         <Tabs.Screen name="profile" options={profileOptions} />
 
-        {/* FAB — not a real tab destination, and (per this redesign) no
-            longer positioned between other tabs: it's declared LAST so it
-            renders as the rightmost item, visually separated from the tab
-            capsule by BOTTOM_NAV_CAPSULE_GAP (see fabItemStyle above) —
-            "+", conceptually an action, not part of the tab set. tabPress
-            is still prevented and onPress still navigates straight to
-            /log, exactly as before; only where/how it's drawn changed. */}
+        {/* FAB — not a real tab destination. It is declared LAST in a
+            separate right-hand item after the four-tab capsule. tabPress is
+            still prevented and onPress still navigates straight to /log. */}
         <Tabs.Screen
           name="add"
           options={addOptions}

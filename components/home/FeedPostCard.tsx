@@ -1,17 +1,23 @@
-import { memo, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../ui/icon';
+import { IconButton } from '../ui/iconButton';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 import { Row } from '../layout/row';
 import { CommentsSheet } from './CommentsSheet';
+import { PostOptionsSheet } from './PostOptionsSheet';
+import { ReportReasonSheet } from '../reports/ReportReasonSheet';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { reactToPost, unreactToPost } from '../../services/workout-posts/workout-posts.service';
 import { useAuth } from '../../hooks/useAuth';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
+
+// Slightly longer than BottomSheetModal's 260ms close animation.
+const SHEET_SWAP_DELAY_MS = 320;
 
 interface FeedPostCardProps {
   post: FeedPostViewModel;
@@ -40,6 +46,9 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
   const [likesCount, setLikesCount] = useState(post.likesCount);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  const [optionsVisible, setOptionsVisible] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
+  const reportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // A ref, not state, for the in-flight guard below — two taps fired back to
   // back (before React has committed a re-render) would both read the same
   // stale `false` from a state variable's closure, letting both through.
@@ -54,8 +63,26 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
   // swap that comment called for). `/messaging/new` resolves-or-creates the
   // real 1:1 conversation for `recipientUserId` and hands off to the real
   // thread screen — see app/messaging/new.tsx's own doc comment.
+  // The report sheet opens only after the options sheet has finished
+  // sliding out. Both are native <Modal>s, and iOS drops a modal presented
+  // while another one is still dismissing.
+  function handleReportFromOptions() {
+    setOptionsVisible(false);
+    reportTimerRef.current = setTimeout(() => setReportVisible(true), SHEET_SWAP_DELAY_MS);
+  }
+
+  useEffect(() => () => {
+    if (reportTimerRef.current) clearTimeout(reportTimerRef.current);
+  }, []);
+
   function handleSendMessage() {
     router.push({ pathname: '/messaging/new', params: { recipientUserId: post.userId } });
+  }
+
+  // `/profile/[userId]` itself redirects to the tabs' own profile screen
+  // when the id is the viewer's own — no isOwnPost branch needed here.
+  function handleOpenAuthorProfile() {
+    router.push(`/profile/${post.userId}`);
   }
 
   // Optimistic toggle, reverted on failure — the global axios interceptor
@@ -84,12 +111,36 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
 
   return (
     <View style={styles.card}>
-      <Row gap="sm" style={styles.header}>
-        <UserAvatar username={post.userName} imageUrl={post.userAvatarUrl} size={32} />
-        <View>
-          <Text variant="label">{post.userName}</Text>
-          <Text variant="caption" tone="secondary">{post.postedAt}</Text>
-        </View>
+      <Row justify="space-between" align="center">
+        <Row
+          pressable
+          onPress={handleOpenAuthorProfile}
+          gap="sm"
+          style={styles.header}
+          accessibilityRole="button"
+          accessibilityLabel={t('home.openAuthorProfileA11y', { name: post.userName })}
+        >
+          <UserAvatar username={post.userName} imageUrl={post.userAvatarUrl} size={32} />
+          <View>
+            <Text variant="label">{post.userName}</Text>
+            <Text variant="caption" tone="secondary">{post.postedAt}</Text>
+          </View>
+        </Row>
+
+        {/* Report is the only option so far, and you can't report your own
+            post — so the menu only exists on other people's posts. */}
+        {isOwnPost ? null : (
+          <IconButton
+            name="ellipsis-horizontal"
+            size={32}
+            iconSize={20}
+            iconColor={colors.paper}
+            onPress={() => setOptionsVisible(true)}
+            accessibilityLabel={t('home.postOptions.openA11y')}
+            hitSlop={10}
+            testID="post-options"
+          />
+        )}
       </Row>
 
       <View style={styles.photo}>
@@ -106,7 +157,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
         </Text>
       ) : null}
 
-      <Row justify="space-between" align="center">
+      <Row justify="space-between" align="center" style={styles.actions}>
         <Row gap="lg" justify="flex-start">
           <Row
             pressable
@@ -145,6 +196,19 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
         onClose={() => setCommentsVisible(false)}
         onCommentsCountChange={setCommentsCount}
       />
+
+      <PostOptionsSheet
+        visible={optionsVisible}
+        onClose={() => setOptionsVisible(false)}
+        onReport={handleReportFromOptions}
+      />
+
+      <ReportReasonSheet
+        visible={reportVisible}
+        targetType="post"
+        targetId={post.id}
+        onClose={() => setReportVisible(false)}
+      />
     </View>
   );
 });
@@ -155,6 +219,11 @@ const styles = StyleSheet.create({
   },
   header: {
     justifyContent: 'flex-start',
+  },
+  // The like / comment / send row sits well below the photo and the caption: on top
+  // of the card's own `sm` gap, another `md`.
+  actions: {
+    marginTop: spacing.md,
   },
   photo: {
     width: '100%',

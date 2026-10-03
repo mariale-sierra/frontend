@@ -9,7 +9,7 @@ import { IconButton } from '../../../components/ui/iconButton';
 import { SearchBar } from '../../../components/ui/searchBar';
 import { Divider } from '../../../components/ui/divider';
 import { FollowListItem } from '../../../components/profile/FollowListItem';
-import { ChallengeAccentGlow } from '../../../components/challenge/challengeAccentGlow';
+import { ChallengeAccentBackdrop } from '../../../components/challenge/challengeAccentBackdrop';
 import { useChallengeParticipants } from '../../../hooks/useChallengeParticipants';
 import { getChallenge } from '../../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../../services/user/user.service';
@@ -37,7 +37,7 @@ const HEADER_SIDE_SIZE = 44;
  * dropped the same day — not part of this screen anymore. Background and
  * the header's
  * invite icon now use this challenge's own Activity Color System v2 accent
- * (`ChallengeAccentGlow`, the same reusable top glow Challenge-Info and the
+ * (`ChallengeAccentBackdrop`, the same Skia backdrop Challenge-Info and the
  * Consistency screen already use) — the wireframe's flat yellow is that
  * system's placeholder, not a literal color to hardcode; see
  * havit-design-system-SKILL.md's Activity Color System v2 section.
@@ -122,8 +122,8 @@ export default function ChallengeMembers() {
           true from the very first render — no flash, no delay. A cold/
           deep-linked visit with no param still waits on `getChallenge()`
           the same way `app/challenge/[id]/index.tsx` does via its own
-          loading-skeleton return before its `ChallengeAccentGlow`. */}
-      {accentColorKnown && <ChallengeAccentGlow color={accentColor} />}
+          loading-skeleton return before its `ChallengeAccentBackdrop`. */}
+      {accentColorKnown && <ChallengeAccentBackdrop color={accentColor} />}
 
       <View style={[styles.header, { paddingTop: spacing.lg }]}>
         <BackButton style={styles.headerSideButton} />

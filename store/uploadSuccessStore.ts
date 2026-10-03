@@ -1,5 +1,15 @@
 import { create } from 'zustand';
 
+/** Optional context for the richer version of the message — all three
+ * present together is the common case (a normal logged day); any subset
+ * missing just falls back to the plain "logged!" copy (see
+ * UploadSuccessPopup.tsx). */
+export interface UploadSuccessData {
+  challengeName?: string;
+  currentDay?: number;
+  totalDays?: number;
+}
+
 /**
  * Drives the global "logged!" success popup shown after a photo/metrics
  * upload or a rest-day log completes. Deliberately global (not a per-screen
@@ -11,12 +21,15 @@ import { create } from 'zustand';
  */
 interface UploadSuccessStore {
   visible: boolean;
-  show: () => void;
+  data: UploadSuccessData | null;
+  show: (data?: UploadSuccessData) => void;
   hide: () => void;
 }
 
 export const useUploadSuccessStore = create<UploadSuccessStore>((set) => ({
   visible: false,
-  show: () => set({ visible: true }),
+  data: null,
+  show: (data) => set({ visible: true, data: data ?? null }),
+  // The data stays put so the popup keeps its text while it fades out.
   hide: () => set({ visible: false }),
 }));

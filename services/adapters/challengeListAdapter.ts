@@ -1,7 +1,7 @@
 import { asString, asNumber, asBoolean } from './adapterUtils';
 import { pickChallengeStatus, deriveChallengeCardState, pickDominantActivityCategory } from './challengeState';
 import { isRestDay as isRestDayForCycle } from '../../utils/challengeCycle';
-import type { ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
+import type { ChallengeAuthorViewModel, ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import type { ActivityType } from '../../types/activity';
 import type { ChallengeContract, ChallengePhoto } from '../../types/challenge';
 
@@ -38,6 +38,11 @@ export interface ChallengeMineCardViewModel {
    * color from `state` + this via `challengeState.ts`'s
    * `getChallengeCardColor()`, don't read `activityColors` directly. */
   dominantActivityCategory: ActivityType | null;
+  /** Who created it — `null` if the raw contract carried no such field
+   * (never actually null for a real challenge; defensive only). Lets a
+   * caller tell "I made this" apart from "I joined/was approved into this"
+   * — see the Challenges tab's own "you were approved" popup detection. */
+  createdByUserId: string | null;
 }
 
 
@@ -137,6 +142,21 @@ export function pickRestDaysCount(challenge: ChallengeContract): number {
   return challenge.cycle_days.filter((d) => asBoolean(d.is_rest_day) === true).length;
 }
 
+/** Explore card's "by @username" — `null` for a challenge with no embedded
+ * `author` (older cached response) or whose creator's account is gone
+ * (backend sends `author: null` rather than omitting the challenge). */
+export function pickAuthor(challenge: ChallengeContract): ChallengeAuthorViewModel | null {
+  const author = challenge.author;
+  if (!author || typeof author !== 'object') return null;
+  const username = asString(author.username);
+  if (!username) return null;
+  return {
+    username,
+    displayName: typeof author.displayName === 'string' ? author.displayName : null,
+    profileImageUrl: typeof author.profileImageUrl === 'string' ? author.profileImageUrl : null,
+  };
+}
+
 // pickChallengeStatus now lives in ./challengeState (shared with
 // homeAdapter.ts — both Home's hero card and this Mine tab need the exact
 // same status detection).
@@ -152,6 +172,7 @@ function toExploreCard(challenge: ChallengeContract, labels: ChallengeListLabels
     categoriesLabel: pickCategoriesLabel(challenge, labels.categoryFallbackLabel),
     membersCount: pickMembersCount(challenge),
     dominantActivityCategory: pickDominantActivityCategory(challenge),
+    author: pickAuthor(challenge),
   };
 }
 
@@ -174,6 +195,7 @@ function toMineCard(challenge: ChallengeContract, latestPhoto: ChallengePhoto | 
     state,
     latestPhotoUrl: latestPhoto?.imageUrl ?? null,
     dominantActivityCategory: pickDominantActivityCategory(challenge),
+    createdByUserId: typeof challenge.created_by_user_id === 'string' ? challenge.created_by_user_id : null,
   };
 }
 
@@ -187,8 +209,21 @@ const MINE_STATE_PRIORITY: Record<ChallengeMineCardViewModel['state'], number> =
 
 /**
  * Challenges-Mine tab — every challenge the user is enrolled in, in whatever
- * state. Sorted active → rest → completed → won → left, matching the
- * wireframe's example order.
+ * state, EXCEPT `left` (abandoned). Sorted active → rest → completed → won,
+ * matching the wireframe's example order.
+ *
+ * `left` is filtered out entirely, per explicit request 2026-09-22 ("I dont
+ * want to have the 'left' challenges, those shouldnt have a place anywhere")
+ * — a challenge the user walked away from doesn't belong in their list at
+ * all, not even collapsed alongside finished ones. The `left` state itself
+ * (icon/color/label, `deriveChallengeCardState`, both card components) is
+ * deliberately NOT removed from the codebase — it's a real
+ * `challenge_user_map.status` the backend can still report, and ripping the
+ * whole state out of the type/model layer for a "don't show it in this one
+ * list" request would be a much bigger, riskier change than this screen
+ * actually needs. If a future screen (e.g. a "challenge history") wants to
+ * surface left challenges again, the state and its card treatment are still
+ * there to reuse.
  *
  * Deliberately kept pure (no fetching here) — `latestPhotoByChallengeId` is
  * pre-fetched by the caller via a SINGLE GET /workout-posts/mine call,
@@ -203,6 +238,7 @@ export function toChallengeMineViewModels(
 ): ChallengeMineCardViewModel[] {
   return challenges
     .map((challenge) => toMineCard(challenge, latestPhotoByChallengeId.get(String(challenge.id))))
+    .filter((card) => card.state !== 'left')
     .sort((a, b) => MINE_STATE_PRIORITY[a.state] - MINE_STATE_PRIORITY[b.state]);
 }
 
