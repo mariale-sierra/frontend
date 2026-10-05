@@ -36,6 +36,7 @@ import { BOTTOM_NAV_HEIGHT } from '../../constants/bottomNav';
 import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../constants/onboardingDebug';
 import { formatTodayLabel, hoursUntilMidnight } from '../../utils/time';
 import { withAlpha } from '../../utils/color';
+import { useNotificationsStore } from '../../store/notificationsStore';
 import { hasSeenLogCoachMark, markLogCoachMarkSeen } from '../../utils/logCoachMark';
 
 function FeedSeparator() {
@@ -47,6 +48,7 @@ export default function Home() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const unreadNotifications = useNotificationsStore((s) => s.unreadCount);
 
   // Same source as the Challenges tab (services/user/user.service.ts getMyChallenges,
   // i.e. GET /users/me/challenges) so the two screens always show the same set of
@@ -268,14 +270,18 @@ export default function Home() {
         </View>
 
         <Row gap="sm">
-          {/* Messaging/notifications routes exist but aren't wired to real
-              unread state yet — the dot below is decorative for now. */}
           <Pressable style={styles.iconButton} onPress={() => router.push('/messaging')}>
             <Icon name="chatbubble-ellipses-outline" size={22} />
           </Pressable>
-          <Pressable style={styles.iconButton} onPress={() => router.push('/notifications')}>
+          {/* B3: the dot is the real unread count (store/notificationsStore). */}
+          <Pressable
+            style={styles.iconButton}
+            onPress={() => router.push('/notifications')}
+            accessibilityRole="button"
+            accessibilityLabel={t('notifications.title')}
+          >
             <Icon name="notifications-outline" size={22} />
-            <View style={styles.notificationDot} />
+            {unreadNotifications > 0 ? <View style={styles.notificationDot} /> : null}
           </Pressable>
         </Row>
       </Row>
@@ -316,7 +322,7 @@ export default function Home() {
       )}
       </View>
     ),
-    [carouselScrollX, challenges, friendStreaks, friendStreaksError, hoursLeft, isReady, router, t, username],
+    [carouselScrollX, challenges, friendStreaks, friendStreaksError, hoursLeft, isReady, router, t, unreadNotifications, username],
   );
   const listEmptyComponent = useMemo(
     () => (!isReady ? null : feedError ? <FeedErrorState /> : <EmptyFeed />),
