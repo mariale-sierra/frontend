@@ -191,6 +191,15 @@ Mock data and gaps:
 - `store/routineBuilderStore.ts` contains seed routine data and a mock schema metric template.
 - No dedicated challenge hooks beyond create flow were found for challenge list/detail loading.
 
+## 12b. Notifications Module Map (B3)
+Full backend/push details: `backend/docs/notificaciones/B3-NOTIFICACIONES.md`.
+- `app/notifications.tsx`: inbox (cursor-paginated via `X-Next-Cursor`, read/unread, mark all, push permission card). `app/notification-settings.tsx`: per-category in-app/push switches from `GET/PATCH /notifications/preferences`.
+- `services/notifications/notifications.service.ts`: API calls. `notificationRoutes.ts`: type → existing expo-router route (pure, tested; add new types here). `notificationText.ts`: i18n row text by type code (`notifications.types.*`).
+- `services/notifications/pushNotifications.ts`: permission state (`blocked` = only Settings, never re-prompt), Expo token register/unregister, badge. `hooks/usePushNotifications.ts` (mounted once in `app/_layout.tsx`): unread refresh, foreground/background/cold-start taps. `hooks/usePushPermission.ts`: the in-app ask.
+- `store/notificationsStore.ts`: unread count for the Home bell dot and the app badge — refreshed on events, never polled.
+- Logout (`context/authContext.tsx`) removes this device's push token before clearing the session.
+- Push needs an EAS projectId (`eas init` or `EAS_PROJECT_ID`) and a development build; Expo Go/simulators/web report push as unsupported and the inbox still works.
+
 ## 13. Do and Don't Rules
 Do:
 - Read this guide and inspect the target route before editing.
