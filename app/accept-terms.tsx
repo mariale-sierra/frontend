@@ -8,6 +8,7 @@ import { Text } from '../components/ui/text';
 import { LegalConsent, type LegalConsentValue } from '../components/legal/LegalConsent';
 import { acceptTerms } from '../services/auth/auth.service';
 import { useAuth } from '../hooks/useAuth';
+import { markTermsAccepted } from '../hooks/useRequiresTermsAcceptance';
 import { useErrorNotificationStore } from '../store/errorNotificationStore';
 import { spacing } from '../constants/theme';
 
@@ -32,6 +33,9 @@ export default function AcceptTermsScreen() {
     setSubmitting(true);
     try {
       await acceptTerms(consent);
+      // Before navigating: RootNavigator redirects back here while this
+      // still says the terms are pending.
+      markTermsAccepted();
       router.replace('/(tabs)');
     } catch (error: any) {
       show({ message: error?.response?.data?.message || t('legal.accept.failed') });
