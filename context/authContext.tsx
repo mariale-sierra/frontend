@@ -9,6 +9,7 @@ import {
   register as registerService,
 } from '../services/auth/auth.service';
 import { invalidateChallengeProgressCache } from '../hooks/useChallengeProgress';
+import { unregisterPushToken } from '../services/notifications/pushNotifications';
 import type { LegalConsent } from '../types/auth';
 
 interface AuthContextValue {
@@ -119,6 +120,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
 
   const logout = useCallback(async () => {
+    // While the session is still valid: this device stops getting the
+    // account's pushes (bounded wait, never blocks the logout).
+    await unregisterPushToken();
     await logoutService();
     invalidateChallengeProgressCache();
     setToken(null);

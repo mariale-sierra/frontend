@@ -9,6 +9,7 @@ import { AuthProvider } from '../context/authContext';
 import { ThemeProvider } from '../context/themeContext';
 import { useAuth } from '../hooks/useAuth';
 import { useRequiresTermsAcceptance } from '../hooks/useRequiresTermsAcceptance';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { ChallengeFinishedPopup } from '../components/ui/ChallengeFinishedPopup';
 import { ChallengeJoinApprovedPopup } from '../components/ui/ChallengeJoinApprovedPopup';
 import { UploadSuccessPopup } from '../components/ui/UploadSuccessPopup';
@@ -43,6 +44,16 @@ function RootNavigator() {
   // Accounts that never accepted the current Terms (created before B2, or the
   // published version changed) are sent to /accept-terms before anything else.
   const requiresTerms = useRequiresTermsAcceptance();
+
+  // B3: a notification tap only navigates once the user is past login,
+  // terms and onboarding — otherwise those redirects would swallow it.
+  const firstSegment = (segments as string[])[0];
+  const canOpenNotifications =
+    isAuthenticated &&
+    !requiresTerms &&
+    !!firstSegment &&
+    !['(auth)', 'accept-terms', 'onboarding'].includes(firstSegment);
+  usePushNotifications(isAuthenticated, canOpenNotifications);
 
   // Simplified 2026-09-24, per explicit "the first thing the user will see
   // is the login screen" request: the standalone pre-login welcome carousel
@@ -103,7 +114,11 @@ function RootNavigator() {
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false, contentStyle: { backgroundColor: colors.ink } }} />
-        <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
+        {/* A regular card screen (was a placeholder modal): it pushes other
+            screens — settings, profiles, challenges — which iOS would show
+            behind a modal. */}
+        <Stack.Screen name="notifications" options={{ headerShown: false }} />
+        <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
         <Stack.Screen name="invitations" options={{ headerShown: false }} />
         <Stack.Screen name="home/streaks" options={{ headerShown: false }} />
         <Stack.Screen name="messaging/index" options={{ headerShown: false }} />
