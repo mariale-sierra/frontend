@@ -5,6 +5,7 @@ import i18n from '../i18n';
 import { getAccessToken } from './auth/token.service';
 import { useErrorNotificationStore } from '../store/errorNotificationStore';
 import { isContentRejectedError } from '../utils/contentModeration';
+import { notifySessionExpired } from './auth/sessionEvents';
 
 // Lets a specific call opt out of the global error toast below — for
 // best-effort writes a caller already handles on its own (catches, logs, and
@@ -14,6 +15,9 @@ import { isContentRejectedError } from '../utils/contentModeration';
 declare module 'axios' {
   export interface AxiosRequestConfig {
     suppressErrorToast?: boolean;
+    /** This endpoint answers 401 for something other than the session (e.g. a
+     * wrong password re-check) — don't sign the user out on it. */
+    skipSessionExpiredLogout?: boolean;
   }
 }
 
@@ -55,6 +59,18 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // A 401 on a request that carried a token means the session is gone
+    // (expired, or the account was banned/deleted): sign out instead of
+    // leaving every screen failing on its own. Requests without a token
+    // (login/register) answer 401 for wrong credentials and are left alone.
+    if (
+      error?.response?.status === 401 &&
+      error?.config?.headers?.Authorization &&
+      !error?.config?.skipSessionExpiredLogout
+    ) {
+      notifySessionExpired();
+    }
+
     if (error?.config?.suppressErrorToast) {
       return Promise.reject(error);
     }

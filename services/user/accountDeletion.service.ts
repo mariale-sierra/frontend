@@ -16,8 +16,8 @@ export async function requestAccountDeletion(password: string) {
     '/users/me/deletion-request',
     { password },
     // A wrong password answers 401; the screen shows its own message instead
-    // of the global "session expired" toast.
-    { suppressErrorToast: true },
+    // of the global "session expired" toast, and it must not sign the user out.
+    { suppressErrorToast: true, skipSessionExpiredLogout: true },
   );
   return response.data;
 }

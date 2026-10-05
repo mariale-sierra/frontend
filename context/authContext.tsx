@@ -9,7 +9,8 @@ import {
   register as registerService,
 } from '../services/auth/auth.service';
 import { invalidateChallengeProgressCache } from '../hooks/useChallengeProgress';
-import { unregisterPushToken } from '../services/notifications/pushNotifications';
+import { forgetPushToken, unregisterPushToken } from '../services/notifications/pushNotifications';
+import { setSessionExpiredHandler } from '../services/auth/sessionEvents';
 import type { LegalConsent } from '../types/auth';
 
 interface AuthContextValue {
@@ -97,6 +98,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     restoreSession();
   }, [restoreSession]);
+
+  // Any authenticated request answered 401 (token expired, account banned,
+  // purged or gone) signs the user out here, and RootNavigator takes them to
+  // the login screen. See services/api.ts.
+  useEffect(() => {
+    setSessionExpiredHandler(async () => {
+      await forgetPushToken();
+      await logoutService();
+      invalidateChallengeProgressCache();
+      setToken(null);
+      setUserId(null);
+      setUsername(null);
+    });
+    return () => setSessionExpiredHandler(null);
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     // Clear any previous session's cached progress before establishing a new one.

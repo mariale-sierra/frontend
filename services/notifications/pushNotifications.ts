@@ -143,10 +143,24 @@ export async function unregisterPushToken(): Promise<void> {
   const token = await storage.getItem(PUSH_TOKEN_KEY);
   if (!token) return;
   await storage.removeItem(PUSH_TOKEN_KEY);
+  let timer: ReturnType<typeof setTimeout> | undefined;
   await Promise.race([
     removePushToken(token).catch(() => undefined),
-    new Promise<void>((resolve) => setTimeout(resolve, UNREGISTER_TIMEOUT_MS)),
+    new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, UNREGISTER_TIMEOUT_MS);
+    }),
   ]);
+  clearTimeout(timer);
+}
+
+/**
+ * Session already invalid (401): the backend can't be asked to remove the
+ * token anymore, so only forget it locally. The backend never pushes to a
+ * banned/deleted account, purges the row with the account, and moves the
+ * token to whoever registers it next on this device.
+ */
+export async function forgetPushToken(): Promise<void> {
+  await storage.removeItem(PUSH_TOKEN_KEY).catch(() => undefined);
 }
 
 /** App icon badge (iOS / supported Android launchers). */

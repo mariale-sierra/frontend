@@ -13,7 +13,7 @@ jest.mock('../../api', () => ({
 describe('account deletion service', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('requests deletion with the password and silences the global 401 toast', async () => {
+  it('requests deletion with the password, silencing the 401 toast and the session logout', async () => {
     (api.post as jest.Mock).mockResolvedValue({ data: { message: 'ok' } });
 
     await requestAccountDeletion('secret123');
@@ -21,7 +21,7 @@ describe('account deletion service', () => {
     expect(api.post).toHaveBeenCalledWith(
       '/users/me/deletion-request',
       { password: 'secret123' },
-      { suppressErrorToast: true },
+      { suppressErrorToast: true, skipSessionExpiredLogout: true },
     );
   });
 
