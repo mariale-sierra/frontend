@@ -16,6 +16,8 @@ import { Row } from '../../components/layout/row';
 import { useAuth } from '../../hooks/useAuth';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import { deleteWorkoutPost } from '../../services/workout-posts/workout-posts.service';
+import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 
 /**
  * Profile tab. Structured so future sections (followers, stats) can slot in
@@ -90,6 +92,20 @@ export default function Profile() {
   }, []);
   const { refreshing, onRefresh } = usePullToRefresh(refreshProfile);
 
+  // B4: deleting one of your own photos from its detail view. PostsGrid owns
+  // its own data, so the same refresh signal pull-to-refresh uses makes it
+  // drop the deleted post.
+  const showSuccess = useErrorNotificationStore((state) => state.showSuccess);
+  const handleDeletePhoto = useCallback(
+    async (photo: ChallengePhoto) => {
+      await deleteWorkoutPost(photo.id);
+      setSelectedPhoto(null);
+      setPostsRefreshSignal((n) => n + 1);
+      showSuccess({ message: t('home.postOptions.deleteSuccess') });
+    },
+    [showSuccess, t],
+  );
+
   const displayName = profile?.display_name ?? sessionUsername ?? 'User name';
   const username = profile?.username ?? sessionUsername ?? 'username';
 
@@ -163,7 +179,11 @@ export default function Profile() {
           </>
         )}
       </ScrollView>
-      <ProfilePhotoModal photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
+      <ProfilePhotoModal
+        photo={selectedPhoto}
+        onClose={() => setSelectedPhoto(null)}
+        onDelete={handleDeletePhoto}
+      />
     </ScreenBackground>
   );
 }

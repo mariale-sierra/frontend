@@ -1,7 +1,7 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { FeedPostCard } from '../FeedPostCard';
-import { reactToPost, unreactToPost } from '../../../services/workout-posts/workout-posts.service';
+import { deleteWorkoutPost, reactToPost, unreactToPost } from '../../../services/workout-posts/workout-posts.service';
 import type { FeedPostViewModel } from '../../../services/adapters/feedAdapter';
 
 jest.mock('react-i18next', () => ({
@@ -23,6 +23,7 @@ jest.mock('../../../services/reports/reports.service', () => ({ createReport: je
 jest.mock('../../../services/workout-posts/workout-posts.service', () => ({
   reactToPost: jest.fn(),
   unreactToPost: jest.fn(),
+  deleteWorkoutPost: jest.fn(),
 }));
 
 // CommentsSheet pulls in useAuth (backed by AsyncStorage) and its own service
@@ -32,9 +33,56 @@ jest.mock('../../../services/workout-posts/workout-posts.service', () => ({
 jest.mock('../../reports/ReportReasonSheet', () => ({
   ReportReasonSheet: () => null,
 }));
-jest.mock('../PostOptionsSheet', () => ({
-  PostOptionsSheet: () => null,
-}));
+// Minimal stand-ins exposing only what this card wires into them: which
+// options the sheet offers (B4: Delete on your own post, Report on anyone
+// else's) and the confirmation popup's buttons.
+jest.mock('../PostOptionsSheet', () => {
+  const React = require('react');
+  const { Pressable, Text } = require('react-native');
+  return {
+    PostOptionsSheet: ({ visible, onReport, onDelete }: { visible: boolean; onReport?: () => void; onDelete?: () => void }) =>
+      visible
+        ? React.createElement(
+            React.Fragment,
+            null,
+            onReport
+              ? React.createElement(Pressable, { testID: 'post-options-report', onPress: onReport }, React.createElement(Text, null, 'report'))
+              : null,
+            onDelete
+              ? React.createElement(Pressable, { testID: 'post-options-delete', onPress: onDelete }, React.createElement(Text, null, 'delete'))
+              : null,
+          )
+        : null,
+  };
+});
+jest.mock('../../ui/confirmationPopup', () => {
+  const React = require('react');
+  const { Pressable, Text, View } = require('react-native');
+  return {
+    ConfirmationPopup: ({
+      visible,
+      title,
+      primaryButton,
+      secondaryButton,
+    }: {
+      visible: boolean;
+      title: string;
+      primaryButton: { label: string; onPress: () => void };
+      secondaryButton?: { label: string; onPress: () => void };
+    }) =>
+      visible
+        ? React.createElement(
+            View,
+            null,
+            React.createElement(Text, null, title),
+            React.createElement(Pressable, { testID: 'confirm-primary', onPress: primaryButton.onPress }, React.createElement(Text, null, primaryButton.label)),
+            secondaryButton
+              ? React.createElement(Pressable, { testID: 'confirm-secondary', onPress: secondaryButton.onPress }, React.createElement(Text, null, secondaryButton.label))
+              : null,
+          )
+        : null,
+  };
+});
 jest.mock('../CommentsSheet', () => ({
   CommentsSheet: () => null,
 }));
@@ -82,10 +130,79 @@ describe('FeedPostCard — options menu', () => {
     expect(screen.queryByTestId('post-options')).toBeTruthy();
   });
 
-  // Report is its only option, and you can't report your own post.
-  it('hides the "..." options button on your own post', async () => {
+  // B4: your own post has a menu too — with Delete instead of Report (you
+  // still can't report yourself).
+  it('offers Delete, never Report, on your own post', async () => {
     const screen = await renderWithTheme(<FeedPostCard post={basePost({ userId: 'viewer-1' })} />);
-    expect(screen.queryByTestId('post-options')).toBeNull();
+    await fireEvent.press(screen.getByTestId('post-options'));
+    expect(screen.queryByTestId('post-options-delete')).toBeTruthy();
+    expect(screen.queryByTestId('post-options-report')).toBeNull();
+  });
+
+  it('offers Report, never Delete, on someone else\'s post', async () => {
+    const screen = await renderWithTheme(<FeedPostCard post={basePost({ userId: 'user-1' })} />);
+    await fireEvent.press(screen.getByTestId('post-options'));
+    expect(screen.queryByTestId('post-options-report')).toBeTruthy();
+    expect(screen.queryByTestId('post-options-delete')).toBeNull();
+  });
+});
+
+describe('FeedPostCard — deleting your own post (B4)', () => {
+  const mockedDelete = deleteWorkoutPost as jest.Mock;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('asks for confirmation before deleting anything', async () => {
+    const screen = await renderWithTheme(<FeedPostCard post={basePost({ userId: 'viewer-1' })} />);
+    await fireEvent.press(screen.getByTestId('post-options'));
+    await fireEvent.press(screen.getByTestId('post-options-delete'));
+
+    await waitFor(() => expect(screen.getByText('home.postOptions.deleteConfirmTitle')).toBeTruthy());
+    expect(mockedDelete).not.toHaveBeenCalled();
+  });
+
+  it('deletes and reports the post id to the list once confirmed', async () => {
+    mockedDelete.mockResolvedValue(undefined);
+    const onDeleted = jest.fn();
+    const screen = await renderWithTheme(<FeedPostCard post={basePost({ userId: 'viewer-1' })} onDeleted={onDeleted} />);
+    await fireEvent.press(screen.getByTestId('post-options'));
+    await fireEvent.press(screen.getByTestId('post-options-delete'));
+    await waitFor(() => expect(screen.getByTestId('confirm-primary')).toBeTruthy());
+
+    await fireEvent.press(screen.getByTestId('confirm-primary'));
+
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledWith('post-1'));
+    expect(mockedDelete).toHaveBeenCalledWith('post-1');
+  });
+
+  it('cancelling deletes nothing', async () => {
+    const onDeleted = jest.fn();
+    const screen = await renderWithTheme(<FeedPostCard post={basePost({ userId: 'viewer-1' })} onDeleted={onDeleted} />);
+    await fireEvent.press(screen.getByTestId('post-options'));
+    await fireEvent.press(screen.getByTestId('post-options-delete'));
+    await waitFor(() => expect(screen.getByTestId('confirm-secondary')).toBeTruthy());
+
+    await fireEvent.press(screen.getByTestId('confirm-secondary'));
+
+    expect(mockedDelete).not.toHaveBeenCalled();
+    expect(onDeleted).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('confirm-primary')).toBeNull();
+  });
+
+  it('keeps the post when the delete request fails', async () => {
+    mockedDelete.mockRejectedValue(new Error('network'));
+    const onDeleted = jest.fn();
+    const screen = await renderWithTheme(<FeedPostCard post={basePost({ userId: 'viewer-1' })} onDeleted={onDeleted} />);
+    await fireEvent.press(screen.getByTestId('post-options'));
+    await fireEvent.press(screen.getByTestId('post-options-delete'));
+    await waitFor(() => expect(screen.getByTestId('confirm-primary')).toBeTruthy());
+
+    await fireEvent.press(screen.getByTestId('confirm-primary'));
+
+    await waitFor(() => expect(mockedDelete).toHaveBeenCalled());
+    expect(onDeleted).not.toHaveBeenCalled();
   });
 });
 

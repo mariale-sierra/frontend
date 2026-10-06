@@ -1,3 +1,4 @@
+import { fireEvent } from '@testing-library/react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { MessageBubble } from '../MessageBubble';
 import type { MessageContract } from '../../../types/chat';
@@ -26,6 +27,27 @@ describe('MessageBubble', () => {
       <MessageBubble message={buildMessage({ senderId: 'user-1' })} isMine />,
     );
 
+    expect(screen.getByText('hola!')).toBeTruthy();
+  });
+
+  // B4: your own messages are deleted via long-press — no extra chrome.
+  it('calls onLongPress when the bubble is long-pressed', async () => {
+    const onLongPress = jest.fn();
+    const screen = await renderWithTheme(
+      <MessageBubble message={buildMessage({ id: 7, senderId: 'user-1' })} isMine onLongPress={onLongPress} />,
+    );
+
+    await fireEvent(screen.getByTestId('message-bubble-7'), 'longPress');
+
+    expect(onLongPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('is not long-pressable at all without onLongPress (someone else\'s message)', async () => {
+    const screen = await renderWithTheme(
+      <MessageBubble message={buildMessage({ id: 8 })} isMine={false} />,
+    );
+
+    expect(screen.queryByTestId('message-bubble-8')).toBeNull();
     expect(screen.getByText('hola!')).toBeTruthy();
   });
 });

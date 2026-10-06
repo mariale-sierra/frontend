@@ -73,3 +73,16 @@ export async function acceptConversationRequest(
 export async function declineConversationRequest(conversationId: string): Promise<void> {
   await api.delete(`/chats/conversations/${conversationId}/decline`);
 }
+
+/** Deletes one of the caller's own messages (sender only; the rest of the
+ * conversation is untouched). */
+export async function deleteMessage(conversationId: string, messageId: number): Promise<void> {
+  await api.delete(`/chats/conversations/${conversationId}/messages/${messageId}`);
+}
+
+/** Removes a conversation from the caller's OWN list only — unlike
+ * declineConversationRequest, the other participant keeps it, and it comes
+ * back if a new message is sent in it. */
+export async function hideConversation(conversationId: string): Promise<void> {
+  await api.delete(`/chats/conversations/${conversationId}`);
+}

@@ -80,8 +80,26 @@ export default function Chat() {
     loadingOlder,
     loadOlder,
     send,
+    remove,
     reload,
   } = useConversationMessages(conversationId);
+
+  // B4: deleting one of your own messages — long-press its bubble, confirm.
+  const [pendingDeleteMessageId, setPendingDeleteMessageId] = useState<number | null>(null);
+  const [deletingMessage, setDeletingMessage] = useState(false);
+
+  async function handleDeleteMessage() {
+    if (pendingDeleteMessageId === null) return;
+    setDeletingMessage(true);
+    try {
+      await remove(pendingDeleteMessageId);
+      setPendingDeleteMessageId(null);
+    } catch {
+      // Global api.ts interceptor already shows the error toast.
+    } finally {
+      setDeletingMessage(false);
+    }
+  }
 
   const [draft, setDraft] = useState('');
   const { listRef, ready, onContentSizeChange, onLayout } = useScrollToLatestMessage(messages);
@@ -157,7 +175,7 @@ export default function Chat() {
           onPress={() =>
             router.push({
               pathname: '/messaging/chat-details',
-              params: { otherUserId: otherUserId ?? '', otherUsername: otherUsername ?? '', otherDisplayName: otherDisplayName ?? '', otherProfileImageUrl: otherProfileImageUrl ?? '' },
+              params: { conversationId, otherUserId: otherUserId ?? '', otherUsername: otherUsername ?? '', otherDisplayName: otherDisplayName ?? '', otherProfileImageUrl: otherProfileImageUrl ?? '' },
             })
           }
           accessibilityLabel={t('chats.optionsA11y')}
@@ -219,7 +237,13 @@ export default function Chat() {
               return (
                 <>
                   {showDaySeparator && <DaySeparator iso={item.sentAt} t={t} />}
-                  <MessageBubble message={item} isMine={isMine} otherAvatar={isMine ? undefined : otherAvatar} />
+                  <MessageBubble
+                    message={item}
+                    isMine={isMine}
+                    otherAvatar={isMine ? undefined : otherAvatar}
+                    onLongPress={isMine ? () => setPendingDeleteMessageId(item.id) : undefined}
+                    longPressA11yHint={isMine ? t('chats.deleteMessageA11yHint') : undefined}
+                  />
                 </>
               );
             }}
@@ -338,6 +362,27 @@ export default function Chat() {
           disabled: declining,
         }}
         onDismiss={() => setDeclineConfirmVisible(false)}
+      />
+
+      <ConfirmationPopup
+        visible={pendingDeleteMessageId !== null}
+        title={t('chats.deleteMessageConfirmTitle')}
+        description={t('chats.deleteMessageConfirmMessage')}
+        icon="trash-outline"
+        iconColor={colors.error}
+        primaryButton={{
+          label: t('chats.deleteMessageCta'),
+          onPress: handleDeleteMessage,
+          variant: 'danger',
+          loading: deletingMessage,
+        }}
+        secondaryButton={{
+          label: t('chats.cancelCta'),
+          onPress: () => setPendingDeleteMessageId(null),
+          variant: 'neutral',
+          disabled: deletingMessage,
+        }}
+        onDismiss={() => !deletingMessage && setPendingDeleteMessageId(null)}
       />
     </ScreenBackground>
   );

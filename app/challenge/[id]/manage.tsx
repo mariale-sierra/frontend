@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../../components/layout/screenBackground';
 import { ScreenHeader } from '../../../components/layout/ScreenHeader';
 import { ConfirmationPopup } from '../../../components/ui/confirmationPopup';
 import { Icon } from '../../../components/ui/icon';
 import { Text } from '../../../components/ui/text';
+import { Row } from '../../../components/layout/row';
 import { ChallengeAccentBackdrop } from '../../../components/challenge/challengeAccentBackdrop';
 import { ChallengeParticipantManageRow } from '../../../components/challenge/ChallengeParticipantManageRow';
 import { ChallengeParticipantManageRowSkeleton } from '../../../components/challenge/ChallengeParticipantManageRowSkeleton';
@@ -17,13 +18,15 @@ import { useChallengeParticipants } from '../../../hooks/useChallengeParticipant
 import { useAuth } from '../../../hooks/useAuth';
 import {
   approveChallengeJoinRequest,
+  deleteChallenge,
   getChallenge,
   isChallengeOwner,
   rejectChallengeJoinRequest,
   removeChallengeParticipant,
 } from '../../../services/challenge/challenge.service';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
-import { colors, spacing, textOpacity } from '../../../constants/theme';
+import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
+import { useErrorNotificationStore } from '../../../store/errorNotificationStore';
 import { withAlpha } from '../../../utils/color';
 import { safeBack } from '../../../utils/navigation';
 import type { ChallengeContract, ChallengeParticipantContract } from '../../../types/challenge';
@@ -57,6 +60,8 @@ export default function ManageChallengeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const challengeId = typeof id === 'string' && id.length > 0 ? id : null;
   const { userId } = useAuth();
+  const router = useRouter();
+  const showSuccess = useErrorNotificationStore((state) => state.showSuccess);
 
   const [challenge, setChallenge] = useState<ChallengeContract | null>(null);
   const [removeTarget, setRemoveTarget] = useState<ChallengeParticipantContract | null>(null);
@@ -64,6 +69,12 @@ export default function ManageChallengeScreen() {
   const [removedIds, setRemovedIds] = useState<string[]>([]);
   // The join request being answered, and how: it is the only row that is busy.
   const [pendingRequest, setPendingRequest] = useState<{ requestId: string; action: JoinRequestAction } | null>(null);
+  // Deleting the whole challenge (B4) — owner-only, like everything here.
+  // Not the same as closing it (admin-only, status = closed): a deleted
+  // challenge stops existing for everyone; its members and history are kept
+  // server-side.
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!challengeId) return;
@@ -128,6 +139,42 @@ export default function ManageChallengeScreen() {
     }
   }
 
+  async function confirmDelete() {
+    if (!challengeId) return;
+    setDeleting(true);
+    try {
+      await deleteChallenge(challengeId);
+      setDeleteConfirmVisible(false);
+      showSuccess({ message: t('challengeProgress.deleteChallengeSuccess') });
+      // Back to the challenges list, unwinding this challenge's own screens
+      // (info/progress/manage) — none of them can load it anymore.
+      router.dismissTo('/(tabs)/challenges');
+    } catch {
+      // Global api.ts interceptor already surfaces an error toast.
+      setDeleting(false);
+    }
+  }
+
+  // Same destructive row as Spaces' own "Delete space" (spaces/[id]/manage.tsx),
+  // at the end of whichever list this screen shows.
+  const deleteRow = (
+    <Row
+      justify="flex-start"
+      gap="sm"
+      align="center"
+      pressable
+      onPress={() => setDeleteConfirmVisible(true)}
+      style={styles.deleteRow}
+      accessibilityRole="button"
+      testID="delete-challenge"
+    >
+      <Icon name="trash-outline" size={20} color={colors.error} />
+      <Text variant="body" weight="bold" style={styles.deleteLabel}>
+        {t('challengeProgress.deleteChallengeCta')}
+      </Text>
+    </Row>
+  );
+
   const skeleton = (
     <View style={styles.list}>
       {Array.from({ length: SKELETON_ROWS }, (_, index) => (
@@ -161,6 +208,7 @@ export default function ManageChallengeScreen() {
             <Text variant="body" tone="secondary" align="center">
               {t('challengeProgress.joinRequestsLoadError')}
             </Text>
+            <View style={styles.deleteRowInline}>{deleteRow}</View>
           </View>
         ) : (
           <FlatList
@@ -191,6 +239,8 @@ export default function ManageChallengeScreen() {
                 </Text>
               </View>
             }
+            ListFooterComponent={deleteRow}
+            ListFooterComponentStyle={styles.footer}
           />
         )
       ) : participantsLoading ? (
@@ -217,6 +267,8 @@ export default function ManageChallengeScreen() {
               </Text>
             </View>
           }
+          ListFooterComponent={deleteRow}
+          ListFooterComponentStyle={styles.footer}
         />
       )}
 
@@ -240,6 +292,27 @@ export default function ManageChallengeScreen() {
           disabled: removing,
         }}
       />
+
+      <ConfirmationPopup
+        visible={deleteConfirmVisible}
+        title={t('challengeProgress.deleteChallengeTitle')}
+        description={t('challengeProgress.deleteChallengeDescription')}
+        icon="trash-outline"
+        iconColor={colors.error}
+        onDismiss={() => !deleting && setDeleteConfirmVisible(false)}
+        primaryButton={{
+          label: t('challengeProgress.deleteChallengeConfirm'),
+          onPress: confirmDelete,
+          variant: 'danger',
+          loading: deleting,
+        }}
+        secondaryButton={{
+          label: t('challengeProgress.deleteChallengeCancel'),
+          onPress: () => setDeleteConfirmVisible(false),
+          variant: 'neutral',
+          disabled: deleting,
+        }}
+      />
     </ScreenBackground>
   );
 }
@@ -257,5 +330,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
+  },
+  footer: {
+    paddingTop: spacing.lg,
+  },
+  deleteRowInline: {
+    alignSelf: 'stretch',
+    paddingHorizontal: spacing.lg,
+  },
+  // Same row as Spaces' "Delete space" (spaces/[id]/manage.tsx).
+  deleteRow: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.medium,
+    padding: spacing.base,
+  },
+  deleteLabel: {
+    color: colors.error,
   },
 });

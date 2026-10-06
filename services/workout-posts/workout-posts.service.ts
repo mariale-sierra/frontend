@@ -13,6 +13,12 @@ export async function unreactToPost(postId: string): Promise<void> {
   await api.delete(`/workout-posts/${postId}/reactions`);
 }
 
+/** Deletes one of the caller's own posts (soft delete server-side — its
+ * comments/reactions are kept, it just stops showing anywhere). */
+export async function deleteWorkoutPost(postId: string): Promise<void> {
+  await api.delete(`/workout-posts/${postId}`);
+}
+
 export async function getReactionSummary(
   postId: string,
 ): Promise<ReactionSummaryContract> {

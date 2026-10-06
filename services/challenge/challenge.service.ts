@@ -219,3 +219,11 @@ export async function closeChallenge(challengeId: string) {
   const response = await api.patch(`/challenges/${challengeId}/close`);
   return response.data;
 }
+
+/** Creator-only — deletes the challenge (soft delete server-side: members and
+ * history are kept, it just stops existing for everyone). Not the same as
+ * closeChallenge. */
+export async function deleteChallenge(challengeId: string) {
+  const response = await api.delete(`/challenges/${challengeId}`);
+  return response.data;
+}

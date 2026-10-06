@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 import { colors, radius, spacing } from '../../constants/theme';
@@ -10,11 +10,28 @@ interface MessageBubbleProps {
   isMine: boolean;
   /** The other participant's avatar — Chats-47A renders it next to THEIR bubbles only, never next to mine. */
   otherAvatar?: { username: string; imageUrl: string | null };
+  /** Long-press on the bubble (B4: your own messages, to delete one). The
+   * bubble looks exactly the same either way — no extra chrome per message. */
+  onLongPress?: () => void;
+  longPressA11yHint?: string;
 }
 
 const AVATAR_SIZE = 26;
 
-export function MessageBubble({ message, isMine, otherAvatar }: MessageBubbleProps) {
+export function MessageBubble({ message, isMine, otherAvatar, onLongPress, longPressA11yHint }: MessageBubbleProps) {
+  const bubble = (
+    <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
+      {/* `inverse` (→ `ink` text), not a raw `color: colors.textInverse`
+          override — that token doesn't exist on the current theme (see
+          radius/spacing notes below); `Text`'s own `inverse` prop is the
+          real mechanism for "dark text on a light/`primary` background"
+          everywhere else in the app. */}
+      <Text variant="body" inverse={isMine}>
+        {message.content}
+      </Text>
+    </View>
+  );
+
   return (
     <View style={[styles.row, isMine ? styles.rowMine : styles.rowTheirs]}>
       {!isMine && (
@@ -23,16 +40,17 @@ export function MessageBubble({ message, isMine, otherAvatar }: MessageBubblePro
         </View>
       )}
       <View style={[styles.bubbleColumn, isMine && styles.bubbleColumnMine]}>
-        <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
-          {/* `inverse` (→ `ink` text), not a raw `color: colors.textInverse`
-              override — that token doesn't exist on the current theme (see
-              radius/spacing notes below); `Text`'s own `inverse` prop is the
-              real mechanism for "dark text on a light/`primary` background"
-              everywhere else in the app. */}
-          <Text variant="body" inverse={isMine}>
-            {message.content}
-          </Text>
-        </View>
+        {onLongPress ? (
+          <Pressable
+            onLongPress={onLongPress}
+            accessibilityHint={longPressA11yHint}
+            testID={`message-bubble-${message.id}`}
+          >
+            {bubble}
+          </Pressable>
+        ) : (
+          bubble
+        )}
         <Text variant="caption" tone="secondary" style={isMine ? styles.timeMine : styles.timeTheirs}>
           {formatRelativeTime(message.sentAt)}
         </Text>

@@ -28,6 +28,10 @@ jest.mock('../PostOptionsSheet', () => ({
 jest.mock('../CommentsSheet', () => ({
   CommentsSheet: () => null,
 }));
+// B4's delete confirmation — closed by default, irrelevant to layout.
+jest.mock('../../ui/confirmationPopup', () => ({
+  ConfirmationPopup: () => null,
+}));
 
 // Its own file: the reaction tests in FeedPostCard.test.tsx leave React's act
 // environment mid-flight, which this render must not inherit.

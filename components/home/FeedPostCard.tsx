@@ -10,9 +10,14 @@ import { Row } from '../layout/row';
 import { CommentsSheet } from './CommentsSheet';
 import { PostOptionsSheet } from './PostOptionsSheet';
 import { ReportReasonSheet } from '../reports/ReportReasonSheet';
+import { ConfirmationPopup } from '../ui/confirmationPopup';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
-import { reactToPost, unreactToPost } from '../../services/workout-posts/workout-posts.service';
+import {
+  deleteWorkoutPost,
+  reactToPost,
+  unreactToPost,
+} from '../../services/workout-posts/workout-posts.service';
 import { useAuth } from '../../hooks/useAuth';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
 
@@ -21,6 +26,9 @@ const SHEET_SWAP_DELAY_MS = 320;
 
 interface FeedPostCardProps {
   post: FeedPostViewModel;
+  /** Called after the viewer deleted their own post (B4), so the list can
+   * drop it. Must be a stable callback to keep `memo` effective. */
+  onDeleted?: (postId: string) => void;
 }
 
 // `memo`: its only prop is `post`, which keeps a stable reference in
@@ -28,7 +36,7 @@ interface FeedPostCardProps {
 // actually changes — so a re-render triggered by an unrelated section of
 // the Home screen (friend streaks resolving, the header re-rendering) no
 // longer has to re-render every already-visible feed card too.
-export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardProps) {
+export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: FeedPostCardProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const { userId } = useAuth();
@@ -49,6 +57,8 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
   const [optionsVisible, setOptionsVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
   const reportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   // A ref, not state, for the in-flight guard below — two taps fired back to
   // back (before React has committed a re-render) would both read the same
   // stale `false` from a state variable's closure, letting both through.
@@ -69,6 +79,25 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
   function handleReportFromOptions() {
     setOptionsVisible(false);
     reportTimerRef.current = setTimeout(() => setReportVisible(true), SHEET_SWAP_DELAY_MS);
+  }
+
+  // Same native-modal swap delay as Report above, for the delete confirmation.
+  function handleDeleteFromOptions() {
+    setOptionsVisible(false);
+    reportTimerRef.current = setTimeout(() => setDeleteConfirmVisible(true), SHEET_SWAP_DELAY_MS);
+  }
+
+  async function confirmDelete() {
+    setDeleting(true);
+    try {
+      await deleteWorkoutPost(post.id);
+      setDeleteConfirmVisible(false);
+      onDeleted?.(post.id);
+    } catch {
+      // Global axios interceptor already shows the error toast.
+    } finally {
+      setDeleting(false);
+    }
   }
 
   useEffect(() => () => {
@@ -127,20 +156,17 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
           </View>
         </Row>
 
-        {/* Report is the only option so far, and you can't report your own
-            post — so the menu only exists on other people's posts. */}
-        {isOwnPost ? null : (
-          <IconButton
-            name="ellipsis-horizontal"
-            size={32}
-            iconSize={20}
-            iconColor={colors.paper}
-            onPress={() => setOptionsVisible(true)}
-            accessibilityLabel={t('home.postOptions.openA11y')}
-            hitSlop={10}
-            testID="post-options"
-          />
-        )}
+        {/* Someone else's post: Report. Your own post: Delete (B4). */}
+        <IconButton
+          name="ellipsis-horizontal"
+          size={32}
+          iconSize={20}
+          iconColor={colors.paper}
+          onPress={() => setOptionsVisible(true)}
+          accessibilityLabel={t('home.postOptions.openA11y')}
+          hitSlop={10}
+          testID="post-options"
+        />
       </Row>
 
       <View style={styles.photo}>
@@ -200,7 +226,29 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
       <PostOptionsSheet
         visible={optionsVisible}
         onClose={() => setOptionsVisible(false)}
-        onReport={handleReportFromOptions}
+        onReport={isOwnPost ? undefined : handleReportFromOptions}
+        onDelete={isOwnPost ? handleDeleteFromOptions : undefined}
+      />
+
+      <ConfirmationPopup
+        visible={deleteConfirmVisible}
+        title={t('home.postOptions.deleteConfirmTitle')}
+        description={t('home.postOptions.deleteConfirmDescription')}
+        icon="trash-outline"
+        iconColor={colors.error}
+        primaryButton={{
+          label: t('home.postOptions.deleteConfirmCta'),
+          onPress: confirmDelete,
+          variant: 'danger',
+          loading: deleting,
+        }}
+        secondaryButton={{
+          label: t('home.postOptions.cancelCta'),
+          onPress: () => setDeleteConfirmVisible(false),
+          variant: 'neutral',
+          disabled: deleting,
+        }}
+        onDismiss={() => !deleting && setDeleteConfirmVisible(false)}
       />
 
       <ReportReasonSheet

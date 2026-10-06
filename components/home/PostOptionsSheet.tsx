@@ -9,14 +9,18 @@ import { colors, radius, spacing } from '../../constants/theme';
 interface PostOptionsSheetProps {
   visible: boolean;
   onClose: () => void;
-  onReport: () => void;
+  /** Someone else's post: report it. */
+  onReport?: () => void;
+  /** Your own post (B4): delete it. */
+  onDelete?: () => void;
 }
 
 /**
- * The "..." menu on someone else's feed post. Report is the only option for
- * now; new ones go in as more rows here, styled the same way.
+ * The "..." menu on a feed post. Someone else's post gets Report; your own
+ * post gets Delete (you can't report yourself). Each option is one row,
+ * styled the same way.
  */
-export function PostOptionsSheet({ visible, onClose, onReport }: PostOptionsSheetProps) {
+export function PostOptionsSheet({ visible, onClose, onReport, onDelete }: PostOptionsSheetProps) {
   const { t } = useTranslation();
 
   return (
@@ -26,22 +30,42 @@ export function PostOptionsSheet({ visible, onClose, onReport }: PostOptionsShee
       </Text>
 
       <View style={styles.list}>
-        <Row
-          pressable
-          onPress={onReport}
-          gap="md"
-          justify="flex-start"
-          align="center"
-          style={styles.option}
-          accessibilityRole="button"
-          accessibilityLabel={t('reports.reportPostA11y')}
-          testID="post-options-report"
-        >
-          <Icon name="flag-outline" size={20} color={colors.error} />
-          <Text variant="body" style={styles.destructiveLabel}>
-            {t('home.postOptions.report')}
-          </Text>
-        </Row>
+        {onReport ? (
+          <Row
+            pressable
+            onPress={onReport}
+            gap="md"
+            justify="flex-start"
+            align="center"
+            style={styles.option}
+            accessibilityRole="button"
+            accessibilityLabel={t('reports.reportPostA11y')}
+            testID="post-options-report"
+          >
+            <Icon name="flag-outline" size={20} color={colors.error} />
+            <Text variant="body" style={styles.destructiveLabel}>
+              {t('home.postOptions.report')}
+            </Text>
+          </Row>
+        ) : null}
+        {onDelete ? (
+          <Row
+            pressable
+            onPress={onDelete}
+            gap="md"
+            justify="flex-start"
+            align="center"
+            style={styles.option}
+            accessibilityRole="button"
+            accessibilityLabel={t('home.postOptions.deleteA11y')}
+            testID="post-options-delete"
+          >
+            <Icon name="trash-outline" size={20} color={colors.error} />
+            <Text variant="body" style={styles.destructiveLabel}>
+              {t('home.postOptions.delete')}
+            </Text>
+          </Row>
+        ) : null}
       </View>
 
       {/* BottomSheetModal sizes to content by default, and one row alone

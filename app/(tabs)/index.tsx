@@ -37,6 +37,7 @@ import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../constants/onboardingDebug'
 import { formatTodayLabel, hoursUntilMidnight } from '../../utils/time';
 import { withAlpha } from '../../utils/color';
 import { useNotificationsStore } from '../../store/notificationsStore';
+import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { hasSeenLogCoachMark, markLogCoachMarkSeen } from '../../utils/logCoachMark';
 
 function FeedSeparator() {
@@ -250,7 +251,21 @@ export default function Home() {
   // identity every render defeats FlatList's own cell-level memoization and
   // forces every visible row to re-render even when its own data hasn't
   // changed (e.g. while the friend-streaks section resolves independently).
-  const renderItem = useCallback(({ item }: { item: FeedPostViewModel }) => <FeedPostCard post={item} />, []);
+  // B4: the viewer deleted one of their own posts from its "..." menu — drop
+  // it from the already-loaded feed in place (no refetch, no scroll jump).
+  const showSuccess = useErrorNotificationStore((state) => state.showSuccess);
+  const handlePostDeleted = useCallback(
+    (postId: string) => {
+      setFeedPosts((prev) => prev.filter((post) => post.id !== postId));
+      showSuccess({ message: t('home.postOptions.deleteSuccess') });
+    },
+    [showSuccess, t],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: FeedPostViewModel }) => <FeedPostCard post={item} onDeleted={handlePostDeleted} />,
+    [handlePostDeleted],
+  );
 
   // One combined gate instead of three independent loading flags each
   // rendering their own fallback — the screen reveals once, fully populated,
