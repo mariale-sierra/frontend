@@ -39,12 +39,23 @@ export function ConversationListItem({
   const name = otherParticipant.displayName ?? `@${otherParticipant.username}`;
   const hasUnread = unreadCount > 0;
 
+  // A share sent without a comment has empty `content` — describe what was
+  // shared instead (Sprint 10, B5).
+  const lastText = lastMessage
+    ? lastMessage.content ||
+      (lastMessage.kind === 'post'
+        ? t('chats.sharedPostPreview')
+        : lastMessage.kind === 'challenge'
+          ? t('chats.sharedChallengePreview')
+          : '')
+    : '';
+
   const preview = isPending
     ? t('chats.messageRequestLabel')
     : lastMessage
       ? lastMessage.senderId === currentUserId
-        ? t('chats.lastMessageFromYou', { message: lastMessage.content })
-        : lastMessage.content
+        ? t('chats.lastMessageFromYou', { message: lastText })
+        : lastText
       : t('chats.noMessagesYet');
 
   return (

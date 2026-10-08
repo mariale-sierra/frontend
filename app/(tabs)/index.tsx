@@ -368,6 +368,14 @@ export default function Home() {
             <View style={styles.feedFooterLoading}>
               <Loader visible={true} overlayStyle={styles.loaderTransparent} />
             </View>
+          ) : isReady && !feedError && feedPosts.length > 0 && !feedNextCursor ? (
+            // The end of the feed, so an empty scroll below the last post
+            // doesn't read as "still loading" or "broken".
+            <View style={styles.feedEnd} testID="feed-end">
+              <Text variant="caption" tone="secondary" align="center">
+                {t('home.feedEnd')}
+              </Text>
+            </View>
           ) : null
         }
         onScroll={handleListScroll}
@@ -454,6 +462,9 @@ const styles = StyleSheet.create({
   friendsArea: {},
   divider: {
     marginTop: spacing.xs,
+  },
+  feedEnd: {
+    paddingVertical: spacing.xl,
   },
   feedFooterLoading: {
     height: 60,

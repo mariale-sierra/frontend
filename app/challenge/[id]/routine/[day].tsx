@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -30,6 +30,7 @@ import { useOpenExercise } from '../../../../hooks/useOpenExercise';
 import { useErrorNotificationStore } from '../../../../store/errorNotificationStore';
 import type { ChallengeContract, ChallengeCycleDayContract, ChallengeExerciseSetContract, ChallengeExerciseTargetContract } from '../../../../types/challenge';
 import type { TFunction } from 'i18next';
+import { shareChallengeExternally } from '../../../../utils/shareChallenge';
 
 type MembershipStatus = 'creator' | 'joined' | 'none';
 
@@ -228,7 +229,8 @@ export default function RoutineDayDetail() {
 
   function handleShare() {
     if (!challenge || !selectedDay) return;
-    Share.share({ message: t('challengeInfo.shareMessage', { name: `${challenge.name} — ${selectedDay.routineName}` }) }).catch(() => {});
+    // Same message + app link as the challenge's own share (utils/shareChallenge.ts).
+    shareChallengeExternally({ id: challenge.id, name: `${challenge.name} — ${selectedDay.routineName}` }, t);
   }
 
   if (loading) {

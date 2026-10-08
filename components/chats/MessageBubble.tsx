@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
+import { SharedChallengeCard, SharedPostCard } from './SharedContentCard';
 import { colors, radius, spacing } from '../../constants/theme';
 import { formatRelativeTime } from '../../utils/time';
 import type { MessageContract } from '../../types/chat';
@@ -19,7 +20,16 @@ interface MessageBubbleProps {
 const AVATAR_SIZE = 26;
 
 export function MessageBubble({ message, isMine, otherAvatar, onLongPress, longPressA11yHint }: MessageBubbleProps) {
-  const bubble = (
+  // Sprint 10, B5: a shared post/challenge is its own card; any comment sent
+  // with it is a regular bubble right under it. A share sent with no comment
+  // has `content: ''` and gets no text bubble at all.
+  const shared = message.sharedPost ? (
+    <SharedPostCard post={message.sharedPost} />
+  ) : message.sharedChallenge ? (
+    <SharedChallengeCard challenge={message.sharedChallenge} />
+  ) : null;
+
+  const textBubble = message.content ? (
     <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
       {/* `inverse` (→ `ink` text), not a raw `color: colors.textInverse`
           override — that token doesn't exist on the current theme (see
@@ -30,6 +40,15 @@ export function MessageBubble({ message, isMine, otherAvatar, onLongPress, longP
         {message.content}
       </Text>
     </View>
+  ) : null;
+
+  const bubble = shared ? (
+    <View style={[styles.sharedStack, isMine && styles.bubbleColumnMine]}>
+      {shared}
+      {textBubble}
+    </View>
+  ) : (
+    textBubble
   );
 
   return (
@@ -89,6 +108,10 @@ const styles = StyleSheet.create({
   },
   bubbleColumnMine: {
     alignItems: 'flex-end',
+  },
+  sharedStack: {
+    gap: spacing.xs,
+    alignItems: 'flex-start',
   },
   // Bumped a tier each — `spacing.md`→`base`, `spacing.sm`→`md` — per
   // explicit "text too close to the bubble edge" report. Still real scale

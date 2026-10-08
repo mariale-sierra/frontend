@@ -9,6 +9,8 @@ import { colors, radius, spacing } from '../../constants/theme';
 interface PostOptionsSheetProps {
   visible: boolean;
   onClose: () => void;
+  /** Someone else's post: open a chat with its author. */
+  onMessage?: () => void;
   /** Someone else's post: report it. */
   onReport?: () => void;
   /** Your own post (B4): delete it. */
@@ -16,11 +18,11 @@ interface PostOptionsSheetProps {
 }
 
 /**
- * The "..." menu on a feed post. Someone else's post gets Report; your own
- * post gets Delete (you can't report yourself). Each option is one row,
+ * The "..." menu on a feed post. Someone else's post gets Message the
+ * author and Report; your own post gets Delete (you can't report yourself). Each option is one row,
  * styled the same way.
  */
-export function PostOptionsSheet({ visible, onClose, onReport, onDelete }: PostOptionsSheetProps) {
+export function PostOptionsSheet({ visible, onClose, onMessage, onReport, onDelete }: PostOptionsSheetProps) {
   const { t } = useTranslation();
 
   return (
@@ -30,6 +32,21 @@ export function PostOptionsSheet({ visible, onClose, onReport, onDelete }: PostO
       </Text>
 
       <View style={styles.list}>
+        {onMessage ? (
+          <Row
+            pressable
+            onPress={onMessage}
+            gap="md"
+            justify="flex-start"
+            align="center"
+            style={styles.option}
+            accessibilityRole="button"
+            testID="post-options-message"
+          >
+            <Icon name="chatbubble-ellipses-outline" size={20} color={colors.paper} />
+            <Text variant="body">{t('home.sendMessage')}</Text>
+          </Row>
+        ) : null}
         {onReport ? (
           <Row
             pressable

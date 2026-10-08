@@ -200,6 +200,13 @@ Full backend/push details: `backend/docs/notificaciones/B3-NOTIFICACIONES.md`.
 - Logout (`context/authContext.tsx`) removes this device's push token before clearing the session.
 - Push needs an EAS projectId (`eas init` or `EAS_PROJECT_ID`) and a development build; Expo Go/simulators/web report push as unsupported and the inbox still works.
 
+## 12c. Social Sharing Module Map (B5)
+- `components/social/ShareToChatSheet.tsx`: "Send to…" sheet — recent 1:1 chats (minus unaccepted requests) plus user search; sends `POST /chats/conversations/:id/messages` with `workoutPostId` or `challengeId` (`content` optional). Optional "Other apps" row for the native share sheet. Used by `FeedPostCard` (paper plane) and the challenge detail share button.
+- `utils/shareChallenge.ts`: external share text + app link (`expo-linking` `createURL('/challenge/<id>')`), also used by the routine-day share.
+- `components/chats/SharedContentCard.tsx`: shared post/challenge card inside `MessageBubble`. Previews come resolved per viewer (`available: false` → "no longer available", never content). `ConversationListItem` describes a share without a comment via `lastMessage.kind`.
+- Reactions lead with people, not numbers: `components/social/ReactorsSummary.tsx` (from the feed's `recent_reactors`) and `ReactorsSheet.tsx` (`GET /workout-posts/:postId/reactions/users`, `X-Next-Cursor`). The like count is never rendered.
+- Hashtags: typed in the camera confirm screen's caption (`app/(add)/camera.tsx`), parsed and stored by the backend (`havit.hashtags`, `havit.workout_post_hashtags`). `utils/hashtags.ts` mirrors the backend parser — keep both in sync. `components/social/HashtagText.tsx` highlights tags; they aren't tappable until a hashtag search exists.
+
 ## 13. Do and Don't Rules
 Do:
 - Read this guide and inspect the target route before editing.

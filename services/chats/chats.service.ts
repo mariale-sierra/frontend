@@ -3,6 +3,7 @@ import type {
   ConversationSummaryContract,
   MessageContract,
   MessagesPageContract,
+  SharedContentPayload,
 } from '../../types/chat';
 
 /** Starts a new 1:1 conversation, or returns the existing one if there's already one. */
@@ -41,13 +42,18 @@ export async function getMessages(
   return response.data;
 }
 
+/** Sends text, shared content (a post or a challenge), or both. `content`
+ * may be empty only when something is shared — it's then left out of the
+ * body, which the backend accepts. */
 export async function sendMessage(
   conversationId: string,
   content: string,
+  shared: SharedContentPayload = {},
 ): Promise<MessageContract> {
+  const text = content.trim();
   const response = await api.post<MessageContract>(
     `/chats/conversations/${conversationId}/messages`,
-    { content },
+    { ...(text ? { content } : {}), ...shared },
   );
   return response.data;
 }

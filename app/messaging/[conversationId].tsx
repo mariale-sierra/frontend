@@ -195,7 +195,7 @@ export default function Chat() {
       ) : error ? (
         <View style={styles.center}>
           <Text tone="secondary">{t('chats.threadLoadError')}</Text>
-          <Button variant="outline" size="sm" onPress={reload}>
+          <Button variant="outline" size="sm" onPress={() => reload()}>
             {t('common.actions.continue')}
           </Button>
         </View>

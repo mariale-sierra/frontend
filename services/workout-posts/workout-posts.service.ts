@@ -2,7 +2,9 @@ import api from '../api';
 import type {
   CommentContract,
   ListCommentsResponse,
+  ListReactorsResponse,
   ReactionSummaryContract,
+  ReactorContract,
 } from '../../types/workout-post-social';
 
 export async function reactToPost(postId: string): Promise<void> {
@@ -26,6 +28,18 @@ export async function getReactionSummary(
     `/workout-posts/${postId}/reactions`,
   );
   return data;
+}
+
+/** Who reacted to a post, newest first (Sprint 10, B5). Pass the previous
+ * page's `nextCursor` to continue. */
+export async function listReactors(postId: string, cursor?: string): Promise<ListReactorsResponse> {
+  const { data, headers } = await api.get<ReactorContract[]>(`/workout-posts/${postId}/reactions/users`, {
+    params: cursor ? { cursor } : undefined,
+  });
+  return {
+    reactors: Array.isArray(data) ? data : [],
+    nextCursor: headers['x-next-cursor'] as string | undefined,
+  };
 }
 
 export async function listComments(

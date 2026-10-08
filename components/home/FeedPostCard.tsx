@@ -11,6 +11,10 @@ import { CommentsSheet } from './CommentsSheet';
 import { PostOptionsSheet } from './PostOptionsSheet';
 import { ReportReasonSheet } from '../reports/ReportReasonSheet';
 import { ConfirmationPopup } from '../ui/confirmationPopup';
+import { HashtagText } from '../social/HashtagText';
+import { ReactorsSummary } from '../social/ReactorsSummary';
+import { ReactorsSheet } from '../social/ReactorsSheet';
+import { ShareToChatSheet } from '../social/ShareToChatSheet';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import {
@@ -40,9 +44,9 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
   const router = useRouter();
   const { t } = useTranslation();
   const { userId } = useAuth();
-  // Real, reported bug: the "Message" action showed on your own posts too —
-  // tapping it tried to open a conversation with yourself, which the chats
-  // module doesn't support (getOrCreateConversation rejects a self-id).
+  // Own post: Delete in the "..." menu. Someone else's: Report and Message
+  // the author — never on your own post, since getOrCreateConversation
+  // rejects a conversation with yourself.
   const isOwnPost = post.userId === userId;
 
   // Local, optimistic copies of the server-seeded reaction/comment state —
@@ -53,7 +57,21 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
   const [liked, setLiked] = useState(post.likedByMe);
   const [likesCount, setLikesCount] = useState(post.likesCount);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount);
+  // Home refreshes the feed silently on refocus/pull-to-refresh and hands
+  // each card a fresh `post` with the same id — the card is reused (same
+  // key), so without this it kept showing the counts/liked state from its
+  // FIRST render: a like or comment made elsewhere never showed up here
+  // (Sprint 10, B5: "posts visible consistently"). Skipped while a reaction
+  // request is in flight so a refresh can't undo the optimistic tap.
+  useEffect(() => {
+    if (reactingRef.current) return;
+    setLiked(post.likedByMe);
+    setLikesCount(post.likesCount);
+    setCommentsCount(post.commentsCount);
+  }, [post.likedByMe, post.likesCount, post.commentsCount]);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  const [reactorsVisible, setReactorsVisible] = useState(false);
+  const [shareVisible, setShareVisible] = useState(false);
   const [optionsVisible, setOptionsVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
   const reportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -66,13 +84,6 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
   // tap's check always sees the first tap's write.
   const reactingRef = useRef(false);
 
-  // Fixed 2026-08-31, real bug — was `router.push(\`/messaging/${post.userId}\`)`,
-  // treating the OTHER user's id as if it were a conversationId (the
-  // comment here used to explain this was a deliberate placeholder before
-  // the real chats module existed — it now does, so this is the actual
-  // swap that comment called for). `/messaging/new` resolves-or-creates the
-  // real 1:1 conversation for `recipientUserId` and hands off to the real
-  // thread screen — see app/messaging/new.tsx's own doc comment.
   // The report sheet opens only after the options sheet has finished
   // sliding out. Both are native <Modal>s, and iOS drops a modal presented
   // while another one is still dismissing.
@@ -104,7 +115,8 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
     if (reportTimerRef.current) clearTimeout(reportTimerRef.current);
   }, []);
 
-  function handleSendMessage() {
+  function handleMessageAuthor() {
+    setOptionsVisible(false);
     router.push({ pathname: '/messaging/new', params: { recipientUserId: post.userId } });
   }
 
@@ -150,7 +162,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
           accessibilityLabel={t('home.openAuthorProfileA11y', { name: post.userName })}
         >
           <UserAvatar username={post.userName} imageUrl={post.userAvatarUrl} size={32} />
-          <View>
+          <View style={styles.headerText}>
             <Text variant="label">{post.userName}</Text>
             <Text variant="caption" tone="secondary">{post.postedAt}</Text>
           </View>
@@ -177,10 +189,29 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
         )}
       </View>
 
-      {post.caption ? (
-        <Text variant="body" numberOfLines={2}>
-          {post.caption}
+      {/* Which challenge this progress belongs to — the feed is challenge
+          progress, and this was the one piece of context the card had in
+          its data but never showed. Opens the challenge. */}
+      <Row
+        pressable
+        onPress={() => router.push(`/challenge/${post.challengeId}`)}
+        gap="xs"
+        align="center"
+        justify="flex-start"
+        accessibilityRole="button"
+        accessibilityLabel={t('home.openPostChallengeA11y', { name: post.challengeName })}
+        testID="post-challenge"
+      >
+        <Icon name="trophy-outline" size={14} color={colors.paper} />
+        <Text variant="caption" weight="bold" numberOfLines={1} style={styles.challengeLabel}>
+          {t('home.postChallengeDay', { day: post.day, name: post.challengeName })}
         </Text>
+      </Row>
+
+      {post.caption ? (
+        <HashtagText variant="body" numberOfLines={2}>
+          {post.caption}
+        </HashtagText>
       ) : null}
 
       <Row justify="space-between" align="center" style={styles.actions}>
@@ -191,9 +222,11 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
             gap="xs"
             accessibilityRole="button"
             accessibilityLabel={t('home.reactionA11y')}
+            accessibilityState={{ selected: liked }}
           >
-            <Icon name="heart-outline" size={20} color={liked ? colors.accent : colors.paper} />
-            <Text variant="caption">{likesCount}</Text>
+            {/* Sprint 10, B5: no count next to the heart — who reacted is
+                shown below instead (ReactorsSummary). */}
+            <Icon name={liked ? 'heart' : 'heart-outline'} size={22} color={liked ? colors.accent : colors.paper} />
           </Row>
 
           <Row
@@ -208,13 +241,27 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
           </Row>
         </Row>
 
-        {isOwnPost ? null : (
-          <Row pressable onPress={handleSendMessage} gap="xs">
-            <Icon name="paper-plane-outline" size={20} color={colors.paper} />
-            <Text variant="caption" tone="secondary">{t('home.sendMessage')}</Text>
-          </Row>
-        )}
+        {/* Sends the post itself into a chat (Sprint 10, B5) — own posts
+            too. Messaging the author directly lives on their profile. */}
+        <Row
+          pressable
+          onPress={() => setShareVisible(true)}
+          gap="xs"
+          accessibilityRole="button"
+          accessibilityLabel={t('home.sharePostA11y')}
+          testID="share-post"
+        >
+          <Icon name="paper-plane-outline" size={20} color={colors.paper} />
+          <Text variant="caption" tone="secondary">{t('home.sharePost')}</Text>
+        </Row>
       </Row>
+
+      <ReactorsSummary
+        reactors={post.recentReactors}
+        likedByMe={liked}
+        totalCount={likesCount}
+        onPress={() => setReactorsVisible(true)}
+      />
 
       <CommentsSheet
         visible={commentsVisible}
@@ -223,9 +270,18 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
         onCommentsCountChange={setCommentsCount}
       />
 
+      <ReactorsSheet visible={reactorsVisible} postId={post.id} onClose={() => setReactorsVisible(false)} />
+
+      <ShareToChatSheet
+        visible={shareVisible}
+        onClose={() => setShareVisible(false)}
+        content={{ workoutPostId: post.id }}
+      />
+
       <PostOptionsSheet
         visible={optionsVisible}
         onClose={() => setOptionsVisible(false)}
+        onMessage={isOwnPost ? undefined : handleMessageAuthor}
         onReport={isOwnPost ? undefined : handleReportFromOptions}
         onDelete={isOwnPost ? handleDeleteFromOptions : undefined}
       />
@@ -267,6 +323,13 @@ const styles = StyleSheet.create({
   },
   header: {
     justifyContent: 'flex-start',
+    flexShrink: 1,
+  },
+  headerText: {
+    flexShrink: 1,
+  },
+  challengeLabel: {
+    flexShrink: 1,
   },
   // The like / comment / send row sits well below the photo and the caption: on top
   // of the card's own `sm` gap, another `md`.

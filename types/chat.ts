@@ -6,12 +6,47 @@ export interface ConversationParticipantContract {
   profileImageUrl: string | null;
 }
 
+/** What a message carries: plain text, or a shared post/challenge (with an
+ * optional comment in `content`). */
+export type MessageKind = 'text' | 'post' | 'challenge';
+
 /** Preview of a conversation's last message (backend LastMessagePreviewDto). */
 export interface LastMessagePreviewContract {
   id: number;
   content: string;
   senderId: string;
   sentAt: string;
+  /** Optional only for an older API deployment that predates sharing. */
+  kind?: MessageKind;
+}
+
+/** A workout post shared inside a message (backend SharedPostPreviewDto),
+ * resolved for the viewer: `available: false` means deleted, hidden or not
+ * visible to them — every other field is then null. */
+export interface SharedPostPreviewContract {
+  id: string;
+  available: boolean;
+  imageUrl: string | null;
+  caption: string | null;
+  author: ConversationParticipantContract | null;
+}
+
+/** A challenge shared inside a message (backend SharedChallengePreviewDto). */
+export interface SharedChallengePreviewContract {
+  id: string;
+  available: boolean;
+  name: string | null;
+  description: string | null;
+  durationDays: number | null;
+  visibility: string | null;
+  membersJoined: number | null;
+  dominantActivityCategory: string | null;
+}
+
+/** Content to share in a message — at most one of the two. */
+export interface SharedContentPayload {
+  workoutPostId?: string;
+  challengeId?: string;
 }
 
 /** GET/POST /chats/conversations row (backend ConversationSummaryDto). */
@@ -39,6 +74,8 @@ export interface MessageContract {
   content: string;
   sentAt: string;
   readAt: string | null;
+  sharedPost?: SharedPostPreviewContract | null;
+  sharedChallenge?: SharedChallengePreviewContract | null;
 }
 
 /** GET /chats/conversations/:id/messages response shape. */

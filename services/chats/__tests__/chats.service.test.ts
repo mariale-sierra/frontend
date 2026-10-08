@@ -77,6 +77,28 @@ describe('chats.service', () => {
     expect(result).toEqual(message);
   });
 
+  it('sendMessage shares a post without text, leaving content out of the body', async () => {
+    mockedApi.post.mockResolvedValue({ data: { id: 2 } });
+
+    await sendMessage('conv-1', '  ', { workoutPostId: 'post-1' });
+
+    expect(mockedApi.post).toHaveBeenCalledWith(
+      '/chats/conversations/conv-1/messages',
+      { workoutPostId: 'post-1' },
+    );
+  });
+
+  it('sendMessage sends a comment together with a shared challenge', async () => {
+    mockedApi.post.mockResolvedValue({ data: { id: 3 } });
+
+    await sendMessage('conv-1', '¡Únete!', { challengeId: 'ch-1' });
+
+    expect(mockedApi.post).toHaveBeenCalledWith(
+      '/chats/conversations/conv-1/messages',
+      { content: '¡Únete!', challengeId: 'ch-1' },
+    );
+  });
+
   it('markConversationRead patches the read endpoint', async () => {
     mockedApi.patch.mockResolvedValue({ data: { updated: 2 } });
 

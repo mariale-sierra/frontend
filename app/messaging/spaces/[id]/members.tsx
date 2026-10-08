@@ -27,7 +27,13 @@ export default function SpaceMembersScreen() {
   const filteredMembers = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return members;
-    return members.filter((member) => member.username.toLowerCase().includes(q));
+    // Display name too — rows now lead with it, so searching only the
+    // @username didn't match what people actually see on screen.
+    return members.filter(
+      (member) =>
+        member.username.toLowerCase().includes(q) ||
+        (member.displayName ?? '').toLowerCase().includes(q),
+    );
   }, [members, query]);
 
   return (

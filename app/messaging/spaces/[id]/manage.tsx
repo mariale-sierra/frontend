@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { safeBack } from '../../../../utils/navigation';
+import { safeBack, safeBackTimes } from '../../../../utils/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../../../components/layout/screenBackground';
@@ -60,7 +60,10 @@ export default function ManageSpaceScreen() {
     try {
       await deleteSpace(spaceId);
       setDeleteConfirmVisible(false);
-      router.dismissTo('/messaging/spaces');
+      // Pop Manage AND the deleted space's own screen under it — leaving
+      // that one in the history meant Back landed on a space that no longer
+      // exists ("could not load"). Falls back to Messages after a deep link.
+      safeBackTimes(2, '/messaging');
     } catch {
       setDeleting(false);
     }

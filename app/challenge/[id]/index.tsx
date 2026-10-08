@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,7 @@ import { Text } from '../../../components/ui/text';
 import { ChallengeHeader, ChallengeAboutSection, ChallengeRoutineList, ChallengeInfoContentSkeleton } from '../../../components/challenge/detail';
 import { ChallengeAccentBackdrop } from '../../../components/challenge/challengeAccentBackdrop';
 import { CoachMark } from '../../../components/onboarding/CoachMark';
+import { ShareToChatSheet } from '../../../components/social/ShareToChatSheet';
 import type { ChallengeInfoRow } from '../../../components/challenge/detail';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
@@ -27,6 +28,7 @@ import { useErrorNotificationStore } from '../../../store/errorNotificationStore
 import { markChallengeMembershipSeen } from '../../../utils/seenChallengeMemberships';
 import { hasSeenChallengeJoinCallout, markChallengeJoinCalloutSeen } from '../../../utils/challengeJoinCallout';
 import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../../constants/onboardingDebug';
+import { shareChallengeExternally } from '../../../utils/shareChallenge';
 import type { ChallengeContract } from '../../../types/challenge';
 
 type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
@@ -50,6 +52,7 @@ export default function ChallengeDetail() {
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('none');
   const [membershipLoading, setMembershipLoading] = useState(true);
   const { showSuccess } = useErrorNotificationStore();
+  const [shareVisible, setShareVisible] = useState(false);
 
   // Onboarding Stage 4's join callout — teaches the general concept of
   // joining (not tied to this specific challenge), shown once ever per
@@ -161,9 +164,11 @@ export default function ChallengeDetail() {
       .finally(() => setMembershipLoading(false));
   }, [challenge]);
 
+  // Sprint 10, B5: the share button opens "Send to…" — a chat inside Havit,
+  // or "Other apps" for the native share sheet (WhatsApp, Instagram…).
   function handleShare() {
     if (!challenge) return;
-    Share.share({ message: t('challengeInfo.shareMessage', { name: challenge.name }) }).catch(() => {});
+    setShareVisible(true);
   }
 
   if (loading) {
@@ -356,6 +361,25 @@ export default function ChallengeDetail() {
           </Pressable>
         </View>
       )}
+
+      <ShareToChatSheet
+        visible={shareVisible}
+        onClose={() => setShareVisible(false)}
+        content={{ challengeId: String(challenge?.id ?? id) }}
+        onShareExternally={() => {
+          setShareVisible(false);
+          shareChallengeExternally(
+            {
+              id: String(challenge?.id ?? id),
+              name: view.title,
+              description: view.description,
+              durationDays: view.durationDays,
+              membersJoined: view.membersJoined,
+            },
+            t,
+          );
+        }}
+      />
 
       <joinPopup.Component />
       <closeChallengePopup.Component />

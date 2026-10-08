@@ -18,6 +18,17 @@ export interface FeedPostViewModel {
   likesCount: number;
   likedByMe: boolean;
   commentsCount: number;
+  /** Who reacted (up to 3, never the viewer) — the reactions UI leads with
+   * people, not the count (Sprint 10, B5). */
+  recentReactors: ReactorViewModel[];
+  hashtags: string[];
+}
+
+export interface ReactorViewModel {
+  id: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
 }
 
 const ACTIVITY_MAP: Record<string, ActivityType> = {
@@ -50,6 +61,13 @@ export function toFeedPostViewModel(post: FeedPostContract): FeedPostViewModel {
     likesCount: post.likes_count ?? 0,
     likedByMe: post.liked_by_me ?? false,
     commentsCount: post.comments_count ?? 0,
+    recentReactors: (post.recent_reactors ?? []).map((r) => ({
+      id: r.id,
+      username: r.username,
+      displayName: r.display_name,
+      avatarUrl: r.avatar_url,
+    })),
+    hashtags: post.hashtags ?? [],
   };
 }
 
