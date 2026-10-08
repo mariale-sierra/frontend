@@ -6,7 +6,7 @@ import { Icon } from '../ui/icon';
 import { UserAvatar } from '../ui/userAvatar';
 import { Row } from '../layout/row';
 import { HashtagText } from '../social/HashtagText';
-import { colors, radius, spacing, textOpacity } from '../../constants/theme';
+import { colors, fillOpacity, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { getChallengeAccentColor, parseActivityType } from '../../services/adapters/challengeState';
 import type { SharedChallengePreviewContract, SharedPostPreviewContract } from '../../types/chat';
@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   photo: {
     width: '100%',
     aspectRatio: 3 / 4,
-    backgroundColor: withAlpha(colors.paper, 0.06),
+    backgroundColor: withAlpha(colors.paper, fillOpacity.placeholder),
     alignItems: 'center',
     justifyContent: 'center',
   },

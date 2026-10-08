@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Text } from '../ui/text';
 import { Icon } from '../ui/icon';
-import { colors, radius, spacing } from '../../constants/theme';
+import { borderWidth, colors, radius, spacing } from '../../constants/theme';
 import type { LegalDocKey } from '../../constants/legal/legalDocs';
 
 export interface LegalConsentValue {
@@ -17,6 +17,9 @@ interface LegalConsentProps {
 }
 
 const DOC_LINKS: LegalDocKey[] = ['terms', 'privacy', 'community'];
+// Same as the body text's line height (24), so the box lines up with the
+// first line of its label without an off-scale nudge.
+const CHECKBOX_SIZE = spacing.lg;
 
 function Checkbox({
   checked,
@@ -94,14 +97,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   box: {
-    width: 24,
-    height: 24,
+    width: CHECKBOX_SIZE,
+    height: CHECKBOX_SIZE,
     borderRadius: radius.small,
-    borderWidth: 1.5,
+    borderWidth: borderWidth.thin,
     borderColor: colors.paper,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 1,
   },
   boxChecked: {
     backgroundColor: colors.primary,
@@ -114,10 +116,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
-    paddingLeft: 24 + spacing.md,
+    paddingLeft: CHECKBOX_SIZE + spacing.md,
   },
+  // A custom `color` on `Text` needs `opacity: 1` — otherwise the tone
+  // opacity still applies underneath and mutes it (components/ui/text.tsx).
   link: {
     color: colors.primary,
+    opacity: 1,
     textDecorationLine: 'underline',
   },
 });

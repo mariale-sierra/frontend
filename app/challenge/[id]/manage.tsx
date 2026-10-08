@@ -345,6 +345,9 @@ const styles = StyleSheet.create({
     padding: spacing.base,
   },
   deleteLabel: {
+    // Custom `color` on `Text` needs `opacity: 1`, or the tone opacity
+    // mutes the red (components/ui/text.tsx).
     color: colors.error,
+    opacity: 1,
   },
 });

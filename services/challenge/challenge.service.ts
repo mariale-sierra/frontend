@@ -45,19 +45,39 @@ type ChallengeUsersResponse =
       message?: string;
     };
 
-export async function getChallenges() {
-  const response = await api.get<ChallengesListResponse>('/challenges');
-  const payload = response.data;
+// The backend's largest page (MAX_PAGE_LIMIT): the fewest round trips.
+const CHALLENGES_PAGE_LIMIT = 50;
+// Safety stop for a cursor that never ends (2,500 challenges).
+const CHALLENGES_MAX_PAGES = 50;
 
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-
-  if (payload && Array.isArray(payload.data)) {
-    return payload.data;
-  }
-
+function toChallengeList(payload: ChallengesListResponse): ChallengeContract[] {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.data)) return payload.data;
   return [];
+}
+
+/**
+ * Every challenge. Since B1, GET /challenges is cursor-paginated (20 per page
+ * by default, next cursor in X-Next-Cursor) — the Explore tab and Search
+ * filter this list on the client, so reading only the first page silently
+ * hid every challenge past the newest 20. Follows the cursor to the end.
+ */
+export async function getChallenges(): Promise<ChallengeContract[]> {
+  const all: ChallengeContract[] = [];
+  let cursor: string | undefined;
+
+  for (let page = 0; page < CHALLENGES_MAX_PAGES; page++) {
+    const response = await api.get<ChallengesListResponse>('/challenges', {
+      params: { limit: CHALLENGES_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
+    });
+    all.push(...toChallengeList(response.data));
+    const next = response.headers?.['x-next-cursor'] as string | undefined;
+    // A cursor that does not move on would go on for ever.
+    if (!next || next === cursor) break;
+    cursor = next;
+  }
+
+  return all;
 }
 
 export async function getChallenge(id: string) {

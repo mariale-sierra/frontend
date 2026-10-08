@@ -39,7 +39,7 @@ export function FollowListItem({ user, onNavigate }: FollowListItemProps) {
         <View style={styles.names}>
           {user.displayName ? (
             <>
-              <Text variant="body" style={styles.username} numberOfLines={1}>
+              <Text variant="body" weight="medium" numberOfLines={1}>
                 {user.displayName}
               </Text>
               <Text variant="caption" tone="secondary" numberOfLines={1}>
@@ -47,7 +47,7 @@ export function FollowListItem({ user, onNavigate }: FollowListItemProps) {
               </Text>
             </>
           ) : (
-            <Text variant="body" style={styles.username} numberOfLines={1}>
+            <Text variant="body" weight="medium" numberOfLines={1}>
               @{user.username}
             </Text>
           )}
@@ -63,8 +63,5 @@ const styles = StyleSheet.create({
   },
   names: {
     flex: 1,
-  },
-  username: {
-    fontWeight: '600',
   },
 });

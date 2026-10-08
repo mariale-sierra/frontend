@@ -19,7 +19,7 @@ import { IconButton } from '../../components/ui/iconButton';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
 import { GlassInput } from '../../components/ui/glassInput';
-import { colors, spacing, radius } from '../../constants/theme';
+import { colors, fillOpacity, spacing, radius } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
 import { submitWorkoutProgress } from '../../services/workout-log/workout-log.service';
@@ -497,7 +497,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radius.big,
-    backgroundColor: withAlpha(colors.accent, 0.18),
+    // `accent` = the palette's social color; chip-fill opacity from the scale.
+    backgroundColor: withAlpha(colors.accent, fillOpacity.chip),
   },
   // Custom color on `Text` needs `opacity: 1` (see components/ui/text.tsx).
   hashtagChipText: {
