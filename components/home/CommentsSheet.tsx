@@ -209,34 +209,40 @@ export function CommentsSheet({
             />
           </Row>
         </View>
+
+        {/* Rendered INSIDE the sheet, not next to it: both are native
+            <Modal>s, and iOS won't present a second modal while the sheet's
+            is up — the delete confirmation (and the report sheet) never
+            appeared, so deleting a comment "didn't work". Real, reported bug.
+            Nested, each is presented on top of the sheet's own window. */}
+        <ConfirmationPopup
+          visible={pendingDeleteId !== null}
+          title={t('comments.deleteConfirmTitle')}
+          icon="trash-outline"
+          iconColor={colors.error}
+          primaryButton={{
+            label: t('comments.deleteConfirmCta'),
+            onPress: handleDelete,
+            variant: 'danger',
+            loading: deleting,
+          }}
+          secondaryButton={{
+            label: t('comments.cancelCta'),
+            onPress: () => setPendingDeleteId(null),
+            variant: 'neutral',
+            disabled: deleting,
+          }}
+          onDismiss={() => setPendingDeleteId(null)}
+        />
+
+        <ReportReasonSheet
+          visible={reportCommentId !== null}
+          targetType="comment"
+          targetId={reportCommentId === null ? null : String(reportCommentId)}
+          onClose={() => setReportCommentId(null)}
+        />
       </BottomSheetModal>
 
-      <ConfirmationPopup
-        visible={pendingDeleteId !== null}
-        title={t('comments.deleteConfirmTitle')}
-        icon="trash-outline"
-        iconColor={colors.error}
-        primaryButton={{
-          label: t('comments.deleteConfirmCta'),
-          onPress: handleDelete,
-          variant: 'danger',
-          loading: deleting,
-        }}
-        secondaryButton={{
-          label: t('comments.cancelCta'),
-          onPress: () => setPendingDeleteId(null),
-          variant: 'neutral',
-          disabled: deleting,
-        }}
-        onDismiss={() => setPendingDeleteId(null)}
-      />
-
-      <ReportReasonSheet
-        visible={reportCommentId !== null}
-        targetType="comment"
-        targetId={reportCommentId === null ? null : String(reportCommentId)}
-        onClose={() => setReportCommentId(null)}
-      />
     </>
   );
 }

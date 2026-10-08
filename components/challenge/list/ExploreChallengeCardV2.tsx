@@ -46,6 +46,7 @@ import { getChallengeAccentColor, getChallengeGlowKey } from '../../../services/
 export const ExploreChallengeCardV2 = memo(function ExploreChallengeCardV2({
   challenge,
   onPress,
+  onLongPress,
 }: ExploreChallengeCardProps) {
   const { t } = useTranslation();
   // Activity Color System v2 — falls back to colors.primary when this
@@ -53,7 +54,7 @@ export const ExploreChallengeCardV2 = memo(function ExploreChallengeCardV2({
   const accentColor = getChallengeAccentColor(challenge.dominantActivityCategory);
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
+    <Pressable onPress={onPress} onLongPress={onLongPress} style={({ pressed }) => [pressed && styles.pressed]}>
       <ChallengeCard
         accentColor={accentColor}
         glowRecipe={getMeshRecipe('explore', getChallengeGlowKey('active', challenge.dominantActivityCategory))}

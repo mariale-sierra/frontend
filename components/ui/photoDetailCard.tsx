@@ -1,21 +1,25 @@
+import type { ReactNode } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Icon } from './icon';
 import { Text } from './text';
 import { UserAvatar } from './userAvatar';
 import { Row } from '../layout/row';
-import { colors, radius, spacing, textOpacity } from '../../constants/theme';
+import { colors, radius, shadows, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import type { ChallengePhoto } from '../../types/challenge';
 
 interface PhotoDetailCardProps {
   photo: ChallengePhoto;
+  /** Right end of the header row — your own profile puts Delete here. */
+  headerAction?: ReactNode;
 }
 
 /**
  * One photo in a vertical detail feed (ChallengePhotoGalleryModal,
- * ProfilePhotoModal) — header row (avatar + username + day), photo, caption,
- * metrics table. Mirrors Home's FeedPostCard structure (header row above the
+ * formerly ProfilePhotoModal) — header row (avatar + username + day), photo, caption,
+ * metrics table. The post's visibility sits on the photo's top-right corner
+ * (a shadowed glyph, like the feed's "liked by" label). Mirrors Home's FeedPostCard structure (header row above the
  * photo, not text overlaid on top of it) rather than the old
  * PhotoFrame/PhotoUserOverlay approach: a dedicated header row reads
  * reliably regardless of the photo's own brightness/color, which
@@ -23,7 +27,7 @@ interface PhotoDetailCardProps {
  * likes/comment row here (unlike FeedPostCard) — this is a personal
  * progress-photo detail, not a social feed post.
  */
-export function PhotoDetailCard({ photo }: PhotoDetailCardProps) {
+export function PhotoDetailCard({ photo, headerAction }: PhotoDetailCardProps) {
   const { t } = useTranslation();
   const hasDescription = !!photo.description;
   const hasMetrics = photo.metrics.length > 0;
@@ -38,11 +42,7 @@ export function PhotoDetailCard({ photo }: PhotoDetailCardProps) {
             {t('challenges.dayLabel', { day: photo.day })}
           </Text>
         </View>
-        <Icon
-          name={photo.visibility === 'public' ? 'eye-outline' : 'camera-outline'}
-          size={16}
-          color={photo.visibility === 'public' ? colors.primary : withAlpha(colors.paper, 0.4)}
-        />
+        {headerAction}
       </Row>
 
       <View style={styles.photoFrame}>
@@ -51,6 +51,14 @@ export function PhotoDetailCard({ photo }: PhotoDetailCardProps) {
         ) : (
           <Icon name="image-outline" size={42} color={withAlpha(colors.paper, textOpacity.tertiary)} />
         )}
+        <View style={styles.visibilityBadge} pointerEvents="none" testID="photo-visibility">
+          <Icon
+            name={photo.visibility === 'public' ? 'eye-outline' : 'eye-off-outline'}
+            size={20}
+            color={colors.paper}
+            style={styles.overImage}
+          />
+        </View>
       </View>
 
       {hasDescription && (
@@ -99,6 +107,18 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  visibilityBadge: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+  },
+  // Same dark outline as the feed's "liked by" label on a photo
+  // (ReactorsSummary `overImage`), so the glyph reads over any picture.
+  overImage: {
+    textShadowColor: colors.ink,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: shadows.md.shadowRadius,
   },
   description: {
     opacity: 1,

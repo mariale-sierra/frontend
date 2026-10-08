@@ -50,7 +50,11 @@ import { Text } from './text';
  *   exact reason, not a repeat of that rejected neutral look).
  */
 type ButtonVariant = 'primary' | 'activity' | 'outline' | 'danger' | 'neutral' | 'subtle' | 'dangerSubtle';
-type ButtonSize = 'sm' | 'md' | 'lg';
+/** `cta`: the screen's main call to action — 52 tall, `body` bold text. The same
+ * look the app's hand-built main buttons share (Join challenge, Confirm routine,
+ * the camera's confirm bar): use this instead of building another one. Usually
+ * full width (stretch it from the parent or with `style`). */
+type ButtonSize = 'sm' | 'md' | 'lg' | 'cta';
 
 interface ButtonProps extends Omit<PressableProps, 'children'> {
   variant?: ButtonVariant;
@@ -116,8 +120,8 @@ export function Button({
         <>
           {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
           <Text
-            variant={size === 'sm' ? 'caption' : 'label'}
-            weight={textWeight}
+            variant={size === 'sm' ? 'caption' : size === 'cta' ? 'body' : 'label'}
+            weight={textWeight ?? (size === 'cta' ? 'bold' : undefined)}
             style={[
               styles.text,
               { color: textColor },
@@ -188,6 +192,12 @@ const styles = StyleSheet.create({
   lg: {
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xl,
+  },
+  // A fixed height, not padding: the hand-built main buttons it replaces are all
+  // exactly 52 (`height: 52` in challenge/[id], routine/select, camera).
+  cta: {
+    height: 52,
+    paddingHorizontal: spacing.lg,
   },
 
   // STATES

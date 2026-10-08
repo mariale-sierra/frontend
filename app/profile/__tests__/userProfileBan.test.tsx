@@ -33,6 +33,10 @@ jest.mock('../../../hooks/useAuth', () => ({ useAuth: () => ({ userId: 'admin-1'
 jest.mock('../../../hooks/useIsAdmin', () => ({ useIsAdmin: jest.fn() }));
 jest.mock('../../../hooks/usePullToRefresh', () => ({ usePullToRefresh: () => ({ refreshing: false, onRefresh: jest.fn() }) }));
 jest.mock('../../../services/user/user.service', () => ({ getPublicProfile: jest.fn(), banUser: jest.fn() }));
+// Only used to open a post passed as `postId` (a post shared in a chat).
+jest.mock('../../../services/challenge/challenge.service', () => ({
+  getUserPosts: jest.fn().mockResolvedValue({ photos: [] }),
+}));
 // The profile's own parts are tested on their own; here they are markers, and the follow button is
 // the one thing the admin's button sits under.
 jest.mock('../../../components/profile', () => {
@@ -41,7 +45,7 @@ jest.mock('../../../components/profile', () => {
     ProfileHeader: ({ actions }: { actions?: React.ReactNode }) => <View>{actions}</View>,
     FollowButton: () => <Text>follow-button</Text>,
     UserPostsGrid: () => null,
-    ProfilePhotoModal: () => null,
+
   };
 });
 

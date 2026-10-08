@@ -15,7 +15,7 @@ import { HashtagText } from '../social/HashtagText';
 import { ReactorsSummary } from '../social/ReactorsSummary';
 import { ReactorsSheet } from '../social/ReactorsSheet';
 import { ShareToChatSheet } from '../social/ShareToChatSheet';
-import { colors, radius, spacing, textOpacity } from '../../constants/theme';
+import { colors, radius, shadows, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import {
   deleteWorkoutPost,
@@ -61,7 +61,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
   // each card a fresh `post` with the same id — the card is reused (same
   // key), so without this it kept showing the counts/liked state from its
   // FIRST render: a like or comment made elsewhere never showed up here
-  // (Sprint 10, B5: "posts visible consistently"). Skipped while a reaction
+  // (Sprint 9, B5: "posts visible consistently"). Skipped while a reaction
   // request is in flight so a refresh can't undo the optimistic tap.
   useEffect(() => {
     if (reactingRef.current) return;
@@ -72,6 +72,8 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [reactorsVisible, setReactorsVisible] = useState(false);
   const [shareVisible, setShareVisible] = useState(false);
+  // The logged metrics start collapsed — a quiet toggle in the actions row.
+  const [metricsOpen, setMetricsOpen] = useState(false);
   const [optionsVisible, setOptionsVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
   const reportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -187,32 +189,29 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
         ) : (
           <Icon name="image-outline" size={42} color={withAlpha(colors.paper, textOpacity.tertiary)} />
         )}
+        {post.visibility ? (
+          <View style={styles.visibilityOverlay} pointerEvents="none" testID="post-visibility">
+            <Icon
+              name={post.visibility === 'public' ? 'eye-outline' : 'eye-off-outline'}
+              size={20}
+              color={colors.paper}
+              style={styles.iconOverImage}
+            />
+          </View>
+        ) : null}
+        {/* Who reacted sits on the photo's bottom-left corner (shadowed text
+            so it reads over any picture), not as its own row below. */}
+        <View style={styles.reactorsOverlay} pointerEvents="box-none">
+          <ReactorsSummary
+            reactors={post.recentReactors}
+            likedByMe={liked}
+            totalCount={likesCount}
+            onPress={() => setReactorsVisible(true)}
+            overImage
+          />
+        </View>
       </View>
 
-      {/* Which challenge this progress belongs to — the feed is challenge
-          progress, and this was the one piece of context the card had in
-          its data but never showed. Opens the challenge. */}
-      <Row
-        pressable
-        onPress={() => router.push(`/challenge/${post.challengeId}`)}
-        gap="xs"
-        align="center"
-        justify="flex-start"
-        accessibilityRole="button"
-        accessibilityLabel={t('home.openPostChallengeA11y', { name: post.challengeName })}
-        testID="post-challenge"
-      >
-        <Icon name="trophy-outline" size={14} color={colors.paper} />
-        <Text variant="caption" weight="bold" numberOfLines={1} style={styles.challengeLabel}>
-          {t('home.postChallengeDay', { day: post.day, name: post.challengeName })}
-        </Text>
-      </Row>
-
-      {post.caption ? (
-        <HashtagText variant="body" numberOfLines={2}>
-          {post.caption}
-        </HashtagText>
-      ) : null}
 
       <Row justify="space-between" align="center" style={styles.actions}>
         <Row gap="lg" justify="flex-start">
@@ -224,7 +223,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
             accessibilityLabel={t('home.reactionA11y')}
             accessibilityState={{ selected: liked }}
           >
-            {/* Sprint 10, B5: no count next to the heart — who reacted is
+            {/* Sprint 9, B5: no count next to the heart — who reacted is
                 shown below instead (ReactorsSummary). */}
             <Icon name={liked ? 'heart' : 'heart-outline'} size={22} color={liked ? colors.accent : colors.paper} />
           </Row>
@@ -239,9 +238,39 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
             <Icon name="chatbubble-outline" size={20} color={colors.paper} />
             <Text variant="caption">{commentsCount}</Text>
           </Row>
+
+          {/* What was logged with the photo, collapsed by default — only when
+              there is something to show. */}
+          {post.metrics.length > 0 ? (
+            <Row
+              pressable
+              onPress={() => setMetricsOpen((open) => !open)}
+              accessibilityRole="button"
+              accessibilityLabel={t('home.metricsToggleA11y')}
+              accessibilityState={{ expanded: metricsOpen }}
+              testID="post-metrics-toggle"
+            >
+              <Icon
+                name={metricsOpen ? 'stats-chart' : 'stats-chart-outline'}
+                size={20}
+                color={colors.paper}
+              />
+            </Row>
+          ) : null}
+
+          {/* The challenge this progress belongs to — opens it. */}
+          <Row
+            pressable
+            onPress={() => router.push(`/challenge/${post.challengeId}`)}
+            accessibilityRole="button"
+            accessibilityLabel={t('home.openPostChallengeA11y', { name: post.challengeName })}
+            testID="post-challenge"
+          >
+            <Icon name="trophy-outline" size={20} color={colors.paper} />
+          </Row>
         </Row>
 
-        {/* Sends the post itself into a chat (Sprint 10, B5) — own posts
+        {/* Sends the post itself into a chat (Sprint 9, B5) — own posts
             too. Messaging the author directly lives on their profile. */}
         <Row
           pressable
@@ -256,12 +285,34 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
         </Row>
       </Row>
 
-      <ReactorsSummary
-        reactors={post.recentReactors}
-        likedByMe={liked}
-        totalCount={likesCount}
-        onPress={() => setReactorsVisible(true)}
-      />
+      {metricsOpen && post.metrics.length > 0 ? (
+        <View style={styles.metrics} testID="post-metrics">
+          {post.metrics.map((metric, index) => (
+            <Row
+              key={`${metric.label}-${index}`}
+              justify="space-between"
+              align="center"
+              gap="md"
+              style={[styles.metricRow, index === post.metrics.length - 1 && styles.metricRowLast]}
+            >
+              <Text variant="caption" tone="secondary" numberOfLines={1} style={styles.metricLabel}>
+                {metric.label}
+              </Text>
+              <Text variant="caption" weight="bold" style={styles.metricValue}>
+                {metric.value}
+              </Text>
+            </Row>
+          ))}
+        </View>
+      ) : null}
+
+      {/* Caption under the like / comment / share row, at the author name's
+          size (14). */}
+      {post.caption ? (
+        <HashtagText variant="body" size="sm" numberOfLines={2}>
+          {post.caption}
+        </HashtagText>
+      ) : null}
 
       <CommentsSheet
         visible={commentsVisible}
@@ -328,11 +379,51 @@ const styles = StyleSheet.create({
   headerText: {
     flexShrink: 1,
   },
-  challengeLabel: {
-    flexShrink: 1,
+  visibilityOverlay: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
   },
-  // The like / comment / send row sits well below the photo and the caption: on top
-  // of the card's own `sm` gap, another `md`.
+  // Same dark outline as the reactors label over the photo.
+  iconOverImage: {
+    textShadowColor: colors.ink,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: shadows.md.shadowRadius,
+  },
+  // A small, plain list — the same `surface` panel as a photo's detail
+  // metrics, tighter: it's a peek under a feed post, not a table.
+  // Its own extra space below the actions row (on top of the card's `sm`
+  // gap), so the open panel doesn't sit tight against the icons.
+  metrics: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.medium,
+    paddingHorizontal: spacing.md,
+  },
+  metricRow: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: withAlpha(colors.paper, 0.08),
+  },
+  metricRowLast: {
+    borderBottomWidth: 0,
+  },
+  metricLabel: {
+    flex: 1,
+  },
+  metricValue: {
+    opacity: 1,
+    fontVariant: ['tabular-nums'],
+  },
+  reactorsOverlay: {
+    position: 'absolute',
+    left: spacing.md,
+    right: spacing.md,
+    bottom: spacing.md,
+    alignItems: 'flex-start',
+  },
+  // The like / comment / send row sits well below the photo (the caption goes under
+  // it): on top of the card's own `sm` gap, another `md`.
   actions: {
     marginTop: spacing.md,
   },

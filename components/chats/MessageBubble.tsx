@@ -4,6 +4,7 @@ import { UserAvatar } from '../ui/userAvatar';
 import { SharedChallengeCard, SharedPostCard } from './SharedContentCard';
 import { colors, radius, spacing } from '../../constants/theme';
 import { formatRelativeTime } from '../../utils/time';
+import { triggerLongPressHaptic } from '../../utils/haptics';
 import type { MessageContract } from '../../types/chat';
 
 interface MessageBubbleProps {
@@ -19,14 +20,32 @@ interface MessageBubbleProps {
 
 const AVATAR_SIZE = 26;
 
-export function MessageBubble({ message, isMine, otherAvatar, onLongPress, longPressA11yHint }: MessageBubbleProps) {
-  // Sprint 10, B5: a shared post/challenge is its own card; any comment sent
+export function MessageBubble({
+  message,
+  isMine,
+  otherAvatar,
+  onLongPress: onLongPressProp,
+  longPressA11yHint,
+}: MessageBubbleProps) {
+  // Every long-press that opens an action buzzes first — on the text bubble
+  // and on a shared post/challenge card alike.
+  const onLongPress = onLongPressProp
+    ? () => {
+        triggerLongPressHaptic();
+        onLongPressProp();
+      }
+    : undefined;
+  // Sprint 9, B5: a shared post/challenge is its own card; any comment sent
   // with it is a regular bubble right under it. A share sent with no comment
   // has `content: ''` and gets no text bubble at all.
   const shared = message.sharedPost ? (
-    <SharedPostCard post={message.sharedPost} />
+    <SharedPostCard post={message.sharedPost} onLongPress={onLongPress} longPressA11yHint={longPressA11yHint} />
   ) : message.sharedChallenge ? (
-    <SharedChallengeCard challenge={message.sharedChallenge} />
+    <SharedChallengeCard
+      challenge={message.sharedChallenge}
+      onLongPress={onLongPress}
+      longPressA11yHint={longPressA11yHint}
+    />
   ) : null;
 
   const textBubble = message.content ? (

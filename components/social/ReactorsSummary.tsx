@@ -4,7 +4,7 @@ import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 import { Row } from '../layout/row';
 import { IconStack } from '../layout/iconStack';
-import { colors, radius } from '../../constants/theme';
+import { borderWidth, colors, radius, shadows } from '../../constants/theme';
 import type { ReactorViewModel } from '../../services/adapters/feedAdapter';
 
 const MAX_NAMES = 2;
@@ -16,10 +16,13 @@ interface ReactorsSummaryProps {
   reactors: ReactorViewModel[];
   likedByMe: boolean;
   /** Total reactions. Only used to know whether there are more people than
-   * the ones named — it's never shown (Sprint 10, B5: the redesign shows WHO
+   * the ones named — it's never shown (Sprint 9, B5: the redesign shows WHO
    * reacted, not a number to compare against other posts). */
   totalCount: number;
   onPress: () => void;
+  /** Drawn on top of a photo: full-strength text with a dark shadow so it
+   * reads over any picture. */
+  overImage?: boolean;
 }
 
 function displayName(reactor: ReactorViewModel): string {
@@ -30,7 +33,7 @@ function displayName(reactor: ReactorViewModel): string {
  * "Tú, Ana y otras personas" under a post, with their avatars. Renders
  * nothing when nobody reacted. Taps open the full list (ReactorsSheet).
  */
-export function ReactorsSummary({ reactors, likedByMe, totalCount, onPress }: ReactorsSummaryProps) {
+export function ReactorsSummary({ reactors, likedByMe, totalCount, onPress, overImage = false }: ReactorsSummaryProps) {
   const { t } = useTranslation();
   if (totalCount <= 0 && !likedByMe) return null;
 
@@ -73,7 +76,13 @@ export function ReactorsSummary({ reactors, likedByMe, totalCount, onPress }: Re
           ))}
         </IconStack>
       ) : null}
-      <Text variant="caption" tone="secondary" numberOfLines={1} style={styles.label}>
+      <Text
+        variant="caption"
+        weight={overImage ? 'medium' : undefined}
+        tone={overImage ? 'primary' : 'secondary'}
+        numberOfLines={1}
+        style={[styles.label, overImage && styles.labelOverImage]}
+      >
         {label}
       </Text>
     </Row>
@@ -85,10 +94,20 @@ const styles = StyleSheet.create({
   // separate people.
   avatarRing: {
     borderRadius: radius.big,
-    borderWidth: 1.5,
+    borderWidth: borderWidth.thin,
     borderColor: colors.ink,
   },
   label: {
     flexShrink: 1,
+  },
+  // A soft dark outline around the letters — the `ink` background color, at
+  // the shadow scale's `md` blur — so the label never disappears into a light
+  // photo. `opacity: 1`: over a picture the text needs full strength.
+  labelOverImage: {
+    color: colors.paper,
+    opacity: 1,
+    textShadowColor: colors.ink,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: shadows.md.shadowRadius,
   },
 });

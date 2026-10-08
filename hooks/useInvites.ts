@@ -13,7 +13,7 @@ import type { ChallengeInviteContract } from '../types/invite';
 export type InviteAction = 'accept' | 'decline' | 'cancel';
 
 /**
- * Screen-level orchestration for the invitations screen: loads received and
+ * Orchestration for the invites section of the Notifications screen: loads received and
  * sent invites, exposes accept/decline/cancel with a per-invite processing
  * flag (prevents double submission), and refreshes both lists after every
  * action. Accepting also invalidates the challenge progress cache so the
@@ -78,8 +78,10 @@ export function useInvites() {
           // "You're in!" popup (for an approval the user found out about
           // asynchronously, with no other feedback) never also fires for
           // this same membership.
-          if (accepted?.challengeId) {
-            void markChallengeMembershipSeen(accepted.challengeId);
+          // (The contract nests it: `challenge.id` — `challengeId` never
+          // existed, so this never ran and the popup could still fire.)
+          if (accepted?.challenge?.id) {
+            void markChallengeMembershipSeen(accepted.challenge.id);
           }
         } else if (action === 'decline') {
           await declineInvite(inviteId);

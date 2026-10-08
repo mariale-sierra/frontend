@@ -30,7 +30,7 @@ export async function getReactionSummary(
   return data;
 }
 
-/** Who reacted to a post, newest first (Sprint 10, B5). Pass the previous
+/** Who reacted to a post, newest first (Sprint 9, B5). Pass the previous
  * page's `nextCursor` to continue. */
 export async function listReactors(postId: string, cursor?: string): Promise<ListReactorsResponse> {
   const { data, headers } = await api.get<ReactorContract[]>(`/workout-posts/${postId}/reactions/users`, {

@@ -49,5 +49,5 @@ export * from './userAvatar';
 // PhotoDetailCard: One photo in a vertical detail feed — header row (avatar/
 // username/day), photo, caption, metrics table. Mirrors FeedPostCard's
 // header-row-above-the-photo structure rather than overlaying text on the
-// image. Used in ChallengePhotoGalleryModal and ProfilePhotoModal.
+// image. Used in ChallengePhotoGalleryModal.
 export * from './photoDetailCard';

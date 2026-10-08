@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -8,33 +9,61 @@ import { Row } from '../layout/row';
 import { HashtagText } from '../social/HashtagText';
 import { colors, fillOpacity, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
-import { getChallengeAccentColor, parseActivityType } from '../../services/adapters/challengeState';
+import { Skeleton } from '../ui/skeleton';
+import { ExploreCard } from '../challenge/list/challengeCards';
+import { CHALLENGE_CARD_HEIGHT } from '../challenge/card/ChallengeCard';
+import { getChallenge } from '../../services/challenge/challenge.service';
+import { toExploreChallengeViewModels } from '../../services/adapters';
+import type { ExploreChallengeViewModel } from '../challenge/list/challengeListSections';
 import type { SharedChallengePreviewContract, SharedPostPreviewContract } from '../../types/chat';
 
 const CARD_WIDTH = 220;
+// A shared challenge is the full Explore card, so it gets more room than a
+// post card — still inside the bubble column's 80% of the screen.
+const CHALLENGE_CARD_WIDTH = 260;
+
+/** Long-press on the card itself (your own message: delete it). The card's
+ * own Pressable takes the touch, so the bubble's long-press never fires on it
+ * — a share sent without a comment had no other surface to long-press. */
+interface CardActionProps {
+  onLongPress?: () => void;
+  longPressA11yHint?: string;
+}
 
 /**
- * A post or challenge shared inside a 1:1 message (Sprint 10, B5), drawn as
+ * A post or challenge shared inside a 1:1 message (Sprint 9, B5), drawn as
  * a small tappable card in the bubble. The backend already resolved each
  * preview for THIS viewer — `available: false` (deleted, hidden, or a post
  * they aren't allowed to see) renders a muted placeholder, never content.
  */
-export function SharedPostCard({ post }: { post: SharedPostPreviewContract }) {
+export function SharedPostCard({
+  post,
+  onLongPress,
+  longPressA11yHint,
+}: { post: SharedPostPreviewContract } & CardActionProps) {
   const router = useRouter();
   const { t } = useTranslation();
 
   if (!post.available || !post.author) {
-    return <UnavailableCard label={t('chats.sharedPostUnavailable')} />;
+    return (
+      <UnavailableCard
+        label={t('chats.sharedPostUnavailable')}
+        onLongPress={onLongPress}
+        longPressA11yHint={longPressA11yHint}
+      />
+    );
   }
 
   const author = post.author;
   const authorName = author.displayName || `@${author.username}`;
 
-  // There's no single-post screen; a shared post opens its author's profile,
-  // where the post lives in their grid.
+  // There's no single-post screen: a shared post opens its author's profile
+  // with that post already open in the photo modal (`postId`).
   return (
     <Pressable
-      onPress={() => router.push(`/profile/${author.id}`)}
+      onPress={() => router.push({ pathname: '/profile/[userId]', params: { userId: author.id, postId: post.id } })}
+      onLongPress={onLongPress}
+      accessibilityHint={onLongPress ? longPressA11yHint : undefined}
       accessibilityRole="button"
       accessibilityLabel={t('chats.openSharedPostA11y', { name: authorName })}
       style={styles.card}
@@ -62,62 +91,76 @@ export function SharedPostCard({ post }: { post: SharedPostPreviewContract }) {
   );
 }
 
-export function SharedChallengeCard({ challenge }: { challenge: SharedChallengePreviewContract }) {
+/**
+ * A challenge shared in a chat looks exactly like its card in Explore — the
+ * same `ExploreCard` (glow or classic, whichever the app uses), built from
+ * the full challenge (GET /challenges/:id: categories, location and author
+ * aren't in the message's own preview). Tapping it opens the challenge.
+ */
+export function SharedChallengeCard({
+  challenge,
+  onLongPress,
+  longPressA11yHint,
+}: { challenge: SharedChallengePreviewContract } & CardActionProps) {
   const router = useRouter();
   const { t } = useTranslation();
+  const [card, setCard] = useState<ExploreChallengeViewModel | null>(null);
+  const [failed, setFailed] = useState(false);
 
-  if (!challenge.available || !challenge.name) {
-    return <UnavailableCard label={t('chats.sharedChallengeUnavailable')} />;
+  useEffect(() => {
+    if (!challenge.available) return;
+    let active = true;
+    getChallenge(challenge.id)
+      .then((full) => {
+        if (active) setCard(toExploreChallengeViewModels([full])[0] ?? null);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [challenge.id, challenge.available]);
+
+  if (!challenge.available || failed) {
+    return (
+      <UnavailableCard
+        label={t('chats.sharedChallengeUnavailable')}
+        onLongPress={onLongPress}
+        longPressA11yHint={longPressA11yHint}
+      />
+    );
   }
 
-  const accent = getChallengeAccentColor(parseActivityType(challenge.dominantActivityCategory));
-
   return (
-    <Pressable
-      onPress={() => router.push(`/challenge/${challenge.id}`)}
-      accessibilityRole="button"
-      accessibilityLabel={t('chats.openSharedChallengeA11y', { name: challenge.name })}
-      style={styles.card}
+    <View
+      style={styles.challengeCard}
       testID="shared-challenge-card"
+      accessibilityHint={onLongPress ? longPressA11yHint : undefined}
     >
-      <View style={[styles.challengeBand, { backgroundColor: accent }]}>
-        <Icon name="trophy-outline" size={18} color={colors.ink} />
-        <Text variant="caption" weight="bold" style={styles.bandLabel}>
-          {t('chats.sharedChallengeLabel')}
-        </Text>
-      </View>
-      <View style={styles.challengeBody}>
-        <Text variant="body" weight="bold" numberOfLines={2}>
-          {challenge.name}
-        </Text>
-        {challenge.description ? (
-          <Text variant="caption" tone="secondary" numberOfLines={2}>
-            {challenge.description}
-          </Text>
-        ) : null}
-        <Text variant="caption" tone="secondary">
-          {[
-            challenge.durationDays != null ? t('chats.sharedChallengeDays', { count: challenge.durationDays }) : null,
-            challenge.membersJoined != null
-              ? t('chats.sharedChallengeMembers', { count: challenge.membersJoined })
-              : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </Text>
-      </View>
-    </Pressable>
+      {card ? (
+        <ExploreCard
+          challenge={card}
+          onPress={() => router.push(`/challenge/${challenge.id}`)}
+          onLongPress={onLongPress}
+        />
+      ) : (
+        <Skeleton height={CHALLENGE_CARD_HEIGHT} radius={radius.big} />
+      )}
+    </View>
   );
 }
 
-function UnavailableCard({ label }: { label: string }) {
+function UnavailableCard({ label, onLongPress, longPressA11yHint }: { label: string } & CardActionProps) {
   return (
-    <Row gap="sm" align="center" justify="flex-start" style={[styles.card, styles.unavailable]}>
-      <Icon name="eye-off-outline" size={18} color={withAlpha(colors.paper, textOpacity.tertiary)} />
-      <Text variant="caption" tone="secondary" style={styles.flexText}>
-        {label}
-      </Text>
-    </Row>
+    <Pressable onLongPress={onLongPress} disabled={!onLongPress} accessibilityHint={longPressA11yHint}>
+      <Row gap="sm" align="center" justify="flex-start" style={[styles.card, styles.unavailable]}>
+        <Icon name="eye-off-outline" size={18} color={withAlpha(colors.paper, textOpacity.tertiary)} />
+        <Text variant="caption" tone="secondary" style={styles.flexText}>
+          {label}
+        </Text>
+      </Row>
+    </Pressable>
   );
 }
 
@@ -150,21 +193,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
   },
-  challengeBand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  // Custom color on `Text` needs `opacity: 1` (see components/ui/text.tsx).
-  bandLabel: {
-    color: colors.ink,
-    opacity: 1,
-  },
-  challengeBody: {
-    gap: spacing.xs,
-    padding: spacing.sm,
+  challengeCard: {
+    width: CHALLENGE_CARD_WIDTH,
   },
   unavailable: {
     padding: spacing.md,

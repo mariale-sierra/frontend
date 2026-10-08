@@ -176,7 +176,8 @@ export default function Messaging() {
   }
 
   return (
-    <ScreenBackground variant="default">
+    // The paper light, from the bottom (the tabs' own edge) — explicit request.
+    <ScreenBackground variant="default" gradientBackground gradientEdge="bottom">
       <Row align="center" gap="sm" style={styles.header}>
         <BackButton style={styles.backButton} />
         <View style={styles.searchWrap}>
@@ -336,7 +337,8 @@ export default function Messaging() {
             {t('chats.newMessageTitle')}
           </Text>
         </Pressable>
-        <Divider marginVertical="xs" />
+        {/* No divider between the two options (explicit request) — the rows'
+            own padding separates them, like the post "..." menu. */}
         <Pressable
           style={styles.composeMenuRow}
           onPress={() => {

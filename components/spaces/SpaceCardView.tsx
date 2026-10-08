@@ -5,7 +5,7 @@ import { AccentCard } from '../ui/accentCard';
 import { Text } from '../ui/text';
 import { ChallengeCardMembers } from '../challenge/card/ChallengeCardMembers';
 import { challengeCardText } from '../challenge/card/challengeCardText';
-import { spacing } from '../../constants/theme';
+import { borderWidth, spacing } from '../../constants/theme';
 import { formatCount } from '../../utils/format';
 import { getChallengeGlowColor } from '../../services/adapters/challengeState';
 import type { ActivityType } from '../../types/activity';
@@ -32,9 +32,13 @@ interface SpaceCardViewProps {
  * Presentational only — `SpaceCard` adds the press handling, and the space form
  * shows it as its live preview.
  *
- * The glow is `AccentCard`'s `linearGlow` — a plain diagonal `LinearGradient`,
- * `ink` at the top-left to the space's own full, vivid activity color at the
- * bottom-right. Real change 2026-09-25, replacing a long chain of attempts at
+ * The glow is `AccentCard`'s `linearGlow`: since 2026-10-08 (explicit
+ * request) a plain VERTICAL gradient — `ink` at the top to the space's own
+ * activity color, more saturated, at the bottom (`LINEAR_GLOW`) — with a
+ * `thin` (1px) outline instead of the challenge cards' `fine` one.
+ *
+ * Before that it was diagonal: `ink` at the top-left to the space's own full,
+ * vivid activity color at the bottom-right. That was a real change 2026-09-25, replacing a long chain of attempts at
  * getting there through `AccentCard`'s dome/bloom system instead (a half-moon
  * from the bottom edge, matching Home's hero card and Mine's cards): after
  * seven rounds of tuning peaks, falloff curves, a hot core and a real blur —
@@ -77,6 +81,10 @@ export function SpaceCardView({
   const { t } = useTranslation();
 
   return (
+    // A plain vertical gradient — ink at the top, the space's activity color
+    // (more saturated) at the bottom — and a thicker outline than the
+    // challenge cards': both per explicit request (2026-10-08). See
+    // `AccentCard`'s `LINEAR_GLOW` for the tuning.
     <AccentCard color={getChallengeGlowColor('active', activityType)} linearGlow style={styles.card}>
       {/* The name on the left, in the SAME row as the CTA pill, the CTA anchored
           to its top edge (the wireframe's shape). */}
@@ -121,6 +129,7 @@ const styles = StyleSheet.create({
   // Roomier than `AccentCard`'s own `md` padding, so the content sits well in from
   // the card's rounded edges: `lg` at the sides, `base` above and below.
   card: {
+    borderWidth: borderWidth.thin,
     gap: spacing.xs,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.base,

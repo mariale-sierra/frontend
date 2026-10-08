@@ -40,7 +40,7 @@ export function ConversationListItem({
   const hasUnread = unreadCount > 0;
 
   // A share sent without a comment has empty `content` — describe what was
-  // shared instead (Sprint 10, B5).
+  // shared instead (Sprint 9, B5).
   const lastText = lastMessage
     ? lastMessage.content ||
       (lastMessage.kind === 'post'

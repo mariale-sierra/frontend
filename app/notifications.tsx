@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,9 @@ import { Button } from '../components/ui/button';
 import { NotificationListItem } from '../components/notifications/NotificationListItem';
 import { NotificationListSkeleton } from '../components/notifications/NotificationListSkeleton';
 import { PushPermissionCard } from '../components/notifications/PushPermissionCard';
+import { InviteNotificationRow } from '../components/notifications/InviteNotificationRow';
+import { useInvites, type InviteAction } from '../hooks/useInvites';
+import { useErrorNotificationStore } from '../store/errorNotificationStore';
 import { useNotificationsInbox } from '../hooks/useNotificationsInbox';
 import { usePushPermission } from '../hooks/usePushPermission';
 import { useNotificationsStore } from '../store/notificationsStore';
@@ -21,11 +24,24 @@ import {
 import { colors, spacing, textOpacity } from '../constants/theme';
 import { withAlpha } from '../utils/color';
 import type { NotificationContract } from '../types/notification';
+import type { ChallengeInviteContract } from '../types/invite';
+
+const INVITE_SUCCESS_KEY: Record<InviteAction, string> = {
+  accept: 'invites.successAccepted',
+  decline: 'invites.successDeclined',
+  cancel: 'invites.successCancelled',
+};
 
 /**
  * B3 notification inbox: newest first, paginated, read/unread, tap opens the
  * related screen (and marks it read), mark-all, and the contextual push
  * permission ask. Settings live in app/notification-settings.tsx.
+ *
+ * Pending challenge invites live here too, as a small section above the
+ * notifications (B5 — this replaced the separate Invitations screen): the
+ * ones you received (accept / decline) and the ones you sent (cancel), in
+ * the same row style as a notification. Answered invites aren't listed —
+ * their outcome arrives as a notification.
  */
 export default function Notifications() {
   const { t } = useTranslation();
@@ -33,19 +49,49 @@ export default function Notifications() {
   const inbox = useNotificationsInbox();
   const push = usePushPermission();
   const unreadCount = useNotificationsStore((s) => s.unreadCount);
+  const invites = useInvites();
+  const { show, showSuccess } = useErrorNotificationStore();
+
+  const pendingReceived = useMemo(
+    () => invites.received.filter((invite) => invite.status === 'pending'),
+    [invites.received],
+  );
+  const pendingSent = useMemo(
+    () => invites.sent.filter((invite) => invite.status === 'pending'),
+    [invites.sent],
+  );
+  const hasInvites = pendingReceived.length + pendingSent.length > 0;
+
+  const handleInviteAction = useCallback(
+    async (action: InviteAction, invite: ChallengeInviteContract) => {
+      const ok = await invites.runAction(action, invite.id);
+      if (ok) {
+        showSuccess({ message: t(INVITE_SUCCESS_KEY[action], { challenge: invite.challenge?.name ?? '' }) });
+      } else {
+        show({ message: t('invites.errorAction') });
+      }
+    },
+    [invites.runAction, show, showSuccess, t],
+  );
+
+  const handleRefresh = useCallback(() => {
+    inbox.refresh();
+    invites.refresh();
+  }, [inbox.refresh, invites.refresh]);
 
   const handlePress = useCallback(
     (notification: NotificationContract) => {
       inbox.markRead(notification);
-      void openNotificationTarget(
-        router,
-        resolveNotificationTarget({
-          type: notification.type,
-          entityType: notification.entity.type,
-          entityId: notification.entity.id,
-          data: notification.data,
-        }),
-      );
+      const target = resolveNotificationTarget({
+        type: notification.type,
+        entityType: notification.entity.type,
+        entityId: notification.entity.id,
+        data: notification.data,
+      });
+      // An invite's target is this very screen (its section is right above):
+      // don't push a second copy of it.
+      if (target.kind === 'route' && target.href === '/notifications') return;
+      void openNotificationTarget(router, target);
     },
     [inbox.markRead, router],
   );
@@ -77,11 +123,39 @@ export default function Notifications() {
           </Text>
         </Pressable>
       ) : null}
+      {hasInvites ? (
+        <View style={styles.invites} testID="notifications-invites">
+          <Text variant="label" tone="secondary">
+            {t('notifications.invites.title')}
+          </Text>
+          {pendingReceived.map((invite) => (
+            <InviteNotificationRow
+              key={invite.id}
+              invite={invite}
+              direction="received"
+              busy={invites.processingId !== null}
+              processing={invites.processingId === invite.id}
+              onAction={handleInviteAction}
+            />
+          ))}
+          {pendingSent.map((invite) => (
+            <InviteNotificationRow
+              key={invite.id}
+              invite={invite}
+              direction="sent"
+              busy={invites.processingId !== null}
+              processing={invites.processingId === invite.id}
+              onAction={handleInviteAction}
+            />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 
   return (
-    <ScreenBackground variant="default">
+    // The same paper light as the main tabs, coming from the top here.
+    <ScreenBackground variant="default" gradientBackground gradientEdge="top">
       <ScreenHeader
         title={t('notifications.title')}
         trailing={
@@ -125,7 +199,11 @@ export default function Notifications() {
           onEndReachedThreshold={0.4}
           contentContainerStyle={styles.content}
           refreshControl={
-            <RefreshControl refreshing={inbox.refreshing} onRefresh={inbox.refresh} tintColor={colors.primary} />
+            <RefreshControl
+              refreshing={inbox.refreshing || invites.refreshing}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+            />
           }
         />
       )}
@@ -154,7 +232,7 @@ function EmptyInbox() {
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing['2xl'],
     flexGrow: 1,
@@ -163,8 +241,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.md,
   },
+  // Left-aligned, at the start of the list (explicit request) — it was on the right.
+  // The invites section: a quiet label and its rows, then the notifications.
+  invites: {
+    marginBottom: spacing.base,
+  },
   markAll: {
-    alignSelf: 'flex-end',
+    alignSelf: 'flex-start',
   },
   markAllText: {
     color: colors.primary,

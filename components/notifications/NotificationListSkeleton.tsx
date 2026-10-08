@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingHorizontal: spacing.base,
+    // Same as NotificationListItem's row: no side padding of its own.
     paddingVertical: spacing.md,
   },
   lines: {

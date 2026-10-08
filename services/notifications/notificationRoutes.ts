@@ -51,7 +51,8 @@ export function resolveNotificationTarget(input: NotificationTargetInput): Notif
     case 'challenge_join_request':
       return id ? { kind: 'route', href: `/challenge/${id}/manage` } : none;
     case 'challenge_invite':
-      return { kind: 'route', href: '/invitations' };
+      // Pending invites live in the Notifications screen itself (B5).
+      return { kind: 'route', href: '/notifications' };
     case 'report_resolved':
     case 'content_hidden':
       return none;
@@ -70,7 +71,8 @@ export function resolveNotificationTarget(input: NotificationTargetInput): Notif
     case 'direct_conversation':
       return id ? { kind: 'conversation', conversationId: id } : none;
     case 'challenge_invite':
-      return { kind: 'route', href: '/invitations' };
+      // Pending invites live in the Notifications screen itself (B5).
+      return { kind: 'route', href: '/notifications' };
     case 'workout_post':
       return { kind: 'route', href: '/(tabs)/profile' };
     default:

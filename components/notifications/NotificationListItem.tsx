@@ -27,10 +27,10 @@ interface NotificationListItemProps {
 }
 
 /**
- * One inbox row — List-row card (surface, `medium` radius). Unread rows keep
- * the card fill, full-strength text and the `accent` notification dot; read
- * rows drop the fill and mute the text, so the difference doesn't rely on
- * color alone.
+ * One inbox row — a plain row, no card behind it (per explicit request: the
+ * card fill that marked unread rows read as clutter). Unread rows get the
+ * `accent` dot and full-strength text; read rows mute the text, so the
+ * difference doesn't rely on color alone.
  */
 function NotificationListItemBase({ notification, onPress }: NotificationListItemProps) {
   const { t } = useTranslation();
@@ -44,7 +44,7 @@ function NotificationListItemBase({ notification, onPress }: NotificationListIte
       onPress={() => onPress(notification)}
       accessibilityRole="button"
       accessibilityLabel={unread ? `${t('notifications.unread')}. ${text}` : text}
-      style={({ pressed }) => [styles.row, unread && styles.rowUnread, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       {notification.actor ? (
         <UserAvatar
@@ -89,12 +89,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingHorizontal: spacing.base,
+    // No horizontal padding of its own: the list's screen margin is the only
+    // side space (it was that margin PLUS this row's own `base`).
     paddingVertical: spacing.md,
-    borderRadius: radius.medium,
-  },
-  rowUnread: {
-    backgroundColor: colors.surface,
   },
   pressed: {
     opacity: 0.85,

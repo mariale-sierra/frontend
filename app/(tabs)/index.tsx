@@ -39,6 +39,7 @@ import { withAlpha } from '../../utils/color';
 import { useNotificationsStore } from '../../store/notificationsStore';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { hasSeenLogCoachMark, markLogCoachMarkSeen } from '../../utils/logCoachMark';
+import { FEED_POST_GAP } from '../../constants/feed';
 
 function FeedSeparator() {
   return <View style={styles.separator} />;
@@ -469,8 +470,9 @@ const styles = StyleSheet.create({
   feedFooterLoading: {
     height: 60,
   },
+  // Shared with every scroll of posts (constants/feed.ts).
   separator: {
-    height: spacing['2xl'],
+    height: FEED_POST_GAP,
   },
   // Anchored bottom-right, pointing down toward the tab bar's Log FAB — see
   // constants/bottomNav.ts's BOTTOM_NAV_HEIGHT for why the offset is

@@ -112,6 +112,7 @@ Future services should reuse `services/api.ts`, avoid creating another Axios cli
 Prefer hooks for screens that coordinate services, stores, translations, routing, alerts, loading, and errors. Direct service calls are acceptable in small screens, but shared or multi-step behavior should move into a hook or store following existing patterns.
 
 ## 9. UI and Component Architecture
+- A screen's main call to action is `Button size="cta"` (52 tall, `body` bold, usually full width) — don't hand-build another 52px button; the older hand-built ones (Join challenge, Confirm routine, camera) can migrate to it.
 - Shared reusable UI belongs in `components/ui/` (`Text`, `Button`, `Card`, `Input`, `Icon`, `IconButton`, `Loader`, etc.).
 - Layout primitives belong in `components/layout/` (`ScreenBackground`, `Stack`, `Row`, `Column`, spacers, gradients).
 - Feature-specific UI belongs in `components/<feature>/`, for example `components/challenge/list`, `components/challenge/detail`, `components/challenge/create`, `components/routine`, and `components/add`.
@@ -201,11 +202,11 @@ Full backend/push details: `backend/docs/notificaciones/B3-NOTIFICACIONES.md`.
 - Push needs an EAS projectId (`eas init` or `EAS_PROJECT_ID`) and a development build; Expo Go/simulators/web report push as unsupported and the inbox still works.
 
 ## 12c. Social Sharing Module Map (B5)
-- `components/social/ShareToChatSheet.tsx`: "Send to…" sheet — recent 1:1 chats (minus unaccepted requests) plus user search; sends `POST /chats/conversations/:id/messages` with `workoutPostId` or `challengeId` (`content` optional). Optional "Other apps" row for the native share sheet. Used by `FeedPostCard` (paper plane) and the challenge detail share button.
+- `components/social/ShareToChatSheet.tsx`: "Send to…" sheet laid out like the Streaks grid (three round avatars + username per row, `getStreakGridLayout`, smaller avatars); tapping people selects them and a Send button appears at the bottom — only that sends (closes with a toast; failures stay selected with Retry). Recent 1:1 chats (minus unaccepted requests) plus user search; sends `POST /chats/conversations/:id/messages` with `workoutPostId` or `challengeId` (`content` optional). Optional "Other apps" row for the native share sheet. Used by `FeedPostCard` (paper plane) and the challenge detail share button.
 - `utils/shareChallenge.ts`: external share text + app link (`expo-linking` `createURL('/challenge/<id>')`), also used by the routine-day share.
-- `components/chats/SharedContentCard.tsx`: shared post/challenge card inside `MessageBubble`. Previews come resolved per viewer (`available: false` → "no longer available", never content). `ConversationListItem` describes a share without a comment via `lastMessage.kind`.
-- Reactions lead with people, not numbers: `components/social/ReactorsSummary.tsx` (from the feed's `recent_reactors`) and `ReactorsSheet.tsx` (`GET /workout-posts/:postId/reactions/users`, `X-Next-Cursor`). The like count is never rendered.
-- Hashtags: typed in the camera confirm screen's caption (`app/(add)/camera.tsx`), parsed and stored by the backend (`havit.hashtags`, `havit.workout_post_hashtags`). `utils/hashtags.ts` mirrors the backend parser — keep both in sync. `components/social/HashtagText.tsx` highlights tags; they aren't tappable until a hashtag search exists.
+- `components/chats/SharedContentCard.tsx`: shared post/challenge card inside `MessageBubble` (long-press = delete your own message, with a haptic). A shared post opens `/profile/[userId]?postId=` with that post's modal open (also for your own post — no redirect to the tab then). A shared challenge renders the real `ExploreCard` from `GET /challenges/:id`. Previews come resolved per viewer (`available: false` → "no longer available", never content). `ConversationListItem` describes a share without a comment via `lastMessage.kind`.
+- Reactions lead with people, not numbers: `components/social/ReactorsSummary.tsx` (from the feed's `recent_reactors`, drawn over the photo's bottom-left corner with a text shadow — `overImage`) and `ReactorsSheet.tsx` (`GET /workout-posts/:postId/reactions/users`, `X-Next-Cursor`). The like count is never rendered.
+- Hashtags: typed in the camera confirm screen's caption (`app/(add)/camera.tsx`), parsed and stored by the backend (`havit.hashtags`, `havit.workout_post_hashtags`). `utils/hashtags.ts` mirrors the backend parser — keep both in sync. `components/social/HashtagText.tsx` shows tags in `activityColors.flexibility` blue, regular weight, no pill; they aren't tappable until a hashtag search exists.
 
 ## 13. Do and Don't Rules
 Do:
@@ -256,3 +257,9 @@ As of the form-validation refactor (2026-09-04), every text-input form that need
 - Implement only scoped changes.
 - Run available checks.
 - Summarize changed files.
+
+Profile posts: tapping a photo in a profile grid (yours or another user's) opens `app/profile/posts.tsx`, the user's posts as a feed of `FeedPostCard`s starting on the tapped one (`utils/postViewer.ts` → `store/postViewerStore.ts`; the backend's profile photos carry likes/comments/reactors/hashtags since B5). A real screen, not a modal, so what a card opens lands on top of it. `FeedPostCard`: like, comments, the challenge (trophy) and — when there are any — the logged metrics (collapsed, `stats-chart` toggle) in the actions row; your own posts show their visibility on the photo.
+
+Invitations: there is no Invitations screen any more — pending challenge invites (received: accept/decline; sent: cancel) are a section at the top of `app/notifications.tsx` (`components/notifications/InviteNotificationRow.tsx`, same row style as a notification). `challenge_invite` notifications route to `/notifications`.
+
+Popups: every popup goes through `components/ui/confirmationPopup.tsx` — softly blurred, darker backdrop and the `popup` black glass (`ink` tint) (`glass.popup` tokens in `constants/theme.ts`, `GlassSurface variant="popup"`). Popup icons are always `paper` (no status colors; `tone`/`iconColor` are deprecated and ignored). Every glass `BottomSheetModal` uses the same black glass (`glass.blackTintOpacity`, `ink` tint). Change the look there, not per popup.

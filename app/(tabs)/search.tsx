@@ -20,7 +20,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 // Capped, per explicit request: an unbounded challenge-results list pushed
 // the People section endlessly far down the screen for a broad query. Same
-// "preview + See more/See less" pattern app/invitations.tsx already
+// "preview + See more/See less" pattern the old Invitations screen
 // established for its own capped request list (`REQUESTS_PREVIEW_COUNT`).
 const CHALLENGE_RESULTS_PREVIEW_COUNT = 3;
 

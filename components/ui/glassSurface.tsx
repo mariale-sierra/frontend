@@ -23,6 +23,8 @@ interface GlassBackdropProps {
   /** How much of the `surface` tint sits over the blur. Default `glass.tintOpacity`;
    * a small badge over a colored light takes the lighter `glass.badgeTintOpacity`. */
   tintOpacity?: number;
+  /** The tint's color: `surface` (default) or `ink` — the popups' black glass. */
+  tintColor?: string;
 }
 
 /**
@@ -31,7 +33,7 @@ interface GlassBackdropProps {
  * the first child of a container that clips (`overflow: 'hidden'`) and has a
  * radius, or via `GlassSurface` below, which does all of that.
  */
-export function GlassBackdrop({ tintOpacity = glass.tintOpacity }: GlassBackdropProps) {
+export function GlassBackdrop({ tintOpacity = glass.tintOpacity, tintColor = colors.surface }: GlassBackdropProps) {
   const nativePointerEvents = Platform.OS === 'web' ? {} : { pointerEvents: 'none' as const };
 
   return (
@@ -42,7 +44,7 @@ export function GlassBackdrop({ tintOpacity = glass.tintOpacity }: GlassBackdrop
         style={[
           styles.tint,
           Platform.OS === 'web' && styles.nonInteractive,
-          { backgroundColor: withAlpha(colors.surface, tintOpacity) },
+          { backgroundColor: withAlpha(tintColor, tintOpacity) },
         ]}
       />
     </>
@@ -53,6 +55,10 @@ export function GlassBackdrop({ tintOpacity = glass.tintOpacity }: GlassBackdrop
 // container's own edge, so its outer half falls outside the container, where the clip
 // cuts it off, and the inner half is the rim.
 const RIM_STROKE = borderWidth.thin * 2;
+// The glass modals' rim (the bottom sheets' and the popups'), thinned twice on
+// explicit request (2026-10-08): 2 → 1.5 → 1. Half the stroke is clipped by the
+// edge, so this shows about half a pixel of light.
+const MODAL_RIM_STROKE = borderWidth.thin;
 
 // A sheet's rim is lit along its top edge and fades down its sides over this share of the
 // rectangle it is drawn in (which is twice the sheet's height: see `GlassHighlight`).
@@ -82,6 +88,16 @@ const RIM = {
 // the sheet, so its bottom edge and corners fall outside it, under the clip.
 const SHEET_RIM_HEIGHT_SHARE = 2;
 
+/** The card rim at the popups' fainter strengths (`glass.popup.rimOpacity`). */
+const SUBTLE_CARD_RIM = {
+  end: RIM.card.end,
+  stops: [
+    [0, glass.popup.rimOpacity.bright],
+    [0.5, glass.popup.rimOpacity.dim],
+    [1, glass.popup.rimOpacity.echo],
+  ],
+} as const;
+
 interface GlassHighlightProps {
   /** The corner radius of the container the light is in, which the rim follows (a sheet's
    * top corners). */
@@ -91,6 +107,8 @@ interface GlassHighlightProps {
    * `sheet`: a bottom sheet, anchored to the bottom of the screen — just the rim, lit along
    * its whole top edge and fading down its sides, with no bottom edge or corners. */
   kind?: 'card' | 'sheet';
+  /** `subtle`: the popups' fainter sheen and rim (`glass.popup`). */
+  subtle?: boolean;
 }
 
 /**
@@ -112,9 +130,10 @@ interface GlassHighlightProps {
  * to half its height SEPARATELY: it drew an ellipse there, stretched along the bar and off
  * the clip — the outline "outstretched".
  */
-export function GlassHighlight({ cornerRadius, kind = 'card' }: GlassHighlightProps) {
+export function GlassHighlight({ cornerRadius, kind = 'card', subtle = false }: GlassHighlightProps) {
   const isSheet = kind === 'sheet';
-  const rim = RIM[kind];
+  const rim = subtle && !isSheet ? SUBTLE_CARD_RIM : RIM[kind];
+  const sheenOpacity = subtle ? glass.popup.sheenOpacity : glass.sheenOpacity;
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
@@ -134,7 +153,7 @@ export function GlassHighlight({ cornerRadius, kind = 'card' }: GlassHighlightPr
       <Defs>
         {!isSheet ? (
           <LinearGradient id="glassSheen" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset={0} stopColor={colors.paper} stopOpacity={glass.sheenOpacity} />
+            <Stop offset={0} stopColor={colors.paper} stopOpacity={sheenOpacity} />
             <Stop offset={0.6} stopColor={colors.paper} stopOpacity={0} />
           </LinearGradient>
         ) : null}
@@ -152,7 +171,7 @@ export function GlassHighlight({ cornerRadius, kind = 'card' }: GlassHighlightPr
         ry={rimRadius}
         fill="none"
         stroke="url(#glassRim)"
-        strokeWidth={RIM_STROKE}
+        strokeWidth={isSheet || subtle ? MODAL_RIM_STROKE : RIM_STROKE}
       />
     </Svg>
   );
@@ -163,17 +182,27 @@ interface GlassSurfaceProps extends ViewProps {
    * and a gradient rim in place of the plain hairline, following the `borderRadius`
    * given in `style`. */
   highlight?: boolean;
+  /** `popup`: the popups' black glass (`glass.popup`) — an `ink` tint and a subtler
+   * highlight. */
+  variant?: 'default' | 'popup';
 }
 
 /** A frosted-glass container, same look as the bottom nav bar. Pass the radius
  * (and size/padding) through `style`. */
-export function GlassSurface({ style, children, highlight = false, ...props }: GlassSurfaceProps) {
+export function GlassSurface({ style, children, highlight = false, variant = 'default', ...props }: GlassSurfaceProps) {
   const radius = StyleSheet.flatten(style)?.borderRadius;
+  const isPopup = variant === 'popup';
 
   return (
     <View {...props} style={[styles.surface, highlight && glassRimmedStyle, style]}>
-      <GlassBackdrop />
-      {highlight ? <GlassHighlight cornerRadius={typeof radius === 'number' ? radius : 0} /> : null}
+      {isPopup ? (
+        <GlassBackdrop tintOpacity={glass.blackTintOpacity} tintColor={colors.ink} />
+      ) : (
+        <GlassBackdrop />
+      )}
+      {highlight ? (
+        <GlassHighlight cornerRadius={typeof radius === 'number' ? radius : 0} subtle={isPopup} />
+      ) : null}
       {children}
     </View>
   );

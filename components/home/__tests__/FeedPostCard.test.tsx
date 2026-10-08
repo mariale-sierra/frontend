@@ -120,6 +120,7 @@ const basePost = (overrides: Partial<FeedPostViewModel> = {}): FeedPostViewModel
   commentsCount: 2,
   recentReactors: [],
   hashtags: [],
+  metrics: [],
   ...overrides,
 });
 

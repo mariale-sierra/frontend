@@ -183,7 +183,8 @@ describe('GlassHighlight as a sheet — the rim along the top of a bottom sheet'
   it('follows the sheet\'s top corners', async () => {
     const rim = walk(await renderSheetRim()).find((node) => node.props?.stroke !== undefined);
 
-    expect(rim?.props).toMatchObject({ rx: SHEET_RADIUS, ry: SHEET_RADIUS, strokeWidth: borderWidth.thin * 2 });
+    // The glass modals' rim is thinner than the toasts' (1 vs 2).
+    expect(rim?.props).toMatchObject({ rx: SHEET_RADIUS, ry: SHEET_RADIUS, strokeWidth: borderWidth.thin });
   });
 
   it("is drawn in a rectangle taller than the sheet, so its bottom edge and corners fall outside the clip", async () => {

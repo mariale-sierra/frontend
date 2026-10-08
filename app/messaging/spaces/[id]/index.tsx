@@ -336,30 +336,11 @@ function SpaceThread({ space, accentColor, isOwner, onLeavePress }: SpaceThreadP
     <>
       <View style={styles.threadHeader}>
         <BackButton style={styles.headerSideButton} />
-        {/* Tapping the space's name opens its member list — for every
-            member, not only the owner (who also reaches it from Manage).
-            Before, a regular member had no way to see who was in the space. */}
-        <Row
-          pressable
-          onPress={() => router.push(`/messaging/spaces/${space.id}/members`)}
-          accessibilityRole="button"
-          accessibilityLabel={t('spaces.openMembersA11y', { name: space.name })}
-          align="center"
-          gap="sm"
-          style={styles.threadHeaderInfo}
-          justify="flex-start"
-          testID="space-thread-header"
-        >
+        <Row align="center" gap="sm" style={styles.threadHeaderInfo} justify="flex-start">
           <SpaceAvatar name={space.name} accentColor={accentColor} imageUrl={space.imageUrl} size={HEADER_AVATAR_SIZE} />
           <View style={styles.threadHeaderTextBlock}>
             <Text variant="body" weight="bold" numberOfLines={1}>
               {space.name}
-            </Text>
-            <Text variant="caption" tone="secondary" numberOfLines={1}>
-              {t('spaces.membersCount', {
-                count: space.membersCount,
-                formattedCount: formatCount(space.membersCount),
-              })}
             </Text>
             {space.activityCategory && (
               <Row gap="xs" align="center" justify="flex-start">

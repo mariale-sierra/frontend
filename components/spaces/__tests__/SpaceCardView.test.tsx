@@ -1,8 +1,9 @@
 import { StyleSheet, Text as RNText } from 'react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { SpaceCardView } from '../SpaceCardView';
-import { activityColors, colors, fontSize, spacing } from '../../../constants/theme';
-import { boostSaturation } from '../../../utils/color';
+import { LINEAR_GLOW } from '../../ui/accentCard';
+import { activityColors, borderWidth, colors, fontSize, spacing } from '../../../constants/theme';
+import { boostSaturation, withAlpha } from '../../../utils/color';
 
 // The glow is drawn once the card has been measured; this hands it a size at once.
 jest.mock('../../ui/accentGlow', () => ({
@@ -84,45 +85,45 @@ describe('SpaceCardView', () => {
   // itself for the fuller "why" (an attached reference image showed a
   // completely different, much simpler shape than the dome was ever
   // going to produce).
-  describe('its glow — a plain diagonal gradient, ink to the activity color', () => {
+  describe('its glow — a vertical gradient, ink at the top to the activity color at the bottom (B5)', () => {
     const treeOf = async (props: Partial<Parameters<typeof SpaceCardView>[0]> = {}) =>
       JSON.stringify((await renderWithTheme(<SpaceCardView {...baseProps} {...props} />)).toJSON());
-    // `AccentCard`'s `linearGlow` colors are `[colors.ink,
-    // boostSaturation(color, ACCENT_VIVID_FACTOR)]` — see accentCard.tsx.
-    const DOME_VIVID_FACTOR = 1.25;
-    const endColor = (type: keyof typeof activityColors) => boostSaturation(activityColors[type], DOME_VIVID_FACTOR);
+    // AccentCard's LINEAR_GLOW: the color, boosted, rising down the card.
+    const stops = (color: string) => {
+      const vivid = boostSaturation(color, LINEAR_GLOW.vividFactor);
+      return LINEAR_GLOW.stops.map(([, opacity]) => withAlpha(vivid, opacity));
+    };
 
-    it("draws a diagonal gradient ending in the space's own activity color", async () => {
-      const tree = await treeOf();
-
-      expect(tree).toContain(`"colors":["${colors.ink}","${endColor('cardioLow')}"]`);
-    });
-
-    it("takes another activity's colors", async () => {
-      const strength = await treeOf({ activityType: 'strength' });
-
-      expect(strength).toContain(`"colors":["${colors.ink}","${endColor('strength')}"]`);
-      expect(strength).not.toBe(await treeOf());
-    });
-
-    it('is the neutral color for a space with no activity yet', async () => {
-      const tree = await treeOf({ activityType: null });
-
-      expect(tree).toContain(`"colors":["${colors.ink}","${boostSaturation(colors.primary, DOME_VIVID_FACTOR)}"]`);
-    });
-
-    it('runs corner to corner, top-left to bottom-right — not the retired dome, mesh orbs, or twin dome', async () => {
+    it('runs straight down, from the top edge to the bottom edge', async () => {
       const tree = await treeOf();
 
       expect(tree).toContain('"start":{"__typename__":"Point","ref":{"0":0,"1":0}}');
-      expect(tree).toContain('"end":{"__typename__":"Point","ref":{"0":342,"1":140}}');
-      // A single flat `Rect` fill — none of the dome's own layered
-      // Group/Rect/mask structure, the mesh's per-blob Circles, or the
-      // twin dome's two domes.
-      expect(tree.match(/"type":"skRect"/g)).toHaveLength(1);
-      expect(tree).not.toContain('"type":"skOval"');
-      expect(tree).not.toContain('"type":"skCircle"');
-      expect(tree).not.toContain('"type":"skRadialGradient"');
+      expect(tree).toContain('"end":{"__typename__":"Point","ref":{"0":0,"1":140}}');
+      expect(tree).toContain(`"positions":${JSON.stringify(LINEAR_GLOW.stops.map(([offset]) => offset))}`);
+      // A soft fade, not steps: it starts at nothing, never drops, collects
+      // at the bottom, and no two neighbouring samples jump by much.
+      const opacities = LINEAR_GLOW.stops.map(([, opacity]) => opacity);
+      expect(opacities[0]).toBe(0);
+      opacities.slice(1).forEach((opacity, i) => {
+        expect(opacity).toBeGreaterThanOrEqual(opacities[i]);
+        expect(opacity - opacities[i]).toBeLessThanOrEqual(0.25);
+      });
+      expect(opacities[opacities.length - 1]).toBeGreaterThan(opacities[Math.floor(opacities.length / 2)] * 2);
+    });
+
+    it("rises to the space's own activity color, more saturated, short of full strength", async () => {
+      expect(await treeOf()).toContain(`"colors":${JSON.stringify(stops(activityColors.cardioLow))}`);
+      expect(await treeOf({ activityType: 'strength' })).toContain(
+        `"colors":${JSON.stringify(stops(activityColors.strength))}`,
+      );
+    });
+
+    it('is the neutral color for a space with no activity yet', async () => {
+      expect(await treeOf({ activityType: null })).toContain(`"colors":${JSON.stringify(stops(colors.primary))}`);
+    });
+
+    it("has a 1px outline — thicker than the challenge cards' hairline", async () => {
+      expect(await treeOf()).toContain(`"borderWidth":${borderWidth.thin}`);
     });
   });
 });

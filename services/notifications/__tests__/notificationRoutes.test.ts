@@ -18,7 +18,7 @@ describe('resolveNotificationTarget', () => {
     ['space_join_request', 'space', UUID, {}, `/messaging/spaces/${UUID}/join-requests`],
     ['space_join_response', 'space', UUID, { approved: 'true' }, `/messaging/spaces/${UUID}`],
     ['space_join_response', 'space', UUID, { approved: 'false' }, '/messaging/spaces'],
-    ['challenge_invite', 'challenge_invite', '42', { challengeId: UUID }, '/invitations'],
+    ['challenge_invite', 'challenge_invite', '42', { challengeId: UUID }, '/notifications'],
     ['challenge_invite_response', 'challenge', UUID, { accepted: 'true' }, `/challenge/${UUID}`],
     ['challenge_join_request', 'challenge', UUID, {}, `/challenge/${UUID}/manage`],
     ['challenge_join_response', 'challenge', UUID, { approved: 'false' }, `/challenge/${UUID}`],
@@ -77,9 +77,9 @@ describe('openNotificationTarget', () => {
 
   it('pushes a plain route', async () => {
     await expect(
-      openNotificationTarget(router, { kind: 'route', href: '/invitations' }),
+      openNotificationTarget(router, { kind: 'route', href: '/notifications' }),
     ).resolves.toBe(true);
-    expect(router.push).toHaveBeenCalledWith('/invitations');
+    expect(router.push).toHaveBeenCalledWith('/notifications');
   });
 
   it('returns false and navigates nowhere for no target', async () => {

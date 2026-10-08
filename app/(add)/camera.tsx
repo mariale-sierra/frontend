@@ -19,7 +19,7 @@ import { IconButton } from '../../components/ui/iconButton';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
 import { GlassInput } from '../../components/ui/glassInput';
-import { colors, fillOpacity, spacing, radius } from '../../constants/theme';
+import { activityColors, colors, spacing, radius } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
 import { submitWorkoutProgress } from '../../services/workout-log/workout-log.service';
@@ -104,7 +104,7 @@ export default function Camera() {
   const [error, setError] = useState<string | null>(null);
 
   const [visibility, setVisibility] = useState<'followers' | 'private'>('followers');
-  // Optional caption on the photo (Sprint 10, B5) — #hashtags typed here are
+  // Optional caption on the photo (Sprint 9, B5) — #hashtags typed here are
   // parsed and stored by the backend; the chips below the field preview them.
   const [caption, setCaption] = useState('');
   const captionHashtags = useMemo(() => extractHashtags(caption), [caption]);
@@ -363,11 +363,9 @@ export default function Camera() {
           {captionHashtags.length > 0 ? (
             <View style={styles.hashtagRow}>
               {captionHashtags.map((tag) => (
-                <View key={tag} style={styles.hashtagChip}>
-                  <Text variant="caption" weight="bold" style={styles.hashtagChipText}>
-                    #{tag}
-                  </Text>
-                </View>
+                <Text key={tag} variant="caption" style={styles.hashtagText}>
+                  #{tag}
+                </Text>
               ))}
             </View>
           ) : null}
@@ -491,18 +489,13 @@ const styles = StyleSheet.create({
   hashtagRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.xs,
+    columnGap: spacing.sm,
+    rowGap: spacing.xs,
   },
-  hashtagChip: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.big,
-    // `accent` = the palette's social color; chip-fill opacity from the scale.
-    backgroundColor: withAlpha(colors.accent, fillOpacity.chip),
-  },
-  // Custom color on `Text` needs `opacity: 1` (see components/ui/text.tsx).
-  hashtagChipText: {
-    color: colors.accent,
+  // Same look as hashtags everywhere else (HashtagText): electric blue,
+  // regular weight, no pill. Custom color on `Text` needs `opacity: 1`.
+  hashtagText: {
+    color: activityColors.flexibility,
     opacity: 1,
   },
   bottomBar: {

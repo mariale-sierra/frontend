@@ -164,7 +164,7 @@ export default function ChallengeDetail() {
       .finally(() => setMembershipLoading(false));
   }, [challenge]);
 
-  // Sprint 10, B5: the share button opens "Send to…" — a chat inside Havit,
+  // Sprint 9, B5: the share button opens "Send to…" — a chat inside Havit,
   // or "Other apps" for the native share sheet (WhatsApp, Instagram…).
   function handleShare() {
     if (!challenge) return;

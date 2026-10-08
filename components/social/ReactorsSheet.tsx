@@ -16,7 +16,7 @@ interface ReactorsSheetProps {
 }
 
 /** Everyone who reacted to a post, newest first — names and faces, no
- * count (Sprint 10, B5). Rows tap through to each profile. */
+ * count (Sprint 9, B5). Rows tap through to each profile. */
 export function ReactorsSheet({ visible, postId, onClose }: ReactorsSheetProps) {
   const { t } = useTranslation();
   const [reactors, setReactors] = useState<ReactorContract[]>([]);

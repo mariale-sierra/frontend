@@ -263,4 +263,20 @@ export interface ChallengePhoto {
   visibility: 'public' | 'private';
   metrics: ChallengePhotoMetric[];
   description: string;
+  // Sprint 9, B5 — what a profile photo needs to show as a full feed post
+  // (react, comment, share). Optional: absent on an older API deployment.
+  userId?: string;
+  userAvatarUrl?: string | null;
+  challengeName?: string | null;
+  postedAt?: string;
+  likesCount?: number;
+  likedByMe?: boolean;
+  commentsCount?: number;
+  recentReactors?: Array<{
+    id: string;
+    username: string;
+    displayName: string | null;
+    profileImageUrl: string | null;
+  }>;
+  hashtags?: string[];
 }

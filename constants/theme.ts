@@ -293,6 +293,11 @@ export type RadiusToken = keyof typeof radius;
  * rim. Real blur on iOS; on Android `expo-blur` falls back to a plain
  * translucent view, which the tint still makes read as glass.
  */
+// "Black glass" (2026-10-08, explicit request — "I LOVE the black glass"):
+// the blur tinted with `ink` instead of `surface`. Every popup AND every glass
+// bottom sheet uses it, so they always read as the same material.
+const BLACK_GLASS_TINT_OPACITY = 0.72;
+
 export const glass = {
   blurIntensity: 28,
   tint: 'dark',
@@ -308,6 +313,19 @@ export const glass = {
   // the bottom-right — a gradient outline in place of the plain hairline all round.
   sheenOpacity: 0.14,
   rimOpacity: { bright: 0.5, dim: 0.05, echo: 0.2 },
+  /** `ink` over the blur — the popups' and the glass sheets' black glass. */
+  blackTintOpacity: BLACK_GLASS_TINT_OPACITY,
+  // The popups (`ConfirmationPopup` — and every popup built on it), 2026-10-08,
+  // explicit requests: the screen behind softly blurred and a bit darker, and
+  // the card "black glass" — the blur tinted with `ink` (not `surface`), with
+  // the sheen and rim at about half the strength of the toasts'/sheets' above.
+  popup: {
+    backdropBlurIntensity: 12, // was 24 — "a bit more subtle"
+    backdropDimOpacity: 0.6, // `ink` over the blurred screen (the sheets' plain dim is `fillOpacity.dim`, .5)
+    tintOpacity: BLACK_GLASS_TINT_OPACITY, // `ink` over the card's own blur — black glass
+    sheenOpacity: 0.06,
+    rimOpacity: { bright: 0.24, dim: 0.03, echo: 0.1 },
+  },
 } as const;
 
 // ---------------------------------------------------------------------------

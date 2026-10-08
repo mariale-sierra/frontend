@@ -3,6 +3,25 @@ import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { MessageBubble } from '../MessageBubble';
 import type { MessageContract } from '../../../types/chat';
 
+// A shared challenge loads the full challenge to draw the real Explore card;
+// stand-ins for that request and for the card itself.
+const mockGetChallenge = jest.fn();
+jest.mock('../../../services/challenge/challenge.service', () => ({
+  getChallenge: (...args: unknown[]) => mockGetChallenge(...args),
+}));
+jest.mock('../../challenge/list/challengeCards', () => {
+  const React = require('react');
+  const { Pressable, Text } = require('react-native');
+  return {
+    ExploreCard: ({ challenge, onPress, onLongPress }: { challenge: { title: string }; onPress: () => void; onLongPress?: () => void }) =>
+      React.createElement(
+        Pressable,
+        { testID: 'explore-card', onPress, onLongPress },
+        React.createElement(Text, null, challenge.title),
+      ),
+  };
+});
+
 const buildMessage = (overrides: Partial<MessageContract> = {}): MessageContract => ({
   id: 1,
   conversationId: 'conv-1',

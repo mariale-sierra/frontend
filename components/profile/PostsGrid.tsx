@@ -7,7 +7,8 @@ import type { ChallengePhoto } from '../../types/challenge';
 
 interface PostsGridProps {
   view: 'posts' | 'photos';
-  onPhotoPress?: (photo: ChallengePhoto) => void;
+  /** The tapped photo plus the list it was in (as shown), for the post viewer. */
+  onPhotoPress?: (photo: ChallengePhoto, photos: ChallengePhoto[]) => void;
   /** Bumped by the parent screen's pull-to-refresh (a value change, any
    * value) to force a refetch outside the normal focus-effect cycle — this
    * component owns its own fetch, so a parent-level refresh has no other way
@@ -105,7 +106,7 @@ export const PostsGrid = memo(function PostsGrid({ view, onPhotoPress, refreshSi
       photos={visiblePhotos}
       loading={loading}
       emptyLabel={view === 'posts' ? t('profile.emptyPublicPhotos') : t('profile.emptyAllPhotos')}
-      onPhotoPress={onPhotoPress}
+      onPhotoPress={onPhotoPress ? (photo) => onPhotoPress(photo, visiblePhotos) : undefined}
     />
   );
 });

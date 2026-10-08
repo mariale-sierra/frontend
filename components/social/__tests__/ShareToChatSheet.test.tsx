@@ -51,17 +51,51 @@ describe('ShareToChatSheet (B5)', () => {
     expect(screen.queryByText('@eve')).toBeNull();
   });
 
-  it('sends the post into an existing conversation and marks it sent', async () => {
+  it('picking someone only selects them — the Send button appears, nothing is sent yet', async () => {
     const screen = await renderWithTheme(
       <ShareToChatSheet visible onClose={jest.fn()} content={{ workoutPostId: 'post-1' }} />,
     );
-    await waitFor(() => expect(screen.getByTestId('share-send-user-bob')).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId('share-pick-user-bob')).toBeTruthy());
+    expect(screen.queryByTestId('share-send')).toBeNull();
 
-    await fireEvent.press(screen.getByTestId('share-send-user-bob'));
+    await fireEvent.press(screen.getByTestId('share-pick-user-bob'));
 
-    await waitFor(() => expect(screen.getByText('share.sent')).toBeTruthy());
+    expect(screen.getByTestId('share-send')).toBeTruthy();
+    expect(mockedSend).not.toHaveBeenCalled();
+
+    // Tapping again unselects, and the button goes away.
+    await fireEvent.press(screen.getByTestId('share-pick-user-bob'));
+    expect(screen.queryByTestId('share-send')).toBeNull();
+  });
+
+  it('Send shares into the existing conversation and closes the sheet', async () => {
+    const onClose = jest.fn();
+    const screen = await renderWithTheme(
+      <ShareToChatSheet visible onClose={onClose} content={{ workoutPostId: 'post-1' }} />,
+    );
+    await waitFor(() => expect(screen.getByTestId('share-pick-user-bob')).toBeTruthy());
+
+    await fireEvent.press(screen.getByTestId('share-pick-user-bob'));
+    await fireEvent.press(screen.getByTestId('share-send'));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(mockedGetOrCreate).not.toHaveBeenCalled();
     expect(mockedSend).toHaveBeenCalledWith('conv-bob', '', { workoutPostId: 'post-1' });
+  });
+
+  it('keeps the sheet open with Retry when a send fails', async () => {
+    mockedSend.mockRejectedValueOnce(new Error('network'));
+    const onClose = jest.fn();
+    const screen = await renderWithTheme(
+      <ShareToChatSheet visible onClose={onClose} content={{ workoutPostId: 'post-1' }} />,
+    );
+    await waitFor(() => expect(screen.getByTestId('share-pick-user-bob')).toBeTruthy());
+
+    await fireEvent.press(screen.getByTestId('share-pick-user-bob'));
+    await fireEvent.press(screen.getByTestId('share-send'));
+
+    await waitFor(() => expect(screen.getByText('share.retry')).toBeTruthy());
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('resolves a conversation for a searched user before sending', async () => {
@@ -76,11 +110,12 @@ describe('ShareToChatSheet (B5)', () => {
     await waitFor(() => expect(screen.getByText('@bob')).toBeTruthy());
 
     await fireEvent.changeText(screen.getByPlaceholderText('share.searchPlaceholder'), 'an');
-    await waitFor(() => expect(screen.getByTestId('share-send-user-ana')).toBeTruthy(), { timeout: 2000 });
+    await waitFor(() => expect(screen.getByTestId('share-pick-user-ana')).toBeTruthy(), { timeout: 2000 });
     // Never offers sharing to yourself.
-    expect(screen.queryByTestId('share-send-viewer-1')).toBeNull();
+    expect(screen.queryByTestId('share-pick-viewer-1')).toBeNull();
 
-    await fireEvent.press(screen.getByTestId('share-send-user-ana'));
+    await fireEvent.press(screen.getByTestId('share-pick-user-ana'));
+    await fireEvent.press(screen.getByTestId('share-send'));
 
     await waitFor(() => expect(mockedSend).toHaveBeenCalledWith('conv-ana', '', { challengeId: 'ch-1' }));
     expect(mockedGetOrCreate).toHaveBeenCalledWith('user-ana');

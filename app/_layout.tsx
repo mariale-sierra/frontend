@@ -119,7 +119,6 @@ function RootNavigator() {
             behind a modal. */}
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
         <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
-        <Stack.Screen name="invitations" options={{ headerShown: false }} />
         <Stack.Screen name="home/streaks" options={{ headerShown: false }} />
         <Stack.Screen name="messaging/index" options={{ headerShown: false }} />
         <Stack.Screen name="messaging/[conversationId]" options={{ headerShown: false }} />
@@ -143,6 +142,7 @@ function RootNavigator() {
             this screen's own BackButton/header. Every other custom-header
             screen in this app is registered the same way. */}
         <Stack.Screen name="profile/[userId]" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/posts" options={{ headerShown: false }} />
         <Stack.Screen name="profile/about" options={{ headerShown: false }} />
         <Stack.Screen name="profile/moderation" options={{ headerShown: false }} />
         <Stack.Screen name="profile/delete-account" options={{ headerShown: false }} />

@@ -1,15 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { BottomSheetModal } from '../ui/bottomSheetModal';
 import { SearchBar } from '../ui/searchBar';
 import { Text } from '../ui/text';
 import { Icon } from '../ui/icon';
+import { Button } from '../ui/button';
 import { UserAvatar } from '../ui/userAvatar';
 import { Row } from '../layout/row';
-import { colors, radius, spacing } from '../../constants/theme';
+import { borderWidth, colors, fillOpacity, radius, spacing } from '../../constants/theme';
+import { STREAK_GRID_COLUMNS } from '../../constants/streaksGrid';
+import { getStreakGridLayout } from '../../utils/streaksGrid';
 import { withAlpha } from '../../utils/color';
 import { useAuth } from '../../hooks/useAuth';
+import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { getConversations, getOrCreateConversation, sendMessage } from '../../services/chats/chats.service';
 import { searchUsers } from '../../services/user/user.service';
 import type { SharedContentPayload } from '../../types/chat';
@@ -17,7 +21,7 @@ import type { SharedContentPayload } from '../../types/chat';
 interface ShareToChatSheetProps {
   visible: boolean;
   onClose: () => void;
-  /** What to share — a post or a challenge (Sprint 10, B5). */
+  /** What to share — a post or a challenge (Sprint 9, B5). */
   content: SharedContentPayload;
   /** Optional extra row for the native share sheet (WhatsApp, Instagram…). */
   onShareExternally?: () => void;
@@ -34,34 +38,49 @@ interface Recipient {
   conversationId?: string;
 }
 
-type SendState = 'sending' | 'sent' | 'error';
-
 const SEARCH_DEBOUNCE_MS = 350;
+// Same three-to-a-row grid as Streaks, but smaller faces (explicit request:
+// Streaks' 80%-of-the-column avatars were too big for a picker).
+const SHARE_AVATAR_SHARE = 0.6;
 
 /**
  * "Send to…" sheet for sharing a post or a challenge inside Havit's own 1:1
  * chats. Lists the viewer's recent conversations (minus message requests they
  * haven't accepted — they can't send there yet) and lets them search anyone
- * else. Each row sends on tap and then shows "Sent", so the same post can go
- * to several people without reopening the sheet.
+ * else, laid out like the Streaks grid (round avatar + username, three to a
+ * row). Tapping people selects them (several at once, kept across searches);
+ * the Send button appears at the bottom once someone is selected, and only
+ * that sends. All sent: the sheet closes with a toast. Some failed: those stay
+ * selected, marked in red, and the button becomes Retry.
  */
 export function ShareToChatSheet({ visible, onClose, content, onShareExternally }: ShareToChatSheetProps) {
   const { t } = useTranslation();
   const { userId } = useAuth();
+  const showSuccess = useErrorNotificationStore((state) => state.showSuccess);
+  const { width } = useWindowDimensions();
+  // The sheet's side padding is the same `spacing.lg` as the Streaks screen,
+  // so its column math applies unchanged.
+  const { columnWidth } = getStreakGridLayout(width);
+  const avatarSize = Math.floor(columnWidth * SHARE_AVATAR_SHARE);
+
   const [recent, setRecent] = useState<Recipient[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Recipient[]>([]);
   const [searching, setSearching] = useState(false);
-  const [sendState, setSendState] = useState<Record<string, SendState>>({});
+  const [selected, setSelected] = useState<Record<string, Recipient>>({});
+  const [failed, setFailed] = useState<Set<string>>(new Set());
+  const [sending, setSending] = useState(false);
 
-  // Fresh state every time the sheet opens — "Sent" marks belong to one
+  // Fresh state every time the sheet opens — a selection belongs to one
   // share, not to the next post shared from the same screen.
   useEffect(() => {
     if (!visible) return;
     setQuery('');
     setResults([]);
-    setSendState({});
+    setSelected({});
+    setFailed(new Set());
+    setSending(false);
     setLoadingRecent(true);
     let cancelled = false;
     getConversations()
@@ -126,18 +145,50 @@ export function ShareToChatSheet({ visible, onClose, content, onShareExternally 
     return results.map((r) => recentByUser.get(r.userId) ?? r);
   }, [searchingMode, recent, results]);
 
-  async function handleSend(recipient: Recipient) {
-    const current = sendState[recipient.userId];
-    if (current === 'sending' || current === 'sent') return;
-    setSendState((prev) => ({ ...prev, [recipient.userId]: 'sending' }));
-    try {
-      const conversationId = recipient.conversationId ?? (await getOrCreateConversation(recipient.userId)).id;
-      await sendMessage(conversationId, '', content);
-      setSendState((prev) => ({ ...prev, [recipient.userId]: 'sent' }));
-    } catch {
-      // The global api.ts interceptor already shows the error toast.
-      setSendState((prev) => ({ ...prev, [recipient.userId]: 'error' }));
+  const selectedList = Object.values(selected);
+
+  function toggle(recipient: Recipient) {
+    if (sending) return;
+    setSelected((prev) => {
+      const next = { ...prev };
+      if (next[recipient.userId]) delete next[recipient.userId];
+      else next[recipient.userId] = recipient;
+      return next;
+    });
+    setFailed((prev) => {
+      if (!prev.has(recipient.userId)) return prev;
+      const next = new Set(prev);
+      next.delete(recipient.userId);
+      return next;
+    });
+  }
+
+  async function handleSend() {
+    if (sending || selectedList.length === 0) return;
+    setSending(true);
+    const outcomes = await Promise.all(
+      selectedList.map(async (recipient) => {
+        try {
+          const conversationId = recipient.conversationId ?? (await getOrCreateConversation(recipient.userId)).id;
+          await sendMessage(conversationId, '', content);
+          return { recipient, ok: true };
+        } catch {
+          // The global api.ts interceptor already shows the error toast.
+          return { recipient, ok: false };
+        }
+      }),
+    );
+    setSending(false);
+
+    const failedOnes = outcomes.filter((o) => !o.ok).map((o) => o.recipient);
+    if (failedOnes.length === 0) {
+      showSuccess({ message: t('share.sentToast', { count: outcomes.length }) });
+      onClose();
+      return;
     }
+    // Keep only the ones that failed selected, so the button retries just them.
+    setSelected(Object.fromEntries(failedOnes.map((r) => [r.userId, r])));
+    setFailed(new Set(failedOnes.map((r) => r.userId)));
   }
 
   return (
@@ -171,12 +222,6 @@ export function ShareToChatSheet({ visible, onClose, content, onShareExternally 
           </Row>
         ) : null}
 
-        {!searchingMode && (
-          <Text variant="caption" tone="secondary" style={styles.sectionLabel}>
-            {t('share.recentChats')}
-          </Text>
-        )}
-
         {(searchingMode ? searching : loadingRecent) ? (
           <View style={styles.center}>
             <ActivityIndicator color={colors.primary} />
@@ -186,6 +231,8 @@ export function ShareToChatSheet({ visible, onClose, content, onShareExternally 
             style={styles.flexFill}
             data={rows}
             keyExtractor={(item) => item.userId}
+            numColumns={STREAK_GRID_COLUMNS}
+            columnWrapperStyle={styles.gridRow}
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.list}
             ListEmptyComponent={
@@ -196,59 +243,84 @@ export function ShareToChatSheet({ visible, onClose, content, onShareExternally 
               </View>
             }
             renderItem={({ item }) => (
-              <RecipientRow recipient={item} state={sendState[item.userId]} onSend={() => handleSend(item)} />
+              <RecipientTile
+                recipient={item}
+                selected={!!selected[item.userId]}
+                failed={failed.has(item.userId)}
+                onPress={() => toggle(item)}
+                columnWidth={columnWidth}
+                avatarSize={avatarSize}
+              />
             )}
           />
         )}
+
+        {/* Only once someone is picked — sending happens here, not on the tap. */}
+        {selectedList.length > 0 ? (
+          <View style={styles.footer}>
+            <Button size="md" loading={sending} onPress={handleSend} testID="share-send">
+              {failed.size > 0
+                ? t('share.retry')
+                : selectedList.length === 1
+                  ? t('share.send')
+                  : t('share.sendCount', { count: selectedList.length })}
+            </Button>
+          </View>
+        ) : null}
       </View>
     </BottomSheetModal>
   );
 }
 
-function RecipientRow({
+function RecipientTile({
   recipient,
-  state,
-  onSend,
+  selected,
+  failed,
+  onPress,
+  columnWidth,
+  avatarSize,
 }: {
   recipient: Recipient;
-  state: SendState | undefined;
-  onSend: () => void;
+  selected: boolean;
+  failed: boolean;
+  onPress: () => void;
+  columnWidth: number;
+  avatarSize: number;
 }) {
   const { t } = useTranslation();
-  const sent = state === 'sent';
+  const name = recipient.displayName || recipient.username;
 
   return (
-    <Row align="center" gap="md" style={styles.recipientRow}>
-      <UserAvatar username={recipient.username} imageUrl={recipient.imageUrl} size={44} />
-      <View style={styles.recipientInfo}>
-        <Text variant="body" weight="bold" numberOfLines={1}>
-          {recipient.displayName || `@${recipient.username}`}
-        </Text>
-        {recipient.displayName ? (
-          <Text variant="caption" tone="secondary" numberOfLines={1}>
-            @{recipient.username}
-          </Text>
-        ) : null}
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="checkbox"
+      accessibilityLabel={t('share.sendToA11y', { name })}
+      accessibilityState={{ checked: selected }}
+      style={({ pressed }) => [styles.tile, { width: columnWidth }, pressed && styles.pressed]}
+      testID={`share-pick-${recipient.userId}`}
+    >
+      <View style={[styles.avatarRing, { borderRadius: avatarSize }, selected && styles.avatarRingSelected]}>
+        <UserAvatar username={recipient.username} imageUrl={recipient.imageUrl} size={avatarSize} circle />
       </View>
-      <Pressable
-        onPress={onSend}
-        disabled={state === 'sending' || sent}
-        accessibilityRole="button"
-        accessibilityLabel={t('share.sendToA11y', { name: recipient.displayName || recipient.username })}
-        style={[styles.sendButton, sent && styles.sendButtonSent]}
-        testID={`share-send-${recipient.userId}`}
+      {selected ? (
+        <View style={[styles.stateBadge, failed ? styles.stateBadgeFailed : styles.stateBadgeSelected]}>
+          <Icon name={failed ? 'refresh' : 'checkmark'} size={14} color={colors.ink} />
+        </View>
+      ) : null}
+      <Text
+        variant="caption"
+        tone={selected ? 'primary' : 'secondary'}
+        numberOfLines={1}
+        style={[styles.name, { width: columnWidth }]}
       >
-        {state === 'sending' ? (
-          <ActivityIndicator size="small" color={colors.ink} />
-        ) : (
-          <Text variant="caption" weight="bold" inverse={!sent}>
-            {sent ? t('share.sent') : state === 'error' ? t('share.retry') : t('share.send')}
-          </Text>
-        )}
-      </Pressable>
-    </Row>
+        @{recipient.username}
+      </Text>
+    </Pressable>
   );
 }
+
+// Room the selection ring takes around an avatar.
+const RING_WIDTH = borderWidth.thin * 2;
 
 const styles = StyleSheet.create({
   flexFill: {
@@ -270,32 +342,55 @@ const styles = StyleSheet.create({
     borderRadius: radius.big,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: withAlpha(colors.paper, 0.08),
-  },
-  sectionLabel: {
-    marginBottom: spacing.xs,
+    backgroundColor: withAlpha(colors.paper, fillOpacity.chip),
   },
   list: {
-    paddingBottom: spacing['2xl'],
+    paddingBottom: spacing.lg,
   },
-  recipientRow: {
-    paddingVertical: spacing.xs,
+  gridRow: {
+    marginBottom: spacing.lg,
   },
-  recipientInfo: {
-    flex: 1,
-    gap: 2,
+  tile: {
+    alignItems: 'center',
+    gap: spacing.sm,
   },
-  sendButton: {
-    minWidth: 76,
-    height: 32,
-    paddingHorizontal: spacing.md,
+  pressed: {
+    opacity: 0.85,
+  },
+  // A transparent ring that turns `primary` when selected, so picking someone
+  // doesn't shift the avatar.
+  avatarRing: {
+    borderWidth: RING_WIDTH,
+    borderColor: 'transparent',
+    padding: RING_WIDTH,
+  },
+  avatarRingSelected: {
+    borderColor: colors.primary,
+  },
+  // A small check on the avatar's top-right, ringed in the background color.
+  stateBadge: {
+    position: 'absolute',
+    top: 0,
+    right: '20%',
+    width: spacing.lg,
+    height: spacing.lg,
     borderRadius: radius.big,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: RING_WIDTH,
+    borderColor: colors.ink,
+  },
+  stateBadgeSelected: {
     backgroundColor: colors.primary,
   },
-  sendButtonSent: {
-    backgroundColor: withAlpha(colors.paper, 0.08),
+  stateBadgeFailed: {
+    backgroundColor: colors.error,
+  },
+  name: {
+    textAlign: 'center',
+  },
+  footer: {
+    paddingTop: spacing.md,
   },
   center: {
     minHeight: 120,

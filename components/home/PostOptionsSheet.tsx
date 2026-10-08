@@ -98,11 +98,14 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: spacing.md,
   },
+  // Options sit close together, like one list (per explicit "too much of a
+  // gap between Send a message and Report" request): no gap between rows,
+  // each row's own vertical padding is the only space.
   list: {
-    gap: spacing.sm,
+    gap: 0,
   },
   option: {
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.base,
     borderRadius: radius.medium,
   },

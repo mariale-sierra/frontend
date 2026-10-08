@@ -7,17 +7,15 @@ import { colors, spacing } from '../../constants/theme';
 import { Text } from '../../components/ui/text';
 import { IconButton } from '../../components/ui/iconButton';
 import { getMyProfile } from '../../services/user/user.service';
-import { getPendingInvites } from '../../services/invites/invite.service';
 import type { MyProfileContract } from '../../types/user';
-import { ProfileHeader, PostsViewToggle, PostsGrid, ProfilePhotoModal, ProfileContentSkeleton } from '../../components/profile';
+import { ProfileHeader, PostsViewToggle, PostsGrid, ProfileContentSkeleton } from '../../components/profile';
+import { openPostViewer } from '../../utils/postViewer';
 import type { PostsView } from '../../components/profile';
 import type { ChallengePhoto } from '../../types/challenge';
 import { Row } from '../../components/layout/row';
 import { useAuth } from '../../hooks/useAuth';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
-import { deleteWorkoutPost } from '../../services/workout-posts/workout-posts.service';
-import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 
 /**
  * Profile tab. Structured so future sections (followers, stats) can slot in
@@ -27,7 +25,7 @@ import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 export default function Profile() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { username: sessionUsername } = useAuth();
+  const { username: sessionUsername, userId: sessionUserId } = useAuth();
   const isAdmin = useIsAdmin();
   const [profile, setProfile] = useState<MyProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,8 +35,6 @@ export default function Profile() {
   // and any log without an explicit visibility default to private
   // server-side). "Public" stays one tap away via the eye toggle.
   const [view, setView] = useState<PostsView>('photos');
-  const [selectedPhoto, setSelectedPhoto] = useState<ChallengePhoto | null>(null);
-  const [hasPendingInvites, setHasPendingInvites] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -61,49 +57,22 @@ export default function Profile() {
     }, [t]),
   );
 
-  // Drives the notification dot on the invitations icon — real pending-invite
-  // data (already used by the invitations screen itself), not decorative.
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      getPendingInvites()
-        .then((invites) => {
-          if (active) setHasPendingInvites(invites.length > 0);
-        })
-        .catch(() => {
-          if (active) setHasPendingInvites(false);
-        });
-      return () => {
-        active = false;
-      };
-    }, []),
-  );
-
   // PostsGrid fetches its own photos internally (see components/profile/PostsGrid.tsx)
   // — bumping this signal is the only way this screen's pull-to-refresh can
-  // also force it to refetch, alongside this screen's own profile/invites data.
+  // also force it to refetch, alongside this screen's own profile data.
   const [postsRefreshSignal, setPostsRefreshSignal] = useState(0);
   const refreshProfile = useCallback(async () => {
-    await Promise.allSettled([
-      getMyProfile().then(setProfile),
-      getPendingInvites().then((invites) => setHasPendingInvites(invites.length > 0)),
-    ]);
+    await Promise.allSettled([getMyProfile().then(setProfile)]);
     setPostsRefreshSignal((n) => n + 1);
   }, []);
   const { refreshing, onRefresh } = usePullToRefresh(refreshProfile);
 
-  // B4: deleting one of your own photos from its detail view. PostsGrid owns
-  // its own data, so the same refresh signal pull-to-refresh uses makes it
-  // drop the deleted post.
-  const showSuccess = useErrorNotificationStore((state) => state.showSuccess);
-  const handleDeletePhoto = useCallback(
-    async (photo: ChallengePhoto) => {
-      await deleteWorkoutPost(photo.id);
-      setSelectedPhoto(null);
-      setPostsRefreshSignal((n) => n + 1);
-      showSuccess({ message: t('home.postOptions.deleteSuccess') });
-    },
-    [showSuccess, t],
+  // Tapping a photo opens your posts as a feed (react, comment, share, and
+  // delete from each post's "..." menu — B4). PostsGrid refetches on focus,
+  // so a post deleted there is gone when you come back.
+  const handlePhotoPress = useCallback(
+    (photo: ChallengePhoto, photos: ChallengePhoto[]) => openPostViewer(photos, photo, { ownerId: sessionUserId }),
+    [sessionUserId],
   );
 
   const displayName = profile?.display_name ?? sessionUsername ?? 'User name';
@@ -130,17 +99,6 @@ export default function Profile() {
         accessibilityLabel={t('profile.editButtonA11y')}
         hitSlop={10}
       />
-      <View>
-        <IconButton
-          name="mail-outline"
-          iconSize={22}
-          onPress={() => router.push('/invitations')}
-          accessibilityRole="button"
-          accessibilityLabel={t('profile.invitationsButtonA11y')}
-          hitSlop={10}
-        />
-        {hasPendingInvites && <View style={styles.notificationDot} />}
-      </View>
     </Row>
   );
 
@@ -172,18 +130,13 @@ export default function Profile() {
               practices={profile?.practice_preferences}
             />
             <PostsViewToggle view={view} onViewChange={setView} />
-            <PostsGrid view={view} onPhotoPress={setSelectedPhoto} refreshSignal={postsRefreshSignal} />
+            <PostsGrid view={view} onPhotoPress={handlePhotoPress} refreshSignal={postsRefreshSignal} />
             <Pressable onPress={() => router.push('/profile/about')} style={styles.aboutLink}>
               <Text variant="caption" tone="secondary">{t('about.title')}</Text>
             </Pressable>
           </>
         )}
       </ScrollView>
-      <ProfilePhotoModal
-        photo={selectedPhoto}
-        onClose={() => setSelectedPhoto(null)}
-        onDelete={handleDeletePhoto}
-      />
     </ScreenBackground>
   );
 }
@@ -203,17 +156,6 @@ const styles = StyleSheet.create({
     paddingTop: spacing.base,
     paddingBottom: spacing['2xl'],
     gap: spacing.lg,
-  },
-  notificationDot: {
-    position: 'absolute',
-    top: 8,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 8,
-    backgroundColor: colors.accent,
-    borderWidth: 2,
-    borderColor: colors.ink,
   },
   center: {
     minHeight: 280,

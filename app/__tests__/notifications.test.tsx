@@ -9,6 +9,7 @@ import {
 } from '../../services/notifications/notifications.service';
 import { useNotificationsStore } from '../../store/notificationsStore';
 import { usePushPermission } from '../../hooks/usePushPermission';
+import { useInvites } from '../../hooks/useInvites';
 import type { NotificationContract } from '../../types/notification';
 import i18n from '../../i18n';
 
@@ -35,6 +36,8 @@ jest.mock('../../services/notifications/notifications.service', () => ({
 }));
 jest.mock('../../services/chats/chats.service', () => ({ getConversations: jest.fn() }));
 jest.mock('../../hooks/usePushPermission', () => ({ usePushPermission: jest.fn() }));
+// Pending challenge invites (B5: the Invitations screen merged into this one).
+jest.mock('../../hooks/useInvites', () => ({ useInvites: jest.fn() }));
 
 const USER = '3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b';
 
@@ -50,6 +53,28 @@ const row = (overrides: Partial<NotificationContract> = {}): NotificationContrac
   title: null,
   body: null,
   ...overrides,
+});
+
+const invitesState = (overrides = {}) => ({
+  received: [],
+  sent: [],
+  loading: false,
+  refreshing: false,
+  error: false,
+  processingId: null,
+  refresh: jest.fn(),
+  reload: jest.fn(),
+  runAction: jest.fn().mockResolvedValue(true),
+  ...overrides,
+});
+
+const invite = (id: string, status = 'pending') => ({
+  id,
+  status,
+  created_at: new Date().toISOString(),
+  challenge: { id: 'ch-1', name: 'Reto de Fuerza' },
+  sender: { id: 'u-ana', username: 'ana' },
+  recipient: { id: 'u-bob', username: 'bob' },
 });
 
 const pushPermission = (overrides = {}) => ({
@@ -69,6 +94,42 @@ describe('Notifications inbox', () => {
     (getUnreadNotificationsCount as jest.Mock).mockResolvedValue(1);
     (markNotificationRead as jest.Mock).mockResolvedValue(undefined);
     (usePushPermission as jest.Mock).mockReturnValue(pushPermission());
+    (useInvites as jest.Mock).mockReturnValue(invitesState());
+  });
+
+  describe('pending invites section (B5)', () => {
+    beforeEach(() => {
+      (getNotifications as jest.Mock).mockResolvedValue({ notifications: [], nextCursor: null });
+    });
+
+    it('is hidden when there are no pending invites', async () => {
+      await renderWithProviders(<Notifications />);
+      await waitFor(() => expect(screen.queryByTestId('notifications-invites')).toBeNull());
+    });
+
+    it('lists received invites to accept/decline and sent ones to cancel — answered ones are left out', async () => {
+      (useInvites as jest.Mock).mockReturnValue(
+        invitesState({ received: [invite('r-1'), invite('r-old', 'accepted')], sent: [invite('s-1')] }),
+      );
+      await renderWithProviders(<Notifications />);
+
+      await waitFor(() => expect(screen.getByTestId('notifications-invites')).toBeTruthy());
+      expect(screen.getByTestId('invite-accept-r-1')).toBeTruthy();
+      expect(screen.getByTestId('invite-decline-r-1')).toBeTruthy();
+      expect(screen.getByTestId('invite-cancel-s-1')).toBeTruthy();
+      expect(screen.queryByTestId('invite-row-r-old')).toBeNull();
+    });
+
+    it('accepting runs the action and confirms it', async () => {
+      const runAction = jest.fn().mockResolvedValue(true);
+      (useInvites as jest.Mock).mockReturnValue(invitesState({ received: [invite('r-1')], runAction }));
+      await renderWithProviders(<Notifications />);
+
+      await waitFor(() => expect(screen.getByTestId('invite-accept-r-1')).toBeTruthy());
+      await fireEvent.press(screen.getByTestId('invite-accept-r-1'));
+
+      expect(runAction).toHaveBeenCalledWith('accept', 'r-1');
+    });
   });
 
   it('lists notifications with the actor and marks unread ones', async () => {

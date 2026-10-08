@@ -2,6 +2,7 @@ import { normalizeKey } from './adapterUtils';
 import { formatRelativeTime } from '../../utils/time';
 import type { ActivityType } from '../../types/activity';
 import type { FeedPostContract } from '../../types/feed';
+import type { ChallengePhoto } from '../../types/challenge';
 
 export interface FeedPostViewModel {
   id: string;
@@ -19,9 +20,13 @@ export interface FeedPostViewModel {
   likedByMe: boolean;
   commentsCount: number;
   /** Who reacted (up to 3, never the viewer) — the reactions UI leads with
-   * people, not the count (Sprint 10, B5). */
+   * people, not the count (Sprint 9, B5). */
   recentReactors: ReactorViewModel[];
   hashtags: string[];
+  /** Exercise + logged value rows, shown collapsed under the actions. */
+  metrics: Array<{ label: string; value: string }>;
+  /** Only known for your own posts (profile): drawn on the photo's corner. */
+  visibility?: 'public' | 'private';
 }
 
 export interface ReactorViewModel {
@@ -68,6 +73,39 @@ export function toFeedPostViewModel(post: FeedPostContract): FeedPostViewModel {
       avatarUrl: r.avatar_url,
     })),
     hashtags: post.hashtags ?? [],
+    metrics: post.metrics ?? [],
+  };
+}
+
+/**
+ * A profile/gallery photo (GET /workout-posts/mine | /user/:id) as a feed post,
+ * so the profile's post viewer can reuse FeedPostCard — reactions, comments,
+ * share. `visibility` is kept so your own posts can show it on the photo.
+ */
+export function challengePhotoToFeedPost(photo: ChallengePhoto): FeedPostViewModel {
+  return {
+    id: photo.id,
+    userId: photo.userId ?? '',
+    userName: photo.userName || 'Unknown',
+    userAvatarUrl: photo.userAvatarUrl ?? undefined,
+    challengeId: photo.challengeId,
+    challengeName: photo.challengeName ?? 'Challenge',
+    day: photo.day ?? 1,
+    imageUrl: photo.imageUrl ?? undefined,
+    caption: photo.description || undefined,
+    postedAt: photo.postedAt ? formatRelativeTime(photo.postedAt) : '',
+    likesCount: photo.likesCount ?? 0,
+    likedByMe: photo.likedByMe ?? false,
+    commentsCount: photo.commentsCount ?? 0,
+    recentReactors: (photo.recentReactors ?? []).map((r) => ({
+      id: r.id,
+      username: r.username,
+      displayName: r.displayName,
+      avatarUrl: r.profileImageUrl,
+    })),
+    hashtags: photo.hashtags ?? [],
+    metrics: photo.metrics ?? [],
+    visibility: photo.visibility,
   };
 }
 

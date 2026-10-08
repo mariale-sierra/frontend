@@ -1,3 +1,4 @@
+import { fireEvent } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { FeedPostCard } from '../FeedPostCard';
@@ -52,6 +53,7 @@ const post: FeedPostViewModel = {
   commentsCount: 2,
   recentReactors: [],
   hashtags: [],
+  metrics: [],
 };
 
 describe('FeedPostCard — the like / comment row', () => {
@@ -85,3 +87,44 @@ describe('FeedPostCard — stays in sync with refreshed data (B5)', () => {
     expect(screen.getByText('5')).toBeTruthy();
   });
 });
+
+describe('FeedPostCard — metrics, trophy and visibility (B5)', () => {
+  it('has no metrics toggle when nothing was logged', async () => {
+    const screen = await renderWithTheme(<FeedPostCard post={post} />);
+    expect(screen.queryByTestId('post-metrics-toggle')).toBeNull();
+  });
+
+  it('keeps the logged metrics collapsed until their toggle is tapped', async () => {
+    const screen = await renderWithTheme(
+      <FeedPostCard post={{ ...post, metrics: [{ label: 'Sentadilla', value: '3 × 12 reps' }] }} />,
+    );
+    expect(screen.queryByTestId('post-metrics')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('post-metrics-toggle'));
+
+    expect(screen.getByTestId('post-metrics')).toBeTruthy();
+    expect(screen.getByText('3 × 12 reps')).toBeTruthy();
+  });
+
+  it('puts the trophy in the actions row, with the like and comments', async () => {
+    const screen = await renderWithTheme(<FeedPostCard post={post} />);
+    const row = actionsRowOf(screen.getByTestId('post-challenge'));
+    expect(row).toBe(actionsRowOf(screen.getByLabelText('home.reactionA11y')));
+  });
+
+  it('shows the visibility on the photo only when the post carries it (your own posts)', async () => {
+    const others = await renderWithTheme(<FeedPostCard post={post} />);
+    expect(others.queryByTestId('post-visibility')).toBeNull();
+    const own = await renderWithTheme(<FeedPostCard post={{ ...post, visibility: 'private' }} />);
+    expect(own.getByTestId('post-visibility')).toBeTruthy();
+  });
+});
+
+// The nearest ancestor with a top margin: the card's actions row.
+function actionsRowOf(node: { parent: unknown; props: { style?: unknown } } | null) {
+  let current = node as { parent: unknown; props: { style?: unknown } } | null;
+  while (current && StyleSheet.flatten(current.props.style as never)?.marginTop === undefined) {
+    current = current.parent as typeof current;
+  }
+  return current;
+}
