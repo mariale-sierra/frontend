@@ -17,7 +17,7 @@ import { ShareToChatSheet } from '../../../components/social/ShareToChatSheet';
 import type { ChallengeInfoRow } from '../../../components/challenge/detail';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
-import { closeChallenge, getChallenge, isChallengeOwner, joinChallenge } from '../../../services/challenge/challenge.service';
+import { closeChallenge, getChallenge, isChallengeOwner, joinChallenge, reopenChallenge } from '../../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../../services/user/user.service';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
@@ -90,6 +90,23 @@ export default function ChallengeDetail() {
         showSuccess({ message: t('challengeProgress.closeChallengeSuccess') });
       } catch {
         // The confirmation popup itself surfaces failure via its own error state; nothing else to do here.
+      }
+    },
+  });
+
+  // Admin-only too (AdminGuard server-side): the inverse of closing.
+  const reopenChallengePopup = useConfirmationPopup({
+    type: 'reopenChallenge',
+    challengeName: challenge?.name ?? t('challenges.fallbackName'),
+    onConfirm: async () => {
+      const challengeId = typeof id === 'string' ? id : '';
+      if (!challengeId) return;
+      try {
+        await reopenChallenge(challengeId);
+        setChallenge((prev) => (prev ? { ...prev, status: 'open' } : prev));
+        showSuccess({ message: t('challengeProgress.reopenChallengeSuccess') });
+      } catch {
+        // The global api.ts interceptor already surfaces the error toast.
       }
     },
   });
@@ -303,6 +320,16 @@ export default function ChallengeDetail() {
                 <Icon name="lock-closed-outline" size={22} color={colors.error} />
               </Pressable>
             )}
+            {isAdmin && isClosed && (
+              <Pressable
+                onPress={reopenChallengePopup.show}
+                style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel={t('challengeProgress.reopenChallengeA11y')}
+              >
+                <Icon name="lock-open-outline" size={22} color={colors.paper} />
+              </Pressable>
+            )}
           </Row>
         </Row>
 
@@ -383,6 +410,7 @@ export default function ChallengeDetail() {
 
       <joinPopup.Component />
       <closeChallengePopup.Component />
+      <reopenChallengePopup.Component />
     </ScreenBackground>
   );
 }

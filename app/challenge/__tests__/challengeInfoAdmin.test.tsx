@@ -2,7 +2,7 @@ import { fireEvent, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import ChallengeDetail from '../[id]/index';
-import { closeChallenge, getChallenge, joinChallenge } from '../../../services/challenge/challenge.service';
+import { closeChallenge, getChallenge, joinChallenge, reopenChallenge } from '../../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../../services/user/user.service';
 import { useIsAdmin } from '../../../hooks/useIsAdmin';
 import { useErrorNotificationStore } from '../../../store/errorNotificationStore';
@@ -36,6 +36,7 @@ jest.mock('../../../services/challenge/challenge.service', () => ({
   ...jest.requireActual('../../../services/challenge/challenge.service'),
   getChallenge: jest.fn(),
   closeChallenge: jest.fn(),
+  reopenChallenge: jest.fn(),
   joinChallenge: jest.fn(),
 }));
 jest.mock('../../../services/user/user.service', () => ({ getMyChallenges: jest.fn() }));
@@ -134,6 +135,60 @@ describe('Challenge info — the owner and admin actions', () => {
 
       await waitFor(() => expect(closeChallenge).toHaveBeenCalled());
       expect(screen.queryByText('challengeInfo.closedValue')).toBeNull();
+      expect(useErrorNotificationStore.getState().visible).toBe(false);
+    });
+  });
+
+  // B8: reopening is the admin's inverse of closing — never an owner action.
+  describe("the admin's reopen button", () => {
+    const closed = (overrides: Record<string, unknown> = {}) => challenge({ status: 'closed', ...overrides });
+
+    it('is there for an admin, only on a closed challenge', async () => {
+      const screen = await renderInfo({ admin: true, challenge: closed() });
+
+      expect(screen.getByLabelText('challengeProgress.reopenChallengeA11y')).toBeTruthy();
+    });
+
+    it('is not there on an open challenge', async () => {
+      const screen = await renderInfo({ admin: true });
+
+      expect(screen.queryByLabelText('challengeProgress.reopenChallengeA11y')).toBeNull();
+    });
+
+    it('is not there for the owner who is not an admin', async () => {
+      const screen = await renderInfo({ challenge: closed({ created_by_user_id: 'owner-1' }) });
+
+      expect(screen.queryByLabelText('challengeProgress.reopenChallengeA11y')).toBeNull();
+      expect(screen.getByLabelText('challengeProgress.manageA11y')).toBeTruthy();
+    });
+
+    it('asks first, then shows the challenge open again, with a toast and the close button back', async () => {
+      (reopenChallenge as jest.Mock).mockResolvedValue(undefined);
+      const screen = await renderInfo({ admin: true, challenge: closed() });
+
+      await fireEvent.press(screen.getByLabelText('challengeProgress.reopenChallengeA11y'));
+      expect(reopenChallenge).not.toHaveBeenCalled();
+      await fireEvent.press(screen.getByText('challengeProgress.reopenChallengeConfirm'));
+
+      await waitFor(() => expect(reopenChallenge).toHaveBeenCalledWith('ch-1'));
+      await waitFor(() => expect(screen.queryByText('challengeInfo.closedValue')).toBeNull());
+      expect(screen.queryByLabelText('challengeProgress.reopenChallengeA11y')).toBeNull();
+      expect(screen.getByLabelText('challengeProgress.closeChallengeA11y')).toBeTruthy();
+      expect(useErrorNotificationStore.getState()).toMatchObject({
+        visible: true,
+        config: { message: 'challengeProgress.reopenChallengeSuccess', variant: 'success' },
+      });
+    });
+
+    it('leaves the challenge closed when reopening fails', async () => {
+      (reopenChallenge as jest.Mock).mockRejectedValue(new Error('server'));
+      const screen = await renderInfo({ admin: true, challenge: closed() });
+
+      await fireEvent.press(screen.getByLabelText('challengeProgress.reopenChallengeA11y'));
+      await fireEvent.press(screen.getByText('challengeProgress.reopenChallengeConfirm'));
+
+      await waitFor(() => expect(reopenChallenge).toHaveBeenCalled());
+      expect(screen.getByText('challengeInfo.closedValue')).toBeTruthy();
       expect(useErrorNotificationStore.getState().visible).toBe(false);
     });
   });

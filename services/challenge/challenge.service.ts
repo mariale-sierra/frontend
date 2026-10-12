@@ -246,6 +246,13 @@ export async function closeChallenge(challengeId: string) {
   return response.data;
 }
 
+/** Admin-only (AdminGuard server-side) — the inverse of closeChallenge: joining and
+ * logging progress are accepted again; members and history are untouched. */
+export async function reopenChallenge(challengeId: string) {
+  const response = await api.patch(`/challenges/${challengeId}/reopen`);
+  return response.data;
+}
+
 /** Creator-only — deletes the challenge (soft delete server-side: members and
  * history are kept, it just stops existing for everyone). Not the same as
  * closeChallenge. */
