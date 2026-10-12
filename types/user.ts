@@ -75,3 +75,11 @@ export interface UpdateProfilePayload {
    * client staying in sync with it. */
   practice_preferences?: string[];
 }
+
+/** GET /users/banned (admin only): an account an admin banned and can unban. */
+export interface BannedUserContract {
+  id: string;
+  username: string;
+  display_name: string | null;
+  profile_image_url: string | null;
+}

@@ -666,6 +666,12 @@ const es = {
     dismissedMessage: 'Reporte descartado',
     hiddenMessage: 'Contenido ocultado',
     hiddenPenalizedMessage: 'Contenido ocultado y strike registrado',
+    bannedTitle: 'Usuarios baneados',
+    bannedA11y: 'Desbanear a {{username}}',
+    unbanCta: 'Desbanear',
+    confirmUnbanTitle: '¿Desbanear a {{username}}?',
+    confirmUnbanDescription: 'Podrá volver a iniciar sesión y usar la app.',
+    unbannedMessage: 'Usuario desbaneado',
   },
   navigation: {
     tabs: {

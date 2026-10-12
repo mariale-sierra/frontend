@@ -678,6 +678,12 @@ const en = {
     dismissedMessage: 'Report dismissed',
     hiddenMessage: 'Content hidden',
     hiddenPenalizedMessage: 'Content hidden and strike recorded',
+    bannedTitle: 'Banned users',
+    bannedA11y: 'Unban {{username}}',
+    unbanCta: 'Unban',
+    confirmUnbanTitle: 'Unban {{username}}?',
+    confirmUnbanDescription: 'They will be able to sign in and use the app again.',
+    unbannedMessage: 'User unbanned',
   },
   navigation: {
     tabs: {

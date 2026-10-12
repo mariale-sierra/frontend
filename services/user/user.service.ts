@@ -1,6 +1,7 @@
 import api from '../api';
 import type { ChallengeContract } from '../../types/challenge';
 import type {
+  BannedUserContract,
   MyProfileContract,
   PublicProfileContract,
   UpdateProfilePayload,
@@ -69,6 +70,12 @@ export async function searchUsers(query: string): Promise<PublicProfileContract[
 /** Admin-only (global). Reuses the backend's is_active flag — never a hard delete. */
 export async function banUser(userId: string) {
   const response = await api.patch(`/users/${userId}/ban`);
+  return response.data;
+}
+
+/** Admin only (AdminGuard server-side): banned accounts, so they can be unbanned from the app. */
+export async function listBannedUsers(): Promise<BannedUserContract[]> {
+  const response = await api.get<BannedUserContract[]>('/users/banned');
   return response.data;
 }
 
