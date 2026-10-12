@@ -136,4 +136,101 @@ describe('useLocationSwitch', () => {
     await waitFor(() => expect(hook.current.canApply).toBe(true));
     expect(hook.current.items[0].chosenId).toBe(13);
   });
+
+  // Regression (BUG-01): two exercises sharing alternatives both defaulted to
+  // alternatives[0], giving "9:23,11:18,10:23" with canApply true — which the
+  // backend rejects ("Exercise 23 is not a compatible substitute for 10 at
+  // home"), dropping the whole adaptation.
+  describe('one substitute never stands in for two exercises', () => {
+    const ROUTINE = [
+      { exerciseId: 9, name: 'Kettlebell Swing' },
+      { exerciseId: 11, name: 'Rowing Intervals' },
+      { exerciseId: 10, name: 'Battle Ropes' },
+    ];
+    const HOME = { code: 'home', name: 'Home', requiresSubstitution: true, unsupportedExerciseIds: [9, 10, 11] };
+    const SHARED = [alt(23, 'Bodyweight Circuit'), alt(26, 'Resistance Band Workout')];
+
+    function setupRoutine(current = null as any) {
+      availability.mockResolvedValue([HOME]);
+      return renderHook(() => useLocationSwitch({ visible: true, routineId: 2, exercises: ROUTINE, current }));
+    }
+    const chosen = (hook: { current: ReturnType<typeof useLocationSwitch> }) =>
+      hook.current.buildAdaptation()?.substitutions.map((s) => `${s.originalExerciseId}:${s.substituteExerciseId}`);
+
+    it('the reported Gym → Home case picks distinct substitutes', async () => {
+      alternatives.mockImplementation((id: number) =>
+        Promise.resolve(result(id === 11 ? [alt(18, 'Full Body Stretch Routine')] : SHARED)),
+      );
+      const { result: hook } = await setupRoutine();
+      await waitFor(() => expect(hook.current.locations).not.toBeNull());
+      await act(async () => hook.current.selectLocation(HOME));
+
+      await waitFor(() => expect(hook.current.canApply).toBe(true));
+      expect(alternatives).toHaveBeenCalledWith(9, 'home', [11, 10]);
+      expect(chosen(hook)).toEqual(['9:23', '11:18', '10:26']);
+    });
+
+    it('when the only alternative is taken the second exercise stays as written', async () => {
+      alternatives.mockResolvedValue(result([alt(23, 'Bodyweight Circuit')]));
+      const { result: hook } = await setupRoutine();
+      await waitFor(() => expect(hook.current.locations).not.toBeNull());
+      await act(async () => hook.current.selectLocation(HOME));
+
+      await waitFor(() => expect(hook.current.canApply).toBe(true));
+      expect(chosen(hook)).toEqual(['9:23']);
+      expect(hook.current.usedByOther(10, 23)).toBe('Kettlebell Swing');
+      expect(hook.current.usedByOther(9, 23)).toBeNull();
+    });
+
+    it('a manual pick of a substitute already in use is ignored; a free one works and frees the old one', async () => {
+      alternatives.mockImplementation((id: number) =>
+        Promise.resolve(result(id === 11 ? [] : [...SHARED, alt(27, 'Mini Band Row')])),
+      );
+      const { result: hook } = await setupRoutine();
+      await waitFor(() => expect(hook.current.locations).not.toBeNull());
+      await act(async () => hook.current.selectLocation(HOME));
+      await waitFor(() => expect(hook.current.canApply).toBe(true));
+      expect(chosen(hook)).toEqual(['9:23', '10:26']);
+
+      await act(async () => hook.current.choose(10, 23)); // taken by 9 → ignored
+      expect(chosen(hook)).toEqual(['9:23', '10:26']);
+      expect(hook.current.canApply).toBe(true);
+
+      await act(async () => hook.current.choose(10, 27)); // free → works, frees 26
+      await act(async () => hook.current.choose(9, 26));
+      expect(chosen(hook)).toEqual(['9:26', '10:27']);
+      expect(hook.current.canApply).toBe(true);
+      expect(hook.current.withoutAlternatives.map((i) => i.exerciseId)).toEqual([11]);
+    });
+
+    it('re-opening the saved location restores both picks whatever order the answers arrive in', async () => {
+      const resolvers: Record<number, (v: unknown) => void> = {};
+      alternatives.mockImplementation(
+        (id: number) =>
+          new Promise((r) => {
+            resolvers[id] = r;
+          }),
+      );
+      const current = {
+        routineId: 2,
+        locationCode: 'home',
+        locationName: 'Home',
+        substitutions: [
+          { originalExerciseId: 9, originalName: 'Kettlebell Swing', substituteExerciseId: 26, substituteName: 'Resistance Band Workout' },
+          { originalExerciseId: 10, originalName: 'Battle Ropes', substituteExerciseId: 23, substituteName: 'Bodyweight Circuit' },
+        ],
+      };
+      const { result: hook } = await setupRoutine(current);
+      await waitFor(() => expect(hook.current.locations).not.toBeNull());
+      await act(async () => hook.current.selectLocation(HOME));
+
+      // Battle Ropes answers first: it must not grab 26, Kettlebell Swing's saved pick.
+      await act(async () => resolvers[10](result(SHARED)));
+      await act(async () => resolvers[11](result([])));
+      await act(async () => resolvers[9](result(SHARED)));
+
+      await waitFor(() => expect(hook.current.canApply).toBe(true));
+      expect(chosen(hook)).toEqual(['9:26', '10:23']);
+    });
+  });
 });

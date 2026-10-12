@@ -550,6 +550,7 @@ const en = {
       reset: 'Back to the original routine',
       loadError: 'Could not load locations. Try again later.',
       swappedFrom: 'Instead of {{name}}',
+      usedFor: 'Already replacing {{name}}',
       yourVersion: 'Your version for {{location}} — only you see these swaps.',
       invalidSwaps: 'Your location swaps are no longer valid, so the routine is shown as written.',
     },

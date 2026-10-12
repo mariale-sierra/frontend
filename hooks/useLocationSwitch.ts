@@ -89,15 +89,29 @@ export function useLocationSwitch({ visible, routineId, exercises, current }: Op
           .then((result) => {
             if (requestRef.current !== requestId) return;
             const saved = previous.find((s) => s.originalExerciseId === exercise.exerciseId);
-            const preferred =
-              result.alternatives.find((a) => a.id === saved?.substituteExerciseId) ?? result.alternatives[0] ?? null;
-            setItems((prev) =>
-              prev.map((item) =>
+            setItems((prev) => {
+              // The backend rejects one substitute used for two exercises, so
+              // the default pick skips what another exercise already has — or
+              // will get back from the saved choice once its own answer lands.
+              const others = prev.filter((item) => item.exerciseId !== exercise.exerciseId);
+              const chosenByOthers = new Set(others.map((item) => item.chosenId));
+              const reserved = new Set(
+                previous
+                  .filter((s) => s.originalExerciseId !== exercise.exerciseId)
+                  .map((s) => s.substituteExerciseId),
+              );
+              const preferred =
+                result.alternatives.find(
+                  (a) => a.id === saved?.substituteExerciseId && !chosenByOthers.has(a.id),
+                ) ??
+                result.alternatives.find((a) => !chosenByOthers.has(a.id) && !reserved.has(a.id)) ??
+                null;
+              return prev.map((item) =>
                 item.exerciseId === exercise.exerciseId
                   ? { ...item, alternatives: result.alternatives, chosenId: preferred?.id ?? null }
                   : item,
-              ),
-            );
+              );
+            });
           })
           .catch(() => {
             if (requestRef.current !== requestId) return;
@@ -113,8 +127,20 @@ export function useLocationSwitch({ visible, routineId, exercises, current }: Op
   );
 
   const choose = useCallback((exerciseId: number, alternativeId: number) => {
-    setItems((prev) => prev.map((item) => (item.exerciseId === exerciseId ? { ...item, chosenId: alternativeId } : item)));
+    setItems((prev) =>
+      // Already the substitute of another exercise: the backend would reject the pair.
+      prev.some((item) => item.exerciseId !== exerciseId && item.chosenId === alternativeId)
+        ? prev
+        : prev.map((item) => (item.exerciseId === exerciseId ? { ...item, chosenId: alternativeId } : item)),
+    );
   }, []);
+
+  /** Name of the other exercise already using `alternativeId` as its substitute, if any. */
+  const usedByOther = useCallback(
+    (exerciseId: number, alternativeId: number): string | null =>
+      items.find((item) => item.exerciseId !== exerciseId && item.chosenId === alternativeId)?.name ?? null,
+    [items],
+  );
 
   const backToLocations = useCallback(() => {
     requestRef.current += 1;
@@ -125,10 +151,12 @@ export function useLocationSwitch({ visible, routineId, exercises, current }: Op
   const loading = items.some((item) => item.alternatives === null);
   /** Exercises that stay as written because nothing compatible exists there. */
   const withoutAlternatives = items.filter((item) => item.alternatives !== null && item.alternatives.length === 0);
-  const canApply = selected !== null && routineId != null && !loading;
+  const chosenIds = items.flatMap((item) => (item.chosenId != null ? [item.chosenId] : []));
+  const hasDuplicateChoice = new Set(chosenIds).size !== chosenIds.length;
+  const canApply = selected !== null && routineId != null && !loading && !hasDuplicateChoice;
 
   const buildAdaptation = useCallback((): WorkoutAdaptation | null => {
-    if (!selected || routineId == null || loading) return null;
+    if (!selected || routineId == null || loading || hasDuplicateChoice) return null;
     const substitutions: ChosenSubstitute[] = [];
     for (const item of items) {
       const alternative = item.alternatives?.find((a) => a.id === item.chosenId);
@@ -141,7 +169,7 @@ export function useLocationSwitch({ visible, routineId, exercises, current }: Op
       });
     }
     return { routineId, locationCode: selected.code, locationName: selected.name, substitutions };
-  }, [selected, routineId, loading, items]);
+  }, [selected, routineId, loading, hasDuplicateChoice, items]);
 
   return {
     locations,
@@ -153,6 +181,7 @@ export function useLocationSwitch({ visible, routineId, exercises, current }: Op
     canApply,
     selectLocation,
     choose,
+    usedByOther,
     backToLocations,
     buildAdaptation,
   };

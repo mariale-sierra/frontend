@@ -538,6 +538,7 @@ const es = {
       reset: 'Volver a la rutina original',
       loadError: 'No se pudieron cargar las ubicaciones. Inténtalo más tarde.',
       swappedFrom: 'En lugar de {{name}}',
+      usedFor: 'Ya reemplaza a {{name}}',
       yourVersion: 'Tu versión para {{location}} — solo tú ves estos cambios.',
       invalidSwaps: 'Tus cambios de ubicación ya no son válidos, así que se muestra la rutina original.',
     },

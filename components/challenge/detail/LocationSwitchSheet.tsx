@@ -109,6 +109,8 @@ export function LocationSwitchSheet({
                   ) : (
                     item.alternatives.map((alternative) => {
                       const picked = item.chosenId === alternative.id;
+                      // One substitute can't stand in for two exercises (the backend rejects it).
+                      const usedBy = flow.usedByOther(item.exerciseId, alternative.id);
                       return (
                         <Row
                           key={alternative.id}
@@ -117,10 +119,17 @@ export function LocationSwitchSheet({
                           align="center"
                           gap="md"
                           accessibilityRole="radio"
-                          accessibilityState={{ selected: picked }}
-                          style={styles.alternativeRow}
+                          accessibilityState={{ selected: picked, disabled: usedBy !== null }}
+                          style={[styles.alternativeRow, usedBy !== null && styles.alternativeUsed]}
                         >
-                          <Text variant="body" numberOfLines={1} style={styles.fill}>{toTitleCase(alternative.name)}</Text>
+                          <View style={styles.fill}>
+                            <Text variant="body" numberOfLines={1}>{toTitleCase(alternative.name)}</Text>
+                            {usedBy !== null ? (
+                              <Text variant="caption" tone="secondary" numberOfLines={1}>
+                                {t('challengeRoutineDay.location.usedFor', { name: toTitleCase(usedBy) })}
+                              </Text>
+                            ) : null}
+                          </View>
                           <View style={[styles.check, picked && styles.checkSelected]}>
                             {picked ? <Icon name="checkmark-outline" size={CHECK_ICON_SIZE} color={colors.ink} /> : null}
                           </View>
@@ -173,6 +182,7 @@ const styles = StyleSheet.create({
   swapItem: { gap: spacing.xs },
   itemSpinner: { alignSelf: 'flex-start' },
   alternativeRow: { paddingVertical: spacing.sm },
+  alternativeUsed: { opacity: textOpacity.tertiary },
   warning: { paddingTop: spacing.xs },
   actions: { marginTop: spacing.sm },
   check: {
