@@ -26,6 +26,11 @@ import { submitWorkoutProgress } from '../../services/workout-log/workout-log.se
 import type { WorkoutLogContract } from '../../types/workout-log';
 import { applyExerciseMetrics } from '../../services/metrics/applyExerciseMetrics';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
+import {
+  adaptationForRoutine,
+  toSubstitutionPayload,
+  useWorkoutAdaptationStore,
+} from '../../store/workoutAdaptationStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
 import { showProgressLoggedFeedback } from '../../utils/progressLoggedFeedback';
 import { useAuth } from '../../hooks/useAuth';
@@ -94,6 +99,11 @@ export default function Camera() {
   const selectedChallengeId = useMetricsEntryStore((s) => s.selectedChallengeId);
   const currentRoutineId = useMetricsEntryStore((s) => s.currentRoutineId);
   const exerciseMetrics = useMetricsEntryStore((s) => s.exerciseMetrics);
+  const clearAdaptation = useWorkoutAdaptationStore((s) => s.clearAdaptation);
+  // B7: the user's location choice, only when it was made for the routine being logged.
+  const adaptation = useWorkoutAdaptationStore((s) =>
+    selectedChallengeId ? adaptationForRoutine(s.byChallenge[selectedChallengeId], currentRoutineId) : null,
+  );
 
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
@@ -218,6 +228,10 @@ export default function Camera() {
       visibility,
       caption: caption.trim() || undefined,
       routineId: currentRoutineId ?? undefined,
+      // B7: where the user trained and the swaps they chose (only if made for this routine).
+      ...(adaptation
+        ? { locationCode: adaptation.locationCode, substitutions: toSubstitutionPayload(adaptation) }
+        : {}),
       taggedUserIds: isOwner && taggedUserIds.length > 0 ? taggedUserIds : undefined,
     };
 
@@ -257,6 +271,7 @@ export default function Camera() {
         console.error('[Camera] applyExerciseMetrics failed:', metricsError);
       }
     }
+    clearAdaptation(selectedChallengeId);
     invalidateChallengeProgressCache();
     setSubmittingProgress(false);
     try {

@@ -3,8 +3,9 @@ import { safeBack } from '../utils/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useMetricsEntryStore } from '../store/metricsEntryStore';
+import { adaptationForRoutine, useWorkoutAdaptationStore } from '../store/workoutAdaptationStore';
 import { useAuth } from './useAuth';
-import { getTodayRoutineForChallenge } from '../services/challenge/challenge.service';
+import { loadTodayRoutine } from '../services/challenge/todayRoutineAdapted';
 import { getRoutine } from '../services/routine/routine.service';
 import { getMyChallenges } from '../services/user/user.service';
 import {
@@ -30,6 +31,11 @@ export function useMetricsScreen() {
   const updateMetricValue = useMetricsEntryStore((state) => state.updateMetricValue);
   const hydrateMetricsData = useMetricsEntryStore((state) => state.hydrateMetricsData);
 
+  // B7: the user's own location choice for the routine on screen, if any.
+  const adaptation = useWorkoutAdaptationStore((state) =>
+    adaptationForRoutine(state.byChallenge[selectedChallengeId], currentRoutineId),
+  );
+
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [challengeLoadError, setChallengeLoadError] = useState<string | null>(null);
   // Cycle-day number + routine name for the header ("Day {{n}} · {{routine}}").
@@ -38,6 +44,8 @@ export function useMetricsScreen() {
   // since getTodayRoutine only returns routine_id, not the routine's name).
   const [currentDay, setCurrentDay] = useState<number | null>(null);
   const [routineName, setRoutineName] = useState<string | null>(null);
+  // B7: the user's location swaps were rejected by the backend and dropped.
+  const [adaptationInvalid, setAdaptationInvalid] = useState(false);
 
   // Tracks which challengeId we last fetched a routine for, to avoid double-fetching
   // after the init effect sets selectedChallengeId via hydrateMetricsData.
@@ -90,7 +98,8 @@ export function useMetricsScreen() {
 
         // Then fetch today's routine separately — failure here won't block the dropdown.
         try {
-          const routineData = await getTodayRoutineForChallenge(initialChallenge.id);
+          const { routine: routineData, invalidAdaptation } = await loadTodayRoutine(initialChallenge.id);
+          setAdaptationInvalid(invalidAdaptation);
           const exercises = adaptTodayRoutineExercises(routineData, initialChallenge);
           setExerciseMetrics(exercises, routineData.routine_id);
           loadDayAndRoutineName(routineData);
@@ -126,7 +135,8 @@ export function useMetricsScreen() {
     async function loadRoutine() {
       setIsLoadingData(true);
       try {
-        const routineData = await getTodayRoutineForChallenge(selectedChallengeId);
+        const { routine: routineData, invalidAdaptation } = await loadTodayRoutine(selectedChallengeId);
+        setAdaptationInvalid(invalidAdaptation);
         const exercises = adaptTodayRoutineExercises(routineData, challenge!);
 
         lastFetchedChallengeId.current = selectedChallengeId;
@@ -163,6 +173,8 @@ export function useMetricsScreen() {
     challengeLoadError,
     currentDay,
     routineName,
+    adaptation,
+    adaptationInvalid,
     updateMetricValue,
     goToCamera,
     goToRestDay,

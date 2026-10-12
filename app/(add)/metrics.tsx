@@ -29,6 +29,8 @@ export default function Metrics() {
     challengeLoadError,
     currentDay,
     routineName,
+    adaptation,
+    adaptationInvalid,
     updateMetricValue,
     goToCamera,
     goToRestDay,
@@ -141,6 +143,14 @@ export default function Metrics() {
             ? t('logMetrics.entry.dayWithRoutine', { day: currentDay ?? 1, routine: routineName })
             : t('logMetrics.pickChallenge.dayLabel', { day: currentDay ?? 1 })}
         </Text>
+        {adaptation && (
+          <Text variant="caption" tone="secondary">
+            {t('challengeRoutineDay.location.yourVersion', { location: adaptation.locationName })}
+          </Text>
+        )}
+        {adaptationInvalid && (
+          <Text variant="caption" tone="secondary">{t('challengeRoutineDay.location.invalidSwaps')}</Text>
+        )}
       </View>
 
       <View style={styles.contentWrap}>{renderContent()}</View>

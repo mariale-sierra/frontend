@@ -136,10 +136,16 @@ export async function completeChallenge(id: string) {
   return response.data;
 }
 
+/** Today's routine. With `adaptation` (B7) the backend returns the user's own
+ * effective view — their location's substitutes in place of the routine's
+ * exercises; the shared routine itself is never changed. */
 export async function getTodayRoutineForChallenge(
   challengeId: string,
+  adaptation?: { locationCode: string; substitutions: string },
 ): Promise<TodayRoutineContract> {
-  const response = await api.get(`/routine/today/${challengeId}`);
+  const response = await api.get(`/routine/today/${challengeId}`, {
+    params: adaptation ? { location: adaptation.locationCode, substitutions: adaptation.substitutions } : undefined,
+  });
   return response.data;
 }
 
