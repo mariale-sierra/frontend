@@ -2,7 +2,13 @@ import { fireEvent, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import ChallengeDetail from '../[id]/index';
-import { closeChallenge, getChallenge, joinChallenge, reopenChallenge } from '../../../services/challenge/challenge.service';
+import {
+  closeChallenge,
+  getChallenge,
+  getMyChallengeJoinRequest,
+  joinChallenge,
+  reopenChallenge,
+} from '../../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../../services/user/user.service';
 import { useIsAdmin } from '../../../hooks/useIsAdmin';
 import { useErrorNotificationStore } from '../../../store/errorNotificationStore';
@@ -38,6 +44,7 @@ jest.mock('../../../services/challenge/challenge.service', () => ({
   closeChallenge: jest.fn(),
   reopenChallenge: jest.fn(),
   joinChallenge: jest.fn(),
+  getMyChallengeJoinRequest: jest.fn(),
 }));
 jest.mock('../../../services/user/user.service', () => ({ getMyChallenges: jest.fn() }));
 jest.mock('../../../components/challenge/challengeAccentBackdrop', () => ({ ChallengeAccentBackdrop: () => null }));
@@ -57,9 +64,12 @@ const challenge = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-async function renderInfo(setup: { challenge?: unknown; enrolled?: unknown[]; admin?: boolean } = {}) {
+async function renderInfo(
+  setup: { challenge?: unknown; enrolled?: unknown[]; admin?: boolean; pendingRequest?: boolean } = {},
+) {
   (getChallenge as jest.Mock).mockResolvedValue(setup.challenge ?? challenge());
   (getMyChallenges as jest.Mock).mockResolvedValue(setup.enrolled ?? []);
+  (getMyChallengeJoinRequest as jest.Mock).mockResolvedValue({ hasPendingRequest: setup.pendingRequest ?? false });
   (useIsAdmin as jest.Mock).mockReturnValue(setup.admin ?? false);
   const screen = await renderWithTheme(<ChallengeDetail />);
   await waitFor(() => expect(screen.getByText('Morning Run')).toBeTruthy());
@@ -255,6 +265,23 @@ describe('Challenge info — the owner and admin actions', () => {
       // found out about asynchronously) never also fires for this same
       // membership — this device already has its own immediate feedback.
       expect(markChallengeMembershipSeen).toHaveBeenCalledWith('ch-1');
+    });
+
+    // Regression (INC-02): reopening the screen offered Join again even though
+    // the request was still pending, and tapping it got a 409.
+    it('shows "request sent" again when the screen is reopened with the request still pending', async () => {
+      const screen = await renderInfo({ challenge: challenge({ visibility: 'private' }), pendingRequest: true });
+
+      await waitFor(() => expect(screen.getByText('challenges.requestPendingLabel')).toBeTruthy());
+      expect(getMyChallengeJoinRequest).toHaveBeenCalledWith('ch-1');
+      expect(screen.queryByLabelText('challenges.joinButtonA11y')).toBeNull();
+    });
+
+    it('offers Join on a private challenge without a pending request', async () => {
+      const screen = await renderInfo({ challenge: challenge({ visibility: 'private' }) });
+
+      await waitFor(() => expect(screen.getByLabelText('challenges.joinButtonA11y')).toBeTruthy());
+      expect(screen.queryByText('challenges.requestPendingLabel')).toBeNull();
     });
 
     it('does not mark the membership seen for a private request that is still pending — there is nothing to find out yet', async () => {

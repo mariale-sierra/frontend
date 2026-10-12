@@ -18,7 +18,7 @@ import type { ChallengeInfoRow } from '../../../components/challenge/detail';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { closeChallenge, getChallenge, isChallengeOwner, joinChallenge, reopenChallenge } from '../../../services/challenge/challenge.service';
-import { getMyChallenges } from '../../../services/user/user.service';
+import { getMyMembership } from '../../../services/challenge/myMembership';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
 import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
@@ -170,13 +170,10 @@ export default function ChallengeDetail() {
     // See app/challenge/[id]/routine/[day].tsx and progress.tsx — same
     // "created_by_user_id vs enrolled-list membership" check used everywhere
     // else in the app to decide whether the current user is already in.
-    getMyChallenges()
-      .then((enrolled) => {
-        const isMember = enrolled.some(
-          (c) => String(c.id) === String(challenge.id) && c.status !== 'left',
-        );
-        setMembershipStatus(isMember ? 'joined' : 'none');
-      })
+    // B8: a private challenge's pending request comes back from the backend
+    // too, so reopening this screen shows "Request sent" instead of Join.
+    getMyMembership(challenge)
+      .then(setMembershipStatus)
       .catch(() => setMembershipStatus('none'))
       .finally(() => setMembershipLoading(false));
   }, [challenge]);

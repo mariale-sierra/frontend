@@ -253,6 +253,14 @@ export async function reopenChallenge(challengeId: string) {
   return response.data;
 }
 
+/** The session user's own pending request to join this challenge (only ever theirs),
+ * so the screen can show "request sent" again after being reopened. A background
+ * check: no global error toast if it fails. */
+export async function getMyChallengeJoinRequest(challengeId: string): Promise<{ hasPendingRequest: boolean }> {
+  const response = await api.get(`/challenges/${challengeId}/join-requests/mine`, { suppressErrorToast: true });
+  return response.data;
+}
+
 /** Creator-only — deletes the challenge (soft delete server-side: members and
  * history are kept, it just stops existing for everyone). Not the same as
  * closeChallenge. */

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../../../components/layout/screenBackground';
 import { Row } from '../../../../components/layout/row';
 import { BackButton } from '../../../../components/ui/backButton';
+import { Button } from '../../../../components/ui/button';
 import { Icon } from '../../../../components/ui/icon';
 import { Text } from '../../../../components/ui/text';
 import { ChallengeAccentBackdrop } from '../../../../components/challenge/challengeAccentBackdrop';
@@ -17,7 +18,7 @@ import { toTitleCase } from '../../../../utils/format';
 import { toChallengeDetailViewModel } from '../../../../services/adapters/index';
 import { getUpcomingDays } from '../../../../services/adapters/challengeDetailAdapter';
 import { getChallenge, joinChallenge } from '../../../../services/challenge/challenge.service';
-import { getMyChallenges } from '../../../../services/user/user.service';
+import { getMyMembership } from '../../../../services/challenge/myMembership';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../../services/adapters/challengeState';
 import {
   activityTypeFromMetricCodes,
@@ -36,7 +37,7 @@ import { getLocationAvailability, type LocationAvailability } from '../../../../
 import { adaptationForRoutine, useWorkoutAdaptationStore } from '../../../../store/workoutAdaptationStore';
 import type { WorkoutAdaptation } from '../../../../store/workoutAdaptationStore';
 
-type MembershipStatus = 'creator' | 'joined' | 'none';
+type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
 
 // The chevron on an exercise row, that says tapping it opens the exercise.
 const EXERCISE_CHEVRON_SIZE = 14;
@@ -161,7 +162,16 @@ export default function RoutineDayDetail() {
       const challengeId = typeof id === 'string' ? id : '';
       if (!challengeId) return;
       try {
-        await joinChallenge(challengeId);
+        const response = await joinChallenge(challengeId);
+        // Same as app/challenge/[id]/index.tsx: a private challenge only files a
+        // request — not a member yet, so no "joined" toast and no redirect.
+        if (response?.status === 'requested') {
+          setMembershipStatus('requested');
+          showSuccess({
+            message: t('challenges.joinConfirm.requestSent', { name: challenge?.name ?? t('challenges.fallbackName') }),
+          });
+          return;
+        }
         setMembershipStatus('joined');
         // Same fix as app/challenge/[id]/index.tsx's own join flow, per
         // explicit follow-up — this screen has its own separate Join
@@ -199,11 +209,8 @@ export default function RoutineDayDetail() {
 
   useEffect(() => {
     if (!challenge) return;
-    getMyChallenges()
-      .then((enrolled) => {
-        const isMember = enrolled.some((c) => String(c.id) === String(challenge.id) && c.status !== 'left');
-        setMembershipStatus(isMember ? 'joined' : 'none');
-      })
+    getMyMembership(challenge)
+      .then(setMembershipStatus)
       .catch(() => setMembershipStatus('none'))
       .finally(() => setMembershipLoading(false));
   }, [challenge]);
@@ -257,7 +264,13 @@ export default function RoutineDayDetail() {
       cancelled = true;
     };
   }, [refsKey]);
-  const canChangeLocation = membershipStatus !== 'none' && routineId != null && routineExerciseRefs.length > 0;
+  // Same bottom-bar rules as app/challenge/[id]/index.tsx: nothing to join once
+  // an admin closed the challenge, and a pending request shows "Request sent".
+  const isClosed = challenge?.status === 'closed';
+  const showsBottomBar =
+    !isClosed && !membershipLoading && (membershipStatus === 'none' || membershipStatus === 'requested');
+  const canChangeLocation =
+    membershipStatus !== 'none' && membershipStatus !== 'requested' && routineId != null && routineExerciseRefs.length > 0;
 
   // Tapping an exercise opens its own screen — everything the catalog knows about
   // it, not just the one-line description this row used to expand into. Keyed by
@@ -324,7 +337,7 @@ export default function RoutineDayDetail() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: membershipStatus === 'none' ? spacing['2xl'] : insets.bottom + spacing.xl }}
+        contentContainerStyle={{ paddingBottom: showsBottomBar ? spacing['2xl'] : insets.bottom + spacing.xl }}
       >
         <Row justify="space-between" align="center" style={styles.topBar}>
           <BackButton style={styles.backButton} />
@@ -467,7 +480,15 @@ export default function RoutineDayDetail() {
         )}
       </ScrollView>
 
-      {!membershipLoading && membershipStatus === 'none' && (
+      {showsBottomBar && membershipStatus === 'requested' && (
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+          <Button variant="subtle" size="md" disabled leftIcon={<Icon name="time-outline" size={20} color={colors.paper} />}>
+            {t('challenges.requestPendingLabel')}
+          </Button>
+        </View>
+      )}
+
+      {showsBottomBar && membershipStatus === 'none' && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
           <Pressable
             onPress={joinPopup.show}
