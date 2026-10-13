@@ -208,6 +208,11 @@ Full backend/push details: `backend/docs/notificaciones/B3-NOTIFICACIONES.md`.
 - Reactions lead with people, not numbers: `components/social/ReactorsSummary.tsx` (from the feed's `recent_reactors`, drawn over the photo's bottom-left corner with a text shadow — `overImage`) and `ReactorsSheet.tsx` (`GET /workout-posts/:postId/reactions/users`, `X-Next-Cursor`). The like count is never rendered.
 - Hashtags: typed in the camera confirm screen's caption (`app/(add)/camera.tsx`), parsed and stored by the backend (`havit.hashtags`, `havit.workout_post_hashtags`). `utils/hashtags.ts` mirrors the backend parser — keep both in sync. `components/social/HashtagText.tsx` shows tags in `activityColors.flexibility` blue, regular weight, no pill; they aren't tappable until a hashtag search exists.
 
+## 12d. Badges and Empty States (B12)
+Full decision record (computed-on-the-fly rewards, catalog, demo data): `docs/BADGES-RECOMPENSAS.md`.
+- `components/badges/` (`BadgesSection`, `BadgeTile`, `BadgeDetailSheet`) renders `GET /badges/me` / `GET /badges/user/:userId` on both profiles; icon and color per badge `code` live in `constants/badges.ts`, copy in `badges.items.<code>` (backend name/description as fallback).
+- `components/ui/emptyState.tsx` is the shared empty state (icon, title, message, up to two buttons toward challenges/people). Use it instead of a bare centered `Text` when a screen has somewhere useful to send the user; `components/home/EmptyFeed.tsx` is now a thin wrapper over it.
+
 ## 13. Do and Don't Rules
 Do:
 - Read this guide and inspect the target route before editing.

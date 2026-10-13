@@ -1,3 +1,4 @@
+import { EmptyState } from '../../components/ui/emptyState';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -311,12 +312,20 @@ export default function Messaging() {
                 {t('common.actions.continue')}
               </Button>
             </View>
-          ) : (
+          ) : query.trim() ? (
             <View style={styles.center}>
-              <Text tone="secondary">
-                {query.trim() ? t('chats.noResultsForSearch') : t('chats.emptyState')}
-              </Text>
+              <Text tone="secondary">{t('chats.noResultsForSearch')}</Text>
             </View>
+          ) : (
+            <EmptyState
+              icon="chatbubbles-outline"
+              title={t('chats.emptyState')}
+              message={t('chats.emptyStateHint')}
+              actions={[
+                { label: t('chats.emptyStateNew'), onPress: () => router.push('/messaging/new'), testID: 'empty-chats-new' },
+                { label: t('chats.emptyStateFindPeople'), onPress: () => router.push('/(tabs)/search'), testID: 'empty-chats-people' },
+              ]}
+            />
           )
         }
       />

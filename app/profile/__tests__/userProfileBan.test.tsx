@@ -37,6 +37,8 @@ jest.mock('../../../services/user/user.service', () => ({ getPublicProfile: jest
 jest.mock('../../../services/challenge/challenge.service', () => ({
   getUserPosts: jest.fn().mockResolvedValue({ photos: [] }),
 }));
+// Badges have their own tests (components/badges); here the row is just absent.
+jest.mock('../../../components/badges', () => ({ BadgesSection: () => null }));
 // The profile's own parts are tested on their own; here they are markers, and the follow button is
 // the one thing the admin's button sits under.
 jest.mock('../../../components/profile', () => {

@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
 import { PhotoGrid } from './PhotoGrid';
@@ -42,6 +42,7 @@ function haveSamePhotos(current: ChallengePhoto[], next: ChallengePhoto[]) {
 
 export const PostsGrid = memo(function PostsGrid({ view, onPhotoPress, refreshSignal }: PostsGridProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const [photos, setPhotos] = useState<ChallengePhoto[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -106,6 +107,11 @@ export const PostsGrid = memo(function PostsGrid({ view, onPhotoPress, refreshSi
       photos={visiblePhotos}
       loading={loading}
       emptyLabel={view === 'posts' ? t('profile.emptyPublicPhotos') : t('profile.emptyAllPhotos')}
+      emptyTitle={t('profile.emptyPostsTitle')}
+      emptyActions={[
+        { label: t('profile.emptyPostsExplore'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'empty-posts-explore' },
+        { label: t('profile.emptyPostsLog'), onPress: () => router.push('/log'), testID: 'empty-posts-log' },
+      ]}
       onPhotoPress={onPhotoPress ? (photo) => onPhotoPress(photo, visiblePhotos) : undefined}
     />
   );

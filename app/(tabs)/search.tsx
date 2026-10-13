@@ -1,3 +1,4 @@
+import { EmptyState } from '../../components/ui/emptyState';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -122,17 +123,23 @@ export default function Search() {
         </View>
 
         {!hasQuery ? (
-          <View style={styles.center}>
-            <Text tone="secondary" align="center">{t('search.emptyPrompt')}</Text>
-          </View>
+          <EmptyState
+            icon="search-outline"
+            title={t('search.emptyPromptTitle')}
+            message={t('search.emptyPrompt')}
+            actions={[{ label: t('search.exploreChallenges'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'search-explore' }]}
+          />
         ) : catalogLoading ? (
           <View style={styles.center}>
             <ActivityIndicator color={colors.primary} />
           </View>
         ) : hasNoResults ? (
-          <View style={styles.center}>
-            <Text tone="secondary" align="center">{t('search.emptyResults', { query: debouncedQuery })}</Text>
-          </View>
+          <EmptyState
+            icon="sad-outline"
+            title={t('search.emptyResults', { query: debouncedQuery })}
+            message={t('search.emptyResultsHint')}
+            actions={[{ label: t('search.exploreChallenges'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'search-explore' }]}
+          />
         ) : (
           <>
             {matchedChallenges.length > 0 && (

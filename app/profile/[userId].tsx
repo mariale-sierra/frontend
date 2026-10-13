@@ -19,6 +19,7 @@ import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { getUserPosts } from '../../services/challenge/challenge.service';
+import { BadgesSection } from '../../components/badges';
 
 const BAN_ICON_SIZE = 16;
 
@@ -225,6 +226,7 @@ export default function UserProfile() {
                 )
               }
             />
+            <BadgesSection userId={profile.id} refreshSignal={postsRefreshSignal} />
             <UserPostsGrid
               userId={profile.id}
               onPhotoPress={(photo, photos) => openPostViewer(photos, photo, { ownerId: isOwnProfile ? sessionUserId : null })}

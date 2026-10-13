@@ -16,6 +16,7 @@ import { Row } from '../../components/layout/row';
 import { useAuth } from '../../hooks/useAuth';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import { BadgesSection } from '../../components/badges';
 
 /**
  * Profile tab. Structured so future sections (followers, stats) can slot in
@@ -129,6 +130,7 @@ export default function Profile() {
               onPressFollowing={() => router.push('/profile/following')}
               practices={profile?.practice_preferences}
             />
+            <BadgesSection refreshSignal={postsRefreshSignal} />
             <PostsViewToggle view={view} onViewChange={setView} />
             <PostsGrid view={view} onPhotoPress={handlePhotoPress} refreshSignal={postsRefreshSignal} />
             <Pressable onPress={() => router.push('/profile/about')} style={styles.aboutLink}>

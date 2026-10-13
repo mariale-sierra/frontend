@@ -1,3 +1,5 @@
+import { EmptyState } from '../ui/emptyState';
+import type { EmptyStateAction } from '../ui/emptyState';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
 import { colors, fillOpacity, radius, spacing, textOpacity } from '../../constants/theme';
@@ -29,6 +31,9 @@ interface PhotoGridProps {
   photos: ChallengePhoto[];
   loading: boolean;
   emptyLabel: string;
+  /** With `emptyActions`, the empty state gets a bold title above `emptyLabel` and buttons toward where photos come from. */
+  emptyTitle?: string;
+  emptyActions?: EmptyStateAction[];
   onPhotoPress?: (photo: ChallengePhoto) => void;
 }
 
@@ -55,7 +60,14 @@ const PhotoTile = memo(function PhotoTile({
 
 /** Presentational tile grid shared by PostsGrid (own posts) and other-user
  * profile screens — pure rendering, callers own fetching/filtering. */
-export const PhotoGrid = memo(function PhotoGrid({ photos, loading, emptyLabel, onPhotoPress }: PhotoGridProps) {
+export const PhotoGrid = memo(function PhotoGrid({
+  photos,
+  loading,
+  emptyLabel,
+  emptyTitle,
+  emptyActions,
+  onPhotoPress,
+}: PhotoGridProps) {
   const [imagesReady, setImagesReady] = useState(false);
   const hasRenderedContent = useRef(false);
 
@@ -117,6 +129,10 @@ export const PhotoGrid = memo(function PhotoGrid({ photos, loading, emptyLabel, 
         ))}
       </View>
     );
+  }
+
+  if (photos.length === 0 && emptyActions && emptyActions.length > 0) {
+    return <EmptyState icon="camera-outline" title={emptyTitle ?? emptyLabel} message={emptyTitle ? emptyLabel : undefined} actions={emptyActions} />;
   }
 
   if (photos.length === 0) {
