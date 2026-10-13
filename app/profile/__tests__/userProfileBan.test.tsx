@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import UserProfile from '../[userId]';
+import { router } from 'expo-router';
 import { banUser, getPublicProfile } from '../../../services/user/user.service';
 import { useIsAdmin } from '../../../hooks/useIsAdmin';
 import { useErrorNotificationStore } from '../../../store/errorNotificationStore';
@@ -33,6 +34,12 @@ jest.mock('../../../hooks/useAuth', () => ({ useAuth: () => ({ userId: 'admin-1'
 jest.mock('../../../hooks/useIsAdmin', () => ({ useIsAdmin: jest.fn() }));
 jest.mock('../../../hooks/usePullToRefresh', () => ({ usePullToRefresh: () => ({ refreshing: false, onRefresh: jest.fn() }) }));
 jest.mock('../../../services/user/user.service', () => ({ getPublicProfile: jest.fn(), banUser: jest.fn() }));
+// Only used to open a post passed as `postId` (a post shared in a chat).
+jest.mock('../../../services/challenge/challenge.service', () => ({
+  getUserPosts: jest.fn().mockResolvedValue({ photos: [] }),
+}));
+// Badges have their own tests (components/badges); here the row is just absent.
+jest.mock('../../../components/badges', () => ({ BadgesSection: () => null }));
 // The profile's own parts are tested on their own; here they are markers, and the follow button is
 // the one thing the admin's button sits under.
 jest.mock('../../../components/profile', () => {
@@ -41,7 +48,7 @@ jest.mock('../../../components/profile', () => {
     ProfileHeader: ({ actions }: { actions?: React.ReactNode }) => <View>{actions}</View>,
     FollowButton: () => <Text>follow-button</Text>,
     UserPostsGrid: () => null,
-    ProfilePhotoModal: () => null,
+
   };
 });
 
@@ -77,6 +84,15 @@ describe("Another user's profile — the admin's ban action", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useErrorNotificationStore.setState({ visible: false, config: { message: '' } });
+  });
+
+  it('has a Message button that opens a chat with that person (Instagram-style), for any viewer', async () => {
+    const screen = await renderProfile(false);
+    fireEvent.press(screen.getByTestId('profile-message-button'));
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/messaging/new',
+      params: { recipientUserId: USER_ID },
+    });
   });
 
   it('is only for an admin', async () => {

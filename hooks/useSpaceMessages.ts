@@ -25,10 +25,22 @@ export function useSpaceMessages(spaceId: string | null) {
   const [hasMore, setHasMore] = useState(false);
   const oldestIdRef = useRef<number | null>(null);
   const latestIdRef = useRef<number | null>(null);
+  // Same bug, same fix as useConversationMessages (1:1 chat): useFocusEffect
+  // fires on EVERY re-focus, and flipping `loading` back to true there made
+  // the space screen unmount its FlatList — coming back from Members,
+  // Manage or a profile showed a spinner and dropped the thread at its very
+  // top. Only the first load shows the spinner; later focuses refresh in
+  // place. Reset if the hook is ever reused for a different space.
+  const hasLoadedOnceRef = useRef(false);
+  const spaceIdRef = useRef(spaceId);
+  if (spaceIdRef.current !== spaceId) {
+    spaceIdRef.current = spaceId;
+    hasLoadedOnceRef.current = false;
+  }
 
-  const loadLatest = useCallback(() => {
+  const loadLatest = useCallback((options?: { silent?: boolean }) => {
     if (!spaceId) return;
-    setLoading(true);
+    if (!options?.silent) setLoading(true);
     setError(false);
     getSpaceMessages(spaceId)
       .then((page) => {
@@ -38,7 +50,9 @@ export function useSpaceMessages(spaceId: string | null) {
         setHasMore(page.nextBefore !== null);
       })
       .catch(() => setError(true))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!options?.silent) setLoading(false);
+      });
   }, [spaceId]);
 
   const poll = useCallback(() => {
@@ -65,7 +79,8 @@ export function useSpaceMessages(spaceId: string | null) {
   useFocusEffect(
     useCallback(() => {
       if (!spaceId) return;
-      loadLatest();
+      loadLatest({ silent: hasLoadedOnceRef.current });
+      hasLoadedOnceRef.current = true;
       const interval = setInterval(poll, POLL_INTERVAL_MS);
       return () => clearInterval(interval);
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,6 +127,6 @@ export function useSpaceMessages(spaceId: string | null) {
     loadingOlder,
     loadOlder,
     send,
-    reload: loadLatest,
+    reload: useCallback(() => loadLatest(), [loadLatest]),
   };
 }

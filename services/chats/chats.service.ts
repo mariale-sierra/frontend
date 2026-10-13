@@ -3,6 +3,7 @@ import type {
   ConversationSummaryContract,
   MessageContract,
   MessagesPageContract,
+  SharedContentPayload,
 } from '../../types/chat';
 
 /** Starts a new 1:1 conversation, or returns the existing one if there's already one. */
@@ -41,13 +42,18 @@ export async function getMessages(
   return response.data;
 }
 
+/** Sends text, shared content (a post or a challenge), or both. `content`
+ * may be empty only when something is shared — it's then left out of the
+ * body, which the backend accepts. */
 export async function sendMessage(
   conversationId: string,
   content: string,
+  shared: SharedContentPayload = {},
 ): Promise<MessageContract> {
+  const text = content.trim();
   const response = await api.post<MessageContract>(
     `/chats/conversations/${conversationId}/messages`,
-    { content },
+    { ...(text ? { content } : {}), ...shared },
   );
   return response.data;
 }
@@ -72,4 +78,17 @@ export async function acceptConversationRequest(
  * participants (Instagram-style "immediate delete", not a soft hide). */
 export async function declineConversationRequest(conversationId: string): Promise<void> {
   await api.delete(`/chats/conversations/${conversationId}/decline`);
+}
+
+/** Deletes one of the caller's own messages (sender only; the rest of the
+ * conversation is untouched). */
+export async function deleteMessage(conversationId: string, messageId: number): Promise<void> {
+  await api.delete(`/chats/conversations/${conversationId}/messages/${messageId}`);
+}
+
+/** Removes a conversation from the caller's OWN list only — unlike
+ * declineConversationRequest, the other participant keeps it, and it comes
+ * back if a new message is sent in it. */
+export async function hideConversation(conversationId: string): Promise<void> {
+  await api.delete(`/chats/conversations/${conversationId}`);
 }

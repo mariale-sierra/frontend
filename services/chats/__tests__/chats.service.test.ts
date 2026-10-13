@@ -7,6 +7,8 @@ import {
   markConversationRead,
   acceptConversationRequest,
   declineConversationRequest,
+  deleteMessage,
+  hideConversation,
 } from '../chats.service';
 
 jest.mock('../../api', () => ({
@@ -75,6 +77,28 @@ describe('chats.service', () => {
     expect(result).toEqual(message);
   });
 
+  it('sendMessage shares a post without text, leaving content out of the body', async () => {
+    mockedApi.post.mockResolvedValue({ data: { id: 2 } });
+
+    await sendMessage('conv-1', '  ', { workoutPostId: 'post-1' });
+
+    expect(mockedApi.post).toHaveBeenCalledWith(
+      '/chats/conversations/conv-1/messages',
+      { workoutPostId: 'post-1' },
+    );
+  });
+
+  it('sendMessage sends a comment together with a shared challenge', async () => {
+    mockedApi.post.mockResolvedValue({ data: { id: 3 } });
+
+    await sendMessage('conv-1', '¡Únete!', { challengeId: 'ch-1' });
+
+    expect(mockedApi.post).toHaveBeenCalledWith(
+      '/chats/conversations/conv-1/messages',
+      { content: '¡Únete!', challengeId: 'ch-1' },
+    );
+  });
+
   it('markConversationRead patches the read endpoint', async () => {
     mockedApi.patch.mockResolvedValue({ data: { updated: 2 } });
 
@@ -99,6 +123,22 @@ describe('chats.service', () => {
     await declineConversationRequest('conv-1');
 
     expect(mockedApi.delete).toHaveBeenCalledWith('/chats/conversations/conv-1/decline');
+  });
+
+  it('deleteMessage deletes one message of the conversation (B4)', async () => {
+    mockedApi.delete.mockResolvedValue({ data: undefined });
+
+    await deleteMessage('conv-1', 42);
+
+    expect(mockedApi.delete).toHaveBeenCalledWith('/chats/conversations/conv-1/messages/42');
+  });
+
+  it('hideConversation deletes the conversation from my own list, not via decline (B4)', async () => {
+    mockedApi.delete.mockResolvedValue({ data: undefined });
+
+    await hideConversation('conv-1');
+
+    expect(mockedApi.delete).toHaveBeenCalledWith('/chats/conversations/conv-1');
   });
 
   it('propagates API errors to the caller', async () => {

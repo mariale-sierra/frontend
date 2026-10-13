@@ -1,3 +1,4 @@
+import { EmptyState } from '../../components/ui/emptyState';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +21,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 // Capped, per explicit request: an unbounded challenge-results list pushed
 // the People section endlessly far down the screen for a broad query. Same
-// "preview + See more/See less" pattern app/invitations.tsx already
+// "preview + See more/See less" pattern the old Invitations screen
 // established for its own capped request list (`REQUESTS_PREVIEW_COUNT`).
 const CHALLENGE_RESULTS_PREVIEW_COUNT = 3;
 
@@ -122,17 +123,23 @@ export default function Search() {
         </View>
 
         {!hasQuery ? (
-          <View style={styles.center}>
-            <Text tone="secondary" align="center">{t('search.emptyPrompt')}</Text>
-          </View>
+          <EmptyState
+            icon="search-outline"
+            title={t('search.emptyPromptTitle')}
+            message={t('search.emptyPrompt')}
+            actions={[{ label: t('search.exploreChallenges'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'search-explore' }]}
+          />
         ) : catalogLoading ? (
           <View style={styles.center}>
             <ActivityIndicator color={colors.primary} />
           </View>
         ) : hasNoResults ? (
-          <View style={styles.center}>
-            <Text tone="secondary" align="center">{t('search.emptyResults', { query: debouncedQuery })}</Text>
-          </View>
+          <EmptyState
+            icon="sad-outline"
+            title={t('search.emptyResults', { query: debouncedQuery })}
+            message={t('search.emptyResultsHint')}
+            actions={[{ label: t('search.exploreChallenges'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'search-explore' }]}
+          />
         ) : (
           <>
             {matchedChallenges.length > 0 && (

@@ -36,7 +36,10 @@ import { BOTTOM_NAV_HEIGHT } from '../../constants/bottomNav';
 import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../constants/onboardingDebug';
 import { formatTodayLabel, hoursUntilMidnight } from '../../utils/time';
 import { withAlpha } from '../../utils/color';
+import { useNotificationsStore } from '../../store/notificationsStore';
+import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { hasSeenLogCoachMark, markLogCoachMarkSeen } from '../../utils/logCoachMark';
+import { FEED_POST_GAP } from '../../constants/feed';
 
 function FeedSeparator() {
   return <View style={styles.separator} />;
@@ -47,6 +50,7 @@ export default function Home() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const unreadNotifications = useNotificationsStore((s) => s.unreadCount);
 
   // Same source as the Challenges tab (services/user/user.service.ts getMyChallenges,
   // i.e. GET /users/me/challenges) so the two screens always show the same set of
@@ -248,7 +252,21 @@ export default function Home() {
   // identity every render defeats FlatList's own cell-level memoization and
   // forces every visible row to re-render even when its own data hasn't
   // changed (e.g. while the friend-streaks section resolves independently).
-  const renderItem = useCallback(({ item }: { item: FeedPostViewModel }) => <FeedPostCard post={item} />, []);
+  // B4: the viewer deleted one of their own posts from its "..." menu — drop
+  // it from the already-loaded feed in place (no refetch, no scroll jump).
+  const showSuccess = useErrorNotificationStore((state) => state.showSuccess);
+  const handlePostDeleted = useCallback(
+    (postId: string) => {
+      setFeedPosts((prev) => prev.filter((post) => post.id !== postId));
+      showSuccess({ message: t('home.postOptions.deleteSuccess') });
+    },
+    [showSuccess, t],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: FeedPostViewModel }) => <FeedPostCard post={item} onDeleted={handlePostDeleted} />,
+    [handlePostDeleted],
+  );
 
   // One combined gate instead of three independent loading flags each
   // rendering their own fallback — the screen reveals once, fully populated,
@@ -268,14 +286,18 @@ export default function Home() {
         </View>
 
         <Row gap="sm">
-          {/* Messaging/notifications routes exist but aren't wired to real
-              unread state yet — the dot below is decorative for now. */}
           <Pressable style={styles.iconButton} onPress={() => router.push('/messaging')}>
             <Icon name="chatbubble-ellipses-outline" size={22} />
           </Pressable>
-          <Pressable style={styles.iconButton} onPress={() => router.push('/notifications')}>
+          {/* B3: the dot is the real unread count (store/notificationsStore). */}
+          <Pressable
+            style={styles.iconButton}
+            onPress={() => router.push('/notifications')}
+            accessibilityRole="button"
+            accessibilityLabel={t('notifications.title')}
+          >
             <Icon name="notifications-outline" size={22} />
-            <View style={styles.notificationDot} />
+            {unreadNotifications > 0 ? <View style={styles.notificationDot} /> : null}
           </Pressable>
         </Row>
       </Row>
@@ -316,7 +338,7 @@ export default function Home() {
       )}
       </View>
     ),
-    [carouselScrollX, challenges, friendStreaks, friendStreaksError, hoursLeft, isReady, router, t, username],
+    [carouselScrollX, challenges, friendStreaks, friendStreaksError, hoursLeft, isReady, router, t, unreadNotifications, username],
   );
   const listEmptyComponent = useMemo(
     () => (!isReady ? null : feedError ? <FeedErrorState /> : <EmptyFeed />),
@@ -346,6 +368,14 @@ export default function Home() {
           feedLoadingMore ? (
             <View style={styles.feedFooterLoading}>
               <Loader visible={true} overlayStyle={styles.loaderTransparent} />
+            </View>
+          ) : isReady && !feedError && feedPosts.length > 0 && !feedNextCursor ? (
+            // The end of the feed, so an empty scroll below the last post
+            // doesn't read as "still loading" or "broken".
+            <View style={styles.feedEnd} testID="feed-end">
+              <Text variant="caption" tone="secondary" align="center">
+                {t('home.feedEnd')}
+              </Text>
             </View>
           ) : null
         }
@@ -434,11 +464,15 @@ const styles = StyleSheet.create({
   divider: {
     marginTop: spacing.xs,
   },
+  feedEnd: {
+    paddingVertical: spacing.xl,
+  },
   feedFooterLoading: {
     height: 60,
   },
+  // Shared with every scroll of posts (constants/feed.ts).
   separator: {
-    height: spacing['2xl'],
+    height: FEED_POST_GAP,
   },
   // Anchored bottom-right, pointing down toward the tab bar's Log FAB — see
   // constants/bottomNav.ts's BOTTOM_NAV_HEIGHT for why the offset is

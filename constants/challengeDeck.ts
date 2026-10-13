@@ -17,7 +17,7 @@ export const DECK_CARD_ASPECT = 1.1;
 /** The longest the picker's loading skeleton waits for the cards' photos to load, in
  * milliseconds, before it shows the deck anyway: a slow or broken photo should cost its
  * card its picture, not the screen its cards. */
-export const DECK_IMAGES_TIMEOUT_MS = 6000;
+export const DECK_IMAGES_TIMEOUT_MS = 3000;
 
 /** How far in from the card's edge its content sits, all round: the inset the
  * challenge cards give their text (`md` of padding and an `sm` inset). */

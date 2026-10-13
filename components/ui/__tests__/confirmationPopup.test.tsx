@@ -92,7 +92,8 @@ describe('ConfirmationPopup', () => {
         const tree = JSON.stringify(screen.toJSON());
 
         expect(tree).toContain('ExpoBlur');
-        expect(tree).toContain(`"backgroundColor":"${withAlpha(colors.surface, glass.tintOpacity)}"`);
+        // The popups' black glass: the blur tinted with `ink`, not `surface`.
+        expect(tree).toContain(`"backgroundColor":"${withAlpha(colors.ink, glass.blackTintOpacity)}"`);
         // Not a solid `surface` card any more.
         expect(tree).not.toContain(`"backgroundColor":"${colors.surface}"`);
         // The old glow was an SVG radial gradient in the tone's color.
@@ -102,20 +103,13 @@ describe('ConfirmationPopup', () => {
       }
     });
 
-    it('shows the tone only in the icon: neutral by default, `success` green for the success tone', async () => {
-      const neutral = await renderPopup();
-      const success = await renderPopup({ tone: 'success' });
+    it('draws its icon in `paper`, like its text — never a status color, whatever the tone or iconColor', async () => {
+      const screen = await renderPopup({ tone: 'success', iconColor: colors.error });
+      const tree = JSON.stringify(screen.toJSON());
 
-      expect(JSON.stringify(neutral.toJSON())).toContain(`"color":"${colors.primary}"`);
-      expect(JSON.stringify(success.toJSON())).toContain(`"color":"${colors.success}"`);
-      // The success green is on the icon, not on any fill.
-      expect(JSON.stringify(success.toJSON())).not.toContain(`"backgroundColor":"${colors.success}`);
-    });
-
-    it('lets a caller color the icon itself (a destructive confirmation)', async () => {
-      const screen = await renderPopup({ iconColor: colors.error });
-
-      expect(JSON.stringify(screen.toJSON())).toContain(`"color":"${colors.error}"`);
+      expect(tree).toContain(`"color":"${colors.paper}"`);
+      expect(tree).not.toContain(`"color":"${colors.success}"`);
+      expect(tree).not.toContain(`"color":"${colors.error}"`);
     });
 
     it('rounds the card, and lights it like glass: a sheen and a gradient rim, in `paper` whichever the tone', async () => {
@@ -130,12 +124,12 @@ describe('ConfirmationPopup', () => {
       }
     });
 
-    it('is sized like a standard alert, not a whole card: at most 300 wide, 24 of padding', async () => {
+    it('is sized like an alert with room around its content: at most 320 wide, 32 of padding', async () => {
       const screen = await renderPopup();
       const tree = JSON.stringify(screen.toJSON());
 
-      expect(tree).toContain('"width":"100%","maxWidth":300');
-      expect(tree).toContain(`"borderRadius":${radius.xl},"padding":${spacing.lg}`);
+      expect(tree).toContain('"width":"100%","maxWidth":320');
+      expect(tree).toContain(`"borderRadius":${radius.xl},"padding":${spacing.xl}`);
     });
 
     it('sets its title as a subheader (20), not a screen title (30), and its description at 14', async () => {
@@ -153,10 +147,13 @@ describe('ConfirmationPopup', () => {
       expect(JSON.stringify(screen.toJSON())).toContain('"size":32');
     });
 
-    it('dims what is behind it the way the bottom sheets do, so the glass has something to show', async () => {
+    it('blurs what is behind it and darkens it a bit more than the sheets do', async () => {
       const screen = await renderPopup();
+      const tree = JSON.stringify(screen.toJSON());
 
-      expect(JSON.stringify(screen.toJSON())).toContain(`"backgroundColor":"${withAlpha(colors.ink, fillOpacity.dim)}"`);
+      expect(tree).toContain(`"intensity":${glass.popup.backdropBlurIntensity}`);
+      expect(tree).toContain(`"backgroundColor":"${withAlpha(colors.ink, glass.popup.backdropDimOpacity)}"`);
+      expect(glass.popup.backdropDimOpacity).toBeGreaterThan(fillOpacity.dim);
     });
   });
 });

@@ -1,3 +1,4 @@
+import { EmptyState } from '../../components/ui/emptyState';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -176,7 +177,8 @@ export default function Messaging() {
   }
 
   return (
-    <ScreenBackground variant="default">
+    // The paper light, from the bottom (the tabs' own edge) — explicit request.
+    <ScreenBackground variant="default" gradientBackground gradientEdge="bottom">
       <Row align="center" gap="sm" style={styles.header}>
         <BackButton style={styles.backButton} />
         <View style={styles.searchWrap}>
@@ -310,12 +312,20 @@ export default function Messaging() {
                 {t('common.actions.continue')}
               </Button>
             </View>
-          ) : (
+          ) : query.trim() ? (
             <View style={styles.center}>
-              <Text tone="secondary">
-                {query.trim() ? t('chats.noResultsForSearch') : t('chats.emptyState')}
-              </Text>
+              <Text tone="secondary">{t('chats.noResultsForSearch')}</Text>
             </View>
+          ) : (
+            <EmptyState
+              icon="chatbubbles-outline"
+              title={t('chats.emptyState')}
+              message={t('chats.emptyStateHint')}
+              actions={[
+                { label: t('chats.emptyStateNew'), onPress: () => router.push('/messaging/new'), testID: 'empty-chats-new' },
+                { label: t('chats.emptyStateFindPeople'), onPress: () => router.push('/(tabs)/search'), testID: 'empty-chats-people' },
+              ]}
+            />
           )
         }
       />
@@ -336,7 +346,8 @@ export default function Messaging() {
             {t('chats.newMessageTitle')}
           </Text>
         </Pressable>
-        <Divider marginVertical="xs" />
+        {/* No divider between the two options (explicit request) — the rows'
+            own padding separates them, like the post "..." menu. */}
         <Pressable
           style={styles.composeMenuRow}
           onPress={() => {

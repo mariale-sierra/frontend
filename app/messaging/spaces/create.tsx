@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { KeyboardAwareScroll } from '../../../components/layout/keyboardAwareScroll';
 import ScreenBackground from '../../../components/layout/screenBackground';
 import { BackButton } from '../../../components/ui/backButton';
 import { Text } from '../../../components/ui/text';
@@ -47,13 +48,13 @@ export default function CreateSpaceScreen() {
         <View style={styles.headerSpacer} />
       </View>
       <View style={styles.contentWrap}>
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <KeyboardAwareScroll style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <SpaceForm
             ref={formRef}
             onAccentColorChange={setAccentColor}
             onSubmit={handleSubmit}
           />
-        </ScrollView>
+        </KeyboardAwareScroll>
       </View>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>

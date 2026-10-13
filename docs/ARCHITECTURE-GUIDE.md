@@ -112,6 +112,7 @@ Future services should reuse `services/api.ts`, avoid creating another Axios cli
 Prefer hooks for screens that coordinate services, stores, translations, routing, alerts, loading, and errors. Direct service calls are acceptable in small screens, but shared or multi-step behavior should move into a hook or store following existing patterns.
 
 ## 9. UI and Component Architecture
+- A screen's main call to action is `Button size="cta"` (52 tall, `body` bold, usually full width) — don't hand-build another 52px button; the older hand-built ones (Join challenge, Confirm routine, camera) can migrate to it.
 - Shared reusable UI belongs in `components/ui/` (`Text`, `Button`, `Card`, `Input`, `Icon`, `IconButton`, `Loader`, etc.).
 - Layout primitives belong in `components/layout/` (`ScreenBackground`, `Stack`, `Row`, `Column`, spacers, gradients).
 - Feature-specific UI belongs in `components/<feature>/`, for example `components/challenge/list`, `components/challenge/detail`, `components/challenge/create`, `components/routine`, and `components/add`.
@@ -191,6 +192,34 @@ Mock data and gaps:
 - `store/routineBuilderStore.ts` contains seed routine data and a mock schema metric template.
 - No dedicated challenge hooks beyond create flow were found for challenge list/detail loading.
 
+## 12b. Notifications Module Map (B3)
+Full backend/push details: `backend/docs/notificaciones/B3-NOTIFICACIONES.md`.
+- `app/notifications.tsx`: inbox (cursor-paginated via `X-Next-Cursor`, read/unread, mark all, push permission card). `app/notification-settings.tsx`: per-category in-app/push switches from `GET/PATCH /notifications/preferences`.
+- `services/notifications/notifications.service.ts`: API calls. `notificationRoutes.ts`: type → existing expo-router route (pure, tested; add new types here). `notificationText.ts`: i18n row text by type code (`notifications.types.*`).
+- `services/notifications/pushNotifications.ts`: permission state (`blocked` = only Settings, never re-prompt), Expo token register/unregister, badge. `hooks/usePushNotifications.ts` (mounted once in `app/_layout.tsx`): unread refresh, foreground/background/cold-start taps. `hooks/usePushPermission.ts`: the in-app ask.
+- `store/notificationsStore.ts`: unread count for the Home bell dot and the app badge — refreshed on events, never polled.
+- Logout (`context/authContext.tsx`) removes this device's push token before clearing the session.
+- Push needs an EAS projectId (`eas init` or `EAS_PROJECT_ID`) and a development build; Expo Go/simulators/web report push as unsupported and the inbox still works.
+
+## 12c. Social Sharing Module Map (B5)
+- `components/social/ShareToChatSheet.tsx`: "Send to…" sheet laid out like the Streaks grid (three round avatars + username per row, `getStreakGridLayout`, smaller avatars); tapping people selects them and a Send button appears at the bottom — only that sends (closes with a toast; failures stay selected with Retry). Recent 1:1 chats (minus unaccepted requests) plus user search; sends `POST /chats/conversations/:id/messages` with `workoutPostId` or `challengeId` (`content` optional). Optional "Other apps" row for the native share sheet. Used by `FeedPostCard` (paper plane) and the challenge detail share button.
+- `utils/shareChallenge.ts`: external share text + app link (`expo-linking` `createURL('/challenge/<id>')`), also used by the routine-day share.
+- `components/chats/SharedContentCard.tsx`: shared post/challenge card inside `MessageBubble` (long-press = delete your own message, with a haptic). A shared post opens `/profile/[userId]?postId=` with that post's modal open (also for your own post — no redirect to the tab then). A shared challenge renders the real `ExploreCard` from `GET /challenges/:id`. Previews come resolved per viewer (`available: false` → "no longer available", never content). `ConversationListItem` describes a share without a comment via `lastMessage.kind`.
+- Reactions lead with people, not numbers: `components/social/ReactorsSummary.tsx` (from the feed's `recent_reactors`, drawn over the photo's bottom-left corner with a text shadow — `overImage`) and `ReactorsSheet.tsx` (`GET /workout-posts/:postId/reactions/users`, `X-Next-Cursor`). The like count is never rendered.
+- Hashtags: typed in the camera confirm screen's caption (`app/(add)/camera.tsx`), parsed and stored by the backend (`havit.hashtags`, `havit.workout_post_hashtags`). `utils/hashtags.ts` mirrors the backend parser — keep both in sync. `components/social/HashtagText.tsx` shows tags in `activityColors.flexibility` blue, regular weight, no pill; they aren't tappable until a hashtag search exists.
+
+## 12d. Badges and Empty States (B12)
+Full decision record (computed-on-the-fly rewards, catalog, demo data): `docs/BADGES-RECOMPENSAS.md`.
+- `components/badges/` (`BadgesSection`, `BadgeTile`, `BadgeDetailSheet`) renders `GET /badges/me` / `GET /badges/user/:userId` on both profiles; icon and color per badge `code` live in `constants/badges.ts`, copy in `badges.items.<code>` (backend name/description as fallback).
+- `components/ui/emptyState.tsx` is the shared empty state (icon, title, message, up to two buttons toward challenges/people). Use it instead of a bare centered `Text` when a screen has somewhere useful to send the user; `components/home/EmptyFeed.tsx` is now a thin wrapper over it.
+
+## 12e. Session hygiene, keyboard, reports (Sprint 9 follow-ups)
+- `store/resetSessionStores.ts` resets every user-scoped Zustand store (challenge/routine builders, metrics entry, location choice, unread count...). `context/authContext.tsx` calls it on login, register, logout and an expired session, so a new session never starts from another user's draft. A new store that holds per-user state must be added there.
+- `components/layout/keyboardAwareScroll.tsx` replaces `ScrollView` in form screens: it adds the keyboard's height as bottom padding and scrolls the focused field above the keyboard (Android's edge-to-edge screens do not resize for it).
+- Reporting content hides it at once for the reporter (`ReportReasonSheet.onReported`; the server keeps it out of that user's reads while the report is pending). A moderation suspension answers writes with `403 ACCOUNT_SUSPENDED`; `services/api.ts` shows when it ends. Fixed hours per reason: `backend/docs/moderacion-manual.md`.
+- "Where do you train?" is also on the register screen (`app/(add)/metrics.tsx`, via `useMetricsScreen.applyLocation`), reusing `LocationSwitchSheet`.
+- Own posts load a page at a time (`getUserPosts(userId)` + "Load more") in the profile grid and the "+" picker; `GET /workout-posts/mine` returns the whole history and is only used where the full list is needed.
+
 ## 13. Do and Don't Rules
 Do:
 - Read this guide and inspect the target route before editing.
@@ -240,3 +269,9 @@ As of the form-validation refactor (2026-09-04), every text-input form that need
 - Implement only scoped changes.
 - Run available checks.
 - Summarize changed files.
+
+Profile posts: tapping a photo in a profile grid (yours or another user's) opens `app/profile/posts.tsx`, the user's posts as a feed of `FeedPostCard`s starting on the tapped one (`utils/postViewer.ts` → `store/postViewerStore.ts`; the backend's profile photos carry likes/comments/reactors/hashtags since B5). A real screen, not a modal, so what a card opens lands on top of it. `FeedPostCard`: like, comments, the challenge (trophy) and — when there are any — the logged metrics (collapsed, `stats-chart` toggle) in the actions row; your own posts show their visibility on the photo.
+
+Invitations: there is no Invitations screen any more — pending challenge invites (received: accept/decline; sent: cancel) are a section at the top of `app/notifications.tsx` (`components/notifications/InviteNotificationRow.tsx`, same row style as a notification). `challenge_invite` notifications route to `/notifications`.
+
+Popups: every popup goes through `components/ui/confirmationPopup.tsx` — softly blurred, darker backdrop and the `popup` black glass (`ink` tint) (`glass.popup` tokens in `constants/theme.ts`, `GlassSurface variant="popup"`). Popup icons are always `paper` (no status colors; `tone`/`iconColor` are deprecated and ignored). Every glass `BottomSheetModal` uses the same black glass (`glass.blackTintOpacity`, `ink` tint). Change the look there, not per popup.

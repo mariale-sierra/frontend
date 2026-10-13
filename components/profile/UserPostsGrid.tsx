@@ -7,7 +7,8 @@ import type { ChallengePhoto } from '../../types/challenge';
 
 interface UserPostsGridProps {
   userId: string;
-  onPhotoPress?: (photo: ChallengePhoto) => void;
+  /** The tapped photo plus the list it was in, for the post viewer. */
+  onPhotoPress?: (photo: ChallengePhoto, photos: ChallengePhoto[]) => void;
   /** Bumped by the parent screen's pull-to-refresh (a value change, any
    * value) to force a refetch outside the normal focus-effect cycle — this
    * component owns its own fetch, so a parent-level refresh has no other way
@@ -71,7 +72,7 @@ export function UserPostsGrid({ userId, onPhotoPress, refreshSignal }: UserPosts
       photos={photos}
       loading={loading}
       emptyLabel={t('profile.emptyUserPhotos')}
-      onPhotoPress={onPhotoPress}
+      onPhotoPress={onPhotoPress ? (photo) => onPhotoPress(photo, photos) : undefined}
     />
   );
 }

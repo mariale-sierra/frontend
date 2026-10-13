@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, Keyboard, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import type { KeyboardEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, fillOpacity, radius, shadows, spacing } from '../../constants/theme';
+import { colors, fillOpacity, glass as glassTokens, radius, shadows, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { GlassBackdrop, GlassHighlight, glassRimmedStyle } from './glassSurface';
 
@@ -26,7 +26,8 @@ interface BottomSheetModalProps {
    * composer to rise into (real, reported bug: "displays at the bottom,
    * not up to half the screen"). */
   height?: `${number}%`;
-  /** Makes the sheet frosted glass — the blur and the translucent `surface` tint the
+  /** Makes the sheet frosted BLACK glass (an `ink` tint since 2026-10-08, like the
+   * popups) — the blur and a translucent tint like the
    * nav bar and the toggles have, and the gradient rim along its top edge — instead of
    * an opaque `surface` card, so what is behind it shows through (the comments sheet). */
   glass?: boolean;
@@ -143,7 +144,8 @@ export function BottomSheetModal({
       >
         {glass ? (
           <>
-            <GlassBackdrop />
+            {/* Black glass, same material as the popups (`glass.blackTintOpacity`). */}
+            <GlassBackdrop tintColor={colors.ink} tintOpacity={glassTokens.blackTintOpacity} />
             <GlassHighlight kind="sheet" cornerRadius={SHEET_RADIUS} />
           </>
         ) : null}

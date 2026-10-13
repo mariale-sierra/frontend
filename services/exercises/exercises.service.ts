@@ -45,6 +45,52 @@ export async function getExercises() {
   return response.data.data;
 }
 
+/** One location of GET /exercises/location-availability: which of the asked
+ * exercises can NOT be done there (so the user must swap them). */
+export interface LocationAvailability {
+  code: string;
+  name: string;
+  requiresSubstitution: boolean;
+  unsupportedExerciseIds: number[];
+}
+
+export interface ExerciseAlternative {
+  id: number;
+  name: string;
+  sameRegion: boolean;
+}
+
+export interface ExerciseAlternativesResult {
+  exerciseId: number;
+  location: { code: string; name: string };
+  originalAvailableAtLocation: boolean;
+  alternatives: ExerciseAlternative[];
+}
+
+/** Sprint 9 (B7): per location, which of these exercises need a substitute. */
+export async function getLocationAvailability(exerciseIds: number[]): Promise<LocationAvailability[]> {
+  const response = await api.get<LocationAvailability[]>('/exercises/location-availability', {
+    params: { exerciseIds: exerciseIds.join(',') },
+  });
+  return response.data;
+}
+
+/** Sprint 9 (B7): compatible substitutes for one exercise at a location —
+ * same metrics, available there. An empty list means "no alternative". */
+export async function getExerciseAlternatives(
+  exerciseId: number,
+  locationCode: string,
+  excludeExerciseIds: number[] = [],
+): Promise<ExerciseAlternativesResult> {
+  const response = await api.get<ExerciseAlternativesResult>(`/exercises/${exerciseId}/alternatives`, {
+    params: {
+      location: locationCode,
+      ...(excludeExerciseIds.length > 0 ? { exclude: excludeExerciseIds.join(',') } : {}),
+    },
+  });
+  return response.data;
+}
+
 export async function getExerciseFull(id: number): Promise<ExerciseFull> {
   const response = await api.get(`/exercises/${id}/full`);
   return response.data;

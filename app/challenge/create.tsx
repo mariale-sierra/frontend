@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { KeyboardAwareScroll } from '../../components/layout/keyboardAwareScroll';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Stack } from '../../components/layout/stack';
 import {
@@ -188,7 +189,7 @@ export default function CreateChallenge() {
 
   return (
     <ScreenBackground variant="top" gradientBackground vividGradient={USE_VIVID_CREATE_FLOW_BACKGROUND}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <KeyboardAwareScroll contentContainerStyle={styles.container}>
         <Stack gap="lg">
           <CreateFlowProgressHeader
             currentIndex={currentStep}
@@ -206,7 +207,7 @@ export default function CreateChallenge() {
             {renderStepContent()}
           </View>
         </Stack>
-      </ScrollView>
+      </KeyboardAwareScroll>
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
         {isCycleStep && !hasRoutineForEveryDay && (

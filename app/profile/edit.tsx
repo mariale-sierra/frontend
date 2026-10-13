@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as ImagePicker from 'expo-image-picker';
+import { KeyboardAwareScroll } from '../../components/layout/keyboardAwareScroll';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { BackButton } from '../../components/ui/backButton';
 import { Text } from '../../components/ui/text';
@@ -16,6 +17,7 @@ import { Divider } from '../../components/ui/divider';
 import { Row } from '../../components/layout/row';
 import { Stack } from '../../components/layout/stack';
 import { LogoutButton } from '../../components/profile/LogoutButton';
+import { DeleteAccountRow } from '../../components/profile/DeleteAccountRow';
 import { ControlledFormField } from '../../components/form/ControlledFormField';
 import {
   getMyProfile,
@@ -179,7 +181,7 @@ export default function EditProfile() {
 
   return (
     <ScreenBackground variant="default">
-      <ScrollView
+      <KeyboardAwareScroll
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
@@ -334,7 +336,8 @@ export default function EditProfile() {
         <Divider variant="section" marginVertical="sm" />
 
         <LogoutButton />
-      </ScrollView>
+        <DeleteAccountRow />
+      </KeyboardAwareScroll>
     </ScreenBackground>
   );
 }

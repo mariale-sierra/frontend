@@ -8,6 +8,8 @@ import { InterTight_700Bold } from '@expo-google-fonts/inter-tight';
 import { AuthProvider } from '../context/authContext';
 import { ThemeProvider } from '../context/themeContext';
 import { useAuth } from '../hooks/useAuth';
+import { useRequiresTermsAcceptance } from '../hooks/useRequiresTermsAcceptance';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 import { ChallengeFinishedPopup } from '../components/ui/ChallengeFinishedPopup';
 import { ChallengeJoinApprovedPopup } from '../components/ui/ChallengeJoinApprovedPopup';
 import { UploadSuccessPopup } from '../components/ui/UploadSuccessPopup';
@@ -39,6 +41,19 @@ function RootNavigator() {
   const router = useRouter();
   const segments = useSegments();
   const { isAuthenticated, isRestoring } = useAuth();
+  // Accounts that never accepted the current Terms (created before B2, or the
+  // published version changed) are sent to /accept-terms before anything else.
+  const requiresTerms = useRequiresTermsAcceptance();
+
+  // B3: a notification tap only navigates once the user is past login,
+  // terms and onboarding — otherwise those redirects would swallow it.
+  const firstSegment = (segments as string[])[0];
+  const canOpenNotifications =
+    isAuthenticated &&
+    !requiresTerms &&
+    !!firstSegment &&
+    !['(auth)', 'accept-terms', 'onboarding'].includes(firstSegment);
+  usePushNotifications(isAuthenticated, canOpenNotifications);
 
   // Simplified 2026-09-24, per explicit "the first thing the user will see
   // is the login screen" request: the standalone pre-login welcome carousel
@@ -73,12 +88,23 @@ function RootNavigator() {
       return;
     }
     if (isAuthenticated && inAuthGroup) {
-      const onRegisterScreen = (segments as string[])[1] === 'register';
-      if (!onRegisterScreen) {
+      const second = (segments as string[])[1];
+      // register manages its own post-signup navigation (see above); legal is
+      // the read-only Terms/Privacy viewer, reachable while signed in too.
+      if (second !== 'register' && second !== 'legal') {
         router.replace('/(tabs)');
       }
+      return;
     }
-  }, [isAuthenticated, isRestoring, segments]);
+    if (
+      isAuthenticated &&
+      requiresTerms &&
+      !inAuthGroup &&
+      (segments as string[])[0] !== 'accept-terms'
+    ) {
+      router.replace('/accept-terms');
+    }
+  }, [isAuthenticated, isRestoring, segments, requiresTerms]);
   if (isRestoring) {
     return null;
   }
@@ -88,8 +114,11 @@ function RootNavigator() {
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false, contentStyle: { backgroundColor: colors.ink } }} />
-        <Stack.Screen name="notifications" options={{ presentation: 'modal' }} />
-        <Stack.Screen name="invitations" options={{ headerShown: false }} />
+        {/* A regular card screen (was a placeholder modal): it pushes other
+            screens — settings, profiles, challenges — which iOS would show
+            behind a modal. */}
+        <Stack.Screen name="notifications" options={{ headerShown: false }} />
+        <Stack.Screen name="notification-settings" options={{ headerShown: false }} />
         <Stack.Screen name="home/streaks" options={{ headerShown: false }} />
         <Stack.Screen name="messaging/index" options={{ headerShown: false }} />
         <Stack.Screen name="messaging/[conversationId]" options={{ headerShown: false }} />
@@ -113,8 +142,11 @@ function RootNavigator() {
             this screen's own BackButton/header. Every other custom-header
             screen in this app is registered the same way. */}
         <Stack.Screen name="profile/[userId]" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/posts" options={{ headerShown: false }} />
         <Stack.Screen name="profile/about" options={{ headerShown: false }} />
         <Stack.Screen name="profile/moderation" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/delete-account" options={{ headerShown: false }} />
+        <Stack.Screen name="accept-terms" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="exercises/index" options={{ headerShown: false }} />
         <Stack.Screen name="exercises/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="exercises/muscles/index" options={{ headerShown: false }} />

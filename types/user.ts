@@ -5,6 +5,8 @@ export interface UserProfileContract {
   is_active?: boolean;
   /** Bloque 1 — global platform admin (GET /users/me only). */
   is_admin?: boolean;
+  /** True when the user never accepted the current Terms / Privacy Policy. */
+  requires_terms_acceptance?: boolean;
   created_at?: string;
   updated_at?: string;
   [key: string]: unknown;
@@ -72,4 +74,12 @@ export interface UpdateProfilePayload {
    * the backend enforces the same cap independently, this is just the
    * client staying in sync with it. */
   practice_preferences?: string[];
+}
+
+/** GET /users/banned (admin only): an account an admin banned and can unban. */
+export interface BannedUserContract {
+  id: string;
+  username: string;
+  display_name: string | null;
+  profile_image_url: string | null;
 }

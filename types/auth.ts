@@ -10,7 +10,13 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface RegisterRequest {
+/** Both must be true for the backend to accept a registration (T&C + 16+). */
+export interface LegalConsent {
+  acceptTerms: boolean;
+  confirmAge16: boolean;
+}
+
+export interface RegisterRequest extends LegalConsent {
   email: string;
   username: string;
   password: string;

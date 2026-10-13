@@ -10,9 +10,18 @@ import { Row } from '../layout/row';
 import { CommentsSheet } from './CommentsSheet';
 import { PostOptionsSheet } from './PostOptionsSheet';
 import { ReportReasonSheet } from '../reports/ReportReasonSheet';
-import { colors, radius, spacing, textOpacity } from '../../constants/theme';
+import { ConfirmationPopup } from '../ui/confirmationPopup';
+import { HashtagText } from '../social/HashtagText';
+import { ReactorsSummary } from '../social/ReactorsSummary';
+import { ReactorsSheet } from '../social/ReactorsSheet';
+import { ShareToChatSheet } from '../social/ShareToChatSheet';
+import { colors, radius, shadows, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
-import { reactToPost, unreactToPost } from '../../services/workout-posts/workout-posts.service';
+import {
+  deleteWorkoutPost,
+  reactToPost,
+  unreactToPost,
+} from '../../services/workout-posts/workout-posts.service';
 import { useAuth } from '../../hooks/useAuth';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
 
@@ -21,6 +30,9 @@ const SHEET_SWAP_DELAY_MS = 320;
 
 interface FeedPostCardProps {
   post: FeedPostViewModel;
+  /** Called after the viewer deleted their own post (B4), so the list can
+   * drop it. Must be a stable callback to keep `memo` effective. */
+  onDeleted?: (postId: string) => void;
 }
 
 // `memo`: its only prop is `post`, which keeps a stable reference in
@@ -28,13 +40,13 @@ interface FeedPostCardProps {
 // actually changes — so a re-render triggered by an unrelated section of
 // the Home screen (friend streaks resolving, the header re-rendering) no
 // longer has to re-render every already-visible feed card too.
-export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardProps) {
+export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: FeedPostCardProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const { userId } = useAuth();
-  // Real, reported bug: the "Message" action showed on your own posts too —
-  // tapping it tried to open a conversation with yourself, which the chats
-  // module doesn't support (getOrCreateConversation rejects a self-id).
+  // Own post: Delete in the "..." menu. Someone else's: Report and Message
+  // the author — never on your own post, since getOrCreateConversation
+  // rejects a conversation with yourself.
   const isOwnPost = post.userId === userId;
 
   // Local, optimistic copies of the server-seeded reaction/comment state —
@@ -45,10 +57,31 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
   const [liked, setLiked] = useState(post.likedByMe);
   const [likesCount, setLikesCount] = useState(post.likesCount);
   const [commentsCount, setCommentsCount] = useState(post.commentsCount);
+  // Home refreshes the feed silently on refocus/pull-to-refresh and hands
+  // each card a fresh `post` with the same id — the card is reused (same
+  // key), so without this it kept showing the counts/liked state from its
+  // FIRST render: a like or comment made elsewhere never showed up here
+  // (Sprint 9, B5: "posts visible consistently"). Skipped while a reaction
+  // request is in flight so a refresh can't undo the optimistic tap.
+  useEffect(() => {
+    if (reactingRef.current) return;
+    setLiked(post.likedByMe);
+    setLikesCount(post.likesCount);
+    setCommentsCount(post.commentsCount);
+  }, [post.likedByMe, post.likesCount, post.commentsCount]);
+  // Reported by this user: the post leaves their view immediately (the server keeps it out of
+  // their feed/profile reads while the report is pending); everyone else sees it until a reviewer decides.
+  const [reported, setReported] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
+  const [reactorsVisible, setReactorsVisible] = useState(false);
+  const [shareVisible, setShareVisible] = useState(false);
+  // The logged metrics start collapsed — a quiet toggle in the actions row.
+  const [metricsOpen, setMetricsOpen] = useState(false);
   const [optionsVisible, setOptionsVisible] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
   const reportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   // A ref, not state, for the in-flight guard below — two taps fired back to
   // back (before React has committed a re-render) would both read the same
   // stale `false` from a state variable's closure, letting both through.
@@ -56,13 +89,6 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
   // tap's check always sees the first tap's write.
   const reactingRef = useRef(false);
 
-  // Fixed 2026-08-31, real bug — was `router.push(\`/messaging/${post.userId}\`)`,
-  // treating the OTHER user's id as if it were a conversationId (the
-  // comment here used to explain this was a deliberate placeholder before
-  // the real chats module existed — it now does, so this is the actual
-  // swap that comment called for). `/messaging/new` resolves-or-creates the
-  // real 1:1 conversation for `recipientUserId` and hands off to the real
-  // thread screen — see app/messaging/new.tsx's own doc comment.
   // The report sheet opens only after the options sheet has finished
   // sliding out. Both are native <Modal>s, and iOS drops a modal presented
   // while another one is still dismissing.
@@ -71,11 +97,31 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
     reportTimerRef.current = setTimeout(() => setReportVisible(true), SHEET_SWAP_DELAY_MS);
   }
 
+  // Same native-modal swap delay as Report above, for the delete confirmation.
+  function handleDeleteFromOptions() {
+    setOptionsVisible(false);
+    reportTimerRef.current = setTimeout(() => setDeleteConfirmVisible(true), SHEET_SWAP_DELAY_MS);
+  }
+
+  async function confirmDelete() {
+    setDeleting(true);
+    try {
+      await deleteWorkoutPost(post.id);
+      setDeleteConfirmVisible(false);
+      onDeleted?.(post.id);
+    } catch {
+      // Global axios interceptor already shows the error toast.
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   useEffect(() => () => {
     if (reportTimerRef.current) clearTimeout(reportTimerRef.current);
   }, []);
 
-  function handleSendMessage() {
+  function handleMessageAuthor() {
+    setOptionsVisible(false);
     router.push({ pathname: '/messaging/new', params: { recipientUserId: post.userId } });
   }
 
@@ -109,6 +155,8 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
     }
   }
 
+  if (reported) return null;
+
   return (
     <View style={styles.card}>
       <Row justify="space-between" align="center">
@@ -121,26 +169,23 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
           accessibilityLabel={t('home.openAuthorProfileA11y', { name: post.userName })}
         >
           <UserAvatar username={post.userName} imageUrl={post.userAvatarUrl} size={32} />
-          <View>
+          <View style={styles.headerText}>
             <Text variant="label">{post.userName}</Text>
             <Text variant="caption" tone="secondary">{post.postedAt}</Text>
           </View>
         </Row>
 
-        {/* Report is the only option so far, and you can't report your own
-            post — so the menu only exists on other people's posts. */}
-        {isOwnPost ? null : (
-          <IconButton
-            name="ellipsis-horizontal"
-            size={32}
-            iconSize={20}
-            iconColor={colors.paper}
-            onPress={() => setOptionsVisible(true)}
-            accessibilityLabel={t('home.postOptions.openA11y')}
-            hitSlop={10}
-            testID="post-options"
-          />
-        )}
+        {/* Someone else's post: Report. Your own post: Delete (B4). */}
+        <IconButton
+          name="ellipsis-horizontal"
+          size={32}
+          iconSize={20}
+          iconColor={colors.paper}
+          onPress={() => setOptionsVisible(true)}
+          accessibilityLabel={t('home.postOptions.openA11y')}
+          hitSlop={10}
+          testID="post-options"
+        />
       </Row>
 
       <View style={styles.photo}>
@@ -149,13 +194,29 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
         ) : (
           <Icon name="image-outline" size={42} color={withAlpha(colors.paper, textOpacity.tertiary)} />
         )}
+        {post.visibility ? (
+          <View style={styles.visibilityOverlay} pointerEvents="none" testID="post-visibility">
+            <Icon
+              name={post.visibility === 'public' ? 'eye-outline' : 'eye-off-outline'}
+              size={20}
+              color={colors.paper}
+              style={styles.iconOverImage}
+            />
+          </View>
+        ) : null}
+        {/* Who reacted sits on the photo's bottom-left corner (shadowed text
+            so it reads over any picture), not as its own row below. */}
+        <View style={styles.reactorsOverlay} pointerEvents="box-none">
+          <ReactorsSummary
+            reactors={post.recentReactors}
+            likedByMe={liked}
+            totalCount={likesCount}
+            onPress={() => setReactorsVisible(true)}
+            overImage
+          />
+        </View>
       </View>
 
-      {post.caption ? (
-        <Text variant="body" numberOfLines={2}>
-          {post.caption}
-        </Text>
-      ) : null}
 
       <Row justify="space-between" align="center" style={styles.actions}>
         <Row gap="lg" justify="flex-start">
@@ -165,9 +226,11 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
             gap="xs"
             accessibilityRole="button"
             accessibilityLabel={t('home.reactionA11y')}
+            accessibilityState={{ selected: liked }}
           >
-            <Icon name="heart-outline" size={20} color={liked ? colors.accent : colors.paper} />
-            <Text variant="caption">{likesCount}</Text>
+            {/* Sprint 9, B5: no count next to the heart — who reacted is
+                shown below instead (ReactorsSummary). */}
+            <Icon name={liked ? 'heart' : 'heart-outline'} size={22} color={liked ? colors.accent : colors.paper} />
           </Row>
 
           <Row
@@ -180,15 +243,81 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
             <Icon name="chatbubble-outline" size={20} color={colors.paper} />
             <Text variant="caption">{commentsCount}</Text>
           </Row>
+
+          {/* What was logged with the photo, collapsed by default — only when
+              there is something to show. */}
+          {post.metrics.length > 0 ? (
+            <Row
+              pressable
+              onPress={() => setMetricsOpen((open) => !open)}
+              accessibilityRole="button"
+              accessibilityLabel={t('home.metricsToggleA11y')}
+              accessibilityState={{ expanded: metricsOpen }}
+              testID="post-metrics-toggle"
+            >
+              <Icon
+                name={metricsOpen ? 'stats-chart' : 'stats-chart-outline'}
+                size={20}
+                color={colors.paper}
+              />
+            </Row>
+          ) : null}
+
+          {/* The challenge this progress belongs to — opens it. */}
+          <Row
+            pressable
+            onPress={() => router.push(`/challenge/${post.challengeId}`)}
+            accessibilityRole="button"
+            accessibilityLabel={t('home.openPostChallengeA11y', { name: post.challengeName })}
+            testID="post-challenge"
+          >
+            <Icon name="trophy-outline" size={20} color={colors.paper} />
+          </Row>
         </Row>
 
-        {isOwnPost ? null : (
-          <Row pressable onPress={handleSendMessage} gap="xs">
-            <Icon name="paper-plane-outline" size={20} color={colors.paper} />
-            <Text variant="caption" tone="secondary">{t('home.sendMessage')}</Text>
-          </Row>
-        )}
+        {/* Sends the post itself into a chat (Sprint 9, B5) — own posts
+            too. Messaging the author directly lives on their profile. */}
+        <Row
+          pressable
+          onPress={() => setShareVisible(true)}
+          gap="xs"
+          accessibilityRole="button"
+          accessibilityLabel={t('home.sharePostA11y')}
+          testID="share-post"
+        >
+          <Icon name="paper-plane-outline" size={20} color={colors.paper} />
+          <Text variant="caption" tone="secondary">{t('home.sharePost')}</Text>
+        </Row>
       </Row>
+
+      {metricsOpen && post.metrics.length > 0 ? (
+        <View style={styles.metrics} testID="post-metrics">
+          {post.metrics.map((metric, index) => (
+            <Row
+              key={`${metric.label}-${index}`}
+              justify="space-between"
+              align="center"
+              gap="md"
+              style={[styles.metricRow, index === post.metrics.length - 1 && styles.metricRowLast]}
+            >
+              <Text variant="caption" tone="secondary" numberOfLines={1} style={styles.metricLabel}>
+                {metric.label}
+              </Text>
+              <Text variant="caption" weight="bold" style={styles.metricValue}>
+                {metric.value}
+              </Text>
+            </Row>
+          ))}
+        </View>
+      ) : null}
+
+      {/* Caption under the like / comment / share row, at the author name's
+          size (14). */}
+      {post.caption ? (
+        <HashtagText variant="body" size="sm" numberOfLines={2}>
+          {post.caption}
+        </HashtagText>
+      ) : null}
 
       <CommentsSheet
         visible={commentsVisible}
@@ -197,10 +326,41 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
         onCommentsCountChange={setCommentsCount}
       />
 
+      <ReactorsSheet visible={reactorsVisible} postId={post.id} onClose={() => setReactorsVisible(false)} />
+
+      <ShareToChatSheet
+        visible={shareVisible}
+        onClose={() => setShareVisible(false)}
+        content={{ workoutPostId: post.id }}
+      />
+
       <PostOptionsSheet
         visible={optionsVisible}
         onClose={() => setOptionsVisible(false)}
-        onReport={handleReportFromOptions}
+        onMessage={isOwnPost ? undefined : handleMessageAuthor}
+        onReport={isOwnPost ? undefined : handleReportFromOptions}
+        onDelete={isOwnPost ? handleDeleteFromOptions : undefined}
+      />
+
+      <ConfirmationPopup
+        visible={deleteConfirmVisible}
+        title={t('home.postOptions.deleteConfirmTitle')}
+        description={t('home.postOptions.deleteConfirmDescription')}
+        icon="trash-outline"
+        iconColor={colors.error}
+        primaryButton={{
+          label: t('home.postOptions.deleteConfirmCta'),
+          onPress: confirmDelete,
+          variant: 'danger',
+          loading: deleting,
+        }}
+        secondaryButton={{
+          label: t('home.postOptions.cancelCta'),
+          onPress: () => setDeleteConfirmVisible(false),
+          variant: 'neutral',
+          disabled: deleting,
+        }}
+        onDismiss={() => !deleting && setDeleteConfirmVisible(false)}
       />
 
       <ReportReasonSheet
@@ -208,6 +368,10 @@ export const FeedPostCard = memo(function FeedPostCard({ post }: FeedPostCardPro
         targetType="post"
         targetId={post.id}
         onClose={() => setReportVisible(false)}
+        onReported={() => {
+          setReported(true);
+          onDeleted?.(post.id);
+        }}
       />
     </View>
   );
@@ -219,9 +383,56 @@ const styles = StyleSheet.create({
   },
   header: {
     justifyContent: 'flex-start',
+    flexShrink: 1,
   },
-  // The like / comment / send row sits well below the photo and the caption: on top
-  // of the card's own `sm` gap, another `md`.
+  headerText: {
+    flexShrink: 1,
+  },
+  visibilityOverlay: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+  },
+  // Same dark outline as the reactors label over the photo.
+  iconOverImage: {
+    textShadowColor: colors.ink,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: shadows.md.shadowRadius,
+  },
+  // A small, plain list — the same `surface` panel as a photo's detail
+  // metrics, tighter: it's a peek under a feed post, not a table.
+  // Its own extra space below the actions row (on top of the card's `sm`
+  // gap), so the open panel doesn't sit tight against the icons.
+  metrics: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.medium,
+    paddingHorizontal: spacing.md,
+  },
+  metricRow: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: withAlpha(colors.paper, 0.08),
+  },
+  metricRowLast: {
+    borderBottomWidth: 0,
+  },
+  metricLabel: {
+    flex: 1,
+  },
+  metricValue: {
+    opacity: 1,
+    fontVariant: ['tabular-nums'],
+  },
+  reactorsOverlay: {
+    position: 'absolute',
+    left: spacing.md,
+    right: spacing.md,
+    bottom: spacing.md,
+    alignItems: 'flex-start',
+  },
+  // The like / comment / send row sits well below the photo (the caption goes under
+  // it): on top of the card's own `sm` gap, another `md`.
   actions: {
     marginTop: spacing.md,
   },

@@ -9,6 +9,10 @@ import {
   register as registerService,
 } from '../services/auth/auth.service';
 import { invalidateChallengeProgressCache } from '../hooks/useChallengeProgress';
+import { resetSessionStores } from '../store/resetSessionStores';
+import { forgetPushToken, unregisterPushToken } from '../services/notifications/pushNotifications';
+import { setSessionExpiredHandler } from '../services/auth/sessionEvents';
+import type { LegalConsent } from '../types/auth';
 
 interface AuthContextValue {
   token: string | null;
@@ -17,7 +21,12 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isRestoring: boolean;
   login: (email: string, password: string) => Promise<any>;
-  register: (email: string, username: string, password: string) => Promise<any>;
+  register: (
+    email: string,
+    username: string,
+    password: string,
+    consent: LegalConsent,
+  ) => Promise<any>;
   logout: () => Promise<void>;
   restoreSession: () => Promise<void>;
 }
@@ -68,6 +77,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Token genuinamente rechazado por el servidor — limpiar sesión
           await logoutService();
           invalidateChallengeProgressCache();
+    resetSessionStores();
           setToken(null);
           setUserId(null);
           setUsername(null);
@@ -91,9 +101,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
     restoreSession();
   }, [restoreSession]);
 
+  // Any authenticated request answered 401 (token expired, account banned,
+  // purged or gone) signs the user out here, and RootNavigator takes them to
+  // the login screen. See services/api.ts.
+  useEffect(() => {
+    setSessionExpiredHandler(async () => {
+      await forgetPushToken();
+      await logoutService();
+      invalidateChallengeProgressCache();
+    resetSessionStores();
+      setToken(null);
+      setUserId(null);
+      setUsername(null);
+    });
+    return () => setSessionExpiredHandler(null);
+  }, []);
+
   const login = useCallback(async (email: string, password: string) => {
     // Clear any previous session's cached progress before establishing a new one.
     invalidateChallengeProgressCache();
+    resetSessionStores();
     const result = await loginService(email, password);
     setToken(result?.accessToken ?? (await getStoredToken()));
     setUserId(result?.user?.id ?? (await getStoredUserId()));
@@ -101,17 +128,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return result;
   }, []);
 
-  const register = useCallback(async (email: string, username: string, password: string) => {
-    const result = await registerService(email, username, password);
+  const register = useCallback(
+    async (email: string, username: string, password: string, consent: LegalConsent) => {
+    invalidateChallengeProgressCache();
+    resetSessionStores();
+    const result = await registerService(email, username, password, consent);
     setToken(result?.accessToken ?? (await getStoredToken()));
     setUserId(result?.user?.id ?? (await getStoredUserId()));
     setUsername(result?.user?.username ?? (await getStoredUsername()));
     return result;
-  }, []);
+    },
+    [],
+  );
 
   const logout = useCallback(async () => {
+    // While the session is still valid: this device stops getting the
+    // account's pushes (bounded wait, never blocks the logout).
+    await unregisterPushToken();
     await logoutService();
     invalidateChallengeProgressCache();
+    resetSessionStores();
     setToken(null);
     setUserId(null);
     setUsername(null);

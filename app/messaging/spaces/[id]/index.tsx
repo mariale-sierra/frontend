@@ -83,7 +83,7 @@ export default function SpaceScreen() {
     try {
       await leaveSpace(spaceId);
       setLeaveConfirmVisible(false);
-      safeBack('/(tabs)');
+      safeBack('/messaging');
     } catch {
       setActionLoading(false);
     }

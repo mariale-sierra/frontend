@@ -3,8 +3,12 @@ import { safeBack } from '../utils/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useMetricsEntryStore } from '../store/metricsEntryStore';
+import { adaptationForRoutine, useWorkoutAdaptationStore } from '../store/workoutAdaptationStore';
+import type { WorkoutAdaptation } from '../store/workoutAdaptationStore';
+import type { RoutineExerciseRef } from './useLocationSwitch';
+import type { TodayRoutineContract } from '../types/challenge';
 import { useAuth } from './useAuth';
-import { getTodayRoutineForChallenge } from '../services/challenge/challenge.service';
+import { loadTodayRoutine } from '../services/challenge/todayRoutineAdapted';
 import { getRoutine } from '../services/routine/routine.service';
 import { getMyChallenges } from '../services/user/user.service';
 import {
@@ -30,6 +34,11 @@ export function useMetricsScreen() {
   const updateMetricValue = useMetricsEntryStore((state) => state.updateMetricValue);
   const hydrateMetricsData = useMetricsEntryStore((state) => state.hydrateMetricsData);
 
+  // B7: the user's own location choice for the routine on screen, if any.
+  const adaptation = useWorkoutAdaptationStore((state) =>
+    adaptationForRoutine(state.byChallenge[selectedChallengeId], currentRoutineId),
+  );
+
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [challengeLoadError, setChallengeLoadError] = useState<string | null>(null);
   // Cycle-day number + routine name for the header ("Day {{n}} · {{routine}}").
@@ -38,6 +47,21 @@ export function useMetricsScreen() {
   // since getTodayRoutine only returns routine_id, not the routine's name).
   const [currentDay, setCurrentDay] = useState<number | null>(null);
   const [routineName, setRoutineName] = useState<string | null>(null);
+  // B7: the user's location swaps were rejected by the backend and dropped.
+  const [adaptationInvalid, setAdaptationInvalid] = useState(false);
+  // The routine's exercises as WRITTEN (not the user's swapped view): the location sheet always
+  // derives its alternatives from these, so changing location twice never compounds swaps.
+  const [baseExercises, setBaseExercises] = useState<RoutineExerciseRef[]>([]);
+  const setAdaptationInStore = useWorkoutAdaptationStore((state) => state.setAdaptation);
+  const clearAdaptationInStore = useWorkoutAdaptationStore((state) => state.clearAdaptation);
+  const rememberBase = useCallback((base: TodayRoutineContract) => {
+    const rows = (base.exercises ?? []) as Array<{ exercise?: { id?: number; name?: string } | null }>;
+    setBaseExercises(
+      rows
+        .filter((row) => typeof row.exercise?.id === 'number' && typeof row.exercise?.name === 'string')
+        .map((row) => ({ exerciseId: row.exercise!.id as number, name: row.exercise!.name as string })),
+    );
+  }, []);
 
   // Tracks which challengeId we last fetched a routine for, to avoid double-fetching
   // after the init effect sets selectedChallengeId via hydrateMetricsData.
@@ -90,7 +114,9 @@ export function useMetricsScreen() {
 
         // Then fetch today's routine separately — failure here won't block the dropdown.
         try {
-          const routineData = await getTodayRoutineForChallenge(initialChallenge.id);
+          const { routine: routineData, invalidAdaptation, base } = await loadTodayRoutine(initialChallenge.id);
+          setAdaptationInvalid(invalidAdaptation);
+          rememberBase(base);
           const exercises = adaptTodayRoutineExercises(routineData, initialChallenge);
           setExerciseMetrics(exercises, routineData.routine_id);
           loadDayAndRoutineName(routineData);
@@ -126,7 +152,9 @@ export function useMetricsScreen() {
     async function loadRoutine() {
       setIsLoadingData(true);
       try {
-        const routineData = await getTodayRoutineForChallenge(selectedChallengeId);
+        const { routine: routineData, invalidAdaptation, base } = await loadTodayRoutine(selectedChallengeId);
+        setAdaptationInvalid(invalidAdaptation);
+        rememberBase(base);
         const exercises = adaptTodayRoutineExercises(routineData, challenge!);
 
         lastFetchedChallengeId.current = selectedChallengeId;
@@ -142,6 +170,37 @@ export function useMetricsScreen() {
 
     loadRoutine();
   }, [selectedChallengeId]);
+
+  // Re-reads today's routine in the user's own view after they pick (or drop) a location.
+  const reloadRoutine = useCallback(async () => {
+    const challenge = challenges.find((c) => c.id === selectedChallengeId);
+    if (!challenge) return;
+    setIsLoadingData(true);
+    try {
+      const { routine: routineData, invalidAdaptation, base } = await loadTodayRoutine(selectedChallengeId);
+      setAdaptationInvalid(invalidAdaptation);
+      rememberBase(base);
+      setExerciseMetrics(adaptTodayRoutineExercises(routineData, challenge), routineData.routine_id);
+      loadDayAndRoutineName(routineData);
+    } catch {
+      Alert.alert(t('metrics.alerts.submitErrorTitle'), t('metrics.alerts.submitErrorFallback'));
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [challenges, selectedChallengeId, rememberBase, setExerciseMetrics, loadDayAndRoutineName, t]);
+
+  const applyLocation = useCallback(
+    (next: WorkoutAdaptation) => {
+      setAdaptationInStore(selectedChallengeId, next);
+      void reloadRoutine();
+    },
+    [selectedChallengeId, setAdaptationInStore, reloadRoutine],
+  );
+
+  const resetLocation = useCallback(() => {
+    clearAdaptationInStore(selectedChallengeId);
+    void reloadRoutine();
+  }, [selectedChallengeId, clearAdaptationInStore, reloadRoutine]);
 
   const goToCamera = useCallback(() => {
     router.push('/(add)/camera');
@@ -163,6 +222,12 @@ export function useMetricsScreen() {
     challengeLoadError,
     currentDay,
     routineName,
+    adaptation,
+    adaptationInvalid,
+    routineId: currentRoutineId,
+    baseExercises,
+    applyLocation,
+    resetLocation,
     updateMetricValue,
     goToCamera,
     goToRestDay,

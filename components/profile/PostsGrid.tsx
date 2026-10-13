@@ -1,13 +1,17 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
+import { getUserPosts } from '../../services/challenge/challenge.service';
+import { useAuth } from '../../hooks/useAuth';
+import { Button } from '../ui/button';
 import { PhotoGrid } from './PhotoGrid';
 import type { ChallengePhoto } from '../../types/challenge';
 
 interface PostsGridProps {
   view: 'posts' | 'photos';
-  onPhotoPress?: (photo: ChallengePhoto) => void;
+  /** The tapped photo plus the list it was in (as shown), for the post viewer. */
+  onPhotoPress?: (photo: ChallengePhoto, photos: ChallengePhoto[]) => void;
   /** Bumped by the parent screen's pull-to-refresh (a value change, any
    * value) to force a refetch outside the normal focus-effect cycle — this
    * component owns its own fetch, so a parent-level refresh has no other way
@@ -41,7 +45,13 @@ function haveSamePhotos(current: ChallengePhoto[], next: ChallengePhoto[]) {
 
 export const PostsGrid = memo(function PostsGrid({ view, onPhotoPress, refreshSignal }: PostsGridProps) {
   const { t } = useTranslation();
+  const router = useRouter();
+  const { userId } = useAuth();
   const [photos, setPhotos] = useState<ChallengePhoto[]>([]);
+  // Own posts come a page at a time (GET /workout-posts/user/:me): the unpaginated
+  // /workout-posts/mine returns and enriches the whole history, which is what made this slow.
+  const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Refetches on focus (not just on mount) so a photo uploaded elsewhere
@@ -53,9 +63,11 @@ export const PostsGrid = memo(function PostsGrid({ view, onPhotoPress, refreshSi
       // flight. Resetting this flag on every tab switch unmounted every
       // image tile, re-mounted the skeleton, and restarted image prefetches
       // even when the server returned the same photos.
-      getMyProgressPhotos()
-        .then((data) => {
+      if (!userId) return;
+      getUserPosts(userId)
+        .then(({ photos: data, nextCursor: cursor }) => {
           if (!active) return;
+          setNextCursor(cursor);
 
           // Service responses contain fresh object identities on every
           // request. Preserve the existing array when its visible content
@@ -72,17 +84,19 @@ export const PostsGrid = memo(function PostsGrid({ view, onPhotoPress, refreshSi
       return () => {
         active = false;
       };
-    }, []),
+    }, [userId]),
   );
 
   // Parent's pull-to-refresh — outside the normal focus cycle above, so it
   // needs its own effect. No loading-flag flip here either, same reasoning.
   useEffect(() => {
-    if (refreshSignal === undefined) return;
+    if (refreshSignal === undefined || !userId) return;
     let active = true;
-    getMyProgressPhotos()
-      .then((data) => {
-        if (active) setPhotos((current) => (haveSamePhotos(current, data) ? current : data));
+    getUserPosts(userId)
+      .then(({ photos: data, nextCursor: cursor }) => {
+        if (!active) return;
+        setNextCursor(cursor);
+        setPhotos((current) => (haveSamePhotos(current, data) ? current : data));
       })
       .catch(() => {
         // Leave the currently displayed photos as-is on a failed refresh.
@@ -100,12 +114,36 @@ export const PostsGrid = memo(function PostsGrid({ view, onPhotoPress, refreshSi
     [photos, view],
   );
 
+  function loadMore() {
+    if (!userId || !nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    getUserPosts(userId, nextCursor)
+      .then(({ photos: more, nextCursor: cursor }) => {
+        setPhotos((current) => [...current, ...more.filter((photo) => !current.some((c) => c.id === photo.id))]);
+        setNextCursor(cursor);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMore(false));
+  }
+
   return (
+    <View>
     <PhotoGrid
       photos={visiblePhotos}
       loading={loading}
       emptyLabel={view === 'posts' ? t('profile.emptyPublicPhotos') : t('profile.emptyAllPhotos')}
-      onPhotoPress={onPhotoPress}
+      emptyTitle={t('profile.emptyPostsTitle')}
+      emptyActions={[
+        { label: t('profile.emptyPostsExplore'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'empty-posts-explore' },
+        { label: t('profile.emptyPostsLog'), onPress: () => router.push('/log'), testID: 'empty-posts-log' },
+      ]}
+      onPhotoPress={onPhotoPress ? (photo) => onPhotoPress(photo, visiblePhotos) : undefined}
     />
+    {nextCursor ? (
+      <Button variant="outline" size="sm" loading={loadingMore} onPress={loadMore} testID="posts-load-more">
+        {t('profile.loadMorePosts')}
+      </Button>
+    ) : null}
+    </View>
   );
 });

@@ -42,4 +42,7 @@ export interface ExploreChallengeViewModel {
 export interface ExploreChallengeCardProps {
   challenge: ExploreChallengeViewModel;
   onPress?: () => void;
+  /** Only where the card is something you can act on — a challenge shared in
+   * a chat (long-press your own message to delete it). */
+  onLongPress?: () => void;
 }

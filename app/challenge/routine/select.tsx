@@ -17,7 +17,9 @@ import type { ActivityType } from '../../../types/activity';
 import { colors, radius, spacing, textOpacity, typography } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { useTranslation } from 'react-i18next';
-import { getRoutines } from '../../../services/routine/routine.service';
+import { deleteRoutine, getRoutines } from '../../../services/routine/routine.service';
+import { ConfirmationPopup } from '../../../components/ui/confirmationPopup';
+import type { RoutineSummary } from '../../../types/routine';
 
 const TRANSITION_DURATION = 380;
 const AnimatedText = Animated.createAnimatedComponent(RNText);
@@ -100,6 +102,32 @@ export default function SelectRoutineScreen() {
         : workoutRoutines[0]?.id ?? null
     ));
   }, [workoutRoutines]);
+
+  // B4: deleting one of the user's saved routines. Only routines that exist in
+  // the backend (`backendId`) offer it — the builder's local seed/session
+  // routines never do. On success the routine is dropped through the store's
+  // existing hydrateSavedRoutines() (the same action the initial fetch uses),
+  // so no new store logic and no refetch round-trip are needed.
+  const [routinePendingDelete, setRoutinePendingDelete] = useState<RoutineSummary | null>(null);
+  const [deletingRoutine, setDeletingRoutine] = useState(false);
+
+  async function handleDeleteRoutine() {
+    const routine = routinePendingDelete;
+    if (!routine || routine.backendId == null) return;
+    setDeletingRoutine(true);
+    try {
+      await deleteRoutine(routine.backendId);
+      hydrateSavedRoutines(savedRoutines.filter((item) => item.id !== routine.id));
+      if (selectedRoutineId === routine.id) {
+        setSelectedRoutineId(null);
+      }
+      setRoutinePendingDelete(null);
+    } catch {
+      // Global api.ts interceptor already surfaces an error toast.
+    } finally {
+      setDeletingRoutine(false);
+    }
+  }
 
   function handleCreateNew() {
     init(dayNumber);
@@ -240,6 +268,7 @@ export default function SelectRoutineScreen() {
                         selected={selectedRoutineId === routine.id}
                         onSelect={() => setSelectedRoutineId(routine.id)}
                         onOpen={() => handleViewRoutine(routine.id)}
+                        onDelete={routine.backendId != null ? () => setRoutinePendingDelete(routine) : undefined}
                       />
                     ))}
                   </Stack>
@@ -304,6 +333,27 @@ export default function SelectRoutineScreen() {
           </Pressable>
         </Animated.View>
       </View>
+
+      <ConfirmationPopup
+        visible={routinePendingDelete !== null}
+        title={t('routineSelect.deleteConfirmTitle')}
+        description={t('routineSelect.deleteConfirmMessage')}
+        icon="trash-outline"
+        iconColor={colors.error}
+        primaryButton={{
+          label: t('routineSelect.deleteConfirmCta'),
+          onPress: handleDeleteRoutine,
+          variant: 'danger',
+          loading: deletingRoutine,
+        }}
+        secondaryButton={{
+          label: t('routineSelect.deleteCancelCta'),
+          onPress: () => setRoutinePendingDelete(null),
+          variant: 'neutral',
+          disabled: deletingRoutine,
+        }}
+        onDismiss={() => !deletingRoutine && setRoutinePendingDelete(null)}
+      />
     </Animated.View>
   );
 }

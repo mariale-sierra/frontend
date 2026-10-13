@@ -11,12 +11,15 @@ import { ConfirmationPopup } from '../../components/ui/confirmationPopup';
 import { colors, spacing } from '../../constants/theme';
 import { banUser, getPublicProfile } from '../../services/user/user.service';
 import type { PublicProfileContract } from '../../types/user';
-import { ProfileHeader, FollowButton, UserPostsGrid, ProfilePhotoModal } from '../../components/profile';
+import { ProfileHeader, FollowButton, UserPostsGrid } from '../../components/profile';
+import { openPostViewer } from '../../utils/postViewer';
 import type { ChallengePhoto } from '../../types/challenge';
 import { useAuth } from '../../hooks/useAuth';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import { getUserPosts } from '../../services/challenge/challenge.service';
+import { BadgesSection } from '../../components/badges';
 
 const BAN_ICON_SIZE = 16;
 
@@ -36,11 +39,16 @@ const BAN_ICON_SIZE = 16;
 // exact upstream cause (a caller passing an empty/mangled id), this guard
 // means it now degrades to the normal "user not found" state instead of a
 // confusing validation toast.
+// How far back to look for a post opened from a chat (20 posts per page).
+const OPEN_POST_MAX_PAGES = 5;
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function UserProfile() {
-  const { userId: rawUserId } = useLocalSearchParams<{ userId: string }>();
+  const { userId: rawUserId, postId: rawPostId } = useLocalSearchParams<{ userId: string; postId?: string }>();
   const rawId = Array.isArray(rawUserId) ? rawUserId[0] : rawUserId;
+  // A post to open on arrival (a post shared in a chat — SharedPostCard).
+  const postId = (Array.isArray(rawPostId) ? rawPostId[0] : rawPostId) || undefined;
   const userId = rawId && UUID_RE.test(rawId) ? rawId : undefined;
   const { t } = useTranslation();
   const router = useRouter();
@@ -51,15 +59,19 @@ export default function UserProfile() {
   const [profile, setProfile] = useState<PublicProfileContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [selectedPhoto, setSelectedPhoto] = useState<ChallengePhoto | null>(null);
   const [banPopupVisible, setBanPopupVisible] = useState(false);
   const [banning, setBanning] = useState(false);
 
   const isOwnProfile = Boolean(sessionUserId && userId && sessionUserId === userId);
+  // Your own profile normally swaps to the Profile TAB — but not when this
+  // screen was opened to show one post (your own post shared in a chat):
+  // `replace` dropped the chat from the history and the tab has no back
+  // chevron, so you were stuck there. Real, reported bug.
+  const redirectToOwnTab = isOwnProfile && !postId;
 
   useFocusEffect(
     useCallback(() => {
-      if (!userId || isOwnProfile) {
+      if (!userId || redirectToOwnTab) {
         if (!userId) setLoading(false);
         return;
       }
@@ -81,14 +93,41 @@ export default function UserProfile() {
       return () => {
         active = false;
       };
-    }, [userId, isOwnProfile]),
+    }, [userId, redirectToOwnTab]),
   );
 
   useEffect(() => {
-    if (isOwnProfile) {
+    if (redirectToOwnTab) {
       router.replace('/(tabs)/profile');
     }
-  }, [isOwnProfile, router]);
+  }, [redirectToOwnTab, router]);
+
+  // Opened for one post (shared in a chat): find it in the author's posts
+  // (newest first, a few pages at most) and open the post viewer on it, with
+  // the posts loaded so far to scroll through. If it isn't visible to the
+  // viewer any more, the profile simply shows.
+  useEffect(() => {
+    if (!userId || !postId) return;
+    let active = true;
+    (async () => {
+      let cursor: string | undefined;
+      const loaded: ChallengePhoto[] = [];
+      for (let page = 0; page < OPEN_POST_MAX_PAGES && active; page++) {
+        const { photos, nextCursor } = await getUserPosts(userId, cursor);
+        loaded.push(...photos);
+        const match = photos.find((photo) => String(photo.id) === postId);
+        if (match) {
+          if (active) openPostViewer(loaded, match, { ownerId: isOwnProfile ? sessionUserId : null });
+          return;
+        }
+        if (!nextCursor) return;
+        cursor = nextCursor;
+      }
+    })().catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [userId, postId, isOwnProfile, sessionUserId]);
 
   // UserPostsGrid fetches its own photos internally — bumping this signal is
   // the only way this screen's pull-to-refresh can also force it to refetch,
@@ -121,7 +160,7 @@ export default function UserProfile() {
     }
   }
 
-  if (isOwnProfile) {
+  if (redirectToOwnTab) {
     return null;
   }
 
@@ -154,7 +193,9 @@ export default function UserProfile() {
               followingCount={profile.following_count}
               practices={profile.practice_preferences}
               actions={
+                isOwnProfile ? null : (
                 <View style={styles.actionsWrap}>
+                  <View style={styles.primaryActions}>
                   <FollowButton
                     userId={profile.id}
                     initialIsFollowing={profile.is_following}
@@ -169,6 +210,19 @@ export default function UserProfile() {
                       )
                     }
                   />
+                  {/* Straight to a chat with this person (same entry as "Message the author" on a
+                      post); /messaging/new resolves or creates the 1:1 conversation and opens it. */}
+                  <Button
+                    variant="outline"
+                    size="md"
+                    leftIcon={<Icon name="chatbubble-outline" size={16} color={colors.paper} />}
+                    onPress={() => router.push({ pathname: '/messaging/new', params: { recipientUserId: profile.id } })}
+                    accessibilityLabel={t('profile.messageButtonA11y')}
+                    testID="profile-message-button"
+                  >
+                    {t('profile.messageButton')}
+                  </Button>
+                  </View>
                   {/* An admin-only action, kept quiet: the app's soft destructive button
                       (a translucent `error` fill and rim), not a bare red link. */}
                   {isAdmin && (
@@ -183,13 +237,18 @@ export default function UserProfile() {
                     </Button>
                   )}
                 </View>
+                )
               }
             />
-            <UserPostsGrid userId={profile.id} onPhotoPress={setSelectedPhoto} refreshSignal={postsRefreshSignal} />
+            <BadgesSection userId={profile.id} refreshSignal={postsRefreshSignal} />
+            <UserPostsGrid
+              userId={profile.id}
+              onPhotoPress={(photo, photos) => openPostViewer(photos, photo, { ownerId: isOwnProfile ? sessionUserId : null })}
+              refreshSignal={postsRefreshSignal}
+            />
           </>
         )}
       </ScrollView>
-      <ProfilePhotoModal photo={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
       <ConfirmationPopup
         visible={banPopupVisible}
         title={t('profile.banUserTitle')}
@@ -230,6 +289,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
+  },
+  primaryActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
   actionsWrap: {
     alignItems: 'center',

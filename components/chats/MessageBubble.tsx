@@ -1,8 +1,10 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
+import { SharedChallengeCard, SharedPostCard } from './SharedContentCard';
 import { colors, radius, spacing } from '../../constants/theme';
 import { formatRelativeTime } from '../../utils/time';
+import { triggerLongPressHaptic } from '../../utils/haptics';
 import type { MessageContract } from '../../types/chat';
 
 interface MessageBubbleProps {
@@ -10,11 +12,64 @@ interface MessageBubbleProps {
   isMine: boolean;
   /** The other participant's avatar — Chats-47A renders it next to THEIR bubbles only, never next to mine. */
   otherAvatar?: { username: string; imageUrl: string | null };
+  /** Long-press on the bubble (B4: your own messages, to delete one). The
+   * bubble looks exactly the same either way — no extra chrome per message. */
+  onLongPress?: () => void;
+  longPressA11yHint?: string;
 }
 
 const AVATAR_SIZE = 26;
 
-export function MessageBubble({ message, isMine, otherAvatar }: MessageBubbleProps) {
+export function MessageBubble({
+  message,
+  isMine,
+  otherAvatar,
+  onLongPress: onLongPressProp,
+  longPressA11yHint,
+}: MessageBubbleProps) {
+  // Every long-press that opens an action buzzes first — on the text bubble
+  // and on a shared post/challenge card alike.
+  const onLongPress = onLongPressProp
+    ? () => {
+        triggerLongPressHaptic();
+        onLongPressProp();
+      }
+    : undefined;
+  // Sprint 9, B5: a shared post/challenge is its own card; any comment sent
+  // with it is a regular bubble right under it. A share sent with no comment
+  // has `content: ''` and gets no text bubble at all.
+  const shared = message.sharedPost ? (
+    <SharedPostCard post={message.sharedPost} onLongPress={onLongPress} longPressA11yHint={longPressA11yHint} />
+  ) : message.sharedChallenge ? (
+    <SharedChallengeCard
+      challenge={message.sharedChallenge}
+      onLongPress={onLongPress}
+      longPressA11yHint={longPressA11yHint}
+    />
+  ) : null;
+
+  const textBubble = message.content ? (
+    <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
+      {/* `inverse` (→ `ink` text), not a raw `color: colors.textInverse`
+          override — that token doesn't exist on the current theme (see
+          radius/spacing notes below); `Text`'s own `inverse` prop is the
+          real mechanism for "dark text on a light/`primary` background"
+          everywhere else in the app. */}
+      <Text variant="body" inverse={isMine}>
+        {message.content}
+      </Text>
+    </View>
+  ) : null;
+
+  const bubble = shared ? (
+    <View style={[styles.sharedStack, isMine && styles.bubbleColumnMine]}>
+      {shared}
+      {textBubble}
+    </View>
+  ) : (
+    textBubble
+  );
+
   return (
     <View style={[styles.row, isMine ? styles.rowMine : styles.rowTheirs]}>
       {!isMine && (
@@ -23,16 +78,17 @@ export function MessageBubble({ message, isMine, otherAvatar }: MessageBubblePro
         </View>
       )}
       <View style={[styles.bubbleColumn, isMine && styles.bubbleColumnMine]}>
-        <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}>
-          {/* `inverse` (→ `ink` text), not a raw `color: colors.textInverse`
-              override — that token doesn't exist on the current theme (see
-              radius/spacing notes below); `Text`'s own `inverse` prop is the
-              real mechanism for "dark text on a light/`primary` background"
-              everywhere else in the app. */}
-          <Text variant="body" inverse={isMine}>
-            {message.content}
-          </Text>
-        </View>
+        {onLongPress ? (
+          <Pressable
+            onLongPress={onLongPress}
+            accessibilityHint={longPressA11yHint}
+            testID={`message-bubble-${message.id}`}
+          >
+            {bubble}
+          </Pressable>
+        ) : (
+          bubble
+        )}
         <Text variant="caption" tone="secondary" style={isMine ? styles.timeMine : styles.timeTheirs}>
           {formatRelativeTime(message.sentAt)}
         </Text>
@@ -71,6 +127,10 @@ const styles = StyleSheet.create({
   },
   bubbleColumnMine: {
     alignItems: 'flex-end',
+  },
+  sharedStack: {
+    gap: spacing.xs,
+    alignItems: 'flex-start',
   },
   // Bumped a tier each — `spacing.md`→`base`, `spacing.sm`→`md` — per
   // explicit "text too close to the bubble edge" report. Still real scale

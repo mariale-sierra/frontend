@@ -20,6 +20,16 @@ export interface ListCommentsResponse {
   nextAfter: number | null;
 }
 
+/** Backend ReactorDto (GET /workout-posts/:postId/reactions/users) — same
+ * restricted user summary as a comment author. */
+export type ReactorContract = CommentAuthorContract;
+
+export interface ListReactorsResponse {
+  reactors: ReactorContract[];
+  /** Opaque cursor for the next page (X-Next-Cursor), absent on the last. */
+  nextCursor?: string;
+}
+
 /** Backend response of GET /workout-posts/:postId/reactions. */
 export interface ReactionSummaryContract {
   count: number;

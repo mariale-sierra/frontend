@@ -1,2 +1,5 @@
-// Social components (follower lists, activity feed, sharing, leaderboards).
-// Placeholder — no components implemented yet.
+// Social components shared across feed, chats and profile.
+export * from './HashtagText';
+export * from './ReactorsSheet';
+export * from './ReactorsSummary';
+export * from './ShareToChatSheet';

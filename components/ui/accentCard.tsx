@@ -1,7 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import type { ViewProps } from 'react-native';
 import { LinearGradient, Rect, vec } from '@shopify/react-native-skia';
-import { AccentDome, ACCENT_VIVID_FACTOR } from './accentDome';
+import { AccentDome } from './accentDome';
 import { AccentGlow } from './accentGlow';
 import { AccentMesh } from './accentMesh';
 import { AccentTwinDome } from './accentTwinDome';
@@ -32,6 +32,26 @@ import { boostSaturation, withAlpha } from '../../utils/color';
 // pairing" tuning this comment used to describe. Shape (`domeHalfWidth`/
 // `domeDepth`) untouched, same as those two — only brightness was asked for.
 const OUTLINE_OPACITY = 0.3;
+// `linearGlow` (Space cards): a vertical gradient, ink at the top to the
+// activity color at the bottom (2026-10-08, explicit requests: "simply linear,
+// color at the bottom and ink at the top", then "more prominent, the color at
+// the bottom", then "too harsh — it needs to look more faded and blurred").
+// So no hand-placed stops (a few of them read as visible steps): the ramp is
+// one smooth curve, opacity = peak × t², sampled at `samples` evenly spaced
+// points. The fade starts near the top and builds gradually, the color still
+// collecting at the bottom. The peak stays short of full strength — the
+// card's text is `paper`, and the activity colors are pastels made to pair
+// with `ink`.
+const LINEAR_GLOW_SAMPLES = 7;
+const LINEAR_GLOW_PEAK = 0.72;
+export const LINEAR_GLOW = {
+  vividFactor: 1.5,
+  // [offset down the card, opacity of the color over the card's ink]
+  stops: Array.from({ length: LINEAR_GLOW_SAMPLES }, (_, i) => {
+    const t = i / (LINEAR_GLOW_SAMPLES - 1);
+    return [t, Math.round(LINEAR_GLOW_PEAK * t * t * 100) / 100] as const;
+  }),
+} as const;
 const DOME = {
   domeHalfWidth: 0.62,
   domeDepth: 0.8,
@@ -77,9 +97,10 @@ interface AccentCardProps extends ViewProps {
       number
     >
   >;
-  /** Draws the glow as a single flat diagonal `LinearGradient` — `ink` at
-   * the top-left corner to the full, vivid accent color at the
-   * bottom-right — instead of the dome/mesh/twin-dome. Added 2026-09-25 for
+  /** Draws the glow as a single flat vertical `LinearGradient` — `ink` at
+   * the top to the vivid accent color at the bottom (`LINEAR_GLOW`; it was
+   * diagonal, top-left to bottom-right, until 2026-10-08) — instead of the
+   * dome/mesh/twin-dome. Added 2026-09-25 for
    * Space cards specifically, per an attached reference image ("I want
    * something like this, only gradient wise... with their activity
    * colors") after several rounds of trying to get there through the
@@ -128,8 +149,11 @@ export function AccentCard({
             <Rect x={0} y={0} width={width} height={height}>
               <LinearGradient
                 start={vec(0, 0)}
-                end={vec(width, height)}
-                colors={[colors.ink, boostSaturation(color, ACCENT_VIVID_FACTOR)]}
+                end={vec(0, height)}
+                positions={LINEAR_GLOW.stops.map(([offset]) => offset)}
+                colors={LINEAR_GLOW.stops.map(([, opacity]) =>
+                  withAlpha(boostSaturation(color, LINEAR_GLOW.vividFactor), opacity),
+                )}
               />
             </Rect>
           ) : glowRecipe ? (

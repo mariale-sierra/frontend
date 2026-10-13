@@ -10,14 +10,14 @@ import { formatCount } from '../../../utils/format';
 import { getChallengeAccentColor } from '../../../services/adapters/challengeState';
 import type { ExploreChallengeCardProps } from './challengeListSections';
 
-export const ExploreChallengeCard = memo(function ExploreChallengeCard({ challenge, onPress }: ExploreChallengeCardProps) {
+export const ExploreChallengeCard = memo(function ExploreChallengeCard({ challenge, onPress, onLongPress }: ExploreChallengeCardProps) {
   const { t } = useTranslation();
   // Activity Color System v2 — falls back to colors.primary when this
   // challenge has no dominant category yet.
   const accentColor = getChallengeAccentColor(challenge.dominantActivityCategory);
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [pressed && styles.pressed]}>
+    <Pressable onPress={onPress} onLongPress={onLongPress} style={({ pressed }) => [pressed && styles.pressed]}>
       <View style={styles.card}>
         <View style={styles.top}>
           <Text variant="subheader" numberOfLines={1}>

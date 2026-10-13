@@ -13,4 +13,18 @@ export interface FeedPostContract {
   likes_count?: number;
   liked_by_me?: boolean;
   comments_count?: number;
+  /** Up to 3 people who reacted — followed users first, never the viewer
+   * (Sprint 9, B5). Absent on an older API deployment. */
+  recent_reactors?: FeedReactorContract[];
+  /** Caption hashtags, lowercase, without '#'. */
+  hashtags?: string[];
+  /** What was logged with the photo (exercise + value), shown collapsed. */
+  metrics?: Array<{ label: string; value: string }>;
+}
+
+export interface FeedReactorContract {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
 }

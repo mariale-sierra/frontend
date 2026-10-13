@@ -11,7 +11,8 @@ import { Text } from '../components/ui/text';
 import { ChallengeDeck } from '../components/add/challengeDeck';
 import { ChallengeDeckSkeleton } from '../components/add/challengeDeckSkeleton';
 import { getMyChallenges } from '../services/user/user.service';
-import { getMyProgressPhotos } from '../services/challenge/challenge.service';
+import { getUserPosts } from '../services/challenge/challenge.service';
+import { useAuth } from '../hooks/useAuth';
 import { groupLatestPhotoByChallengeId } from '../services/adapters/challengeState';
 import { getLogChallengeQuickPicks, type LogChallengeQuickPick } from '../services/adapters/metricsAdapter';
 import { colors, radius, spacing, textOpacity } from '../constants/theme';
@@ -49,6 +50,7 @@ export default function LogChallengePicker() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width, onLayout } = useMeasuredWidth();
+  const { userId } = useAuth();
 
   const [challenges, setChallenges] = useState<LogChallengeQuickPick[]>([]);
   // Real, reported bug: `challenges` (the LOGGABLE-today quick-pick list,
@@ -79,10 +81,13 @@ export default function LogChallengePicker() {
   const backdropAnimatedStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
 
   useEffect(() => {
+    if (!userId) return;
     let active = true;
 
-    Promise.all([getMyChallenges(), getMyProgressPhotos()])
-      .then(([myChallenges, photos]) => {
+    // Only the newest page of posts: the picker needs just the latest photo of each challenge,
+    // and GET /workout-posts/mine returns (and enriches) the user's whole history.
+    Promise.all([getMyChallenges(), getUserPosts(userId)])
+      .then(([myChallenges, { photos }]) => {
         if (!active) return;
         setHasAnyChallenges(myChallenges.length > 0);
         const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(photos);
@@ -98,7 +103,7 @@ export default function LogChallengePicker() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [userId]);
 
   function handleDismiss() {
     safeBack();

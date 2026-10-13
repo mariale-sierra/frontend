@@ -4,6 +4,8 @@ import {
   Alert,
   Animated,
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -16,13 +18,19 @@ import { useTranslation } from 'react-i18next';
 import { IconButton } from '../../components/ui/iconButton';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
-import { colors, spacing, radius } from '../../constants/theme';
+import { GlassInput } from '../../components/ui/glassInput';
+import { activityColors, colors, spacing, radius } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
 import { submitWorkoutProgress } from '../../services/workout-log/workout-log.service';
 import type { WorkoutLogContract } from '../../types/workout-log';
 import { applyExerciseMetrics } from '../../services/metrics/applyExerciseMetrics';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
+import {
+  adaptationForRoutine,
+  toSubstitutionPayload,
+  useWorkoutAdaptationStore,
+} from '../../store/workoutAdaptationStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
 import { showProgressLoggedFeedback } from '../../utils/progressLoggedFeedback';
 import { useAuth } from '../../hooks/useAuth';
@@ -30,6 +38,10 @@ import { useChallengeParticipants } from '../../hooks/useChallengeParticipants';
 import { getChallenge, isChallengeOwner } from '../../services/challenge/challenge.service';
 import { TagParticipantsSheet } from '../../components/challenge/TagParticipantsSheet';
 import type { ChallengeContract } from '../../types/challenge';
+import { extractHashtags } from '../../utils/hashtags';
+
+// Same cap as the backend's CreateWorkoutProgressDto.caption.
+const MAX_CAPTION_LENGTH = 500;
 
 const CHIP_ICON_SIZE = 19;
 
@@ -87,6 +99,11 @@ export default function Camera() {
   const selectedChallengeId = useMetricsEntryStore((s) => s.selectedChallengeId);
   const currentRoutineId = useMetricsEntryStore((s) => s.currentRoutineId);
   const exerciseMetrics = useMetricsEntryStore((s) => s.exerciseMetrics);
+  const clearAdaptation = useWorkoutAdaptationStore((s) => s.clearAdaptation);
+  // B7: the user's location choice, only when it was made for the routine being logged.
+  const adaptation = useWorkoutAdaptationStore((s) =>
+    selectedChallengeId ? adaptationForRoutine(s.byChallenge[selectedChallengeId], currentRoutineId) : null,
+  );
 
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
@@ -97,6 +114,10 @@ export default function Camera() {
   const [error, setError] = useState<string | null>(null);
 
   const [visibility, setVisibility] = useState<'followers' | 'private'>('followers');
+  // Optional caption on the photo (Sprint 9, B5) — #hashtags typed here are
+  // parsed and stored by the backend; the chips below the field preview them.
+  const [caption, setCaption] = useState('');
+  const captionHashtags = useMemo(() => extractHashtags(caption), [caption]);
   const visAnim = useRef(new Animated.Value(1)).current;
 
   // Bloque 1 — joint owner posts: only shown/usable when the current user
@@ -162,6 +183,7 @@ export default function Camera() {
   }
 
   function handleRetry() {
+    setCaption('');
     setCapturedUri(null);
     setError(null);
   }
@@ -204,7 +226,12 @@ export default function Camera() {
       imageUrl: publicUrl,
       isRestDay: false as const,
       visibility,
+      caption: caption.trim() || undefined,
       routineId: currentRoutineId ?? undefined,
+      // B7: where the user trained and the swaps they chose (only if made for this routine).
+      ...(adaptation
+        ? { locationCode: adaptation.locationCode, substitutions: toSubstitutionPayload(adaptation) }
+        : {}),
       taggedUserIds: isOwner && taggedUserIds.length > 0 ? taggedUserIds : undefined,
     };
 
@@ -244,6 +271,7 @@ export default function Camera() {
         console.error('[Camera] applyExerciseMetrics failed:', metricsError);
       }
     }
+    clearAdaptation(selectedChallengeId);
     invalidateChallengeProgressCache();
     setSubmittingProgress(false);
     try {
@@ -304,7 +332,10 @@ export default function Camera() {
 
   if (capturedUri) {
     return (
-      <View style={[styles.fill, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, spacing.xl) }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={[styles.fill, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, spacing.xl) }]}
+      >
         <View style={styles.header}>
           <IconButton
             name="arrow-back-outline"
@@ -330,6 +361,29 @@ export default function Camera() {
               style={styles.tagToggle}
             />
           )}
+        </View>
+
+        <View style={styles.captionWrap}>
+          <GlassInput
+            placeholder={t('camera.captionPlaceholder')}
+            placeholderVariant="caption"
+            value={caption}
+            onChangeText={setCaption}
+            multiline
+            maxLength={MAX_CAPTION_LENGTH}
+            showCounter={false}
+            editable={!isBusy}
+            testID="camera-caption"
+          />
+          {captionHashtags.length > 0 ? (
+            <View style={styles.hashtagRow}>
+              {captionHashtags.map((tag) => (
+                <Text key={tag} variant="caption" style={styles.hashtagText}>
+                  #{tag}
+                </Text>
+              ))}
+            </View>
+          ) : null}
         </View>
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -360,7 +414,7 @@ export default function Camera() {
           onChange={setTaggedUserIds}
           onClose={() => setTagSheetVisible(false)}
         />
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -441,6 +495,23 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     height: '100%',
+  },
+  captionWrap: {
+    marginHorizontal: spacing.sm,
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  hashtagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: spacing.sm,
+    rowGap: spacing.xs,
+  },
+  // Same look as hashtags everywhere else (HashtagText): electric blue,
+  // regular weight, no pill. Custom color on `Text` needs `opacity: 1`.
+  hashtagText: {
+    color: activityColors.flexibility,
+    opacity: 1,
   },
   bottomBar: {
     alignItems: 'center',

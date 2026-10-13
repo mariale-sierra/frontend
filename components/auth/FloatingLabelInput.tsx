@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, TextInput } from 'react-native';
 import type { TextInputProps } from 'react-native';
 import { Icon } from '../ui/icon';
@@ -93,6 +93,16 @@ export function FloatingLabelInput({
     }).start();
   }, [floated, anim]);
 
+  // Rebuilding the input drops focus and the caret: put both back, caret at the end.
+  const toggleReveal = useCallback(() => {
+    setRevealed((r) => !r);
+    const length = (value ?? '').length;
+    setTimeout(() => {
+      inputRef.current?.focus();
+      inputRef.current?.setNativeProps({ selection: { start: length, end: length } });
+    }, 0);
+  }, [value]);
+
   const restOpacity = anim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] });
   const restTranslateY = anim.interpolate({ inputRange: [0, 1], outputRange: [0, -REST_RISE] });
   const floatOpacity = anim;
@@ -122,6 +132,9 @@ export function FloatingLabelInput({
         {label}
       </Animated.Text>
       <TextInput
+        // Android keeps drawing the old mask when `secureTextEntry` is flipped on a live input
+        // (the reveal/hide eye then seems to do nothing), so the input is rebuilt when it flips.
+        key={revealed ? 'revealed' : 'masked'}
         ref={inputRef}
         value={value}
         onFocus={(e) => {
@@ -139,7 +152,7 @@ export function FloatingLabelInput({
       />
       {isPassword && (
         <Pressable
-          onPress={() => setRevealed((r) => !r)}
+          onPress={toggleReveal}
           hitSlop={8}
           style={styles.eyeButton}
           accessibilityRole="button"
@@ -213,6 +226,7 @@ const styles = StyleSheet.create({
     right: spacing.md,
     top: 0,
     bottom: 0,
+    width: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },

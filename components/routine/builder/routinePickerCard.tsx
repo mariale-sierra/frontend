@@ -13,6 +13,9 @@ interface RoutinePickerCardProps {
   selected: boolean;
   onSelect: () => void;
   onOpen: () => void;
+  /** B4: only passed for a routine actually saved in the backend (has a
+   * `backendId`) — never for the builder's local seed/session routines. */
+  onDelete?: () => void;
 }
 
 function CardShell({
@@ -38,7 +41,7 @@ function CardShell({
 // bg, `medium` radius, `base` horizontal / `md` vertical padding. Selection
 // is a border (not a fill — a spotlight color is never a surface) plus a
 // filled radio dot, matching the wireframe exactly.
-export function RoutinePickerCard({ routine, selected, onSelect, onOpen }: RoutinePickerCardProps) {
+export function RoutinePickerCard({ routine, selected, onSelect, onOpen, onDelete }: RoutinePickerCardProps) {
   const { t } = useTranslation();
   const metaText = `${t('routineSelect.card.exercisesCount', { count: routine.exercises.length })} · ${getRoutineLocationSummary(routine.exercises)}`;
   // Activity Color System v2 — this routine's own dominant activity category
@@ -58,6 +61,23 @@ export function RoutinePickerCard({ routine, selected, onSelect, onOpen }: Routi
             {metaText}
           </Text>
         </View>
+
+        {onDelete ? (
+          // Same muted trailing trash icon as CommentRow's own-comment delete.
+          <Pressable
+            onPress={(event) => {
+              event.stopPropagation();
+              onDelete();
+            }}
+            hitSlop={10}
+            style={({ pressed }) => [styles.openButton, pressed && styles.pressed]}
+            accessibilityRole="button"
+            accessibilityLabel={t('routineSelect.deleteA11y', { name: routine.name })}
+            testID={`routine-delete-${routine.id}`}
+          >
+            <Icon name="trash-outline" size={16} color={withAlpha(colors.paper, textOpacity.secondary)} />
+          </Pressable>
+        ) : null}
 
         <Pressable
           onPress={(event) => {

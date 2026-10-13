@@ -4,6 +4,7 @@ import { Row } from '../layout/row';
 import { Stack } from '../layout/stack';
 import { PostCardSkeleton } from './PostCardSkeleton';
 import { radius, spacing } from '../../constants/theme';
+import { FEED_POST_GAP_TOKEN } from '../../constants/feed';
 
 const STREAK_AVATAR_SIZE = 58;
 
@@ -29,7 +30,7 @@ export function HomeContentSkeleton() {
         ))}
       </Row>
 
-      <Stack gap="2xl">
+      <Stack gap={FEED_POST_GAP_TOKEN}>
         <PostCardSkeleton />
         <PostCardSkeleton />
       </Stack>

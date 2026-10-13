@@ -6,3 +6,9 @@ import * as Haptics from 'expo-haptics';
 export function triggerLightHaptic() {
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 }
+
+/** A firmer tap for a long-press that opens an action (deleting your own
+ * chat message) — the touch that tells you the hold "took". Never throws. */
+export function triggerLongPressHaptic() {
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+}

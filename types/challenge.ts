@@ -66,6 +66,8 @@ export interface ChallengeExerciseSetContract {
 }
 
 export interface ChallengeExerciseContract {
+  /** Catalog exercise id (B7) — what location alternatives are asked for. */
+  exercise_id?: number;
   name?: string;
   location?: string;
   activity_type?: ActivityType;
@@ -89,6 +91,8 @@ export interface ChallengeExerciseContract {
 
 export interface ChallengeCycleDayContract {
   day_number?: number;
+  /** The routine the day uses (B7) — substitutions only apply to that routine. */
+  routine_id?: number | null;
   is_rest_day?: boolean;
   routine_name?: string;
   routine_description?: string;
@@ -196,8 +200,17 @@ export interface ChallengeProgressContract {
   [key: string]: unknown;
 }
 
+/** B7: one user-chosen exercise swap, sent with the progress submission. */
+export interface WorkoutSubstitutionPayload {
+  originalExerciseId: number;
+  substituteExerciseId: number;
+}
+
 export interface ProgressSubmissionRequest {
   challengeId: string;
+  /** B7: location trained at; required when `substitutions` is set. */
+  locationCode?: string;
+  substitutions?: WorkoutSubstitutionPayload[];
   routineId?: number;
   imageUrl?: string;
   caption?: string;
@@ -239,6 +252,10 @@ export interface TodayRoutineExerciseContract {
 
 export interface TodayRoutineContract {
   routine_id: number;
+  /** B7: where the routine can be done; `requiresSubstitution` flags locations
+   * that need exercises swapped. */
+  locations?: Array<{ code: string; name: string; requiresSubstitution: boolean; unsupportedExerciseIds: number[] }>;
+  locationCode?: string | null;
   exercises?: TodayRoutineExerciseContract[];
   [key: string]: unknown;
 }
@@ -263,4 +280,20 @@ export interface ChallengePhoto {
   visibility: 'public' | 'private';
   metrics: ChallengePhotoMetric[];
   description: string;
+  // Sprint 9, B5 — what a profile photo needs to show as a full feed post
+  // (react, comment, share). Optional: absent on an older API deployment.
+  userId?: string;
+  userAvatarUrl?: string | null;
+  challengeName?: string | null;
+  postedAt?: string;
+  likesCount?: number;
+  likedByMe?: boolean;
+  commentsCount?: number;
+  recentReactors?: Array<{
+    id: string;
+    username: string;
+    displayName: string | null;
+    profileImageUrl: string | null;
+  }>;
+  hashtags?: string[];
 }

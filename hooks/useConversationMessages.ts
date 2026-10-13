@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
+  deleteMessage as deleteMessageRequest,
   getMessages,
   markConversationRead,
   sendMessage as sendMessageRequest,
@@ -137,6 +138,17 @@ export function useConversationMessages(conversationId: string) {
     [conversationId, sending],
   );
 
+  /** Deletes one of the caller's own messages (B4) and drops it from the
+   * thread in place. Rejects (leaving the thread as-is) if the request
+   * failed — the global api.ts interceptor shows the toast. */
+  const remove = useCallback(
+    async (messageId: number) => {
+      await deleteMessageRequest(conversationId, messageId);
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    },
+    [conversationId],
+  );
+
   return {
     messages,
     loading,
@@ -146,6 +158,7 @@ export function useConversationMessages(conversationId: string) {
     loadingOlder,
     loadOlder,
     send,
+    remove,
     reload: loadLatest,
   };
 }

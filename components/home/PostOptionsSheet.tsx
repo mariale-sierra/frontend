@@ -9,14 +9,20 @@ import { colors, radius, spacing } from '../../constants/theme';
 interface PostOptionsSheetProps {
   visible: boolean;
   onClose: () => void;
-  onReport: () => void;
+  /** Someone else's post: open a chat with its author. */
+  onMessage?: () => void;
+  /** Someone else's post: report it. */
+  onReport?: () => void;
+  /** Your own post (B4): delete it. */
+  onDelete?: () => void;
 }
 
 /**
- * The "..." menu on someone else's feed post. Report is the only option for
- * now; new ones go in as more rows here, styled the same way.
+ * The "..." menu on a feed post. Someone else's post gets Message the
+ * author and Report; your own post gets Delete (you can't report yourself). Each option is one row,
+ * styled the same way.
  */
-export function PostOptionsSheet({ visible, onClose, onReport }: PostOptionsSheetProps) {
+export function PostOptionsSheet({ visible, onClose, onMessage, onReport, onDelete }: PostOptionsSheetProps) {
   const { t } = useTranslation();
 
   return (
@@ -26,22 +32,57 @@ export function PostOptionsSheet({ visible, onClose, onReport }: PostOptionsShee
       </Text>
 
       <View style={styles.list}>
-        <Row
-          pressable
-          onPress={onReport}
-          gap="md"
-          justify="flex-start"
-          align="center"
-          style={styles.option}
-          accessibilityRole="button"
-          accessibilityLabel={t('reports.reportPostA11y')}
-          testID="post-options-report"
-        >
-          <Icon name="flag-outline" size={20} color={colors.error} />
-          <Text variant="body" style={styles.destructiveLabel}>
-            {t('home.postOptions.report')}
-          </Text>
-        </Row>
+        {onMessage ? (
+          <Row
+            pressable
+            onPress={onMessage}
+            gap="md"
+            justify="flex-start"
+            align="center"
+            style={styles.option}
+            accessibilityRole="button"
+            testID="post-options-message"
+          >
+            <Icon name="chatbubble-ellipses-outline" size={20} color={colors.paper} />
+            <Text variant="body">{t('home.sendMessage')}</Text>
+          </Row>
+        ) : null}
+        {onReport ? (
+          <Row
+            pressable
+            onPress={onReport}
+            gap="md"
+            justify="flex-start"
+            align="center"
+            style={styles.option}
+            accessibilityRole="button"
+            accessibilityLabel={t('reports.reportPostA11y')}
+            testID="post-options-report"
+          >
+            <Icon name="flag-outline" size={20} color={colors.error} />
+            <Text variant="body" style={styles.destructiveLabel}>
+              {t('home.postOptions.report')}
+            </Text>
+          </Row>
+        ) : null}
+        {onDelete ? (
+          <Row
+            pressable
+            onPress={onDelete}
+            gap="md"
+            justify="flex-start"
+            align="center"
+            style={styles.option}
+            accessibilityRole="button"
+            accessibilityLabel={t('home.postOptions.deleteA11y')}
+            testID="post-options-delete"
+          >
+            <Icon name="trash-outline" size={20} color={colors.error} />
+            <Text variant="body" style={styles.destructiveLabel}>
+              {t('home.postOptions.delete')}
+            </Text>
+          </Row>
+        ) : null}
       </View>
 
       {/* BottomSheetModal sizes to content by default, and one row alone
@@ -57,16 +98,22 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: spacing.md,
   },
+  // Options sit close together, like one list (per explicit "too much of a
+  // gap between Send a message and Report" request): no gap between rows,
+  // each row's own vertical padding is the only space.
   list: {
-    gap: spacing.sm,
+    gap: 0,
   },
   option: {
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.base,
     borderRadius: radius.medium,
   },
   destructiveLabel: {
+    // Custom `color` on `Text` needs `opacity: 1`, or the tone opacity
+    // mutes the red (components/ui/text.tsx).
     color: colors.error,
+    opacity: 1,
   },
   bottomSpacer: {
     height: spacing.xl,

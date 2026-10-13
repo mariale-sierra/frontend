@@ -17,6 +17,7 @@ import { useMetricsScreen } from '../../hooks/useMetricsScreen';
 import { countAdjustedSets } from '../../services/adapters/index';
 import { hasSeenLogScreenCoachMark, markLogScreenCoachMarkSeen } from '../../utils/logScreenCoachMark';
 import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../constants/onboardingDebug';
+import { LocationSwitchSheet } from '../../components/challenge/detail/LocationSwitchSheet';
 
 export default function Metrics() {
   const { t } = useTranslation();
@@ -29,12 +30,19 @@ export default function Metrics() {
     challengeLoadError,
     currentDay,
     routineName,
+    adaptation,
+    adaptationInvalid,
+    routineId,
+    baseExercises,
+    applyLocation,
+    resetLocation,
     updateMetricValue,
     goToCamera,
     goToRestDay,
     goBack,
   } = useMetricsScreen();
 
+  const [locationSheetVisible, setLocationSheetVisible] = useState(false);
   const selectedChallenge = challenges.find((challenge) => challenge.id === selectedChallengeId) ?? challenges[0];
   const hasChallenges = challenges.length > 0;
   const isEmpty = !isLoadingData && !challengeLoadError && !hasChallenges;
@@ -141,6 +149,31 @@ export default function Metrics() {
             ? t('logMetrics.entry.dayWithRoutine', { day: currentDay ?? 1, routine: routineName })
             : t('logMetrics.pickChallenge.dayLabel', { day: currentDay ?? 1 })}
         </Text>
+        {adaptation && (
+          <Text variant="caption" tone="secondary">
+            {t('challengeRoutineDay.location.yourVersion', { location: adaptation.locationName })}
+          </Text>
+        )}
+        {adaptationInvalid && (
+          <Text variant="caption" tone="secondary">{t('challengeRoutineDay.location.invalidSwaps')}</Text>
+        )}
+        {routineId != null && baseExercises.length > 0 && !isLoadingData && (
+          <Pressable
+            onPress={() => setLocationSheetVisible(true)}
+            style={({ pressed }) => [styles.locationButton, pressed && styles.restDayButtonPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={t('challengeRoutineDay.location.changeA11y')}
+            testID="metrics-change-location"
+          >
+            <Icon name="location-outline" size={16} color={colors.primary} />
+            <Text variant="label" weight="bold" style={styles.locationButtonText}>
+              {adaptation
+                ? t('challengeRoutineDay.location.trainingAt', { location: adaptation.locationName })
+                : t('challengeRoutineDay.location.sheetTitle')}
+            </Text>
+            <Icon name="chevron-down-outline" size={14} color={colors.primary} />
+          </Pressable>
+        )}
       </View>
 
       <View style={styles.contentWrap}>{renderContent()}</View>
@@ -162,6 +195,15 @@ export default function Metrics() {
           disabled={!hasChallenges}
         />
       </View>
+      <LocationSwitchSheet
+        visible={locationSheetVisible}
+        onClose={() => setLocationSheetVisible(false)}
+        routineId={routineId}
+        exercises={baseExercises}
+        current={adaptation}
+        onApply={applyLocation}
+        onReset={resetLocation}
+      />
     </ScreenBackground>
   );
 }
@@ -197,6 +239,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingTop: spacing.xs,
     paddingBottom: spacing.base,
+  },
+  locationButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.big,
+    backgroundColor: withAlpha(colors.paper, 0.08),
+  },
+  locationButtonText: {
+    color: colors.primary,
+    opacity: 1,
   },
   eyebrow: {
     color: colors.primary,

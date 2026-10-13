@@ -45,19 +45,39 @@ type ChallengeUsersResponse =
       message?: string;
     };
 
-export async function getChallenges() {
-  const response = await api.get<ChallengesListResponse>('/challenges');
-  const payload = response.data;
+// The backend's largest page (MAX_PAGE_LIMIT): the fewest round trips.
+const CHALLENGES_PAGE_LIMIT = 50;
+// Safety stop for a cursor that never ends (2,500 challenges).
+const CHALLENGES_MAX_PAGES = 50;
 
-  if (Array.isArray(payload)) {
-    return payload;
-  }
-
-  if (payload && Array.isArray(payload.data)) {
-    return payload.data;
-  }
-
+function toChallengeList(payload: ChallengesListResponse): ChallengeContract[] {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.data)) return payload.data;
   return [];
+}
+
+/**
+ * Every challenge. Since B1, GET /challenges is cursor-paginated (20 per page
+ * by default, next cursor in X-Next-Cursor) — the Explore tab and Search
+ * filter this list on the client, so reading only the first page silently
+ * hid every challenge past the newest 20. Follows the cursor to the end.
+ */
+export async function getChallenges(): Promise<ChallengeContract[]> {
+  const all: ChallengeContract[] = [];
+  let cursor: string | undefined;
+
+  for (let page = 0; page < CHALLENGES_MAX_PAGES; page++) {
+    const response = await api.get<ChallengesListResponse>('/challenges', {
+      params: { limit: CHALLENGES_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
+    });
+    all.push(...toChallengeList(response.data));
+    const next = response.headers?.['x-next-cursor'] as string | undefined;
+    // A cursor that does not move on would go on for ever.
+    if (!next || next === cursor) break;
+    cursor = next;
+  }
+
+  return all;
 }
 
 export async function getChallenge(id: string) {
@@ -116,10 +136,16 @@ export async function completeChallenge(id: string) {
   return response.data;
 }
 
+/** Today's routine. With `adaptation` (B7) the backend returns the user's own
+ * effective view — their location's substitutes in place of the routine's
+ * exercises; the shared routine itself is never changed. */
 export async function getTodayRoutineForChallenge(
   challengeId: string,
+  adaptation?: { locationCode: string; substitutions: string },
 ): Promise<TodayRoutineContract> {
-  const response = await api.get(`/routine/today/${challengeId}`);
+  const response = await api.get(`/routine/today/${challengeId}`, {
+    params: adaptation ? { location: adaptation.locationCode, substitutions: adaptation.substitutions } : undefined,
+  });
   return response.data;
 }
 
@@ -217,5 +243,28 @@ export async function removeChallengeParticipant(challengeId: string, userId: st
 /** Admin-only (global) — closes any challenge. */
 export async function closeChallenge(challengeId: string) {
   const response = await api.patch(`/challenges/${challengeId}/close`);
+  return response.data;
+}
+
+/** Admin-only (AdminGuard server-side) — the inverse of closeChallenge: joining and
+ * logging progress are accepted again; members and history are untouched. */
+export async function reopenChallenge(challengeId: string) {
+  const response = await api.patch(`/challenges/${challengeId}/reopen`);
+  return response.data;
+}
+
+/** The session user's own pending request to join this challenge (only ever theirs),
+ * so the screen can show "request sent" again after being reopened. A background
+ * check: no global error toast if it fails. */
+export async function getMyChallengeJoinRequest(challengeId: string): Promise<{ hasPendingRequest: boolean }> {
+  const response = await api.get(`/challenges/${challengeId}/join-requests/mine`, { suppressErrorToast: true });
+  return response.data;
+}
+
+/** Creator-only — deletes the challenge (soft delete server-side: members and
+ * history are kept, it just stops existing for everyone). Not the same as
+ * closeChallenge. */
+export async function deleteChallenge(challengeId: string) {
+  const response = await api.delete(`/challenges/${challengeId}`);
   return response.data;
 }

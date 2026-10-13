@@ -73,3 +73,9 @@ export async function getRoutine(id: number) {
   const response = await api.get<RoutineContract>(`/routine/${id}`);
   return response.data;
 }
+
+/** Owner-only — deletes one of the caller's routines (soft delete
+ * server-side; past workout logs that used it are kept). */
+export async function deleteRoutine(id: number): Promise<void> {
+  await api.delete(`/routine/${id}`);
+}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -13,11 +13,12 @@ import { Text } from '../../../components/ui/text';
 import { ChallengeHeader, ChallengeAboutSection, ChallengeRoutineList, ChallengeInfoContentSkeleton } from '../../../components/challenge/detail';
 import { ChallengeAccentBackdrop } from '../../../components/challenge/challengeAccentBackdrop';
 import { CoachMark } from '../../../components/onboarding/CoachMark';
+import { ShareToChatSheet } from '../../../components/social/ShareToChatSheet';
 import type { ChallengeInfoRow } from '../../../components/challenge/detail';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
-import { closeChallenge, getChallenge, isChallengeOwner, joinChallenge } from '../../../services/challenge/challenge.service';
-import { getMyChallenges } from '../../../services/user/user.service';
+import { closeChallenge, getChallenge, isChallengeOwner, joinChallenge, reopenChallenge } from '../../../services/challenge/challenge.service';
+import { getMyMembership } from '../../../services/challenge/myMembership';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
 import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
@@ -27,6 +28,7 @@ import { useErrorNotificationStore } from '../../../store/errorNotificationStore
 import { markChallengeMembershipSeen } from '../../../utils/seenChallengeMemberships';
 import { hasSeenChallengeJoinCallout, markChallengeJoinCalloutSeen } from '../../../utils/challengeJoinCallout';
 import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../../constants/onboardingDebug';
+import { shareChallengeExternally } from '../../../utils/shareChallenge';
 import type { ChallengeContract } from '../../../types/challenge';
 
 type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
@@ -50,6 +52,7 @@ export default function ChallengeDetail() {
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('none');
   const [membershipLoading, setMembershipLoading] = useState(true);
   const { showSuccess } = useErrorNotificationStore();
+  const [shareVisible, setShareVisible] = useState(false);
 
   // Onboarding Stage 4's join callout — teaches the general concept of
   // joining (not tied to this specific challenge), shown once ever per
@@ -87,6 +90,23 @@ export default function ChallengeDetail() {
         showSuccess({ message: t('challengeProgress.closeChallengeSuccess') });
       } catch {
         // The confirmation popup itself surfaces failure via its own error state; nothing else to do here.
+      }
+    },
+  });
+
+  // Admin-only too (AdminGuard server-side): the inverse of closing.
+  const reopenChallengePopup = useConfirmationPopup({
+    type: 'reopenChallenge',
+    challengeName: challenge?.name ?? t('challenges.fallbackName'),
+    onConfirm: async () => {
+      const challengeId = typeof id === 'string' ? id : '';
+      if (!challengeId) return;
+      try {
+        await reopenChallenge(challengeId);
+        setChallenge((prev) => (prev ? { ...prev, status: 'open' } : prev));
+        showSuccess({ message: t('challengeProgress.reopenChallengeSuccess') });
+      } catch {
+        // The global api.ts interceptor already surfaces the error toast.
       }
     },
   });
@@ -150,20 +170,19 @@ export default function ChallengeDetail() {
     // See app/challenge/[id]/routine/[day].tsx and progress.tsx — same
     // "created_by_user_id vs enrolled-list membership" check used everywhere
     // else in the app to decide whether the current user is already in.
-    getMyChallenges()
-      .then((enrolled) => {
-        const isMember = enrolled.some(
-          (c) => String(c.id) === String(challenge.id) && c.status !== 'left',
-        );
-        setMembershipStatus(isMember ? 'joined' : 'none');
-      })
+    // B8: a private challenge's pending request comes back from the backend
+    // too, so reopening this screen shows "Request sent" instead of Join.
+    getMyMembership(challenge)
+      .then(setMembershipStatus)
       .catch(() => setMembershipStatus('none'))
       .finally(() => setMembershipLoading(false));
   }, [challenge]);
 
+  // Sprint 9, B5: the share button opens "Send to…" — a chat inside Havit,
+  // or "Other apps" for the native share sheet (WhatsApp, Instagram…).
   function handleShare() {
     if (!challenge) return;
-    Share.share({ message: t('challengeInfo.shareMessage', { name: challenge.name }) }).catch(() => {});
+    setShareVisible(true);
   }
 
   if (loading) {
@@ -298,6 +317,16 @@ export default function ChallengeDetail() {
                 <Icon name="lock-closed-outline" size={22} color={colors.error} />
               </Pressable>
             )}
+            {isAdmin && isClosed && (
+              <Pressable
+                onPress={reopenChallengePopup.show}
+                style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel={t('challengeProgress.reopenChallengeA11y')}
+              >
+                <Icon name="lock-open-outline" size={22} color={colors.paper} />
+              </Pressable>
+            )}
           </Row>
         </Row>
 
@@ -357,8 +386,28 @@ export default function ChallengeDetail() {
         </View>
       )}
 
+      <ShareToChatSheet
+        visible={shareVisible}
+        onClose={() => setShareVisible(false)}
+        content={{ challengeId: String(challenge?.id ?? id) }}
+        onShareExternally={() => {
+          setShareVisible(false);
+          shareChallengeExternally(
+            {
+              id: String(challenge?.id ?? id),
+              name: view.title,
+              description: view.description,
+              durationDays: view.durationDays,
+              membersJoined: view.membersJoined,
+            },
+            t,
+          );
+        }}
+      />
+
       <joinPopup.Component />
       <closeChallengePopup.Component />
+      <reopenChallengePopup.Component />
     </ScreenBackground>
   );
 }

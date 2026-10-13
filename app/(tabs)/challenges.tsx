@@ -1,3 +1,4 @@
+import { EmptyState } from '../../components/ui/emptyState';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -329,11 +330,15 @@ export default function Challenges() {
           // finished and still collapsed, which isn't "no challenges."
           ListEmptyComponent={
             mineChallenges.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text variant="body" tone="secondary" align="center">
-                  {t('challenges.emptyMine')}
-                </Text>
-              </View>
+              <EmptyState
+                icon="trophy-outline"
+                title={t('challenges.emptyMineTitle')}
+                message={t('challenges.emptyMine')}
+                actions={[
+                  { label: t('challenges.emptyMineExplore'), onPress: () => setView('explore'), testID: 'empty-mine-explore' },
+                  { label: t('challenges.emptyMineCreate'), onPress: () => router.push('/challenge/create'), testID: 'empty-mine-create' },
+                ]}
+              />
             ) : undefined
           }
           ListFooterComponent={

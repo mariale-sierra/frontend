@@ -4,7 +4,6 @@ export * from './PostsViewToggle';
 export * from './PostsGrid';
 export * from './PhotoGrid';
 export * from './UserPostsGrid';
-export * from './ProfilePhotoModal';
 export * from './LogoutButton';
 export * from './FollowButton';
 export * from './FollowListItem';
