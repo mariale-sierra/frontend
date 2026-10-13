@@ -16,6 +16,10 @@ export function notificationTextKey(n: Pick<NotificationContract, 'type' | 'data
     case 'report_resolved':
       return `${n.type}_${data.outcome === 'actioned' ? 'actioned' : 'dismissed'}`;
     case 'content_hidden':
+      if (data.suspendedHours) {
+        const hours = Number(data.suspendedHours);
+        return hours >= 48 && hours % 24 === 0 ? 'content_hidden_suspended_days' : 'content_hidden_suspended_hours';
+      }
       return data.strike === 'true' ? 'content_hidden_strike' : 'content_hidden';
     default:
       return n.type;
@@ -38,7 +42,9 @@ export function notificationActorName(
  */
 export function notificationText(n: NotificationContract, t: TFunction): string {
   const key = `notifications.types.${notificationTextKey(n)}`;
-  const text = t(key, { name: notificationActorName(n, t), defaultValue: '' });
+  const hours = Number(n.data?.suspendedHours);
+  const amount = Number.isFinite(hours) ? (hours >= 48 && hours % 24 === 0 ? hours / 24 : hours) : 0;
+  const text = t(key, { name: notificationActorName(n, t), amount, defaultValue: '' });
   if (text) return text;
   return n.body || n.title || t('notifications.types.fallback');
 }

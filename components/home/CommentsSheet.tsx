@@ -240,6 +240,7 @@ export function CommentsSheet({
           targetType="comment"
           targetId={reportCommentId === null ? null : String(reportCommentId)}
           onClose={() => setReportCommentId(null)}
+          onReported={() => setComments((prev) => prev.filter((comment) => comment.id !== reportCommentId))}
         />
       </BottomSheetModal>
 

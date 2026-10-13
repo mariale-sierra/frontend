@@ -51,6 +51,9 @@ describe('notificationText', () => {
     [{ type: 'report_resolved', data: { outcome: 'dismissed' } }, 'report_resolved_dismissed'],
     [{ type: 'content_hidden', data: { strike: 'true' } }, 'content_hidden_strike'],
     [{ type: 'content_hidden', data: { strike: 'false' } }, 'content_hidden'],
+    [{ type: 'content_hidden', data: { strike: 'true', suspendedHours: '24' } }, 'content_hidden_suspended_hours'],
+    [{ type: 'content_hidden', data: { strike: 'true', suspendedHours: '72' } }, 'content_hidden_suspended_days'],
+    [{ type: 'content_hidden', data: { strike: 'true', suspendedHours: '168' } }, 'content_hidden_suspended_days'],
   ])('picks the variant for %o', (input, key) => {
     expect(notificationTextKey(input as NotificationContract)).toBe(key);
   });

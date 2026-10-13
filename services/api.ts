@@ -90,6 +90,16 @@ api.interceptors.response.use(
         message: i18n.t('common.errors.sessionExpiredMessage'),
         duration: 5000,
       });
+    } else if (error?.response?.status === 403 && error?.response?.data?.code === 'ACCOUNT_SUSPENDED') {
+      // A moderation penalty: say until when, instead of the generic "no permission".
+      const until = new Date(error.response.data.suspendedUntil);
+      errorStore.show({
+        title: i18n.t('common.errors.suspendedTitle'),
+        message: i18n.t('common.errors.suspendedMessage', {
+          date: Number.isNaN(until.getTime()) ? '' : until.toLocaleString(),
+        }),
+        duration: 7000,
+      });
     } else if (error?.response?.status === 403) {
       errorStore.show({
         title: i18n.t('common.errors.forbiddenTitle'),

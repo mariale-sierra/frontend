@@ -213,6 +213,13 @@ Full decision record (computed-on-the-fly rewards, catalog, demo data): `docs/BA
 - `components/badges/` (`BadgesSection`, `BadgeTile`, `BadgeDetailSheet`) renders `GET /badges/me` / `GET /badges/user/:userId` on both profiles; icon and color per badge `code` live in `constants/badges.ts`, copy in `badges.items.<code>` (backend name/description as fallback).
 - `components/ui/emptyState.tsx` is the shared empty state (icon, title, message, up to two buttons toward challenges/people). Use it instead of a bare centered `Text` when a screen has somewhere useful to send the user; `components/home/EmptyFeed.tsx` is now a thin wrapper over it.
 
+## 12e. Session hygiene, keyboard, reports (Sprint 9 follow-ups)
+- `store/resetSessionStores.ts` resets every user-scoped Zustand store (challenge/routine builders, metrics entry, location choice, unread count...). `context/authContext.tsx` calls it on login, register, logout and an expired session, so a new session never starts from another user's draft. A new store that holds per-user state must be added there.
+- `components/layout/keyboardAwareScroll.tsx` replaces `ScrollView` in form screens: it adds the keyboard's height as bottom padding and scrolls the focused field above the keyboard (Android's edge-to-edge screens do not resize for it).
+- Reporting content hides it at once for the reporter (`ReportReasonSheet.onReported`; the server keeps it out of that user's reads while the report is pending). A moderation suspension answers writes with `403 ACCOUNT_SUSPENDED`; `services/api.ts` shows when it ends. Fixed hours per reason: `backend/docs/moderacion-manual.md`.
+- "Where do you train?" is also on the register screen (`app/(add)/metrics.tsx`, via `useMetricsScreen.applyLocation`), reusing `LocationSwitchSheet`.
+- Own posts load a page at a time (`getUserPosts(userId)` + "Load more") in the profile grid and the "+" picker; `GET /workout-posts/mine` returns the whole history and is only used where the full list is needed.
+
 ## 13. Do and Don't Rules
 Do:
 - Read this guide and inspect the target route before editing.

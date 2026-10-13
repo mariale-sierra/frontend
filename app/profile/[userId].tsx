@@ -195,6 +195,7 @@ export default function UserProfile() {
               actions={
                 isOwnProfile ? null : (
                 <View style={styles.actionsWrap}>
+                  <View style={styles.primaryActions}>
                   <FollowButton
                     userId={profile.id}
                     initialIsFollowing={profile.is_following}
@@ -209,6 +210,19 @@ export default function UserProfile() {
                       )
                     }
                   />
+                  {/* Straight to a chat with this person (same entry as "Message the author" on a
+                      post); /messaging/new resolves or creates the 1:1 conversation and opens it. */}
+                  <Button
+                    variant="outline"
+                    size="md"
+                    leftIcon={<Icon name="chatbubble-outline" size={16} color={colors.paper} />}
+                    onPress={() => router.push({ pathname: '/messaging/new', params: { recipientUserId: profile.id } })}
+                    accessibilityLabel={t('profile.messageButtonA11y')}
+                    testID="profile-message-button"
+                  >
+                    {t('profile.messageButton')}
+                  </Button>
+                  </View>
                   {/* An admin-only action, kept quiet: the app's soft destructive button
                       (a translucent `error` fill and rim), not a bare red link. */}
                   {isAdmin && (
@@ -275,6 +289,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
+  },
+  primaryActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
   },
   actionsWrap: {
     alignItems: 'center',

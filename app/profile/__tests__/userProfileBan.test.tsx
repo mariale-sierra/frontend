@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import UserProfile from '../[userId]';
+import { router } from 'expo-router';
 import { banUser, getPublicProfile } from '../../../services/user/user.service';
 import { useIsAdmin } from '../../../hooks/useIsAdmin';
 import { useErrorNotificationStore } from '../../../store/errorNotificationStore';
@@ -83,6 +84,15 @@ describe("Another user's profile — the admin's ban action", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useErrorNotificationStore.setState({ visible: false, config: { message: '' } });
+  });
+
+  it('has a Message button that opens a chat with that person (Instagram-style), for any viewer', async () => {
+    const screen = await renderProfile(false);
+    fireEvent.press(screen.getByTestId('profile-message-button'));
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/messaging/new',
+      params: { recipientUserId: USER_ID },
+    });
   });
 
   it('is only for an admin', async () => {

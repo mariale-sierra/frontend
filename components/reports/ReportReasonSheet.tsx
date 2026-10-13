@@ -20,6 +20,8 @@ interface ReportReasonSheetProps {
   /** Post UUID, or the comment's numeric id as a string. */
   targetId: string | null;
   onClose: () => void;
+  /** Called once the report was accepted: the caller hides the reported content right away. */
+  onReported?: () => void;
 }
 
 /**
@@ -28,7 +30,7 @@ interface ReportReasonSheetProps {
  * already toasted by the global axios interceptor, so the catch only keeps
  * the sheet open for another try.
  */
-export function ReportReasonSheet({ visible, targetType, targetId, onClose }: ReportReasonSheetProps) {
+export function ReportReasonSheet({ visible, targetType, targetId, onClose, onReported }: ReportReasonSheetProps) {
   const { t } = useTranslation();
   const showSuccess = useErrorNotificationStore((s) => s.showSuccess);
   const [reason, setReason] = useState<ReportReason | null>(null);
@@ -54,6 +56,7 @@ export function ReportReasonSheet({ visible, targetType, targetId, onClose }: Re
         details: details.trim() || undefined,
       });
       showSuccess({ message: t('reports.submittedMessage') });
+      onReported?.();
       onClose();
     } catch {
       // Global axios interceptor already shows the error toast.

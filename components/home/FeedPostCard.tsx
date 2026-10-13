@@ -69,6 +69,9 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
     setLikesCount(post.likesCount);
     setCommentsCount(post.commentsCount);
   }, [post.likedByMe, post.likesCount, post.commentsCount]);
+  // Reported by this user: the post leaves their view immediately (the server keeps it out of
+  // their feed/profile reads while the report is pending); everyone else sees it until a reviewer decides.
+  const [reported, setReported] = useState(false);
   const [commentsVisible, setCommentsVisible] = useState(false);
   const [reactorsVisible, setReactorsVisible] = useState(false);
   const [shareVisible, setShareVisible] = useState(false);
@@ -151,6 +154,8 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
       reactingRef.current = false;
     }
   }
+
+  if (reported) return null;
 
   return (
     <View style={styles.card}>
@@ -363,6 +368,10 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
         targetType="post"
         targetId={post.id}
         onClose={() => setReportVisible(false)}
+        onReported={() => {
+          setReported(true);
+          onDeleted?.(post.id);
+        }}
       />
     </View>
   );
