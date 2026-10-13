@@ -1,3 +1,4 @@
+import type { ViewStyle } from 'react-native';
 import { Animated, StyleSheet } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { PagedGradientBackground } from '../PagedGradientBackground';
@@ -12,7 +13,7 @@ function lightOpacities(screen: Awaited<ReturnType<typeof render>>) {
   const visit = (node: unknown) => {
     if (!node || typeof node !== 'object') return;
     const { props, children } = node as { props?: { style?: unknown }; children?: unknown[] };
-    const opacity = StyleSheet.flatten(props?.style as never)?.opacity;
+    const opacity = StyleSheet.flatten(props?.style as ViewStyle)?.opacity;
     if (typeof opacity === 'number') opacities.push(opacity);
     children?.forEach(visit);
   };

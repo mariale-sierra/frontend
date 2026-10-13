@@ -1,4 +1,5 @@
 import 'react-native-gesture-handler/jestSetup';
+import type { ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { act, fireEvent } from '@testing-library/react-native';
 import { State } from 'react-native-gesture-handler';
@@ -60,7 +61,7 @@ async function renderDeck(items = challenges, onSelect = jest.fn(), width = 342)
 // The animated box a card sits in: the card's button, then its parent.
 const boxOf = (screen: Awaited<ReturnType<typeof renderDeck>>, name: string) =>
   screen.getByLabelText(`home.logProgressA11y:${name}`).parent!;
-const styleOf = (box: { props: { style?: unknown } }) => StyleSheet.flatten(box.props.style as never) as Record<string, any>;
+const styleOf = (box: { props: { style?: unknown } }) => StyleSheet.flatten(box.props.style as ViewStyle) as Record<string, any>;
 
 describe('ChallengeDeck', () => {
   it('shows nothing until it knows how wide it is', async () => {
@@ -127,7 +128,7 @@ describe('ChallengeDeck', () => {
     const shadeOf = (name: string) => {
       const box = boxOf(screen, name);
       const overlay = box.children[box.children.length - 1] as unknown as { props: { style: unknown } };
-      return StyleSheet.flatten(overlay.props.style as never).opacity as number;
+      return StyleSheet.flatten(overlay.props.style as ViewStyle).opacity as number;
     };
 
     expect(shadeOf('Morning Strength')).toBe(0);

@@ -15,6 +15,7 @@ function buildChallenge(overrides: Partial<ChallengeMineCardViewModel> = {}): Ch
     state: 'active',
     latestPhotoUrl: null,
     dominantActivityCategory: 'cardioLow',
+    createdByUserId: null,
     ...overrides,
   };
 }
