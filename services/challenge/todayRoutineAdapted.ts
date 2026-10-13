@@ -16,20 +16,20 @@ import {
  */
 export async function loadTodayRoutine(
   challengeId: string,
-): Promise<{ routine: TodayRoutineContract; invalidAdaptation: boolean }> {
+): Promise<{ routine: TodayRoutineContract; invalidAdaptation: boolean; base: TodayRoutineContract }> {
   const base = await getTodayRoutineForChallenge(challengeId);
   const { byChallenge, clearAdaptation } = useWorkoutAdaptationStore.getState();
   const adaptation = adaptationForRoutine(byChallenge[challengeId], base.routine_id);
-  if (!adaptation) return { routine: base, invalidAdaptation: false };
+  if (!adaptation) return { routine: base, invalidAdaptation: false, base };
 
   try {
     const routine = await getTodayRoutineForChallenge(challengeId, {
       locationCode: adaptation.locationCode,
       substitutions: toSubstitutionsParam(adaptation),
     });
-    return { routine, invalidAdaptation: false };
+    return { routine, invalidAdaptation: false, base };
   } catch {
     clearAdaptation(challengeId);
-    return { routine: base, invalidAdaptation: true };
+    return { routine: base, invalidAdaptation: true, base };
   }
 }

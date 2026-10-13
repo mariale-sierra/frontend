@@ -103,14 +103,11 @@ export const PhotoGrid = memo(function PhotoGrid({
       return;
     }
 
-    setImagesReady(false);
-
-    preloadInitialImages(urls).finally(() => {
-      if (!cancelled) {
-        hasRenderedContent.current = true;
-        setImagesReady(true);
-      }
-    });
+    // Tiles draw right away (each has its own placeholder fill) and the first row is
+    // warmed in the background: waiting on full-size downloads made the grid look stuck.
+    void preloadInitialImages(urls);
+    hasRenderedContent.current = true;
+    setImagesReady(true);
 
     return () => {
       cancelled = true;

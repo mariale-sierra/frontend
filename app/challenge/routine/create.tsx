@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CreateFlowPrimaryButton } from '../../../components/challenge/create';
+import { KeyboardAwareScroll } from '../../../components/layout/keyboardAwareScroll';
 import ScreenBackground from '../../../components/layout/screenBackground';
 import { Row } from '../../../components/layout/row';
 import { Stack } from '../../../components/layout/stack';
@@ -144,7 +145,7 @@ export default function CreateRoutineScreen() {
         </Text>
       </Row>
 
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScroll contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <Stack gap="lg">
           <Stack gap="sm">
             <Text variant="title" numberOfLines={2}>
@@ -216,7 +217,7 @@ export default function CreateRoutineScreen() {
             </Stack>
           )}
         </Stack>
-      </ScrollView>
+      </KeyboardAwareScroll>
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
         <CreateFlowPrimaryButton

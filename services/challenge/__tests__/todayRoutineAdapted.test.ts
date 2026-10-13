@@ -25,7 +25,7 @@ describe('loadTodayRoutine', () => {
   it('returns the routine as written when the user has not changed location', async () => {
     getToday.mockResolvedValue(base);
     const result = await loadTodayRoutine('c1');
-    expect(result).toEqual({ routine: base, invalidAdaptation: false });
+    expect(result).toEqual({ routine: base, invalidAdaptation: false, base });
     expect(getToday).toHaveBeenCalledTimes(1);
   });
 
@@ -57,7 +57,7 @@ describe('loadTodayRoutine', () => {
 
     const result = await loadTodayRoutine('c1');
 
-    expect(result).toEqual({ routine: base, invalidAdaptation: true });
+    expect(result).toEqual({ routine: base, invalidAdaptation: true, base });
     expect(useWorkoutAdaptationStore.getState().byChallenge.c1).toBeUndefined();
   });
 });

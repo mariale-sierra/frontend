@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as ImagePicker from 'expo-image-picker';
+import { KeyboardAwareScroll } from '../../components/layout/keyboardAwareScroll';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { BackButton } from '../../components/ui/backButton';
 import { Text } from '../../components/ui/text';
@@ -180,7 +181,7 @@ export default function EditProfile() {
 
   return (
     <ScreenBackground variant="default">
-      <ScrollView
+      <KeyboardAwareScroll
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
@@ -336,7 +337,7 @@ export default function EditProfile() {
 
         <LogoutButton />
         <DeleteAccountRow />
-      </ScrollView>
+      </KeyboardAwareScroll>
     </ScreenBackground>
   );
 }

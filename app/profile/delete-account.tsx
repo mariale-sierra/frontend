@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { KeyboardAwareScroll } from '../../components/layout/keyboardAwareScroll';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Row } from '../../components/layout/row';
 import { BackButton } from '../../components/ui/backButton';
@@ -102,7 +103,7 @@ export default function DeleteAccountScreen() {
         <View style={styles.trailingSpacer} />
       </Row>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScroll contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {loading ? null : status?.pending ? (
           <>
             <View style={styles.card}>
@@ -170,7 +171,7 @@ export default function DeleteAccountScreen() {
             </Button>
           </>
         )}
-      </ScrollView>
+      </KeyboardAwareScroll>
 
       <ConfirmationPopup
         visible={confirmVisible}

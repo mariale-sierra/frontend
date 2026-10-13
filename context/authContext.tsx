@@ -9,6 +9,7 @@ import {
   register as registerService,
 } from '../services/auth/auth.service';
 import { invalidateChallengeProgressCache } from '../hooks/useChallengeProgress';
+import { resetSessionStores } from '../store/resetSessionStores';
 import { forgetPushToken, unregisterPushToken } from '../services/notifications/pushNotifications';
 import { setSessionExpiredHandler } from '../services/auth/sessionEvents';
 import type { LegalConsent } from '../types/auth';
@@ -76,6 +77,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Token genuinamente rechazado por el servidor — limpiar sesión
           await logoutService();
           invalidateChallengeProgressCache();
+    resetSessionStores();
           setToken(null);
           setUserId(null);
           setUsername(null);
@@ -107,6 +109,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await forgetPushToken();
       await logoutService();
       invalidateChallengeProgressCache();
+    resetSessionStores();
       setToken(null);
       setUserId(null);
       setUsername(null);
@@ -117,6 +120,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = useCallback(async (email: string, password: string) => {
     // Clear any previous session's cached progress before establishing a new one.
     invalidateChallengeProgressCache();
+    resetSessionStores();
     const result = await loginService(email, password);
     setToken(result?.accessToken ?? (await getStoredToken()));
     setUserId(result?.user?.id ?? (await getStoredUserId()));
@@ -126,6 +130,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const register = useCallback(
     async (email: string, username: string, password: string, consent: LegalConsent) => {
+    invalidateChallengeProgressCache();
+    resetSessionStores();
     const result = await registerService(email, username, password, consent);
     setToken(result?.accessToken ?? (await getStoredToken()));
     setUserId(result?.user?.id ?? (await getStoredUserId()));
@@ -141,6 +147,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await unregisterPushToken();
     await logoutService();
     invalidateChallengeProgressCache();
+    resetSessionStores();
     setToken(null);
     setUserId(null);
     setUsername(null);
