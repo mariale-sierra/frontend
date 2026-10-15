@@ -10,6 +10,7 @@ import {
 } from '../services/auth/auth.service';
 import { invalidateChallengeProgressCache } from '../hooks/useChallengeProgress';
 import { resetSessionStores } from '../store/resetSessionStores';
+import { clearQueryCache, setQueryScope } from '../services/cache/queryCache';
 import { forgetPushToken, unregisterPushToken } from '../services/notifications/pushNotifications';
 import { setSessionExpiredHandler } from '../services/auth/sessionEvents';
 import type { LegalConsent } from '../types/auth';
@@ -77,7 +78,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Token genuinamente rechazado por el servidor — limpiar sesión
           await logoutService();
           invalidateChallengeProgressCache();
-    resetSessionStores();
+          resetSessionStores();
+          setQueryScope(storedUserId);
+          await clearQueryCache();
+          setQueryScope(null);
           setToken(null);
           setUserId(null);
           setUsername(null);
@@ -88,6 +92,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // El token sigue en SecureStore y el interceptor lo adjuntará en siguientes llamadas
       }
 
+      // Cached server data for this user (services/cache) is readable from now on.
+      setQueryScope(storedUserId);
       setToken(storedToken);
       setUserId(storedUserId);
       setUsername(storedUsername);
@@ -109,7 +115,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await forgetPushToken();
       await logoutService();
       invalidateChallengeProgressCache();
-    resetSessionStores();
+      resetSessionStores();
+      await clearQueryCache();
+      setQueryScope(null);
       setToken(null);
       setUserId(null);
       setUsername(null);
@@ -122,6 +130,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     invalidateChallengeProgressCache();
     resetSessionStores();
     const result = await loginService(email, password);
+    setQueryScope(result?.user?.id ?? (await getStoredUserId()));
     setToken(result?.accessToken ?? (await getStoredToken()));
     setUserId(result?.user?.id ?? (await getStoredUserId()));
     setUsername(result?.user?.username ?? (await getStoredUsername()));
@@ -133,6 +142,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     invalidateChallengeProgressCache();
     resetSessionStores();
     const result = await registerService(email, username, password, consent);
+    setQueryScope(result?.user?.id ?? (await getStoredUserId()));
     setToken(result?.accessToken ?? (await getStoredToken()));
     setUserId(result?.user?.id ?? (await getStoredUserId()));
     setUsername(result?.user?.username ?? (await getStoredUsername()));
@@ -148,6 +158,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await logoutService();
     invalidateChallengeProgressCache();
     resetSessionStores();
+    await clearQueryCache();
+    setQueryScope(null);
     setToken(null);
     setUserId(null);
     setUsername(null);

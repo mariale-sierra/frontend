@@ -6,6 +6,7 @@ import { Stack } from '../../layout/stack';
 import { Input } from '../../ui/input';
 import { Text } from '../../ui/text';
 import { colors, radius, spacing, typography } from '../../../constants/theme';
+import { FieldError } from '../../ui/fieldError';
 
 const NAME_MAX_LENGTH = 40;
 
@@ -60,9 +61,7 @@ export function ChallengeNameFields({
           ]}
           style={styles.nameInput}
         />
-        {titleError ? (
-          <Text variant="caption" style={styles.errorText}>{titleError}</Text>
-        ) : null}
+        <FieldError message={titleError} />
       </Stack>
 
       <Stack gap="sm">
@@ -97,9 +96,6 @@ const styles = StyleSheet.create({
   },
   nameContainerError: {
     borderColor: colors.error,
-  },
-  errorText: {
-    color: colors.error,
   },
   nameInput: {
     fontFamily: typography.fontFamily.bold,

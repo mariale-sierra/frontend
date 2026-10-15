@@ -1,41 +1,19 @@
 import { EmptyState } from '../ui/emptyState';
 import type { EmptyStateAction } from '../ui/emptyState';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, StyleSheet, View } from 'react-native';
+import { memo, useCallback, type ReactElement } from 'react';
+import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View, type RefreshControlProps } from 'react-native';
 import { colors, fillOpacity, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { Text } from '../ui/text';
+import { Button } from '../ui/button';
 import type { ChallengePhoto } from '../../types/challenge';
 
 const SKELETON_COUNT = 8;
-
-// On the initial profile load, wait for the first visible row's images so
-// it does not immediately pop from metadata skeletons to empty tiles. Do
-// not prefetch an entire history or reset an already visible grid on every
-// focus refresh: both operations create avoidable JS work during tab
-// navigation. Remaining tiles use React Native's normal native Image
-// loading behavior, and the timeout prevents one broken URL from holding
-// the first render indefinitely.
-const IMAGE_PRELOAD_TIMEOUT_MS = 6000;
-// Only the first row needs to be resident before the initial grid appears.
-// Starting a native prefetch promise for an entire photo history on the JS
-// thread made the Profile tab's first focus compete with the navbar motion.
-// Remaining tiles keep their normal native Image loading behavior.
-const INITIAL_IMAGE_PRELOAD_COUNT = 4;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-interface PhotoGridProps {
-  photos: ChallengePhoto[];
-  loading: boolean;
-  emptyLabel: string;
-  /** With `emptyActions`, the empty state gets a bold title above `emptyLabel` and buttons toward where photos come from. */
-  emptyTitle?: string;
-  emptyActions?: EmptyStateAction[];
-  onPhotoPress?: (photo: ChallengePhoto) => void;
-}
+const NUM_COLUMNS = 2;
+// Rows mounted around the viewport. A profile can hold hundreds of photos; the
+// grid used to mount every one of them (and decode every image) at once.
+const INITIAL_ROWS = 4;
+const WINDOW_SIZE = 7;
 
 const PhotoTile = memo(function PhotoTile({
   photo,
@@ -58,104 +36,157 @@ const PhotoTile = memo(function PhotoTile({
   );
 });
 
-/** Presentational tile grid shared by PostsGrid (own posts) and other-user
- * profile screens — pure rendering, callers own fetching/filtering. */
-export const PhotoGrid = memo(function PhotoGrid({
+function PhotoGridSkeleton() {
+  return (
+    <View style={styles.grid}>
+      {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+        <View key={i} style={styles.tile}>
+          <View style={styles.skeletonInner}>
+            {i === 0 && <ActivityIndicator color={withAlpha(colors.paper, textOpacity.tertiary)} />}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function PhotoGridEmpty({
+  emptyLabel,
+  emptyTitle,
+  emptyActions,
+}: Pick<PhotoGridListProps, 'emptyLabel' | 'emptyTitle' | 'emptyActions'>) {
+  if (emptyActions && emptyActions.length > 0) {
+    return (
+      <EmptyState
+        icon="camera-outline"
+        title={emptyTitle ?? emptyLabel}
+        message={emptyTitle ? emptyLabel : undefined}
+        actions={emptyActions}
+      />
+    );
+  }
+  return (
+    <View style={styles.empty}>
+      <Text variant="body" tone="secondary" align="center">
+        {emptyLabel}
+      </Text>
+    </View>
+  );
+}
+
+function RowSeparator() {
+  return <View style={styles.rowSeparator} />;
+}
+
+interface PhotoGridListProps {
+  photos: ChallengePhoto[];
+  loading: boolean;
+  emptyLabel: string;
+  /** With `emptyActions`, the empty state gets a bold title above `emptyLabel` and buttons toward where photos come from. */
+  emptyTitle?: string;
+  emptyActions?: EmptyStateAction[];
+  onPhotoPress?: (photo: ChallengePhoto) => void;
+  /** Everything above the grid (profile header, badges, toggle). */
+  header?: ReactElement | null;
+  /** Below the grid, after the "load more" row (e.g. the About link). */
+  footer?: ReactElement | null;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
+  loadMoreLabel?: string;
+  refreshControl?: ReactElement<RefreshControlProps>;
+  contentContainerStyle?: object;
+}
+
+/**
+ * A profile screen as one virtualized list: `header` on top, the photos as a
+ * two-column grid, then `footer`. Only the rows near the viewport are mounted,
+ * and the next page loads as the grid nears its end (the "load more" button
+ * stays as the visible indicator and a manual fallback).
+ */
+export function PhotoGridList({
   photos,
   loading,
   emptyLabel,
   emptyTitle,
   emptyActions,
   onPhotoPress,
-}: PhotoGridProps) {
-  const [imagesReady, setImagesReady] = useState(false);
-  const hasRenderedContent = useRef(false);
+  header,
+  footer,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
+  loadMoreLabel = '',
+  refreshControl,
+  contentContainerStyle,
+}: PhotoGridListProps) {
+  const renderItem = useCallback(
+    ({ item }: { item: ChallengePhoto }) => <PhotoTile photo={item} onPhotoPress={onPhotoPress} />,
+    [onPhotoPress],
+  );
 
-  const preloadInitialImages = useCallback((urls: string[]) => {
-    const preload = Promise.allSettled(
-      urls.slice(0, INITIAL_IMAGE_PRELOAD_COUNT).map((url) => Image.prefetch(url)),
-    );
-
-    return Promise.race([preload, delay(IMAGE_PRELOAD_TIMEOUT_MS)]);
-  }, []);
-
-  useEffect(() => {
-    if (loading) {
-      if (!hasRenderedContent.current) {
-        setImagesReady(false);
-      }
-      return;
-    }
-    if (photos.length === 0) {
-      hasRenderedContent.current = true;
-      setImagesReady(true);
-      return;
-    }
-
-    let cancelled = false;
-    const urls = photos.map((photo) => photo.imageUrl).filter((url): url is string => Boolean(url));
-
-    // Once a grid is already on screen, a background refresh must not swap
-    // it back to skeletons. The updated cells render immediately and native
-    // image loading fills any genuinely new URI; existing cells stay intact.
-    if (hasRenderedContent.current) {
-      void preloadInitialImages(urls);
-      return;
-    }
-
-    // Tiles draw right away (each has its own placeholder fill) and the first row is
-    // warmed in the background: waiting on full-size downloads made the grid look stuck.
-    void preloadInitialImages(urls);
-    hasRenderedContent.current = true;
-    setImagesReady(true);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [loading, photos, preloadInitialImages]);
-
-  if (loading || !imagesReady) {
-    return (
-      <View style={styles.grid}>
-        {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-          <View key={i} style={styles.tile}>
-            <View style={styles.skeletonInner}>
-              {i === 0 && <ActivityIndicator color={withAlpha(colors.paper, textOpacity.tertiary)} />}
-            </View>
-          </View>
-        ))}
-      </View>
-    );
-  }
-
-  if (photos.length === 0 && emptyActions && emptyActions.length > 0) {
-    return <EmptyState icon="camera-outline" title={emptyTitle ?? emptyLabel} message={emptyTitle ? emptyLabel : undefined} actions={emptyActions} />;
-  }
-
-  if (photos.length === 0) {
-    return (
-      <View style={styles.empty}>
-        <Text variant="body" tone="secondary" align="center">
-          {emptyLabel}
-        </Text>
-      </View>
-    );
-  }
+  const handleEndReached = useCallback(() => {
+    if (hasMore && !loadingMore) onLoadMore?.();
+  }, [hasMore, loadingMore, onLoadMore]);
 
   return (
-    <View style={styles.grid}>
-      {photos.map((photo) => (
-        <PhotoTile key={photo.id} photo={photo} onPhotoPress={onPhotoPress} />
-      ))}
-    </View>
+    <FlatList
+      data={loading ? [] : photos}
+      keyExtractor={(photo) => String(photo.id)}
+      renderItem={renderItem}
+      numColumns={NUM_COLUMNS}
+      columnWrapperStyle={styles.columns}
+      ItemSeparatorComponent={RowSeparator}
+      ListHeaderComponent={header ? <View style={styles.header}>{header}</View> : null}
+      ListEmptyComponent={
+        loading ? (
+          <PhotoGridSkeleton />
+        ) : (
+          <PhotoGridEmpty emptyLabel={emptyLabel} emptyTitle={emptyTitle} emptyActions={emptyActions} />
+        )
+      }
+      ListFooterComponent={
+        <View>
+          {hasMore && !loading ? (
+            <Button variant="outline" size="sm" loading={loadingMore} onPress={onLoadMore} testID="posts-load-more">
+              {loadMoreLabel}
+            </Button>
+          ) : null}
+          {footer ? <View style={styles.footer}>{footer}</View> : null}
+        </View>
+      }
+      onEndReached={handleEndReached}
+      onEndReachedThreshold={0.6}
+      initialNumToRender={INITIAL_ROWS * NUM_COLUMNS}
+      maxToRenderPerBatch={INITIAL_ROWS * NUM_COLUMNS}
+      windowSize={WINDOW_SIZE}
+      refreshControl={refreshControl}
+      contentContainerStyle={contentContainerStyle}
+      showsVerticalScrollIndicator={false}
+    />
   );
-});
+}
 
 const styles = StyleSheet.create({
+  header: {
+    gap: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+  },
+  // Same geometry as the wrapped grid this replaced: tiles from the left edge,
+  // `sm` between columns and between rows.
+  columns: {
+    gap: spacing.sm,
+  },
+  rowSeparator: {
+    height: spacing.sm,
+  },
+  footer: {
+    marginTop: spacing.lg,
   },
   tile: {
     width: '48.5%',

@@ -36,6 +36,7 @@ import { LocationSwitchSheet } from '../../../../components/challenge/detail/Loc
 import { getLocationAvailability, type LocationAvailability } from '../../../../services/exercises/exercises.service';
 import { adaptationForRoutine, useWorkoutAdaptationStore } from '../../../../store/workoutAdaptationStore';
 import type { WorkoutAdaptation } from '../../../../store/workoutAdaptationStore';
+import { invalidateAfterMembershipChanged } from '../../../../services/cache/queries';
 
 type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
 
@@ -163,6 +164,7 @@ export default function RoutineDayDetail() {
       if (!challengeId) return;
       try {
         const response = await joinChallenge(challengeId);
+        invalidateAfterMembershipChanged();
         // Same as app/challenge/[id]/index.tsx: a private challenge only files a
         // request — not a member yet, so no "joined" toast and no redirect.
         if (response?.status === 'requested') {

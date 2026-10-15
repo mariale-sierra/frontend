@@ -18,6 +18,7 @@ import i18n, { PREFERRED_LANGUAGE_KEY } from '../i18n';
 import type { SupportedLanguage } from '../i18n';
 import { storage } from '../utils/storage';
 import { colors, fontFamily } from '../constants/theme';
+import { logError } from '../utils/apiError';
 
 const navigationTheme: NavigationTheme = {
   dark: true,
@@ -203,7 +204,7 @@ export default function RootLayout() {
         }
       })
       .catch((error) => {
-        console.error('[i18n] failed to apply persisted language', error);
+        logError('i18n.applyPersistedLanguage', error);
       });
   }, []);
 

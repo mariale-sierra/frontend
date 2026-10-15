@@ -30,7 +30,7 @@ describe('auth service — legal consent', () => {
       password: 'password123',
       acceptTerms: true,
       confirmAge16: true,
-    });
+    }, { suppressErrorToast: true });
   });
 
   it('posts the consent to /auth/accept-terms for existing accounts', async () => {

@@ -18,6 +18,7 @@ import { ChallengePhotoGalleryModal } from './ChallengePhotoGalleryModal';
 import { ChallengePhotoMosaicSkeleton } from './ChallengePhotoMosaicSkeleton';
 import { ChallengeProgressContentSkeleton } from './ChallengeProgressContentSkeleton';
 import { ChallengeWorkoutCalendar } from './ChallengeWorkoutCalendar';
+import { invalidateAfterMembershipChanged } from '../../../services/cache/queries';
 
 type ConsistencyView = 'grid' | 'calendar';
 
@@ -43,6 +44,7 @@ export function ChallengeActiveProgressScreen() {
     onConfirm: async () => {
       if (!data.challengeId) return;
       await leaveChallenge(data.challengeId);
+      invalidateAfterMembershipChanged();
       router.replace('/(tabs)/challenges');
     },
   });

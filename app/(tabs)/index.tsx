@@ -25,9 +25,12 @@ import { getHomeChallengesSorted, getHomeGlowColors } from '../../services/adapt
 import { groupLatestPhotoByChallengeId } from '../../services/adapters/challengeState';
 import { getMyChallenges } from '../../services/user/user.service';
 import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
-import { getHomeFeed } from '../../services/feed/feed.service';
-import { toFeedPostViewModels } from '../../services/adapters/feedAdapter';
+import { getHomeFeed, type FeedPage } from '../../services/feed/feed.service';
+import { toCachedFeedPostViewModels } from '../../services/adapters/feedAdapter';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
+import { useCachedQuery } from '../../hooks/useCachedQuery';
+import { queryKeys, staleTimes } from '../../services/cache/queries';
+import { setQueryData } from '../../services/cache/queryCache';
 import { getFollowingStreaks } from '../../services/follow/follow.service';
 import { toFriendStreakViewModels } from '../../services/adapters/followAdapter';
 import { colors, spacing, textOpacity } from '../../constants/theme';
@@ -39,7 +42,7 @@ import { withAlpha } from '../../utils/color';
 import { useNotificationsStore } from '../../store/notificationsStore';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { hasSeenLogCoachMark, markLogCoachMarkSeen } from '../../utils/logCoachMark';
-import { FEED_POST_GAP } from '../../constants/feed';
+import { FEED_POST_GAP, HOME_EDGE_INSET } from '../../constants/feed';
 
 function FeedSeparator() {
   return <View style={styles.separator} />;
@@ -52,12 +55,27 @@ export default function Home() {
   const router = useRouter();
   const unreadNotifications = useNotificationsStore((s) => s.unreadCount);
 
-  // Same source as the Challenges tab (services/user/user.service.ts getMyChallenges,
-  // i.e. GET /users/me/challenges) so the two screens always show the same set of
-  // challenges — this used to mix hardcoded mock badges with a single, separately
-  // fetched "current" challenge from /challenges/progress.
-  const [challenges, setChallenges] = useState<HomeActiveChallengeViewModel[]>([]);
-  const [challengeLoading, setChallengeLoading] = useState(true);
+  // Same source as the Challenges tab (GET /users/me/challenges + the user's own
+  // photos for "posted today"), read through the shared cache: switching tabs or
+  // coming back from another screen reuses what is loaded instead of refetching
+  // it, and a log/join elsewhere invalidates exactly these keys.
+  const challengesQuery = useCachedQuery(queryKeys.myChallenges, getMyChallenges, {
+    staleTime: staleTimes.activity,
+    persist: true,
+  });
+  const photosQuery = useCachedQuery(queryKeys.myPhotos, getMyProgressPhotos, {
+    staleTime: staleTimes.activity,
+    persist: true,
+  });
+  const challenges = useMemo<HomeActiveChallengeViewModel[]>(
+    () =>
+      getHomeChallengesSorted(
+        challengesQuery.data ?? [],
+        groupLatestPhotoByChallengeId(photosQuery.data ?? []),
+      ),
+    [challengesQuery.data, photosQuery.data],
+  );
+  const challengeLoading = challengesQuery.isLoading || photosQuery.isLoading;
 
   // The carousel's scroll offset, which the background light follows: it takes
   // the color of the card in view, cross-fading to the next as the carousel scrolls.
@@ -78,15 +96,27 @@ export default function Home() {
     [carouselScrollX, challenges],
   );
 
-  const [feedPosts, setFeedPosts] = useState<FeedPostViewModel[]>([]);
-  const [feedLoading, setFeedLoading] = useState(true);
-  const [feedError, setFeedError] = useState(false);
-  const [feedNextCursor, setFeedNextCursor] = useState<string | undefined>(undefined);
+  const feedQuery = useCachedQuery<FeedPage>(queryKeys.feed, () => getHomeFeed(), {
+    staleTime: staleTimes.activity,
+    persist: true,
+  });
+  const feedPosts = useMemo(() => toCachedFeedPostViewModels(feedQuery.data?.posts ?? []), [feedQuery.data]);
+  const feedNextCursor = feedQuery.data?.nextCursor;
+  const feedLoading = feedQuery.isLoading;
+  // Only an error with nothing to show: a failed background refresh keeps the cached feed.
+  const feedError = !feedQuery.data && Boolean(feedQuery.error);
   const [feedLoadingMore, setFeedLoadingMore] = useState(false);
 
-  const [friendStreaks, setFriendStreaks] = useState<FriendStreakViewModel[]>([]);
-  const [friendStreaksLoading, setFriendStreaksLoading] = useState(true);
-  const [friendStreaksError, setFriendStreaksError] = useState(false);
+  const streaksQuery = useCachedQuery(queryKeys.followingStreaks, getFollowingStreaks, {
+    staleTime: staleTimes.social,
+    persist: true,
+  });
+  const friendStreaks = useMemo<FriendStreakViewModel[]>(
+    () => toFriendStreakViewModels(streaksQuery.data ?? []),
+    [streaksQuery.data],
+  );
+  const friendStreaksLoading = streaksQuery.isLoading;
+  const friendStreaksError = !streaksQuery.data && Boolean(streaksQuery.error);
 
   // Onboarding Stage 2's one coach mark — points at the tab bar's Log FAB,
   // shown once ever per device (utils/logCoachMark.ts). Checked once on
@@ -109,126 +139,32 @@ export default function Home() {
 
   const hoursLeft = hoursUntilMidnight();
 
-  // Refetches on focus (not just on first mount) so returning to this tab after
-  // joining/completing a challenge elsewhere — or logging today's photo, which
-  // flips a card from active to completed — shows up-to-date state.
+  // Coming back to Home only asks the server for what is older than its
+  // staleTime; anything changed in the app was already invalidated (or patched)
+  // by the mutation itself, so most tab switches cost no request at all.
+  const revalidateChallenges = challengesQuery.revalidate;
+  const revalidatePhotos = photosQuery.revalidate;
+  const revalidateFeed = feedQuery.revalidate;
+  const revalidateStreaks = streaksQuery.revalidate;
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-      Promise.all([getMyChallenges(), getMyProgressPhotos()])
-        .then(([data, myPhotos]) => {
-          if (!active) return;
-          const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(myPhotos ?? []);
-          setChallenges(getHomeChallengesSorted(data ?? [], latestPhotoByChallengeId));
-        })
-        .catch(() => {
-          if (active) setChallenges([]);
-        })
-        .finally(() => {
-          if (active) setChallengeLoading(false);
-        });
-      return () => {
-        active = false;
-      };
-    }, []),
+      void revalidateChallenges();
+      void revalidatePhotos();
+      void revalidateFeed();
+      void revalidateStreaks();
+    }, [revalidateChallenges, revalidatePhotos, revalidateFeed, revalidateStreaks]),
   );
 
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      // No `setFeedLoading(true)` here on purpose: this effect also fires on
-      // every re-focus (tab switch back to Home), not just first mount. Doing
-      // that flip forced `isReady` back to false on every visit, swapping the
-      // whole header + feed out for HomeContentSkeleton and emptying the
-      // FlatList's data even though we already had a perfectly good list on
-      // screen — the exact "re-renders everything from scratch" heaviness
-      // reported when switching tabs. The initial `useState(true)` above
-      // still covers the real first load; every focus after that refreshes
-      // `feedPosts` silently in place once the request resolves.
-      getHomeFeed()
-        .then(({ posts, nextCursor }) => {
-          if (!active) return;
-          setFeedPosts(toFeedPostViewModels(posts));
-          setFeedNextCursor(nextCursor);
-          setFeedError(false);
-        })
-        .catch(() => {
-          // Feed failed to load — show the dedicated error state below rather
-          // than showing stale/fake data.
-          if (!active) return;
-          setFeedPosts([]);
-          setFeedNextCursor(undefined);
-          setFeedError(true);
-        })
-        .finally(() => {
-          if (active) setFeedLoading(false);
-        });
-      return () => {
-        active = false;
-      };
-    }, []),
+  // Pull-to-refresh: always asks the server for all four, independently (one
+  // failing doesn't block the others; each keeps its cached data on failure).
+  const refetchChallenges = challengesQuery.refetch;
+  const refetchPhotos = photosQuery.refetch;
+  const refetchFeed = feedQuery.refetch;
+  const refetchStreaks = streaksQuery.refetch;
+  const refreshHome = useCallback(
+    () => Promise.all([refetchChallenges(), refetchPhotos(), refetchFeed(), refetchStreaks()]),
+    [refetchChallenges, refetchPhotos, refetchFeed, refetchStreaks],
   );
-
-  useFocusEffect(
-    useCallback(() => {
-      let active = true;
-      // Same reasoning as the feed effect above — no loading-flag reset on
-      // every re-focus, only the real first load (initial `useState(true)`).
-      getFollowingStreaks()
-        .then((rows) => {
-          if (!active) return;
-          setFriendStreaks(toFriendStreakViewModels(rows));
-          setFriendStreaksError(false);
-        })
-        .catch(() => {
-          if (!active) return;
-          setFriendStreaks([]);
-          setFriendStreaksError(true);
-        })
-        .finally(() => {
-          if (active) setFriendStreaksLoading(false);
-        });
-      return () => {
-        active = false;
-      };
-    }, []),
-  );
-
-  // Pull-to-refresh: re-fetches all three sections at once, independently of
-  // each other (one failing doesn't block the other two from updating) —
-  // same per-section error flags the focus effects above already maintain.
-  // Doesn't touch `challengeLoading`/`feedLoading`/`friendStreaksLoading` on
-  // purpose: those gate the full-screen skeleton (see `isReady` below), and
-  // by the time the user can pull to refresh that skeleton is long gone —
-  // RefreshControl's own spinner is the only loading indicator this needs.
-  const refreshHome = useCallback(async () => {
-    const [challengesResult, feedResult, streaksResult] = await Promise.allSettled([
-      Promise.all([getMyChallenges(), getMyProgressPhotos()]),
-      getHomeFeed(),
-      getFollowingStreaks(),
-    ]);
-
-    if (challengesResult.status === 'fulfilled') {
-      const [data, myPhotos] = challengesResult.value;
-      const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(myPhotos ?? []);
-      setChallenges(getHomeChallengesSorted(data ?? [], latestPhotoByChallengeId));
-    }
-
-    if (feedResult.status === 'fulfilled') {
-      setFeedPosts(toFeedPostViewModels(feedResult.value.posts));
-      setFeedNextCursor(feedResult.value.nextCursor);
-      setFeedError(false);
-    } else {
-      setFeedError(true);
-    }
-
-    if (streaksResult.status === 'fulfilled') {
-      setFriendStreaks(toFriendStreakViewModels(streaksResult.value));
-      setFriendStreaksError(false);
-    } else {
-      setFriendStreaksError(true);
-    }
-  }, []);
   const { refreshing, onRefresh } = usePullToRefresh(refreshHome);
 
   const loadMoreFeed = useCallback(() => {
@@ -236,13 +172,17 @@ export default function Home() {
     setFeedLoadingMore(true);
     getHomeFeed(feedNextCursor)
       .then(({ posts, nextCursor }) => {
-        setFeedPosts((prev) => [...prev, ...toFeedPostViewModels(posts)]);
-        setFeedNextCursor(nextCursor);
+        // Appended to the cached pages, skipping any post a refresh already brought in.
+        setQueryData<FeedPage>(queryKeys.feed, (previous) => {
+          if (!previous) return previous;
+          const known = new Set(previous.posts.map((post) => post.id));
+          return { posts: [...previous.posts, ...posts.filter((post) => !known.has(post.id))], nextCursor };
+        });
       })
       .catch(() => {
         // Leave the already-loaded posts on screen; simply stop paginating
         // rather than surfacing a second error state mid-scroll.
-        setFeedNextCursor(undefined);
+        setQueryData<FeedPage>(queryKeys.feed, (previous) => (previous ? { ...previous, nextCursor: undefined } : previous));
       })
       .finally(() => setFeedLoadingMore(false));
   }, [feedLoadingMore, feedLoading, feedNextCursor]);
@@ -252,19 +192,17 @@ export default function Home() {
   // identity every render defeats FlatList's own cell-level memoization and
   // forces every visible row to re-render even when its own data hasn't
   // changed (e.g. while the friend-streaks section resolves independently).
-  // B4: the viewer deleted one of their own posts from its "..." menu — drop
-  // it from the already-loaded feed in place (no refetch, no scroll jump).
+  // B4: the viewer deleted one of their own posts from its "..." menu — the
+  // card already dropped it from the cached feed (no refetch, no scroll jump).
   const showSuccess = useErrorNotificationStore((state) => state.showSuccess);
-  const handlePostDeleted = useCallback(
-    (postId: string) => {
-      setFeedPosts((prev) => prev.filter((post) => post.id !== postId));
-      showSuccess({ message: t('home.postOptions.deleteSuccess') });
-    },
-    [showSuccess, t],
-  );
+  const handlePostDeleted = useCallback(() => {
+    showSuccess({ message: t('home.postOptions.deleteSuccess') });
+  }, [showSuccess, t]);
 
   const renderItem = useCallback(
-    ({ item }: { item: FeedPostViewModel }) => <FeedPostCard post={item} onDeleted={handlePostDeleted} />,
+    ({ item }: { item: FeedPostViewModel }) => (
+      <FeedPostCard post={item} onDeleted={handlePostDeleted} edgeToEdgeInset={HOME_EDGE_INSET} />
+    ),
     [handlePostDeleted],
   );
 
@@ -277,7 +215,7 @@ export default function Home() {
   const listHeader = useMemo(
     () => (
       <View style={styles.listHeader}>
-      <Row justify="space-between" align="flex-start">
+      <Row justify="space-between" align="flex-start" style={styles.inset}>
         <View style={styles.greetingBlock}>
           <Text variant="caption" tone="secondary" style={styles.dateLabel}>
             {formatTodayLabel()}
@@ -310,7 +248,7 @@ export default function Home() {
             {challenges.length > 0 ? (
               <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} scrollX={carouselScrollX} />
             ) : (
-              <View style={styles.center}>
+              <View style={[styles.center, styles.inset]}>
                 <Icon name="trophy-outline" size={32} color={withAlpha(colors.paper, textOpacity.tertiary)} />
                 <Text variant="body" tone="secondary" align="center">{t('home.noActiveChallenge')}</Text>
                 <View style={styles.emptyStateCta}>
@@ -333,7 +271,7 @@ export default function Home() {
             />
           </View>
 
-          <Divider style={styles.divider} />
+          <Divider style={[styles.divider, styles.dividerInset]} />
         </>
       )}
       </View>
@@ -341,7 +279,7 @@ export default function Home() {
     [carouselScrollX, challenges, friendStreaks, friendStreaksError, hoursLeft, isReady, router, t, unreadNotifications, username],
   );
   const listEmptyComponent = useMemo(
-    () => (!isReady ? null : feedError ? <FeedErrorState /> : <EmptyFeed />),
+    () => (!isReady ? null : <View style={styles.inset}>{feedError ? <FeedErrorState /> : <EmptyFeed />}</View>),
     [feedError, isReady],
   );
   const listContentStyle = useMemo(
@@ -372,7 +310,7 @@ export default function Home() {
           ) : isReady && !feedError && feedPosts.length > 0 && !feedNextCursor ? (
             // The end of the feed, so an empty scroll below the last post
             // doesn't read as "still loading" or "broken".
-            <View style={styles.feedEnd} testID="feed-end">
+            <View style={[styles.feedEnd, styles.inset]} testID="feed-end">
               <Text variant="caption" tone="secondary" align="center">
                 {t('home.feedEnd')}
               </Text>
@@ -412,8 +350,14 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  listContent: {
-    paddingHorizontal: spacing.lg,
+  // No side padding on the list itself: photos and the two carousels run edge
+  // to edge, and every other row insets itself by HOME_EDGE_INSET (below).
+  listContent: {},
+  inset: {
+    paddingHorizontal: HOME_EDGE_INSET,
+  },
+  dividerInset: {
+    marginHorizontal: HOME_EDGE_INSET,
   },
   listHeader: {
     // ScreenBackground already pads for the safe-area top inset — this is
@@ -446,9 +390,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.ink,
   },
-  challengeArea: {
-    marginHorizontal: -spacing.lg,
-  },
+  challengeArea: {},
   loaderTransparent: {
     backgroundColor: 'transparent',
   },
@@ -480,6 +422,6 @@ const styles = StyleSheet.create({
   // floating glass tab bar), computed inline where insets is in scope.
   logCoachMark: {
     position: 'absolute',
-    right: spacing.lg,
+    right: HOME_EDGE_INSET,
   },
 });

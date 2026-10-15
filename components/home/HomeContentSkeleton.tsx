@@ -4,7 +4,7 @@ import { Row } from '../layout/row';
 import { Stack } from '../layout/stack';
 import { PostCardSkeleton } from './PostCardSkeleton';
 import { radius, spacing } from '../../constants/theme';
-import { FEED_POST_GAP_TOKEN } from '../../constants/feed';
+import { FEED_POST_GAP_TOKEN, HOME_EDGE_INSET } from '../../constants/feed';
 
 const STREAK_AVATAR_SIZE = 58;
 
@@ -19,9 +19,11 @@ const STREAK_AVATAR_SIZE = 58;
 export function HomeContentSkeleton() {
   return (
     <Stack gap="xl">
-      <Skeleton height={168} radius={radius.big} />
+      <View style={styles.inset}>
+        <Skeleton height={168} radius={radius.big} />
+      </View>
 
-      <Row gap="md">
+      <Row gap="md" style={styles.inset}>
         {[0, 1, 2, 3].map((key) => (
           <View key={key} style={styles.streakItem}>
             <Skeleton width={STREAK_AVATAR_SIZE} height={STREAK_AVATAR_SIZE} radius={radius.big} strong />
@@ -31,14 +33,18 @@ export function HomeContentSkeleton() {
       </Row>
 
       <Stack gap={FEED_POST_GAP_TOKEN}>
-        <PostCardSkeleton />
-        <PostCardSkeleton />
+        <PostCardSkeleton inset={HOME_EDGE_INSET} />
+        <PostCardSkeleton inset={HOME_EDGE_INSET} />
       </Stack>
     </Stack>
   );
 }
 
 const styles = StyleSheet.create({
+  // Same layout as the real Home: content inset, photos edge to edge.
+  inset: {
+    paddingHorizontal: HOME_EDGE_INSET,
+  },
   streakItem: {
     alignItems: 'center',
     gap: spacing.xs,

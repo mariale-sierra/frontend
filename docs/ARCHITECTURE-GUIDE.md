@@ -87,7 +87,11 @@ Avoid a fully custom `tabBar`: on iOS with Fabric enabled, it has historically m
 - Base URL: currently hardcoded as `http://20.63.84.1:3000` in `services/api.ts`.
 - Token injection: `services/api.ts` has an Axios request interceptor that calls `getAccessToken()` and sets `Authorization: Bearer <token>`.
 - Timezone header: native clients send `X-Timezone`; web omits it so browser requests remain compatible with older API deployments whose CORS allow-list does not include that custom header. The backend falls back to UTC when it is absent.
-- 401 handling: the Axios response interceptor logs 401s and rejects the error.
+- Timeout: every request has a 30s `timeout`, so a dead connection fails (with the timeout toast) instead of leaving a spinner forever.
+- Error toasts: the response interceptor shows one translated toast per failed request via `showApiErrorToast()` (exported from `services/api.ts`). Messages are always i18n: a few user-actionable backend messages are mapped to `common.errors.known.*` (`utils/apiError.ts`'s `KNOWN_BACKEND_MESSAGES` — the API answers in English); anything else gets the message for its status (400/422, 403, 404, 409, 429, 5xx, timeout, network). Raw server text (class-validator arrays, internal names) never reaches the UI. A 401 on a request that carried a token signs the user out (`notifySessionExpired`); a 401 without one (sign-in, a password re-check) shows "credentials not correct".
+- `suppressErrorToast: true` opts a request out of that toast when the screen shows its own message (login/register do, so a wrong password is one toast, not two).
+- In a screen: an API failure already has its toast — use `wasErrorToastShown(error)` (`utils/apiError.ts`) before adding an `Alert`, and `getApiErrorMessage(error, t, fallback)` for an inline message next to the button/field that failed. Never show `error.response.data.message` directly.
+- Logging: `logError(scope, error)` / `logWarn(scope, message)` (`utils/apiError.ts`) print only in `__DEV__` and only method + path (no query) + status/code — never response bodies, headers (the bearer token travels there), payloads or signed upload URLs. Don't `console.*` an Axios error object.
 - Token storage: `services/auth/token.service.ts` keeps the access token in memory and hydrates it from `utils/storage.ts`.
 - AsyncStorage wrapper: `utils/storage.ts` wraps `AsyncStorage.getItem`, `setItem`, and `removeItem`.
 - Auth service: `services/auth/auth.service.ts` calls `/auth/login`, `/auth/register`, stores token, `userId`, and `username`, and clears them on logout.
@@ -103,6 +107,7 @@ Future services should reuse `services/api.ts`, avoid creating another Axios cli
 - `context/authContext.tsx`: global auth/session state and login/register/logout actions.
 - `context/themeContext.tsx`: exposes theme tokens from `constants/theme`.
 - `hooks/useAuth.ts` and `hooks/useTheme.ts`: thin wrappers around their contexts.
+- **Shared server-data cache** (`services/cache/`, `hooks/useCachedQuery.ts`) — see §8b.
 - `hooks/useCreateChallengeFlow.ts`: orchestrates challenge creation state, validation, payload building, backend submit, and navigation.
 - `hooks/useMetricsScreen.ts`: coordinates enrolled challenges, today's routine, workout log creation, metric submit, loading/error state, and navigation.
 - `hooks/useFilteredExercises.ts`: filters exercise candidates for routine exercise selection.
@@ -110,6 +115,15 @@ Future services should reuse `services/api.ts`, avoid creating another Axios cli
 - Zustand stores in `store/`: hold multi-screen local builder state for challenges, routines, and metrics. Routine day assignments remain transient per challenge, while the routine picker hydrates its reusable routine list from the backend.
 
 Prefer hooks for screens that coordinate services, stores, translations, routing, alerts, loading, and errors. Direct service calls are acceptable in small screens, but shared or multi-step behavior should move into a hook or store following existing patterns.
+
+## 8b. Server-data cache (stale-while-revalidate, no extra dependency)
+Data that several screens read, or that is read again on every visit, goes through one in-memory cache keyed by name (`services/cache/queryCache.ts`), optionally mirrored to AsyncStorage per user so a cold start paints the last known data at once.
+- Keys and freshness live in `services/cache/queries.ts` (`queryKeys`, `staleTimes`): `me:challenges` (GET /users/me/challenges — Home, Challenges › Mine, Search, Log picker, membership checks), `me:photos` (GET /workout-posts/mine), `me:profile`, `challenges:all` (every page of GET /challenges — Explore, Search), `feed` (the pages loaded so far), `follow:streaks`, `badges:me` / `badges:user:<id>`, `profile:<id>`, `user-posts:<id>` (the pages loaded so far), `ref:*` (exercise catalog reference data, `services/exercises/exercises.service.ts`, reused for a day).
+- In a component: `useCachedQuery(key, fetcher, { staleTime, persist, enabled })` → `{ data, isLoading (nothing to show yet — the only time for a skeleton), error, revalidate (fetch if stale — call from the screen's useFocusEffect), refetch (always — pull-to-refresh) }`. Paginated user posts: `hooks/useUserPosts.ts`. Imperative one-off reads: `services/cache/loaders.ts` (`loadMyChallenges`, `loadAllChallenges`, `loadMyProfile`).
+- Two callers of the same key share one request; a failed background refresh keeps the cached data (the toast still says what failed).
+- **Mutations keep the cache true instead of refetching everything:** write the server's answer (`setQueryData` — profile edits), patch locally (`patchFeedPost` for likes/comment counts, `removePostFromCaches` for a deleted/reported post, feed/posts `loadMore` appends), or mark what changed stale with the helpers in `queries.ts` (`invalidateAfterWorkoutLogged`, `invalidateAfterMembershipChanged`, `invalidateAfterFollowChanged`, `invalidateAfterOwnPostDeleted`). An invalidated key that is on screen refetches immediately; the rest refetch the next time a screen asks. A new mutation must call the matching helper (or add one).
+- The server stays the source of truth: optimistic UI (likes, follow) rolls back on failure, and a request that started before a local change never marks the entry fresh.
+- Session safety: `context/authContext.tsx` scopes the cache to the signed-in user (`setQueryScope`) and wipes it, memory and disk, on logout/expired session (`clearQueryCache`). Jest clears it before every test (`jest.setup.afterEnv.js`).
 
 ## 9. UI and Component Architecture
 - A screen's main call to action is `Button size="cta"` (52 tall, `body` bold, usually full width) — don't hand-build another 52px button; the older hand-built ones (Join challenge, Confirm routine, camera) can migrate to it.
@@ -218,7 +232,9 @@ Full decision record (computed-on-the-fly rewards, catalog, demo data): `docs/BA
 - `components/layout/keyboardAwareScroll.tsx` replaces `ScrollView` in form screens: it adds the keyboard's height as bottom padding and scrolls the focused field above the keyboard (Android's edge-to-edge screens do not resize for it).
 - Reporting content hides it at once for the reporter (`ReportReasonSheet.onReported`; the server keeps it out of that user's reads while the report is pending). A moderation suspension answers writes with `403 ACCOUNT_SUSPENDED`; `services/api.ts` shows when it ends. Fixed hours per reason: `backend/docs/moderacion-manual.md`.
 - "Where do you train?" is also on the register screen (`app/(add)/metrics.tsx`, via `useMetricsScreen.applyLocation`), reusing `LocationSwitchSheet`.
-- Own posts load a page at a time (`getUserPosts(userId)` + "Load more") in the profile grid and the "+" picker; `GET /workout-posts/mine` returns the whole history and is only used where the full list is needed.
+- Own posts load a page at a time (`getUserPosts(userId)`) in the profile grid and the "+" picker; `GET /workout-posts/mine` returns the whole history and is only used where the full list is needed.
+- Both profiles (`app/(tabs)/profile.tsx`, `app/profile/[userId].tsx`) are one virtualized `PhotoGridList` (`components/profile/PhotoGrid.tsx`): header + badges (+ toggle) as the list header, photos as a 2-column FlatList (only rows near the viewport are mounted), and the next page loads as the grid nears its end — the "Load more" button stays as the visible indicator/fallback. Pages already loaded are cached per user (`useUserPosts`).
+- Home/Feed layout: the feed list has no side padding; photos and both carousels (active challenges, streaks) run edge to edge, and every other row insets itself by `HOME_EDGE_INSET` (`constants/feed.ts`, `spacing.base`). `FeedPostCard`'s `edgeToEdgeInset` prop gives the Instagram layout (only Home passes it; the profile post viewer keeps its padded column).
 
 ## 13. Do and Don't Rules
 Do:
@@ -246,8 +262,9 @@ As of the form-validation refactor (2026-09-04), every text-input form that need
 **Shared field components** (visual layer, no validation logic of its own):
 - `components/ui/input.tsx` — the base `TextInput` wrapper (`default`/`filled` variants, label, counter, multiline). Gained an `error?: boolean` prop that tints the container border `colors.error`; the border is always reserved at `borderWidth: 1.5` (transparent when there's no error) so toggling the error state never shifts layout.
 - `components/ui/formField.tsx` — label + `Input` + inline error message below the field (`error?: string | null`). The default field for most forms.
-- `components/auth/auth-input.tsx` / `components/auth/auth-form-field.tsx` — the auth-screen variant (recessed `ink` fill, `primary` focus border, `error` overrides the focus border to `colors.error`). Same error-message-below pattern as `FormField`, kept as a separate component because its visual treatment is a real, pre-existing, legitimate difference from the default field — not a duplicate.
-- `components/form/ControlledFormField.tsx` / `components/form/ControlledAuthField.tsx` — thin `react-hook-form` `Controller` adapters. They own zero validation logic themselves; they just wire a `control`/`name` pair to the visual component above (`value`, `onChangeText`, `onBlur`, and the resolved `error.message`).
+- `components/ui/fieldError.tsx` — **the** inline validation message (caption, `colors.error`, announced to screen readers). `FormField` renders it; screens with their own field layout (`FloatingLabelInput` on login/register/delete-account, the challenge/routine name fields) render `<FieldError message={error?.message} />` under the input. A field that turns red must also say why.
+- `components/auth/FloatingLabelInput.tsx` — the auth-screen input (`error` boolean tints its border).
+- `components/form/ControlledFormField.tsx` — thin `react-hook-form` `Controller` adapter. They own zero validation logic themselves; they just wire a `control`/`name` pair to the visual component above (`value`, `onChangeText`, `onBlur`, and the resolved `error.message`).
 
 **Validation schemas** live in `validation/*Schemas.ts` (one file per form/feature: `authSchemas.ts`, `profileSchemas.ts`, `challengeSchemas.ts`, `routineSchemas.ts`, `spaceSchemas.ts`), each exporting a `createXSchema(t: TFunction)` factory (plus the `z.infer` type). Validation logic lives entirely in these files, not in components — passing the current `t` in means every error message is translated and stays in sync with the active language, same as any other `t()` call in the app. A screen builds its schema with `useMemo(() => createXSchema(t), [t])` and passes it to `useForm`'s `resolver: zodResolver(schema)`.
 
@@ -259,6 +276,8 @@ As of the form-validation refactor (2026-09-04), every text-input form that need
 5. Keep `Alert.alert` only for errors that aren't attributable to one on-screen field — a failed network request, a server-side auth failure, a destructive confirmation, or a step whose "fields" are non-text selections (pill grids, day lists, visibility cards) rather than `Input`s.
 
 **Zustand-backed fields (multi-step builders):** when a field's value lives in a Zustand store shared across steps/screens (e.g. `challengeBuilderStore.title`, `routineBuilderStore.routineName`), `react-hook-form` still owns the validation/error state, but the store stays the source of truth for the value itself — see `hooks/useCreateChallengeFlow.ts` (`title`/`titleError`/`onBlurTitle`) and `app/challenge/routine/create.tsx` for the pattern: the field's `onChangeText` calls both the store setter and `setValue(name, value, { shouldValidate: hasExistingError })`, and validation is triggered explicitly (on blur, and again before advancing past that step) via `trigger(name)`.
+
+Schemas mirror the backend DTOs: registration requires an 8+ character password (`RegisterDto @MinLength(8)`, `PASSWORD_MIN_LENGTH`), emails/usernames/display names are trimmed before validation (a trailing autofill space is not "invalid", only-spaces is empty).
 
 ## 15. Future AI Task Checklist
 - Read this guide.

@@ -30,6 +30,7 @@ import { useErrorNotificationStore } from '../../../store/errorNotificationStore
 import { withAlpha } from '../../../utils/color';
 import { safeBack } from '../../../utils/navigation';
 import type { ChallengeContract, ChallengeParticipantContract } from '../../../types/challenge';
+import { invalidateAfterMembershipChanged } from '../../../services/cache/queries';
 
 const SKELETON_ROWS = 4;
 const EMPTY_STATE_MIN_HEIGHT = 220;
@@ -144,6 +145,7 @@ export default function ManageChallengeScreen() {
     setDeleting(true);
     try {
       await deleteChallenge(challengeId);
+      invalidateAfterMembershipChanged();
       setDeleteConfirmVisible(false);
       showSuccess({ message: t('challengeProgress.deleteChallengeSuccess') });
       // Back to the challenges list, unwinding this challenge's own screens

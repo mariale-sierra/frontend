@@ -17,6 +17,7 @@ import {
 } from '../../services/user/accountDeletion.service';
 import { useAuth } from '../../hooks/useAuth';
 import { colors, radius, spacing } from '../../constants/theme';
+import { FieldError } from '../../components/ui/fieldError';
 
 const CONSEQUENCES = ['posts', 'metrics', 'messages', 'social', 'irreversible'] as const;
 
@@ -112,11 +113,7 @@ export default function DeleteAccountScreen() {
                 {t('deleteAccount.pendingBody', { date: scheduledDate })}
               </Text>
             </View>
-            {errorMessage && (
-              <Text variant="caption" style={styles.error}>
-                {errorMessage}
-              </Text>
-            )}
+            <FieldError message={errorMessage} />
             <Button variant="primary" size="md" onPress={handleCancel} loading={busy}>
               {t('deleteAccount.cancelCta')}
             </Button>
@@ -154,11 +151,7 @@ export default function DeleteAccountScreen() {
               autoCorrect={false}
               textContentType="password"
             />
-            {errorMessage && (
-              <Text variant="caption" style={styles.error}>
-                {errorMessage}
-              </Text>
-            )}
+            <FieldError message={errorMessage} />
 
             <Button
               variant="danger"
@@ -207,5 +200,4 @@ const styles = StyleSheet.create({
   },
   bulletRow: { flexDirection: 'row', gap: spacing.sm },
   bulletText: { flex: 1 },
-  error: { color: colors.error },
 });

@@ -22,6 +22,8 @@ import { withAlpha } from '../../../utils/color';
 import { addExerciseToRoutine, buildRoutineExercisePersistence, createRoutine } from '../../../services/routine/routine.service';
 import { getMetricTypes } from '../../../services/metrics/metrics.service';
 import { createRoutineNameSchema, type RoutineNameFormValues } from '../../../validation/routineSchemas';
+import { logError, logWarn, wasErrorToastShown } from '../../../utils/apiError';
+import { FieldError } from '../../../components/ui/fieldError';
 
 const ROUTINE_NAME_MAX = 40;
 
@@ -103,7 +105,7 @@ export default function CreateRoutineScreen() {
       for (const exercise of exercises) {
         const backendId = backendExerciseIdByLocalId[exercise.id];
         if (backendId == null) {
-          console.warn(`[CreateRoutine] Skipping "${exercise.name}" — no backend exerciseId`);
+          logWarn('CreateRoutine', 'skipping an exercise with no backend exerciseId');
           continue;
         }
         const persistence = buildRoutineExercisePersistence(exercise.metrics, metricCodeToId);
@@ -114,11 +116,11 @@ export default function CreateRoutineScreen() {
       stampBackendIdOnDay(dayNumber, routine.id);
       router.replace('/challenge/create');
     } catch (error: any) {
-      console.error('[CreateRoutine] Failed:', error?.response?.data ?? error?.message);
-      Alert.alert(
-        t('routineCreate.alerts.saveFailedTitle'),
-        error?.response?.data?.message ?? t('routineCreate.alerts.saveFailedFallback'),
-      );
+      logError('CreateRoutine', error);
+      // An API failure already has its translated toast; only anything else gets this Alert.
+      if (!wasErrorToastShown(error)) {
+        Alert.alert(t('routineCreate.alerts.saveFailedTitle'), t('routineCreate.alerts.saveFailedFallback'));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -176,11 +178,7 @@ export default function CreateRoutineScreen() {
                   placeholder={t('routineCreate.routineNamePlaceholder')}
                   placeholderVariant="secondary"
                 />
-                {nameErrors.routineName ? (
-                  <Text variant="caption" style={styles.errorText}>
-                    {nameErrors.routineName.message}
-                  </Text>
-                ) : null}
+                <FieldError message={nameErrors.routineName?.message} />
               </Stack>
 
               <Stack gap="sm">
@@ -259,9 +257,6 @@ const styles = StyleSheet.create({
   descriptionInput: {
     minHeight: 96,
     alignItems: 'flex-start',
-  },
-  errorText: {
-    color: colors.error,
   },
   addMoreRow: {
     flexDirection: 'row',

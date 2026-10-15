@@ -18,6 +18,7 @@ const en = {
     validation: {
       required: '{{field}} is required',
       emailInvalid: 'Enter a valid email address',
+      passwordMin: 'Use at least {{min}} characters',
     },
     errors: {
       genericTitle: 'Error',
@@ -36,6 +37,27 @@ const en = {
       networkErrorMessage: 'Could not connect to the server. Check your internet connection.',
       contentRejectedTitle: 'Content not allowed',
       contentRejectedMessage: 'Your content does not meet the community guidelines.',
+      unauthorizedMessage: 'The sign-in details aren\'t correct.',
+      badRequestTitle: 'Check your data',
+      badRequestMessage: 'Something in the request isn\'t valid. Review it and try again.',
+      conflictTitle: 'Already done',
+      conflictMessage: 'This already exists or was changed. Refresh and try again.',
+      tooManyRequestsTitle: 'Too many attempts',
+      tooManyRequestsMessage: 'Wait a moment before trying again.',
+      timeoutTitle: 'Taking too long',
+      timeoutMessage: 'The server took too long to answer. Check your connection and try again.',
+      known: {
+        alreadyMember: 'You\'re already a member.',
+        challengeClosed: 'This challenge is closed.',
+        alreadyLoggedToday: 'You already logged your progress today.',
+        inviteExpired: 'This invite has expired.',
+        alreadyReported: 'You already reported this content.',
+        cannotReportOwn: 'You can\'t report your own content.',
+        ownChallenge: 'You can\'t join a challenge you created.',
+        emailInUse: 'That email is already in use.',
+        deletionAlreadyRequested: 'Your account deletion was already requested.',
+        cycleTooLong: 'The cycle can\'t be longer than the challenge.',
+      },
     },
   },
   welcome: {
@@ -320,6 +342,7 @@ const en = {
     alerts: {
       submitErrorTitle: 'Could not log workout',
       submitErrorFallback: 'Network error. Please try again.',
+      routineLoadError: 'Couldn\'t load today\'s routine. Try again.',
     },
   },
   logMetrics: {

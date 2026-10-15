@@ -24,6 +24,7 @@ import { withAlpha } from '../../utils/color';
 import { CATEGORY_OPTIONS, LOCATION_OPTIONS } from '../../constants/challengeCreateOptions';
 import { useCreateChallengeFlow } from '../../hooks/useCreateChallengeFlow';
 import { getExerciseCount } from '../../services/exercises/exercises.service';
+import { logError } from '../../utils/apiError';
 
 export default function CreateChallenge() {
   const { t } = useTranslation();
@@ -83,7 +84,7 @@ export default function CreateChallenge() {
         if (!cancelled) setMatchingExerciseCount(count);
       })
       .catch((error: any) => {
-        console.error('[CreateChallenge] Failed to load exercise count:', error?.response?.data ?? error?.message);
+        logError('CreateChallenge.exerciseCount', error);
         if (!cancelled) setMatchingExerciseCount(null);
       });
 

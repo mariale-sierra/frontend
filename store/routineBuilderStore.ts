@@ -10,6 +10,7 @@ import type {
   SchemaMetricValue,
   SetRow,
 } from '../types/routine';
+import { logWarn } from '../utils/apiError';
 
 interface RoutineBuilderState {
   dayIndex: number | null;
@@ -261,7 +262,7 @@ function createSchemaMetricsFromRawTemplate(rawTemplate: unknown): ExerciseMetri
   const validation = validateMetricTemplate(rawTemplate);
 
   if (!validation.ok) {
-    console.warn('[RoutineBuilder] Invalid metric template from backend:', validation.errors.join(' | '));
+    logWarn('RoutineBuilder', `invalid metric template from backend: ${validation.errors.join(' | ')}`);
     return null;
   }
 

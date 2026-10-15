@@ -1,5 +1,5 @@
 import { getMyChallengeJoinRequest } from './challenge.service';
-import { getMyChallenges } from '../user/user.service';
+import { loadMyChallenges } from '../cache/loaders';
 import type { ChallengeContract } from '../../types/challenge';
 
 export type MyMembership = 'joined' | 'requested' | 'none';
@@ -12,7 +12,7 @@ export type MyMembership = 'joined' | 'requested' | 'none';
  * screen instead of offering Join again (which the backend answers with 409).
  */
 export async function getMyMembership(challenge: Pick<ChallengeContract, 'id' | 'visibility'>): Promise<MyMembership> {
-  const enrolled = await getMyChallenges();
+  const enrolled = await loadMyChallenges();
   const isMember = enrolled.some((c) => String(c.id) === String(challenge.id) && c.status !== 'left');
   if (isMember) return 'joined';
   if (challenge.visibility !== 'private') return 'none';

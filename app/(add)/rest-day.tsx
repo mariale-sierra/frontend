@@ -14,7 +14,9 @@ import { getChallengeProgress } from '../../services/challenge/challenge.service
 import { submitWorkoutProgress } from '../../services/workout-log/workout-log.service';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
+import { invalidateAfterWorkoutLogged } from '../../services/cache/queries';
 import { showProgressLoggedFeedback } from '../../utils/progressLoggedFeedback';
+import { getApiErrorMessage, logError } from '../../utils/apiError';
 
 export default function RestDay() {
   const router = useRouter();
@@ -64,7 +66,7 @@ export default function RestDay() {
         visibility: 'private',
       });
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? t('restDay.saveFailedMessage'));
+      setError(getApiErrorMessage(e, t, t('restDay.saveFailedMessage')));
       setSubmitting(false);
       submittingRef.current = false;
       return;
@@ -76,6 +78,7 @@ export default function RestDay() {
     // hiccup used to be caught by the same try/catch as the actual submit
     // and misreported as a failed save).
     invalidateChallengeProgressCache();
+    invalidateAfterWorkoutLogged();
     setSubmitting(false);
     submittingRef.current = false;
     try {
@@ -88,7 +91,7 @@ export default function RestDay() {
       // metrics, and the second bubbles up to close the (add) modal itself.
       safeBackTimes(2);
     } catch (navError) {
-      console.error('[RestDay] closing the (add) modal failed after a successful save:', navError);
+      logError('RestDay.closeModal', navError);
     }
     // The popup itself is global (mounted at app root): "Challenge complete" if
     // that was the challenge's last day (it is marked completed first), else "logged!".

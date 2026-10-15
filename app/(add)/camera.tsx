@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -32,6 +31,7 @@ import {
   useWorkoutAdaptationStore,
 } from '../../store/workoutAdaptationStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
+import { invalidateAfterWorkoutLogged } from '../../services/cache/queries';
 import { showProgressLoggedFeedback } from '../../utils/progressLoggedFeedback';
 import { useAuth } from '../../hooks/useAuth';
 import { useChallengeParticipants } from '../../hooks/useChallengeParticipants';
@@ -39,6 +39,7 @@ import { getChallenge, isChallengeOwner } from '../../services/challenge/challen
 import { TagParticipantsSheet } from '../../components/challenge/TagParticipantsSheet';
 import type { ChallengeContract } from '../../types/challenge';
 import { extractHashtags } from '../../utils/hashtags';
+import { getApiErrorMessage, logError } from '../../utils/apiError';
 
 // Same cap as the backend's CreateWorkoutProgressDto.caption.
 const MAX_CAPTION_LENGTH = 500;
@@ -192,8 +193,8 @@ export default function Camera() {
     if (isBusy || !capturedUri || confirmingRef.current) return;
 
     if (!selectedChallengeId) {
+      // Shown inline under the challenge picker — one message, not an Alert on top.
       setError(t('camera.selectChallengeError'));
-      Alert.alert(t('camera.noChallengeSelectedTitle'), t('camera.noChallengeSelectedMessage'));
       return;
     }
 
@@ -212,10 +213,8 @@ export default function Camera() {
     try {
       publicUrl = await uploadImageAsync(capturedUri, 'image/jpeg');
     } catch (e: unknown) {
-      type AxiosLike = { response?: { status?: number; data?: unknown }; message?: string };
-      const err = e as AxiosLike;
-      console.error('[Camera] upload failed:', err?.response?.status, err?.response?.data ?? err?.message);
-      setError(t('camera.uploadError'));
+      logError('Camera.upload', e);
+      setError(getApiErrorMessage(e, t, t('camera.uploadError')));
       setUploadingImage(false);
       return;
     }
@@ -240,12 +239,10 @@ export default function Camera() {
     try {
       workout = await submitWorkoutProgress(progressPayload);
     } catch (e: unknown) {
-      type AxiosLike = { response?: { status?: number; data?: { message?: string } }; message?: string };
-      const err = e as AxiosLike;
-      console.error('[Camera] confirm failed:', err?.response?.status, err?.response?.data ?? err?.message);
-      const msg = err?.response?.data?.message ?? t('camera.saveProgressError');
-      setError(msg);
-      Alert.alert(t('common.errors.genericTitle'), msg);
+      logError('Camera.confirm', e);
+      // Inline, next to the button; the global toast already covered an API
+      // failure, so no Alert on top of it.
+      setError(getApiErrorMessage(e, t, t('camera.saveProgressError')));
       setSubmittingProgress(false);
       return;
     }
@@ -268,11 +265,12 @@ export default function Camera() {
         // The workout + photo already saved successfully — a metrics
         // save failure shouldn't block the flow or look like data loss,
         // just log it for now.
-        console.error('[Camera] applyExerciseMetrics failed:', metricsError);
+        logError('Camera.applyExerciseMetrics', metricsError);
       }
     }
     clearAdaptation(selectedChallengeId);
     invalidateChallengeProgressCache();
+    invalidateAfterWorkoutLogged();
     setSubmittingProgress(false);
     try {
       // Closes the whole (add) modal group, back to whatever screen the user
@@ -296,7 +294,7 @@ export default function Camera() {
       // itself off the root stack too, actually closing the whole modal.
       safeBackTimes(2);
     } catch (navError) {
-      console.error('[Camera] closing the (add) modal failed after a successful save:', navError);
+      logError('Camera.closeModal', navError);
     }
     // The popup itself is global (mounted at app root), so it shows on top of
     // wherever the back() calls above landed: "Challenge complete" if that was

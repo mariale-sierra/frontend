@@ -18,6 +18,7 @@ const es = {
     validation: {
       required: '{{field}} es obligatorio',
       emailInvalid: 'Ingresa un correo válido',
+      passwordMin: 'Usa al menos {{min}} caracteres',
     },
     errors: {
       genericTitle: 'Error',
@@ -36,6 +37,27 @@ const es = {
       networkErrorMessage: 'No se puede conectar al servidor. Verifica tu conexión a internet.',
       contentRejectedTitle: 'Contenido no permitido',
       contentRejectedMessage: 'Tu contenido no cumple con las normas de la comunidad.',
+      unauthorizedMessage: 'Los datos de acceso no son correctos.',
+      badRequestTitle: 'Revisa tus datos',
+      badRequestMessage: 'Algo de la solicitud no es válido. Revísalo e inténtalo de nuevo.',
+      conflictTitle: 'Ya estaba hecho',
+      conflictMessage: 'Esto ya existe o cambió. Actualiza e inténtalo de nuevo.',
+      tooManyRequestsTitle: 'Demasiados intentos',
+      tooManyRequestsMessage: 'Espera un momento antes de volver a intentarlo.',
+      timeoutTitle: 'Está tardando demasiado',
+      timeoutMessage: 'El servidor tardó demasiado en responder. Revisa tu conexión e inténtalo de nuevo.',
+      known: {
+        alreadyMember: 'Ya eres miembro.',
+        challengeClosed: 'Este reto está cerrado.',
+        alreadyLoggedToday: 'Ya registraste tu progreso hoy.',
+        inviteExpired: 'Esta invitación expiró.',
+        alreadyReported: 'Ya reportaste este contenido.',
+        cannotReportOwn: 'No puedes reportar tu propio contenido.',
+        ownChallenge: 'No puedes unirte a un reto que creaste.',
+        emailInUse: 'Ese correo ya está en uso.',
+        deletionAlreadyRequested: 'Ya solicitaste eliminar tu cuenta.',
+        cycleTooLong: 'El ciclo no puede ser más largo que el reto.',
+      },
     },
   },
   welcome: {
@@ -312,6 +334,7 @@ const es = {
     alerts: {
       submitErrorTitle: 'No se pudo registrar el entrenamiento',
       submitErrorFallback: 'Error de red. Intenta de nuevo.',
+      routineLoadError: 'No se pudo cargar la rutina de hoy. Inténtalo de nuevo.',
     },
   },
   logMetrics: {

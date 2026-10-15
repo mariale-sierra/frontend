@@ -9,6 +9,7 @@ import {
 import { invalidateChallengeProgressCache } from './useChallengeProgress';
 import { markChallengeMembershipSeen } from '../utils/seenChallengeMemberships';
 import type { ChallengeInviteContract } from '../types/invite';
+import { invalidateAfterMembershipChanged } from '../services/cache/queries';
 
 export type InviteAction = 'accept' | 'decline' | 'cancel';
 
@@ -73,6 +74,7 @@ export function useInvites() {
           const accepted = await acceptInvite(inviteId);
           // Membership changed — force the challenge tabs to refetch.
           invalidateChallengeProgressCache();
+          invalidateAfterMembershipChanged();
           // Accepting an invite is its own explicit, in-the-moment
           // confirmation — mark it seen right away so the Challenges tab's
           // "You're in!" popup (for an approval the user found out about

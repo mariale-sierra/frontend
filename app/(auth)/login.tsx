@@ -17,6 +17,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { colors, spacing } from '../../constants/theme';
 import { createLoginSchema, type LoginFormValues } from '../../validation/authSchemas';
+import { getApiErrorMessage } from '../../utils/apiError';
+import { FieldError } from '../../components/ui/fieldError';
 
 type LoginStepKey = 'email' | 'password';
 
@@ -81,7 +83,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       const { email, password } = getValues();
-      await login(email, password);
+      await login(email.trim(), password);
       // No explicit navigation — RootNavigator (app/_layout.tsx) picks up
       // the `isAuthenticated` flip, same as register.tsx.
     } catch (error: any) {
@@ -89,7 +91,13 @@ export default function Login() {
       // register.tsx's own account-creation error already got (see that
       // file's history: `Alert.alert` doesn't reliably render on every
       // platform this app ships to).
-      show({ message: error?.response?.data?.message || t('auth.login.invalidCredentials') });
+      // The request opts out of the global toast (auth.service): this is the one message.
+      show({
+        message:
+          error?.response?.status === 401
+            ? t('auth.login.invalidCredentials')
+            : getApiErrorMessage(error, t, t('common.errors.genericMessage')),
+      });
     } finally {
       setSubmitting(false);
     }
@@ -132,6 +140,7 @@ export default function Login() {
               control={control}
               name="email"
               render={({ field: { onChange, value, onBlur }, fieldState: { error } }) => (
+                <View style={styles.field}>
                 <FloatingLabelInput
                   label={t('common.fields.email')}
                   value={value}
@@ -143,6 +152,8 @@ export default function Login() {
                   keyboardType="email-address"
                   textContentType="emailAddress"
                 />
+                <FieldError message={error?.message} />
+                </View>
               )}
             />
           ) : (
@@ -150,6 +161,7 @@ export default function Login() {
               control={control}
               name="password"
               render={({ field: { onChange, value, onBlur }, fieldState: { error } }) => (
+                <View style={styles.field}>
                 <FloatingLabelInput
                   label={t('common.fields.password')}
                   value={value}
@@ -161,6 +173,8 @@ export default function Login() {
                   secureTextEntry
                   textContentType="password"
                 />
+                <FieldError message={error?.message} />
+                </View>
               )}
             />
           )}
@@ -183,6 +197,10 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
+  // A field and its inline validation message (same `xs` gap as FormField).
+  field: {
+    gap: spacing.xs,
+  },
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,

@@ -30,6 +30,7 @@ import { hasSeenChallengeJoinCallout, markChallengeJoinCalloutSeen } from '../..
 import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../../constants/onboardingDebug';
 import { shareChallengeExternally } from '../../../utils/shareChallenge';
 import type { ChallengeContract } from '../../../types/challenge';
+import { invalidateAfterMembershipChanged } from '../../../services/cache/queries';
 
 type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
 
@@ -119,6 +120,7 @@ export default function ChallengeDetail() {
       if (!challengeId) return;
       try {
         const response = await joinChallenge(challengeId);
+        invalidateAfterMembershipChanged();
         const name = challenge?.name ?? t('challenges.fallbackName');
 
         // Private challenge: files a pending request instead of joining

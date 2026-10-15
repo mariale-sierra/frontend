@@ -62,7 +62,7 @@ export default function ProfilePosts() {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: FeedPostViewModel }) => <FeedPostCard post={item} onDeleted={remove} />,
+    ({ item }: { item: FeedPostViewModel }) => <FeedPostCard post={item} onHidden={remove} />,
     [remove],
   );
 

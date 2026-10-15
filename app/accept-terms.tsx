@@ -11,6 +11,7 @@ import { useAuth } from '../hooks/useAuth';
 import { markTermsAccepted } from '../hooks/useRequiresTermsAcceptance';
 import { useErrorNotificationStore } from '../store/errorNotificationStore';
 import { spacing } from '../constants/theme';
+import { getApiErrorMessage } from '../utils/apiError';
 
 /**
  * Shown once to signed-in users whose account has no (or an outdated)
@@ -38,7 +39,7 @@ export default function AcceptTermsScreen() {
       markTermsAccepted();
       router.replace('/(tabs)');
     } catch (error: any) {
-      show({ message: error?.response?.data?.message || t('legal.accept.failed') });
+      show({ message: getApiErrorMessage(error, t, t('legal.accept.failed')) });
     } finally {
       setSubmitting(false);
     }

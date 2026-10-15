@@ -30,6 +30,8 @@ import { activityColors, colors, fillOpacity, radius, shadows, spacing } from '.
 import { withAlpha } from '../../utils/color';
 import { createRegisterSchema, type RegisterFormValues } from '../../validation/authSchemas';
 import { LegalConsent, type LegalConsentValue } from '../../components/legal/LegalConsent';
+import { getApiErrorMessage } from '../../utils/apiError';
+import { FieldError } from '../../components/ui/fieldError';
 
 const INTRO_COUNT = 3;
 // Page 1 ("Real challenges, real routines") got a second photo, per explicit
@@ -323,7 +325,7 @@ export default function Register() {
     setSubmitting(true);
     try {
       const { email, username, password } = getValues();
-      await register(email, username, password, {
+      await register(email.trim(), username.trim(), password, {
         acceptTerms: consent.acceptTerms,
         confirmAge16: consent.confirmAge16,
       });
@@ -344,7 +346,9 @@ export default function Register() {
       // step. The app's own cross-platform error toast — already used one
       // screen later, by practices.tsx's own save-failure case — doesn't
       // have that gap.
-      show({ message: error?.response?.data?.message || t('auth.register.createAccountFailed') });
+      // The request opts out of the global toast (auth.service): this is the one message,
+      // translated (e.g. "email already in use") instead of the API's English text.
+      show({ message: getApiErrorMessage(error, t, t('auth.register.createAccountFailed')) });
     } finally {
       setSubmitting(false);
     }
@@ -515,6 +519,7 @@ export default function Register() {
             control={control}
             name={fieldKey as FieldStepKey}
             render={({ field: { onChange, value, onBlur }, fieldState: { error } }) => (
+              <View style={styles.field}>
               <FloatingLabelInput
                 label={t(`common.fields.${fieldKey}`)}
                 value={value}
@@ -527,6 +532,8 @@ export default function Register() {
                 secureTextEntry={FIELD_META[fieldKey as FieldStepKey].secure}
                 textContentType={FIELD_META[fieldKey as FieldStepKey].textContentType}
               />
+              <FieldError message={error?.message} />
+              </View>
             )}
           />
 
@@ -568,6 +575,10 @@ export default function Register() {
 }
 
 const styles = StyleSheet.create({
+  // A field and its inline validation message (same `xs` gap as FormField).
+  field: {
+    gap: spacing.xs,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.ink,

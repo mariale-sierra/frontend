@@ -5,6 +5,7 @@ import { Text } from '../ui/text';
 import i18n, { PREFERRED_LANGUAGE_KEY } from '../../i18n';
 import type { SupportedLanguage } from '../../i18n';
 import { storage } from '../../utils/storage';
+import { logError } from '../../utils/apiError';
 
 const LANGUAGES: { code: SupportedLanguage; label: string }[] = [
   { code: 'en', label: 'EN' },
@@ -35,7 +36,7 @@ export function LanguageSwitch() {
     if (code === current) return;
     i18n.changeLanguage(code);
     storage.setItem(PREFERRED_LANGUAGE_KEY, code).catch((error) => {
-      console.error('[LanguageSwitch] failed to persist language choice', error);
+      logError('LanguageSwitch', error);
     });
   }
 

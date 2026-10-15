@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { deleteRoutine, getRoutines } from '../../../services/routine/routine.service';
 import { ConfirmationPopup } from '../../../components/ui/confirmationPopup';
 import type { RoutineSummary } from '../../../types/routine';
+import { logError } from '../../../utils/apiError';
 
 const TRANSITION_DURATION = 380;
 const AnimatedText = Animated.createAnimatedComponent(RNText);
@@ -56,7 +57,7 @@ export default function SelectRoutineScreen() {
       .catch((error: any) => {
         // Keep the local demo/current-session routines usable if the account
         // request is temporarily unavailable. A later selector mount retries.
-        console.error('[RoutineSelect] Failed to load saved routines:', error?.response?.data ?? error?.message);
+        logError('RoutineSelect', error);
       });
 
     return () => {

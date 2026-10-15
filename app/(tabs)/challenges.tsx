@@ -33,6 +33,8 @@ import {
 import { hasSeenExploreTip, markExploreTipSeen } from '../../utils/exploreTip';
 import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../constants/onboardingDebug';
 import { useAuth } from '../../hooks/useAuth';
+import { useCachedQuery } from '../../hooks/useCachedQuery';
+import { queryKeys, staleTimes } from '../../services/cache/queries';
 
 function ChallengeListSeparator() {
   return <View style={styles.separator} />;
@@ -62,10 +64,46 @@ export default function Challenges() {
       setView(requestedView);
     }
   }, [requestedView]);
-  const [mineChallenges, setMineChallenges] = useState<ChallengeMineCardViewModel[]>([]);
-  const [exploreChallenges, setExploreChallenges] = useState<ExploreChallengeViewModel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Shared cache keys (same entries Home and Search read): switching tabs reuses
+  // what is loaded; joining/leaving/logging invalidates exactly these.
+  const enrolledQuery = useCachedQuery(queryKeys.myChallenges, getMyChallenges, {
+    staleTime: staleTimes.activity,
+    persist: true,
+  });
+  const photosQuery = useCachedQuery(queryKeys.myPhotos, getMyProgressPhotos, {
+    staleTime: staleTimes.activity,
+    persist: true,
+  });
+  // Every page of GET /challenges — only needed once Explore is opened.
+  const allQuery = useCachedQuery(queryKeys.allChallenges, getChallenges, {
+    staleTime: staleTimes.catalog,
+    persist: true,
+    enabled: view === 'explore',
+  });
+
+  const mineChallenges = useMemo<ChallengeMineCardViewModel[]>(
+    () =>
+      enrolledQuery.data
+        ? toChallengeMineViewModels(enrolledQuery.data, groupLatestPhotoByChallengeId(photosQuery.data ?? []))
+        : [],
+    [enrolledQuery.data, photosQuery.data],
+  );
+  // GET /challenges returns every challenge, joined or not — Explore is "what
+  // you could join", so anything already in Mine (joined, or created —
+  // creating one enrolls you) is excluded, same filter as Search.
+  const exploreChallenges = useMemo<ExploreChallengeViewModel[]>(() => {
+    const enrolledIds = new Set((enrolledQuery.data ?? []).map((c) => String(c.id)));
+    return toExploreChallengeViewModels((allQuery.data ?? []).filter((c) => !enrolledIds.has(String(c.id))));
+  }, [enrolledQuery.data, allQuery.data]);
+
+  // A skeleton only while the current view has nothing to show yet; a failed
+  // background refresh keeps the cached list instead of replacing it with an error.
+  const loading =
+    view === 'mine'
+      ? enrolledQuery.isLoading || photosQuery.isLoading
+      : enrolledQuery.isLoading || allQuery.isLoading;
+  const failed = view === 'mine' ? !enrolledQuery.data && enrolledQuery.error : !allQuery.data && allQuery.error;
+  const error = failed ? t('challenges.loadError') : null;
   // Finished challenges are collapsed out of the main Mine list by default —
   // see FinishedChallengesToggle's own doc comment.
   const [showFinished, setShowFinished] = useState(false);
@@ -111,109 +149,74 @@ export default function Challenges() {
   const showChallengeJoinApproved = useChallengeJoinApprovedStore((state) => state.show);
   const { userId } = useAuth();
 
-  // Shared fetch used both by the focus-refetch effect below and by
-  // pull-to-refresh — `isActive` mirrors the effect's own `active` closure
-  // (defaults to "always active" for the pull-to-refresh caller, which only
-  // ever runs while this screen is mounted and focused).
-  const loadChallenges = useCallback(
-    async (isActive: () => boolean = () => true) => {
-      try {
-        const [enrolledRaw, all, myPhotos] = await Promise.all([
-          getMyChallenges(),
-          getChallenges(),
-          getMyProgressPhotos(),
-        ]);
-        if (!isActive()) return;
-        const enrolled = enrolledRaw ?? [];
-        const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(myPhotos ?? []);
-        const mineViewModels = toChallengeMineViewModels(enrolled, latestPhotoByChallengeId);
-        // A finished challenge (`won`) stays in Mine, as its "Finished" card after the
-        // ones still going — the card must not vanish when the celebration is closed.
-        setMineChallenges(mineViewModels);
-
-        for (const challenge of mineViewModels) {
-          if (challenge.state === 'won' && !(await hasShownCompletion(challenge.challengeId))) {
-            await markCompletionShown(challenge.challengeId);
-            showChallengeFinished({
-              challengeId: challenge.challengeId,
-              challengeName: challenge.title,
-              totalDays: challenge.totalDays,
-            });
-          }
-          if (!isActive()) return;
+  // One-time popups for what changed since this device last looked: run
+  // whenever a new list of my challenges arrives (cache, focus or refresh).
+  useEffect(() => {
+    if (!enrolledQuery.data) return;
+    let active = true;
+    const mineViewModels = mineChallenges;
+    (async () => {
+      // The "Challenge complete" popup is normally shown the moment the last day
+      // is logged; this is the fallback for a challenge that finished without
+      // this device seeing it — once per challenge ever (`shownCompletions`).
+      for (const challenge of mineViewModels) {
+        if (!active) return;
+        if (challenge.state === 'won' && !(await hasShownCompletion(challenge.challengeId))) {
+          await markCompletionShown(challenge.challengeId);
+          showChallengeFinished({
+            challengeId: challenge.challengeId,
+            challengeName: challenge.title,
+            totalDays: challenge.totalDays,
+          });
         }
-
-        // "You're in!" — a private challenge's owner can approve a pending
-        // join request at any time, on their own device; this is the only
-        // place the requester ever finds out. Only ever considers a
-        // challenge the user didn't create themselves; a direct join or an
-        // accepted invite already marks itself seen at its own success
-        // point (see markChallengeMembershipSeen's other call sites), so it
-        // never doubles up with this.
-        if (userId) {
-          const notCreatedByMe = mineViewModels.filter((c) => c.createdByUserId !== userId);
-          if (!(await hasEstablishedMembershipBaseline())) {
-            // First run ever on this device: every current membership is
-            // pre-existing, not a new approval — record it silently, no popups.
-            await establishMembershipBaseline(notCreatedByMe.map((c) => c.challengeId));
-          } else {
-            for (const challenge of notCreatedByMe) {
-              if (!(await hasSeenChallengeMembership(challenge.challengeId))) {
-                await markChallengeMembershipSeen(challenge.challengeId);
-                showChallengeJoinApproved({ challengeId: challenge.challengeId, challengeName: challenge.title });
-              }
-              if (!isActive()) return;
-            }
-          }
-        }
-
-        // GET /challenges (getChallenges) returns every challenge, joined
-        // or not — Explore is meant to be "what you could join," so any
-        // challenge already in Mine (joined, or created — creating one
-        // enrolls you immediately) has to be excluded here, same filter
-        // app/(tabs)/search.tsx already does. Without this, a challenge
-        // you're already in showed up in both tabs at once.
-        const enrolledIds = new Set(enrolled.map((c) => String(c.id)));
-        const explorable = (all ?? []).filter((c) => !enrolledIds.has(String(c.id)));
-        setExploreChallenges(toExploreChallengeViewModels(explorable));
-        setError(null);
-      } catch (err) {
-        if (!isActive()) return;
-        const e = err as { response?: { status?: number; data?: unknown }; message?: string };
-        console.error('[challenges] load failed:', e?.response?.status, e?.response?.data ?? e?.message ?? e);
-        setError(t('challenges.loadError'));
       }
-    },
-    [t, showChallengeFinished, showChallengeJoinApproved, userId],
-  );
 
-  // Refetches on focus (not just on mount) so joining/leaving/completing a
-  // challenge elsewhere and coming back here shows the current state.
+      // "You're in!" — a private challenge's owner can approve a pending join
+      // request at any time, on their own device; this is the only place the
+      // requester ever finds out. Only for challenges the user didn't create; a
+      // direct join or an accepted invite already marks itself seen.
+      if (!userId || !active) return;
+      const notCreatedByMe = mineViewModels.filter((c) => c.createdByUserId !== userId);
+      if (!(await hasEstablishedMembershipBaseline())) {
+        // First run ever on this device: every current membership is
+        // pre-existing, not a new approval — record it silently, no popups.
+        await establishMembershipBaseline(notCreatedByMe.map((c) => c.challengeId));
+        return;
+      }
+      for (const challenge of notCreatedByMe) {
+        if (!active) return;
+        if (!(await hasSeenChallengeMembership(challenge.challengeId))) {
+          await markChallengeMembershipSeen(challenge.challengeId);
+          showChallengeJoinApproved({ challengeId: challenge.challengeId, challengeName: challenge.title });
+        }
+      }
+    })().catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [enrolledQuery.data, mineChallenges, showChallengeFinished, showChallengeJoinApproved, userId]);
+
+  // Coming back to this tab asks the server only for what is stale.
+  const revalidateEnrolled = enrolledQuery.revalidate;
+  const revalidatePhotos = photosQuery.revalidate;
+  const revalidateAll = allQuery.revalidate;
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-      // No `setLoading(true)` here on purpose: this effect re-runs on every
-      // re-focus (switching back to this tab), not just first mount. Doing
-      // that flip unmounted the FlatList and swapped in
-      // ChallengesContentSkeleton on every single visit — a full
-      // render-everything-from-scratch every tab switch, even though the
-      // previous list was still perfectly valid on screen. The initial
-      // `useState(true)` above still covers the real first load; every
-      // focus after that updates `mineChallenges`/`exploreChallenges` in
-      // place, in the background, once the request resolves.
-      loadChallenges(() => active).finally(() => {
-        if (active) setLoading(false);
-      });
-      return () => {
-        active = false;
-      };
-    }, [loadChallenges]),
+      void revalidateEnrolled();
+      void revalidatePhotos();
+      void revalidateAll();
+    }, [revalidateEnrolled, revalidatePhotos, revalidateAll]),
   );
 
-  // Pull-to-refresh: same fetch as the focus effect above, minus the
-  // `loading` flag flip — by the time the user can pull to refresh the
-  // initial skeleton is long gone, RefreshControl's own spinner is enough.
-  const { refreshing, onRefresh } = usePullToRefresh(useCallback(() => loadChallenges(), [loadChallenges]));
+  const refetchEnrolled = enrolledQuery.refetch;
+  const refetchPhotos = photosQuery.refetch;
+  const refetchAll = allQuery.refetch;
+  const { refreshing, onRefresh } = usePullToRefresh(
+    useCallback(
+      () => Promise.all([refetchEnrolled(), refetchPhotos(), view === 'explore' ? refetchAll() : undefined]),
+      [refetchEnrolled, refetchPhotos, refetchAll, view],
+    ),
+  );
 
   // `useCallback` on all of these — they're read by the FlatLists'
   // `renderItem` below, so a stable reference here lets a stable per-item

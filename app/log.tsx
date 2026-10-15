@@ -10,7 +10,7 @@ import { Stack } from '../components/layout/stack';
 import { Text } from '../components/ui/text';
 import { ChallengeDeck } from '../components/add/challengeDeck';
 import { ChallengeDeckSkeleton } from '../components/add/challengeDeckSkeleton';
-import { getMyChallenges } from '../services/user/user.service';
+import { loadMyChallenges } from '../services/cache/loaders';
 import { getUserPosts } from '../services/challenge/challenge.service';
 import { useAuth } from '../hooks/useAuth';
 import { groupLatestPhotoByChallengeId } from '../services/adapters/challengeState';
@@ -86,7 +86,7 @@ export default function LogChallengePicker() {
 
     // Only the newest page of posts: the picker needs just the latest photo of each challenge,
     // and GET /workout-posts/mine returns (and enriches) the user's whole history.
-    Promise.all([getMyChallenges(), getUserPosts(userId)])
+    Promise.all([loadMyChallenges(), getUserPosts(userId)])
       .then(([myChallenges, { photos }]) => {
         if (!active) return;
         setHasAnyChallenges(myChallenges.length > 0);

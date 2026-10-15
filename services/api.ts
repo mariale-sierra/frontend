@@ -6,6 +6,7 @@ import { getAccessToken } from './auth/token.service';
 import { useErrorNotificationStore } from '../store/errorNotificationStore';
 import { isContentRejectedError } from '../utils/contentModeration';
 import { notifySessionExpired } from './auth/sessionEvents';
+import { getApiErrorStatus, isNetworkError, knownApiMessageKey } from '../utils/apiError';
 
 // Lets a specific call opt out of the global error toast below — for
 // best-effort writes a caller already handles on its own (catches, logs, and
@@ -28,8 +29,13 @@ declare module 'axios' {
 const FALLBACK_API_URL = 'http://20.63.84.1:3000';
 const baseURL = (Constants.expoConfig?.extra?.apiUrl as string | undefined) ?? FALLBACK_API_URL;
 
+// Without a timeout a request on a dead connection never settles, leaving its
+// screen on a spinner for ever. Generous enough for the heaviest list reads.
+const REQUEST_TIMEOUT_MS = 30000;
+
 const api = axios.create({
   baseURL,
+  timeout: REQUEST_TIMEOUT_MS,
   // ngrok's free tier interstitial warning page intercepts every request
   // (not just browser navigations) to a *.ngrok-free.* domain unless this
   // header is present — without it, API calls get back an HTML warning page
@@ -56,6 +62,61 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+/**
+ * The app's one error toast for a failed request. The response interceptor
+ * calls it for every request unless `suppressErrorToast` is set; a caller that
+ * suppressed it and then decides the failure is real can call it itself.
+ */
+export function showApiErrorToast(error: any) {
+  const errorStore = useErrorNotificationStore.getState();
+  const status = getApiErrorStatus(error);
+  const show = (titleKey: string, messageKey: string, duration = 5000) =>
+    errorStore.show({
+      title: i18n.t(`common.errors.${titleKey}`),
+      message: i18n.t(`common.errors.${messageKey}`),
+      duration,
+    });
+
+  if (isContentRejectedError(error)) {
+    show('contentRejectedTitle', 'contentRejectedMessage');
+  } else if (status === 401 && error?.config?.headers?.Authorization) {
+    show('sessionExpiredTitle', 'sessionExpiredMessage');
+  } else if (status === 401) {
+    // No session sent (sign-in, a password re-check): the credentials were wrong.
+    show('genericTitle', 'unauthorizedMessage');
+  } else if (status === 403 && error?.response?.data?.code === 'ACCOUNT_SUSPENDED') {
+    // A moderation penalty: say until when, instead of the generic "no permission".
+    const until = new Date(error.response.data.suspendedUntil);
+    errorStore.show({
+      title: i18n.t('common.errors.suspendedTitle'),
+      message: i18n.t('common.errors.suspendedMessage', {
+        date: Number.isNaN(until.getTime()) ? '' : until.toLocaleString(),
+      }),
+      duration: 7000,
+    });
+  } else if (knownApiMessageKey(error)) {
+    show('genericTitle', `known.${knownApiMessageKey(error)}`);
+  } else if (status === 403) {
+    show('forbiddenTitle', 'forbiddenMessage');
+  } else if (status === 404) {
+    show('notFoundTitle', 'notFoundMessage');
+  } else if (status === 409) {
+    show('conflictTitle', 'conflictMessage');
+  } else if (status === 429) {
+    show('tooManyRequestsTitle', 'tooManyRequestsMessage');
+  } else if (status === 400 || status === 422) {
+    show('badRequestTitle', 'badRequestMessage');
+  } else if (status !== undefined && status >= 500) {
+    show('serverErrorTitle', 'serverErrorMessage');
+  } else if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+    show('timeoutTitle', 'timeoutMessage');
+  } else if (isNetworkError(error)) {
+    show('networkErrorTitle', 'networkErrorMessage');
+  } else {
+    show('genericTitle', 'genericMessage');
+  }
+}
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -71,70 +132,8 @@ api.interceptors.response.use(
       notifySessionExpired();
     }
 
-    if (error?.config?.suppressErrorToast) {
-      return Promise.reject(error);
-    }
-
-    const errorStore = useErrorNotificationStore.getState();
-
-    // Handle different error types
-    if (isContentRejectedError(error)) {
-      errorStore.show({
-        title: i18n.t('common.errors.contentRejectedTitle'),
-        message: i18n.t('common.errors.contentRejectedMessage'),
-        duration: 5000,
-      });
-    } else if (error?.response?.status === 401) {
-      errorStore.show({
-        title: i18n.t('common.errors.sessionExpiredTitle'),
-        message: i18n.t('common.errors.sessionExpiredMessage'),
-        duration: 5000,
-      });
-    } else if (error?.response?.status === 403 && error?.response?.data?.code === 'ACCOUNT_SUSPENDED') {
-      // A moderation penalty: say until when, instead of the generic "no permission".
-      const until = new Date(error.response.data.suspendedUntil);
-      errorStore.show({
-        title: i18n.t('common.errors.suspendedTitle'),
-        message: i18n.t('common.errors.suspendedMessage', {
-          date: Number.isNaN(until.getTime()) ? '' : until.toLocaleString(),
-        }),
-        duration: 7000,
-      });
-    } else if (error?.response?.status === 403) {
-      errorStore.show({
-        title: i18n.t('common.errors.forbiddenTitle'),
-        message: i18n.t('common.errors.forbiddenMessage'),
-        duration: 5000,
-      });
-    } else if (error?.response?.status === 404) {
-      errorStore.show({
-        title: i18n.t('common.errors.notFoundTitle'),
-        message: i18n.t('common.errors.notFoundMessage'),
-        duration: 5000,
-      });
-    } else if (error?.response?.status === 500) {
-      errorStore.show({
-        title: i18n.t('common.errors.serverErrorTitle'),
-        message: i18n.t('common.errors.serverErrorMessage'),
-        duration: 5000,
-      });
-    } else if (error?.message === 'Network Error') {
-      errorStore.show({
-        title: i18n.t('common.errors.networkErrorTitle'),
-        message: i18n.t('common.errors.networkErrorMessage'),
-        duration: 5000,
-      });
-    } else if (error?.response?.data?.message) {
-      errorStore.show({
-        message: error.response.data.message,
-        duration: 5000,
-      });
-    } else {
-      errorStore.show({
-        title: i18n.t('common.errors.genericTitle'),
-        message: i18n.t('common.errors.genericMessage'),
-        duration: 5000,
-      });
+    if (!error?.config?.suppressErrorToast) {
+      showApiErrorToast(error);
     }
 
     return Promise.reject(error);

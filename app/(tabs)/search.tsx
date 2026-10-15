@@ -10,8 +10,8 @@ import { Text } from '../../components/ui/text';
 import { SearchBar } from '../../components/ui/searchBar';
 import { ExploreCard } from '../../components/challenge/list/challengeCards';
 import { SearchUserRow } from '../../components/search';
-import { getChallenges } from '../../services/challenge/challenge.service';
-import { getMyChallenges, searchUsers } from '../../services/user/user.service';
+import { searchUsers } from '../../services/user/user.service';
+import { loadAllChallenges, loadMyChallenges } from '../../services/cache/loaders';
 import { toExploreChallengeViewModels } from '../../services/adapters/challengeListAdapter';
 import type { ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import type { PublicProfileContract } from '../../types/user';
@@ -53,7 +53,7 @@ export default function Search() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([getChallenges(), getMyChallenges()])
+    Promise.all([loadAllChallenges(), loadMyChallenges()])
       .then(([all, mine]) => {
         if (!active) return;
         const joinedIds = new Set(mine.map((c) => String(c.id)));

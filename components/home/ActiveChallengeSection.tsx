@@ -17,8 +17,11 @@ import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
 import { USE_GLOW_CHALLENGE_CARDS } from '../../constants/challengeCards';
 import { withAlpha } from '../../utils/color';
 import type { HomeActiveChallengeViewModel } from '../../services/adapters/homeAdapter';
+import { HOME_EDGE_INSET } from '../../constants/feed';
 
-const ITEM_WIDTH = Dimensions.get('window').width - spacing.lg * 2;
+// One card per screen width, inset like the rest of Home's content; the
+// carousel itself spans the whole screen, so the next card slides in from the edge.
+const ITEM_WIDTH = Dimensions.get('window').width - HOME_EDGE_INSET * 2;
 const SEPARATOR_WIDTH = spacing.md;
 /** How far the carousel scrolls from one card to the next, in px. */
 export const ACTIVE_CHALLENGE_SNAP_INTERVAL = ITEM_WIDTH + SEPARATOR_WIDTH;
@@ -179,7 +182,7 @@ export const ActiveChallengeSection = memo(function ActiveChallengeSection({
 
 const styles = StyleSheet.create({
   listContent: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: HOME_EDGE_INSET,
   },
   separator: {
     width: SEPARATOR_WIDTH,

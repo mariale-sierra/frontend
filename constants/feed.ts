@@ -8,3 +8,12 @@ import { spacing } from './theme';
  */
 export const FEED_POST_GAP_TOKEN = '3xl' as const;
 export const FEED_POST_GAP = spacing[FEED_POST_GAP_TOKEN];
+
+/**
+ * Home's side margin for text, profiles and buttons — one token tighter than
+ * the app-wide `lg` screen margin (explicit request, 2026-10-15: "a more
+ * compact layout, not glued to the edges"). Photos and the horizontal
+ * carousels don't use it as an outer margin: they run edge to edge and only
+ * start/end their content at this inset.
+ */
+export const HOME_EDGE_INSET = spacing.base;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { spacing } from '../../constants/theme';
@@ -7,12 +7,12 @@ import { Text } from '../ui/text';
 import { BadgeTile } from './BadgeTile';
 import { BadgeDetailSheet } from './BadgeDetailSheet';
 import type { BadgeContract } from '../../types/badge';
+import { useCachedQuery } from '../../hooks/useCachedQuery';
+import { queryKeys, staleTimes } from '../../services/cache/queries';
 
 interface BadgesSectionProps {
   /** Omit for the session user's own badges (GET /badges/me). */
   userId?: string;
-  /** Bumped by the parent screen's pull-to-refresh to refetch. */
-  refreshSignal?: number;
 }
 
 /**
@@ -20,25 +20,18 @@ interface BadgesSectionProps {
  * error, or when the backend returns [] (a private profile you do not follow):
  * a missing badge row must never read as an error on the profile.
  */
-export function BadgesSection({ userId, refreshSignal }: BadgesSectionProps) {
+export function BadgesSection({ userId }: BadgesSectionProps) {
   const { t } = useTranslation();
-  const [badges, setBadges] = useState<BadgeContract[]>([]);
   const [selected, setSelected] = useState<BadgeContract | null>(null);
   const isOwn = !userId;
-
-  useEffect(() => {
-    let active = true;
-    (userId ? getUserBadges(userId) : getMyBadges())
-      .then((data) => {
-        if (active) setBadges(data);
-      })
-      .catch(() => {
-        // Keep whatever is shown; the global interceptor handles toasts.
-      });
-    return () => {
-      active = false;
-    };
-  }, [userId, refreshSignal]);
+  // Cached per profile; a log (own badges) or the screen's pull-to-refresh
+  // invalidates the key, which refetches it while this row is on screen.
+  const { data } = useCachedQuery(
+    userId ? queryKeys.userBadges(userId) : queryKeys.myBadges,
+    () => (userId ? getUserBadges(userId) : getMyBadges()),
+    { staleTime: staleTimes.catalog, persist: isOwn },
+  );
+  const badges = Array.isArray(data) ? data : [];
 
   if (badges.length === 0) return null;
 

@@ -12,7 +12,7 @@ import { FollowListItem } from '../../../components/profile/FollowListItem';
 import { ChallengeAccentBackdrop } from '../../../components/challenge/challengeAccentBackdrop';
 import { useChallengeParticipants } from '../../../hooks/useChallengeParticipants';
 import { getChallenge } from '../../../services/challenge/challenge.service';
-import { getMyChallenges } from '../../../services/user/user.service';
+import { loadMyChallenges } from '../../../services/cache/loaders';
 import { getChallengeAccentColor, parseActivityType, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
 import { colors, spacing } from '../../../constants/theme';
 import type { ChallengeContract } from '../../../types/challenge';
@@ -91,7 +91,7 @@ export default function ChallengeMembers() {
 
   useEffect(() => {
     if (!challengeId) return;
-    getMyChallenges()
+    loadMyChallenges()
       .then((enrolled) => {
         setIsMember(enrolled.some((c) => String(c.id) === challengeId && c.status !== 'left'));
       })
