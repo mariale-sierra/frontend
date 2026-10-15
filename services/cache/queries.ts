@@ -24,6 +24,8 @@ export const queryKeys = {
   myBadges: 'badges:me',
   userBadges: (userId: string) => `badges:user:${userId}`,
   publicProfile: (userId: string) => `profile:${userId}`,
+  /** GET /challenges/:id — Challenge-Info, progress, routine day, members, manage, invite. */
+  challenge: (challengeId: string) => `challenge:${challengeId}`,
   /** GET /workout-posts/user/:id, the pages loaded so far. */
   userPosts: (userId: string) => `user-posts:${userId}`,
   /** Exercise catalog reference data (categories, muscles...). */
@@ -100,7 +102,12 @@ export function invalidateAfterOwnPostDeleted() {
 
 /** Joined, left, created, completed or deleted a challenge (or accepted an invite). */
 export function invalidateAfterMembershipChanged() {
-  invalidateQueries(queryKeys.myChallenges, queryKeys.allChallenges, queryKeys.myBadges);
+  invalidateQueries(queryKeys.myChallenges, queryKeys.allChallenges, queryKeys.myBadges, 'challenge:');
+}
+
+/** An owner/admin changed one challenge (closed, reopened, members): its detail and the lists. */
+export function invalidateChallenge(challengeId: string) {
+  invalidateQueries(queryKeys.challenge(challengeId), queryKeys.allChallenges, queryKeys.myChallenges);
 }
 
 /** Followed or unfollowed someone: who shows up in streaks, the feed and the counters. */

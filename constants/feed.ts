@@ -17,3 +17,11 @@ export const FEED_POST_GAP = spacing[FEED_POST_GAP_TOKEN];
  * start/end their content at this inset.
  */
 export const HOME_EDGE_INSET = spacing.base;
+
+/**
+ * Side inset of a feed post's author row, action buttons, metrics and caption
+ * on Home — one token tighter than HOME_EDGE_INSET (explicit request,
+ * 2026-10-15: "a bit closer to the sides"), so the post's own controls sit
+ * closer to the edge-to-edge photo they belong to.
+ */
+export const FEED_POST_INSET = spacing.md;

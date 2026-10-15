@@ -19,7 +19,6 @@ import { useAuth } from '../../../hooks/useAuth';
 import {
   approveChallengeJoinRequest,
   deleteChallenge,
-  getChallenge,
   isChallengeOwner,
   rejectChallengeJoinRequest,
   removeChallengeParticipant,
@@ -30,7 +29,8 @@ import { useErrorNotificationStore } from '../../../store/errorNotificationStore
 import { withAlpha } from '../../../utils/color';
 import { safeBack } from '../../../utils/navigation';
 import type { ChallengeContract, ChallengeParticipantContract } from '../../../types/challenge';
-import { invalidateAfterMembershipChanged } from '../../../services/cache/queries';
+import { invalidateAfterMembershipChanged, invalidateChallenge } from '../../../services/cache/queries';
+import { loadChallenge } from '../../../services/cache/challengeLoaders';
 
 const SKELETON_ROWS = 4;
 const EMPTY_STATE_MIN_HEIGHT = 220;
@@ -79,7 +79,7 @@ export default function ManageChallengeScreen() {
 
   useEffect(() => {
     if (!challengeId) return;
-    getChallenge(challengeId).then(setChallenge).catch(() => setChallenge(null));
+    loadChallenge(challengeId).then(setChallenge).catch(() => setChallenge(null));
   }, [challengeId]);
 
   const isOwner = isChallengeOwner(challenge, userId);
@@ -117,6 +117,7 @@ export default function ManageChallengeScreen() {
     setRemoving(true);
     try {
       await removeChallengeParticipant(challengeId, removeTarget.id);
+      invalidateChallenge(challengeId);
       setRemovedIds((previous) => [...previous, removeTarget.id]);
       setRemoveTarget(null);
     } catch {
@@ -132,6 +133,8 @@ export default function ManageChallengeScreen() {
     try {
       const answer = action === 'approve' ? approveChallengeJoinRequest : rejectChallengeJoinRequest;
       await answer(challengeId, requestId);
+      // An approval changes the member count shown on the challenge.
+      if (action === 'approve') invalidateChallenge(challengeId);
       reloadRequests();
     } catch {
       // Global api.ts interceptor already surfaces an error toast.

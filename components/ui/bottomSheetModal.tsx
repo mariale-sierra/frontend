@@ -76,7 +76,11 @@ export function BottomSheetModal({
   // way CommentsSheet wants its composer to "sit on top of the keyboard".
   const keyboardOffset = useRef(new Animated.Value(0)).current;
 
+  // Only while the sheet is on screen: every feed card mounts several closed
+  // sheets, and listening from all of them made each keyboard open/close
+  // animate dozens of invisible sheets at once.
   useEffect(() => {
+    if (!mounted) return;
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
@@ -98,14 +102,15 @@ export function BottomSheetModal({
     return () => {
       showSub.remove();
       hideSub.remove();
+      keyboardOffset.setValue(0);
     };
-  }, [keyboardOffset]);
+  }, [keyboardOffset, mounted]);
 
   useEffect(() => {
     if (visible) {
       setMounted(true);
       Animated.timing(progress, { toValue: 1, duration: ANIM_DURATION, useNativeDriver: true }).start();
-    } else {
+    } else if (mounted) {
       Animated.timing(progress, { toValue: 0, duration: ANIM_DURATION, useNativeDriver: true }).start(({ finished }) => {
         if (finished) setMounted(false);
       });

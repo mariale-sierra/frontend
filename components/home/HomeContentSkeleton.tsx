@@ -4,7 +4,7 @@ import { Row } from '../layout/row';
 import { Stack } from '../layout/stack';
 import { PostCardSkeleton } from './PostCardSkeleton';
 import { radius, spacing } from '../../constants/theme';
-import { FEED_POST_GAP_TOKEN, HOME_EDGE_INSET } from '../../constants/feed';
+import { FEED_POST_GAP_TOKEN, FEED_POST_INSET, HOME_EDGE_INSET } from '../../constants/feed';
 
 const STREAK_AVATAR_SIZE = 58;
 
@@ -33,8 +33,8 @@ export function HomeContentSkeleton() {
       </Row>
 
       <Stack gap={FEED_POST_GAP_TOKEN}>
-        <PostCardSkeleton inset={HOME_EDGE_INSET} />
-        <PostCardSkeleton inset={HOME_EDGE_INSET} />
+        <PostCardSkeleton inset={FEED_POST_INSET} />
+        <PostCardSkeleton inset={FEED_POST_INSET} />
       </Stack>
     </Stack>
   );

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from './useAuth';
 import { useChallengeProgress } from './useChallengeProgress';
 import { useChallengeParticipants } from './useChallengeParticipants';
-import { getChallenge, getMyProgressPhotos, isChallengeOwner } from '../services/challenge/challenge.service';
+import { isChallengeOwner } from '../services/challenge/challenge.service';
 import { deriveChallengeCardState, normalizeChallengeStatus, pickDominantActivityCategory, getChallengeAccentColor } from '../services/adapters/challengeState';
 import type { ChallengeCardState } from '../services/adapters/challengeState';
 import { buildDayRingTicks, classifyDay, dayInCycle, findCycleDayFor, isRestDay } from '../utils/challengeCycle';
@@ -11,6 +11,7 @@ import { PROGRESS_RING } from '../constants/progressRing';
 import { withAlpha } from '../utils/color';
 import type { ActivityType } from '../types/activity';
 import type { ChallengeContract, ChallengePhoto } from '../types/challenge';
+import { loadChallenge, loadMyPhotos } from '../services/cache/challengeLoaders';
 
 interface Participant {
   id: string;
@@ -100,7 +101,7 @@ export function useChallengeActiveProgress(routeChallengeId: string | null): Cha
     let cancelled = false;
     setExtrasLoading(true);
 
-    Promise.all([getChallenge(challengeId), getMyProgressPhotos()])
+    Promise.all([loadChallenge(challengeId), loadMyPhotos()])
       .then(([challengeData, allMyPhotos]) => {
         if (cancelled) return;
         setFullChallenge(challengeData);

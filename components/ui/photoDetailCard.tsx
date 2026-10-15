@@ -47,7 +47,7 @@ export function PhotoDetailCard({ photo, headerAction }: PhotoDetailCardProps) {
 
       <View style={styles.photoFrame}>
         {photo.imageUrl ? (
-          <Image source={{ uri: photo.imageUrl }} style={styles.image} resizeMode="cover" />
+          <Image source={{ uri: photo.imageUrl }} style={styles.image} resizeMode="cover" resizeMethod="resize" />
         ) : (
           <Icon name="image-outline" size={42} color={withAlpha(colors.paper, textOpacity.tertiary)} />
         )}

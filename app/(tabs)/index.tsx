@@ -42,7 +42,7 @@ import { withAlpha } from '../../utils/color';
 import { useNotificationsStore } from '../../store/notificationsStore';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { hasSeenLogCoachMark, markLogCoachMarkSeen } from '../../utils/logCoachMark';
-import { FEED_POST_GAP, HOME_EDGE_INSET } from '../../constants/feed';
+import { FEED_POST_GAP, FEED_POST_INSET, HOME_EDGE_INSET } from '../../constants/feed';
 
 function FeedSeparator() {
   return <View style={styles.separator} />;
@@ -201,7 +201,7 @@ export default function Home() {
 
   const renderItem = useCallback(
     ({ item }: { item: FeedPostViewModel }) => (
-      <FeedPostCard post={item} onDeleted={handlePostDeleted} edgeToEdgeInset={HOME_EDGE_INSET} />
+      <FeedPostCard post={item} onDeleted={handlePostDeleted} edgeToEdgeInset={FEED_POST_INSET} />
     ),
     [handlePostDeleted],
   );

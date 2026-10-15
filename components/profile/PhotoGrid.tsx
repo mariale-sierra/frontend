@@ -28,7 +28,7 @@ const PhotoTile = memo(function PhotoTile({
       onPress={() => onPhotoPress?.(photo)}
     >
       {photo.imageUrl ? (
-        <Image source={{ uri: photo.imageUrl }} style={styles.image} resizeMode="cover" />
+        <Image source={{ uri: photo.imageUrl }} style={styles.image} resizeMode="cover" resizeMethod="resize" />
       ) : (
         <View style={styles.skeletonInner} />
       )}

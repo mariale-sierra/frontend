@@ -101,6 +101,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted, onHidd
   // `useRef` updates are visible immediately, synchronously, so the second
   // tap's check always sees the first tap's write.
   const reactingRef = useRef(false);
+  const openedRef = useRef(new Set<string>());
 
   // The report sheet opens only after the options sheet has finished
   // sliding out. Both are native <Modal>s, and iOS drops a modal presented
@@ -182,6 +183,17 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted, onHidd
     patchFeedPost(post.id, { comments_count: count });
   }
 
+  // Each sheet/popup mounts the first time it opens and then stays mounted (so
+  // its close animation still runs). A feed card nobody interacts with no
+  // longer mounts six closed modals, their hooks and listeners.
+  const opened = openedRef.current;
+  if (commentsVisible) opened.add('comments');
+  if (reactorsVisible) opened.add('reactors');
+  if (shareVisible) opened.add('share');
+  if (optionsVisible) opened.add('options');
+  if (reportVisible) opened.add('report');
+  if (deleteConfirmVisible) opened.add('delete');
+
   if (reported) return null;
 
   const fullBleed = edgeToEdgeInset != null;
@@ -222,7 +234,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted, onHidd
 
       <View style={[styles.photo, fullBleed && styles.photoFullBleed]}>
         {post.imageUrl ? (
-          <Image source={{ uri: post.imageUrl }} style={styles.image} resizeMode="cover" />
+          <Image source={{ uri: post.imageUrl }} style={styles.image} resizeMode="cover" resizeMethod="resize" />
         ) : (
           <Icon name="image-outline" size={42} color={withAlpha(colors.paper, textOpacity.tertiary)} />
         )}
@@ -353,21 +365,28 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted, onHidd
         </View>
       ) : null}
 
+      {opened.has('comments') ? (
       <CommentsSheet
         visible={commentsVisible}
         postId={post.id}
         onClose={() => setCommentsVisible(false)}
         onCommentsCountChange={handleCommentsCountChange}
       />
+      ) : null}
 
-      <ReactorsSheet visible={reactorsVisible} postId={post.id} onClose={() => setReactorsVisible(false)} />
+      {opened.has('reactors') ? (
+        <ReactorsSheet visible={reactorsVisible} postId={post.id} onClose={() => setReactorsVisible(false)} />
+      ) : null}
 
-      <ShareToChatSheet
-        visible={shareVisible}
-        onClose={() => setShareVisible(false)}
-        content={{ workoutPostId: post.id }}
-      />
+      {opened.has('share') ? (
+        <ShareToChatSheet
+          visible={shareVisible}
+          onClose={() => setShareVisible(false)}
+          content={{ workoutPostId: post.id }}
+        />
+      ) : null}
 
+      {opened.has('options') ? (
       <PostOptionsSheet
         visible={optionsVisible}
         onClose={() => setOptionsVisible(false)}
@@ -375,7 +394,9 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted, onHidd
         onReport={isOwnPost ? undefined : handleReportFromOptions}
         onDelete={isOwnPost ? handleDeleteFromOptions : undefined}
       />
+      ) : null}
 
+      {opened.has('delete') ? (
       <ConfirmationPopup
         visible={deleteConfirmVisible}
         title={t('home.postOptions.deleteConfirmTitle')}
@@ -396,7 +417,9 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted, onHidd
         }}
         onDismiss={() => !deleting && setDeleteConfirmVisible(false)}
       />
+      ) : null}
 
+      {opened.has('report') ? (
       <ReportReasonSheet
         visible={reportVisible}
         targetType="post"
@@ -409,6 +432,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted, onHidd
           onHidden?.(post.id);
         }}
       />
+      ) : null}
     </View>
   );
 });

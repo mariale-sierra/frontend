@@ -35,11 +35,12 @@ import { invalidateAfterWorkoutLogged } from '../../services/cache/queries';
 import { showProgressLoggedFeedback } from '../../utils/progressLoggedFeedback';
 import { useAuth } from '../../hooks/useAuth';
 import { useChallengeParticipants } from '../../hooks/useChallengeParticipants';
-import { getChallenge, isChallengeOwner } from '../../services/challenge/challenge.service';
+import { isChallengeOwner } from '../../services/challenge/challenge.service';
 import { TagParticipantsSheet } from '../../components/challenge/TagParticipantsSheet';
 import type { ChallengeContract } from '../../types/challenge';
 import { extractHashtags } from '../../utils/hashtags';
 import { getApiErrorMessage, logError } from '../../utils/apiError';
+import { loadChallenge } from '../../services/cache/challengeLoaders';
 
 // Same cap as the backend's CreateWorkoutProgressDto.caption.
 const MAX_CAPTION_LENGTH = 500;
@@ -135,7 +136,7 @@ export default function Camera() {
       setSelectedChallenge(null);
       return;
     }
-    getChallenge(selectedChallengeId).then(setSelectedChallenge).catch(() => setSelectedChallenge(null));
+    loadChallenge(selectedChallengeId).then(setSelectedChallenge).catch(() => setSelectedChallenge(null));
   }, [selectedChallengeId]);
 
   const isOwner = isChallengeOwner(selectedChallenge, userId);

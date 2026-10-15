@@ -69,35 +69,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
 
-      try {
-        await fetchAuthMe();
-      } catch (error: any) {
-        const status = error?.response?.status;
-
-        if (status === 401) {
-          // Token genuinamente rechazado por el servidor — limpiar sesión
-          await logoutService();
-          invalidateChallengeProgressCache();
-          resetSessionStores();
-          setQueryScope(storedUserId);
-          await clearQueryCache();
-          setQueryScope(null);
-          setToken(null);
-          setUserId(null);
-          setUsername(null);
-          return;
-        }
-
-        // Error de red, 5xx, CORS, timeout, etc. — preservar sesión
-        // El token sigue en SecureStore y el interceptor lo adjuntará en siguientes llamadas
-      }
-
       // Cached server data for this user (services/cache) is readable from now on.
       setQueryScope(storedUserId);
       setToken(storedToken);
       setUserId(storedUserId);
       setUsername(storedUsername);
 
+      // Validated in the background, not before the first screen: the app
+      // used to show nothing until /auth/me answered (up to the request
+      // timeout on a bad connection), even though the stored session and
+      // the cached Home/Profile data were already on the device. A token the
+      // server rejects (401) still ends the session — the same cleanup as
+      // before, just after the first paint instead of before it. Network
+      // errors, 5xx, etc. keep the session, as they always did.
+      fetchAuthMe().catch(async (error: any) => {
+        if (error?.response?.status !== 401) return;
+        await logoutService();
+        invalidateChallengeProgressCache();
+        resetSessionStores();
+        await clearQueryCache();
+        setQueryScope(null);
+        setToken(null);
+        setUserId(null);
+        setUsername(null);
+      });
     } finally {
       setIsRestoring(false);
     }

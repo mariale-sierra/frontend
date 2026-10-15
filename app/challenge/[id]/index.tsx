@@ -17,7 +17,7 @@ import { ShareToChatSheet } from '../../../components/social/ShareToChatSheet';
 import type { ChallengeInfoRow } from '../../../components/challenge/detail';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
-import { closeChallenge, getChallenge, isChallengeOwner, joinChallenge, reopenChallenge } from '../../../services/challenge/challenge.service';
+import { closeChallenge, isChallengeOwner, joinChallenge, reopenChallenge } from '../../../services/challenge/challenge.service';
 import { getMyMembership } from '../../../services/challenge/myMembership';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
@@ -30,7 +30,8 @@ import { hasSeenChallengeJoinCallout, markChallengeJoinCalloutSeen } from '../..
 import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../../constants/onboardingDebug';
 import { shareChallengeExternally } from '../../../utils/shareChallenge';
 import type { ChallengeContract } from '../../../types/challenge';
-import { invalidateAfterMembershipChanged } from '../../../services/cache/queries';
+import { invalidateAfterMembershipChanged, invalidateChallenge } from '../../../services/cache/queries';
+import { loadChallenge } from '../../../services/cache/challengeLoaders';
 
 type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
 
@@ -87,6 +88,7 @@ export default function ChallengeDetail() {
       if (!challengeId) return;
       try {
         await closeChallenge(challengeId);
+        invalidateChallenge(challengeId);
         setChallenge((prev) => (prev ? { ...prev, status: 'closed' } : prev));
         showSuccess({ message: t('challengeProgress.closeChallengeSuccess') });
       } catch {
@@ -104,6 +106,7 @@ export default function ChallengeDetail() {
       if (!challengeId) return;
       try {
         await reopenChallenge(challengeId);
+        invalidateChallenge(challengeId);
         setChallenge((prev) => (prev ? { ...prev, status: 'open' } : prev));
         showSuccess({ message: t('challengeProgress.reopenChallengeSuccess') });
       } catch {
@@ -160,7 +163,7 @@ export default function ChallengeDetail() {
 
   useEffect(() => {
     if (!id) return;
-    getChallenge(id)
+    loadChallenge(id)
       .then(setChallenge)
       .catch(() => setError(true))
       .finally(() => setLoading(false));

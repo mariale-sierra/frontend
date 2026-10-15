@@ -17,7 +17,7 @@ import { withAlpha } from '../../../../utils/color';
 import { toTitleCase } from '../../../../utils/format';
 import { toChallengeDetailViewModel } from '../../../../services/adapters/index';
 import { getUpcomingDays } from '../../../../services/adapters/challengeDetailAdapter';
-import { getChallenge, joinChallenge } from '../../../../services/challenge/challenge.service';
+import { joinChallenge } from '../../../../services/challenge/challenge.service';
 import { getMyMembership } from '../../../../services/challenge/myMembership';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../../services/adapters/challengeState';
 import {
@@ -37,6 +37,7 @@ import { getLocationAvailability, type LocationAvailability } from '../../../../
 import { adaptationForRoutine, useWorkoutAdaptationStore } from '../../../../store/workoutAdaptationStore';
 import type { WorkoutAdaptation } from '../../../../store/workoutAdaptationStore';
 import { invalidateAfterMembershipChanged } from '../../../../services/cache/queries';
+import { loadChallenge } from '../../../../services/cache/challengeLoaders';
 
 type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
 
@@ -194,7 +195,7 @@ export default function RoutineDayDetail() {
       return;
     }
     let cancelled = false;
-    getChallenge(String(id))
+    loadChallenge(String(id))
       .then((data) => {
         if (!cancelled) setChallenge(data);
       })
