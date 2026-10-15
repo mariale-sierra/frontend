@@ -55,6 +55,7 @@ const en = {
         cannotReportOwn: 'You can\'t report your own content.',
         ownChallenge: 'You can\'t join a challenge you created.',
         emailInUse: 'That email is already in use.',
+        usernameInUse: 'That username is already taken.',
         deletionAlreadyRequested: 'Your account deletion was already requested.',
         cycleTooLong: 'The cycle can\'t be longer than the challenge.',
       },

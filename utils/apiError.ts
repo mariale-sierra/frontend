@@ -42,6 +42,7 @@ const KNOWN_BACKEND_MESSAGES: Record<string, string> = {
   'You cannot join a challenge you created': 'ownChallenge',
   'User is the creator of this challenge': 'ownChallenge',
   'Email already in use': 'emailInUse',
+  'Username already in use': 'usernameInUse',
   'Account deletion already requested': 'deletionAlreadyRequested',
   'Cycle length cannot exceed duration': 'cycleTooLong',
 };
@@ -105,9 +106,16 @@ export function describeError(error: unknown): string {
   return String(error);
 }
 
-/** Dev-only error log that goes through `describeError` (nothing sensitive in release logs). */
+/**
+ * Dev-only error log that goes through `describeError` (nothing sensitive in
+ * release logs). A 4xx answer is skipped: it is an expected outcome the screen
+ * already explained to the user (wrong password, taken email...), and in
+ * development `console.error` would pop a red LogBox for it as if it were a bug.
+ */
 export function logError(scope: string, error?: unknown) {
   if (!__DEV__) return;
+  const status = getApiErrorStatus(error);
+  if (status !== undefined && status >= 400 && status < 500) return;
   console.error(`[${scope}]`, describeError(error));
 }
 

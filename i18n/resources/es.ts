@@ -55,6 +55,7 @@ const es = {
         cannotReportOwn: 'No puedes reportar tu propio contenido.',
         ownChallenge: 'No puedes unirte a un reto que creaste.',
         emailInUse: 'Ese correo ya está en uso.',
+        usernameInUse: 'Ese nombre de usuario ya está en uso.',
         deletionAlreadyRequested: 'Ya solicitaste eliminar tu cuenta.',
         cycleTooLong: 'El ciclo no puede ser más largo que el reto.',
       },

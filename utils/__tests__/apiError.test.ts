@@ -1,4 +1,4 @@
-import { describeError, getApiErrorMessage, wasErrorToastShown } from '../apiError';
+import { describeError, getApiErrorMessage, logError, wasErrorToastShown } from '../apiError';
 
 const t = (key: string) => `t(${key})`;
 
@@ -42,5 +42,30 @@ describe('describeError (dev logs)', () => {
     const text = describeError(axiosError(403, { message: 'secret detail', code: 'ACCOUNT_SUSPENDED' }));
     expect(text).toBe('POST /challenges/1/join -> 403 ACCOUNT_SUSPENDED');
     expect(text).not.toMatch(/Bearer|secret|abc\.def/);
+  });
+});
+
+describe('register conflicts', () => {
+  it('translates a taken username (409 from the backend’s unique-index guard)', () => {
+    expect(getApiErrorMessage(axiosError(409, { message: 'Username already in use' }), t, 'fallback')).toBe(
+      't(common.errors.known.usernameInUse)',
+    );
+  });
+});
+
+describe('logError', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('stays quiet for a handled 4xx (a wrong password is not a bug to flag in LogBox)', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    logError('auth.login', axiosError(401));
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('still reports server and network failures in development', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    logError('feed', axiosError(500));
+    logError('feed', { message: 'Network Error' });
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 });

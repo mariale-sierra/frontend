@@ -92,9 +92,13 @@ export default function Login() {
       // file's history: `Alert.alert` doesn't reliably render on every
       // platform this app ships to).
       // The request opts out of the global toast (auth.service): this is the one message.
+      // 401 = wrong email/password; 400 = the API's own login validation (e.g. a
+      // password under its 8-character minimum) — for the user both are just
+      // "those credentials don't work", not an unknown error.
+      const status = error?.response?.status;
       show({
         message:
-          error?.response?.status === 401
+          status === 401 || status === 400
             ? t('auth.login.invalidCredentials')
             : getApiErrorMessage(error, t, t('common.errors.genericMessage')),
       });

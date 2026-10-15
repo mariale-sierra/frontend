@@ -30,7 +30,7 @@ import { activityColors, colors, fillOpacity, radius, shadows, spacing } from '.
 import { withAlpha } from '../../utils/color';
 import { createRegisterSchema, type RegisterFormValues } from '../../validation/authSchemas';
 import { LegalConsent, type LegalConsentValue } from '../../components/legal/LegalConsent';
-import { getApiErrorMessage } from '../../utils/apiError';
+import { getApiErrorMessage, knownApiMessageKey } from '../../utils/apiError';
 import { FieldError } from '../../components/ui/fieldError';
 
 const INTRO_COUNT = 3;
@@ -112,6 +112,14 @@ const STEP_COLORS = [
 ];
 
 type FieldStepKey = 'email' | 'username' | 'password';
+
+const FIELD_STEP_INDEX: Record<FieldStepKey, number> = { email: 3, username: 4, password: 5 };
+
+// Backend conflicts (`common.errors.known.*` keys) that point at one field.
+const REGISTER_CONFLICT_FIELD: Record<string, FieldStepKey | undefined> = {
+  emailInUse: 'email',
+  usernameInUse: 'username',
+};
 
 function fieldStepKeyFor(step: number): FieldStepKey {
   if (step === 3) return 'email';
@@ -207,7 +215,7 @@ export default function Register() {
   const consentGiven = consent.acceptTerms && consent.confirmAge16;
 
   const schema = useMemo(() => createRegisterSchema(t), [t]);
-  const { control, trigger, getValues } = useForm<RegisterFormValues>({
+  const { control, trigger, getValues, setError } = useForm<RegisterFormValues>({
     resolver: zodResolver(schema),
     defaultValues: { email: '', username: '', password: '' },
   });
@@ -348,7 +356,16 @@ export default function Register() {
       // have that gap.
       // The request opts out of the global toast (auth.service): this is the one message,
       // translated (e.g. "email already in use") instead of the API's English text.
-      show({ message: getApiErrorMessage(error, t, t('auth.register.createAccountFailed')) });
+      // A taken email/username belongs to its own field: go back to that step
+      // and mark it there, so the user fixes it where it was typed.
+      const takenField = REGISTER_CONFLICT_FIELD[knownApiMessageKey(error) ?? ''];
+      const message = getApiErrorMessage(error, t, t('auth.register.createAccountFailed'));
+      if (takenField) {
+        setStep(FIELD_STEP_INDEX[takenField]);
+        setError(takenField, { type: 'server', message });
+      } else {
+        show({ message });
+      }
     } finally {
       setSubmitting(false);
     }

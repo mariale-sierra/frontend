@@ -7,7 +7,6 @@ import type {
   LoginRequest,
   RegisterRequest,
 } from '../../types/auth';
-import { logError } from '../../utils/apiError';
 
 export async function login(email: string, password: string) {
   try {
@@ -26,7 +25,8 @@ export async function login(email: string, password: string) {
     }
     return response.data;
   } catch (error: any) {
-    logError('auth.login', error);
+    // No log: the login screen tells the user what happened (logError skips
+    // these handled 4xx answers anyway).
     throw error;
   }
 }
