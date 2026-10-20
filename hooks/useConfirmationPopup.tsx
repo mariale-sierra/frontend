@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ConfirmationPopup, ConfirmationButtonConfig } from '../components/ui/confirmationPopup';
 import { colors } from '../constants/theme';
 
-export type ConfirmationPopupType = 'join' | 'leave' | 'closeChallenge';
+export type ConfirmationPopupType = 'join' | 'leave' | 'closeChallenge' | 'reopenChallenge';
 
 interface UseConfirmationPopupOptions {
   type: ConfirmationPopupType;
@@ -94,6 +94,25 @@ export function useConfirmationPopup({
           } as ConfirmationButtonConfig,
           secondaryButton: {
             label: t('challengeProgress.closeChallengeCancel'),
+            onPress: hide,
+            variant: 'neutral' as const,
+            disabled: loading,
+          } as ConfirmationButtonConfig,
+        };
+
+      case 'reopenChallenge':
+        return {
+          title: t('challengeProgress.reopenChallengeTitle'),
+          description: t('challengeProgress.reopenChallengeDescription'),
+          icon: 'lock-open-outline' as const,
+          primaryButton: {
+            label: t('challengeProgress.reopenChallengeConfirm'),
+            onPress: handleConfirm,
+            variant: 'primary' as const,
+            loading,
+          } as ConfirmationButtonConfig,
+          secondaryButton: {
+            label: t('challengeProgress.reopenChallengeCancel'),
             onPress: hide,
             variant: 'neutral' as const,
             disabled: loading,

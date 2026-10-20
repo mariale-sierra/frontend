@@ -31,6 +31,8 @@ import { withAlpha } from '../../utils/color';
 import { createRegisterSchema, type RegisterFormValues } from '../../validation/authSchemas';
 import { LegalConsent, type LegalConsentValue } from '../../components/legal/LegalConsent';
 import { safeBack } from '../../utils/navigation';
+import { getApiErrorMessage, knownApiMessageKey } from '../../utils/apiError';
+import { FieldError } from '../../components/ui/fieldError';
 
 const INTRO_COUNT = 3;
 // Page 1 ("Real challenges, real routines") got a second photo, per explicit
@@ -111,6 +113,14 @@ const STEP_COLORS = [
 ];
 
 type FieldStepKey = 'email' | 'username' | 'password';
+
+const FIELD_STEP_INDEX: Record<FieldStepKey, number> = { email: 3, username: 4, password: 5 };
+
+// Backend conflicts (`common.errors.known.*` keys) that point at one field.
+const REGISTER_CONFLICT_FIELD: Record<string, FieldStepKey | undefined> = {
+  emailInUse: 'email',
+  usernameInUse: 'username',
+};
 
 function fieldStepKeyFor(step: number): FieldStepKey {
   if (step === 3) return 'email';
@@ -221,7 +231,7 @@ export default function Register() {
   const consentGiven = consent.acceptTerms && consent.confirmAge16;
 
   const schema = useMemo(() => createRegisterSchema(t), [t]);
-  const { control, trigger, getValues } = useForm<RegisterFormValues>({
+  const { control, trigger, getValues, setError } = useForm<RegisterFormValues>({
     resolver: zodResolver(schema),
     defaultValues: { email: '', username: '', password: '' },
   });
@@ -339,7 +349,7 @@ export default function Register() {
     setSubmitting(true);
     try {
       const { email, username, password } = getValues();
-      await register(email, username, password, {
+      await register(email.trim(), username.trim(), password, {
         acceptTerms: consent.acceptTerms,
         confirmAge16: consent.confirmAge16,
       });
@@ -360,7 +370,18 @@ export default function Register() {
       // step. The app's own cross-platform error toast — already used one
       // screen later, by practices.tsx's own save-failure case — doesn't
       // have that gap.
-      show({ message: error?.response?.data?.message || t('auth.register.createAccountFailed') });
+      // The request opts out of the global toast (auth.service): this is the one message,
+      // translated (e.g. "email already in use") instead of the API's English text.
+      // A taken email/username belongs to its own field: go back to that step
+      // and mark it there, so the user fixes it where it was typed.
+      const takenField = REGISTER_CONFLICT_FIELD[knownApiMessageKey(error) ?? ''];
+      const message = getApiErrorMessage(error, t, t('auth.register.createAccountFailed'));
+      if (takenField) {
+        setStep(FIELD_STEP_INDEX[takenField]);
+        setError(takenField, { type: 'server', message });
+      } else {
+        show({ message });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -531,6 +552,7 @@ export default function Register() {
             control={control}
             name={fieldKey as FieldStepKey}
             render={({ field: { onChange, value, onBlur }, fieldState: { error } }) => (
+              <View style={styles.field}>
               <FloatingLabelInput
                 label={t(`common.fields.${fieldKey}`)}
                 value={value}
@@ -543,6 +565,8 @@ export default function Register() {
                 secureTextEntry={FIELD_META[fieldKey as FieldStepKey].secure}
                 textContentType={FIELD_META[fieldKey as FieldStepKey].textContentType}
               />
+              <FieldError message={error?.message} />
+              </View>
             )}
           />
 
@@ -584,6 +608,10 @@ export default function Register() {
 }
 
 const styles = StyleSheet.create({
+  // A field and its inline validation message (same `xs` gap as FormField).
+  field: {
+    gap: spacing.xs,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.ink,

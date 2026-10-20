@@ -8,12 +8,15 @@ import { Button } from '../../components/ui/button';
 import { ConfirmationPopup } from '../../components/ui/confirmationPopup';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
+import { UserAvatar } from '../../components/ui/userAvatar';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { listPendingReports, resolveReport } from '../../services/reports/reports.service';
+import { listBannedUsers, unbanUser } from '../../services/user/user.service';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import type { ReportContract, ResolveReportRequest } from '../../types/content-report';
+import type { BannedUserContract } from '../../types/user';
 
 type PendingDecision = { report: ReportContract; request: ResolveReportRequest };
 
@@ -36,6 +39,20 @@ export default function ModerationScreen() {
   const [error, setError] = useState(false);
   const [decision, setDecision] = useState<PendingDecision | null>(null);
   const [resolving, setResolving] = useState(false);
+  // B8: banned accounts, the only way back to unbanning one from the app (a
+  // banned user's public profile 404s). Loaded on its own: a failure here
+  // never hides the report queue.
+  const [banned, setBanned] = useState<BannedUserContract[]>([]);
+  const [unbanTarget, setUnbanTarget] = useState<BannedUserContract | null>(null);
+  const [unbanning, setUnbanning] = useState(false);
+
+  const loadBanned = useCallback(async () => {
+    try {
+      setBanned(await listBannedUsers());
+    } catch {
+      // Already toasted by the global axios interceptor; the queue still works.
+    }
+  }, []);
 
   const load = useCallback(async (after?: number) => {
     setError(false);
@@ -52,8 +69,56 @@ export default function ModerationScreen() {
   }, []);
 
   useEffect(() => {
-    if (isAdmin) void load();
-  }, [isAdmin, load]);
+    if (isAdmin) {
+      void load();
+      void loadBanned();
+    }
+  }, [isAdmin, load, loadBanned]);
+
+  async function handleUnban() {
+    if (!unbanTarget) return;
+    setUnbanning(true);
+    try {
+      await unbanUser(unbanTarget.id);
+      setBanned((prev) => prev.filter((user) => user.id !== unbanTarget.id));
+      showSuccess({ message: t('moderation.unbannedMessage') });
+      setUnbanTarget(null);
+    } catch {
+      // Already toasted by the global axios interceptor.
+    } finally {
+      setUnbanning(false);
+    }
+  }
+
+  const bannedSection =
+    banned.length > 0 ? (
+      <View style={styles.card}>
+        <Text variant="label" weight="bold">
+          {t('moderation.bannedTitle')}
+        </Text>
+        {banned.map((user) => (
+          <Row key={user.id} gap="md" justify="flex-start" style={styles.bannedRow}>
+            <UserAvatar username={user.username} imageUrl={user.profile_image_url} size={36} />
+            <View style={styles.previewText}>
+              <Text variant="body" weight="bold" numberOfLines={1}>
+                {user.display_name ?? user.username}
+              </Text>
+              <Text variant="caption" tone="secondary" numberOfLines={1}>
+                @{user.username}
+              </Text>
+            </View>
+            <Button
+              variant="subtle"
+              size="sm"
+              onPress={() => setUnbanTarget(user)}
+              accessibilityLabel={t('moderation.bannedA11y', { username: user.username })}
+            >
+              {t('moderation.unbanCta')}
+            </Button>
+          </Row>
+        ))}
+      </View>
+    ) : null;
 
   async function handleConfirm() {
     if (!decision) return;
@@ -126,10 +191,12 @@ export default function ModerationScreen() {
               onRefresh={() => {
                 setRefreshing(true);
                 void load();
+                void loadBanned();
               }}
               tintColor={colors.primary}
             />
           }
+          ListHeaderComponent={bannedSection}
           onEndReached={() => {
             if (nextAfter !== null) void load(nextAfter);
           }}
@@ -176,6 +243,25 @@ export default function ModerationScreen() {
           disabled: resolving,
         }}
         onDismiss={() => setDecision(null)}
+      />
+
+      <ConfirmationPopup
+        visible={unbanTarget !== null}
+        title={t('moderation.confirmUnbanTitle', { username: unbanTarget?.username ?? '' })}
+        description={t('moderation.confirmUnbanDescription')}
+        primaryButton={{
+          label: t('moderation.unbanCta'),
+          onPress: handleUnban,
+          variant: 'primary',
+          loading: unbanning,
+        }}
+        secondaryButton={{
+          label: t('comments.cancelCta'),
+          onPress: () => setUnbanTarget(null),
+          variant: 'neutral',
+          disabled: unbanning,
+        }}
+        onDismiss={() => !unbanning && setUnbanTarget(null)}
       />
     </ScreenBackground>
   );
@@ -296,5 +382,8 @@ const styles = StyleSheet.create({
   actions: {
     flexWrap: 'wrap',
     marginTop: spacing.xs,
+  },
+  bannedRow: {
+    paddingVertical: spacing.xs,
   },
 });

@@ -8,14 +8,16 @@
     "userInterfaceStyle": "light",
     "scheme": "havit",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.havit.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.havit.app"
     },
     "web": {
       "bundler": "metro",
@@ -42,7 +44,23 @@
           "color": "#080906",
           "defaultChannel": "default"
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "apiUrl": "http://20.63.84.1:3000",
+      "eas": {
+        "projectId": "bc509756-4500-48e1-92f2-441965b21629"
+      },
+      "router": {}
+    },
+    "owner": "mariale-sierra"
   }
 }

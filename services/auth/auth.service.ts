@@ -11,7 +11,9 @@ import type {
 export async function login(email: string, password: string) {
   try {
     const payload: LoginRequest = { email, password };
-    const response = await api.post<AuthSessionResponse>('/auth/login', payload);
+    // The login screen shows its own message for every failure (wrong credentials
+    // is a 401 that is not a session expiry), so no global toast on top of it.
+    const response = await api.post<AuthSessionResponse>('/auth/login', payload, { suppressErrorToast: true });
     const { accessToken, user } = response.data;
 
     await setAccessToken(accessToken);
@@ -23,8 +25,9 @@ export async function login(email: string, password: string) {
     }
     return response.data;
   } catch (error: any) {
-    console.error('[auth] login failed, status:', error?.response?.status);
-    throw error; // Re-throw the error after logging
+    // No log: the login screen tells the user what happened (logError skips
+    // these handled 4xx answers anyway).
+    throw error;
   }
 }
 
@@ -35,7 +38,7 @@ export async function register(
   consent: LegalConsent,
 ) {
   const payload: RegisterRequest = { email, username, password, ...consent };
-  const response = await api.post<AuthSessionResponse>('/auth/register', payload);
+  const response = await api.post<AuthSessionResponse>('/auth/register', payload, { suppressErrorToast: true });
   const { accessToken, user } = response.data;
   await setAccessToken(accessToken);
   if (user?.id) {

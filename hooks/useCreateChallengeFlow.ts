@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { buildCreateChallengePayload } from '../services/adapters/index';
 import { createChallenge } from '../services/challenge/challenge.service';
-import { isContentRejectedError } from '../utils/contentModeration';
 import type { ChallengeVisibility } from '../types/challenge';
 import { useChallengeBuilder } from '../store/challengeBuilderStore';
 import { getRoutineLocationSummary, useRoutineBuilder } from '../store/routineBuilderStore';
@@ -15,6 +14,8 @@ import { CATEGORY_TO_ACTIVITY } from '../constants/challengeFilters';
 import type { ActivityType } from '../types/activity';
 import { useTranslation } from 'react-i18next';
 import { createChallengeNameSchema, type ChallengeNameFormValues } from '../validation/challengeSchemas';
+import { invalidateAfterMembershipChanged } from '../services/cache/queries';
+import { logError, wasErrorToastShown } from '../utils/apiError';
 
 // The old single "Build the cycle" step is two steps now: 'cycleLength'
 // (53A — the cycle's length and the challenge's length, with a calendar
@@ -310,6 +311,7 @@ export function useCreateChallengeFlow() {
     setIsSubmitting(true);
     try {
       await createChallenge(payload);
+      invalidateAfterMembershipChanged();
       resetChallengeBuilder();
       // Real bug, fixed 2026-08-29, per user report ("the previous cycle
       // configured shows set up" on the NEXT challenge creation): this store
@@ -327,24 +329,14 @@ export function useCreateChallengeFlow() {
       // Browse (see its own `requestedView` effect).
       router.replace('/(tabs)/challenges?view=mine');
     } catch (err: unknown) {
-      type AxiosLike = {
-        response?: { status?: number; data?: { message?: string | string[] } };
-        message?: string;
-      };
-      const e = err as AxiosLike;
-      console.error('[createChallenge] error:', err);
+      // Never the raw error: it carries the request headers (the bearer token).
+      logError('createChallenge', err);
 
-      // Rejected by automatic moderation (B3): the global interceptor already
-      // showed the i18n toast via errorNotificationStore — skip the duplicate Alert.
-      if (isContentRejectedError(err)) return;
+      // Any API failure (moderation included) already got its translated toast
+      // from the global interceptor — no second Alert with the server's raw text.
+      if (wasErrorToastShown(err)) return;
 
-      const raw = e?.response?.data?.message;
-      const backendMessage = Array.isArray(raw) ? raw.join('\n') : (raw ?? e?.message);
-      const statusLabel = e?.response?.status ? `(${e.response.status}) ` : '';
-      Alert.alert(
-        `${statusLabel}${t('common.errors.genericTitle')}`,
-        backendMessage ?? t('challengeCreate.alerts.createFailedMessage'),
-      );
+      Alert.alert(t('common.errors.genericTitle'), t('challengeCreate.alerts.createFailedMessage'));
     } finally {
       setIsSubmitting(false);
     }

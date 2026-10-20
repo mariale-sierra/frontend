@@ -1,4 +1,13 @@
 import api from '../api';
+import { fetchQuery } from '../cache/queryCache';
+import { queryKeys, staleTimes } from '../cache/queries';
+
+// The exercise catalog is seeded reference data (it changes with a deploy, not
+// with what users do): each answer is reused for a day instead of being asked
+// again on every screen that shows it. The small lists also survive restarts.
+function cachedReference<T>(name: string, fetcher: () => Promise<T>, options: { persist?: boolean } = {}) {
+  return fetchQuery(queryKeys.reference(name), fetcher, { staleTime: staleTimes.reference, persist: options.persist });
+}
 
 export interface BodyPart {
   id: number;
@@ -45,9 +54,57 @@ export async function getExercises() {
   return response.data.data;
 }
 
-export async function getExerciseFull(id: number): Promise<ExerciseFull> {
-  const response = await api.get(`/exercises/${id}/full`);
+/** One location of GET /exercises/location-availability: which of the asked
+ * exercises can NOT be done there (so the user must swap them). */
+export interface LocationAvailability {
+  code: string;
+  name: string;
+  requiresSubstitution: boolean;
+  unsupportedExerciseIds: number[];
+}
+
+export interface ExerciseAlternative {
+  id: number;
+  name: string;
+  sameRegion: boolean;
+}
+
+export interface ExerciseAlternativesResult {
+  exerciseId: number;
+  location: { code: string; name: string };
+  originalAvailableAtLocation: boolean;
+  alternatives: ExerciseAlternative[];
+}
+
+/** Sprint 9 (B7): per location, which of these exercises need a substitute. */
+export async function getLocationAvailability(exerciseIds: number[]): Promise<LocationAvailability[]> {
+  const response = await api.get<LocationAvailability[]>('/exercises/location-availability', {
+    params: { exerciseIds: exerciseIds.join(',') },
+  });
   return response.data;
+}
+
+/** Sprint 9 (B7): compatible substitutes for one exercise at a location —
+ * same metrics, available there. An empty list means "no alternative". */
+export async function getExerciseAlternatives(
+  exerciseId: number,
+  locationCode: string,
+  excludeExerciseIds: number[] = [],
+): Promise<ExerciseAlternativesResult> {
+  const response = await api.get<ExerciseAlternativesResult>(`/exercises/${exerciseId}/alternatives`, {
+    params: {
+      location: locationCode,
+      ...(excludeExerciseIds.length > 0 ? { exclude: excludeExerciseIds.join(',') } : {}),
+    },
+  });
+  return response.data;
+}
+
+export async function getExerciseFull(id: number): Promise<ExerciseFull> {
+  return cachedReference(`exercise-full:${id}`, async () => {
+    const response = await api.get(`/exercises/${id}/full`);
+    return response.data as ExerciseFull;
+  });
 }
 
 /** GET /exercises/count?categories=...&locations=... (backend added
@@ -74,8 +131,10 @@ export async function getExerciseCount(categories: string[], locations: string[]
 }
 
 export async function getBodyParts(): Promise<BodyPart[]> {
-  const response = await api.get('/exercises/body-parts');
-  return response.data;
+  return cachedReference('body-parts', async () => {
+    const response = await api.get('/exercises/body-parts');
+    return response.data as BodyPart[];
+  }, { persist: true });
 }
 
 /** GET /exercises/categories — the same exercise-category taxonomy
@@ -88,8 +147,10 @@ export interface ExerciseCategory {
 }
 
 export async function getExerciseCategories(): Promise<ExerciseCategory[]> {
-  const response = await api.get<ExerciseCategory[]>('/exercises/categories');
-  return Array.isArray(response.data) ? response.data : [];
+  return cachedReference('exercise-categories', async () => {
+    const response = await api.get<ExerciseCategory[]>('/exercises/categories');
+    return Array.isArray(response.data) ? response.data : [];
+  }, { persist: true });
 }
 
 // ---------------------------------------------------------------------------
@@ -129,8 +190,15 @@ export interface PaginatedResult<T> {
  * Always carries an image URL (RepDB exercises always have at least one
  * asset) so a list row never has to render without a thumbnail. */
 export async function getExerciseList(query: ExerciseListQuery = {}): Promise<PaginatedResult<ExerciseListRow>> {
-  const response = await api.get<PaginatedResult<ExerciseListRow>>('/exercises', { params: query });
-  return response.data;
+  // Per filter combination: going back to a search/filter already seen reuses its page.
+  return fetchQuery(
+    queryKeys.reference(`exercise-list:${JSON.stringify(query)}`),
+    async () => {
+      const response = await api.get<PaginatedResult<ExerciseListRow>>('/exercises', { params: query });
+      return response.data;
+    },
+    { staleTime: staleTimes.catalog },
+  );
 }
 
 export interface ExerciseDetail {
@@ -155,8 +223,10 @@ export interface ExerciseDetail {
 }
 
 export async function getExerciseDetail(id: number, locale = 'en'): Promise<ExerciseDetail> {
-  const response = await api.get<ExerciseDetail>(`/exercises/${id}/full`, { params: { locale } });
-  return response.data;
+  return cachedReference(`exercise-detail:${id}:${locale}`, async () => {
+    const response = await api.get<ExerciseDetail>(`/exercises/${id}/full`, { params: { locale } });
+    return response.data;
+  });
 }
 
 export interface MuscleRegionSummary {
@@ -170,8 +240,10 @@ export interface MuscleRegionSummary {
 }
 
 export async function getMuscleRegions(): Promise<MuscleRegionSummary[]> {
-  const response = await api.get<MuscleRegionSummary[]>('/exercises/muscle-regions');
-  return response.data;
+  return cachedReference('muscle-regions', async () => {
+    const response = await api.get<MuscleRegionSummary[]>('/exercises/muscle-regions');
+    return response.data;
+  }, { persist: true });
 }
 
 export interface MuscleSvgPartDto {
@@ -191,8 +263,10 @@ export interface MuscleSummary {
 }
 
 export async function getMusclesInRegion(regionCode: string): Promise<MuscleSummary[]> {
-  const response = await api.get<MuscleSummary[]>(`/exercises/muscle-regions/${regionCode}/muscles`);
-  return response.data;
+  return cachedReference(`muscles:${regionCode}`, async () => {
+    const response = await api.get<MuscleSummary[]>(`/exercises/muscle-regions/${regionCode}/muscles`);
+    return response.data;
+  });
 }
 
 export interface MuscleExerciseRow {
@@ -214,6 +288,8 @@ export interface MuscleDetail {
 }
 
 export async function getMuscleDetail(code: string, page = 1, pageSize = 20): Promise<MuscleDetail> {
-  const response = await api.get<MuscleDetail>(`/exercises/muscles/${code}`, { params: { page, pageSize } });
-  return response.data;
+  return cachedReference(`muscle-detail:${code}:${page}:${pageSize}`, async () => {
+    const response = await api.get<MuscleDetail>(`/exercises/muscles/${code}`, { params: { page, pageSize } });
+    return response.data;
+  });
 }

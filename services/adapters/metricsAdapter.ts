@@ -108,7 +108,6 @@ export function sanitizeChallengeOptions(challenges: ChallengeOption[]): Challen
 }
 
 export function adaptChallengesForMetrics(contracts: ChallengeContract[]): ChallengeOption[] {
-  console.log('[adaptChallengesForMetrics] input', contracts);
   const result = contracts.map((contract) => ({
     id: String(contract.id),
     label: asString(contract.name),
@@ -120,7 +119,6 @@ export function adaptChallengesForMetrics(contracts: ChallengeContract[]): Chall
     ),
     dominantActivityCategory: pickDominantActivityCategory(contract),
   }));
-  console.log('[adaptChallengesForMetrics] output', result);
   return result;
 }
 
@@ -245,8 +243,6 @@ export function adaptTodayRoutineExercises(
   challenge: ChallengeOption,
 ): ExerciseMetricsBlock[] {
   const rawExercises = (contract.exercises ?? []) as TodayRoutineExerciseRow[];
-
-  console.log('[adaptTodayRoutineExercises] Input:', contract, challenge);
 
   return rawExercises
     .map((ex): ExerciseMetricsBlock | null => {

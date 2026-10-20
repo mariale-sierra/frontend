@@ -25,6 +25,7 @@ import {
 import { colors, radius, spacing, activityColors } from '../../constants/theme';
 import { getChallengeAccentColor } from '../../services/adapters/challengeState';
 import { activityTypeForCategoryCode, normalizeCategoryCode } from '../../constants/challengeFilters';
+import { logError } from '../../utils/apiError';
 
 type MuscleWithRole = { role: 'primary' | 'secondary'; svgParts: MuscleSvgPartDto[] };
 
@@ -50,7 +51,7 @@ export default function ExerciseDetailScreen() {
       .then((data) => {
         if (!cancelled) setExercise(data);
       })
-      .catch((error: any) => console.error('[ExerciseDetail] load', error?.response?.data ?? error?.message))
+      .catch((error: any) => logError('ExerciseDetail', error))
       .finally(() => {
         if (!cancelled) setLoading(false);
       });

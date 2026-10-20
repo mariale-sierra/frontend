@@ -1,21 +1,35 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '../utils/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
 import { useMetricsEntryStore } from '../store/metricsEntryStore';
+import { adaptationForRoutine, useWorkoutAdaptationStore } from '../store/workoutAdaptationStore';
+import type { WorkoutAdaptation } from '../store/workoutAdaptationStore';
+import type { RoutineExerciseRef } from './useLocationSwitch';
+import type { TodayRoutineContract } from '../types/challenge';
 import { useAuth } from './useAuth';
-import { getTodayRoutineForChallenge } from '../services/challenge/challenge.service';
+import { loadTodayRoutine } from '../services/challenge/todayRoutineAdapted';
 import { getRoutine } from '../services/routine/routine.service';
-import { getMyChallenges } from '../services/user/user.service';
+import { loadMyChallenges } from '../services/cache/loaders';
 import {
   adaptChallengesForMetrics,
   adaptTodayRoutineExercises,
 } from '../services/adapters/index';
 import { useTranslation } from 'react-i18next';
+import { logError, wasErrorToastShown } from '../utils/apiError';
+import { useErrorNotificationStore } from '../store/errorNotificationStore';
 
 export function useMetricsScreen() {
   const { userId } = useAuth();
   const { t } = useTranslation();
+  const showError = useErrorNotificationStore((state) => state.show);
+  // Today's routine could not be read. An API failure already has its toast;
+  // anything else (e.g. an unexpected routine shape) still tells the user.
+  const reportRoutineLoadError = useCallback(
+    (error: unknown) => {
+      if (!wasErrorToastShown(error)) showError({ message: t('metrics.alerts.routineLoadError') });
+    },
+    [showError, t],
+  );
   // Set when arriving from the "Log today's progress" challenge picker
   // (app/log.tsx) — preselects that challenge instead of always the first
   // one. Falls back to the first active challenge when absent/invalid.
@@ -30,6 +44,11 @@ export function useMetricsScreen() {
   const updateMetricValue = useMetricsEntryStore((state) => state.updateMetricValue);
   const hydrateMetricsData = useMetricsEntryStore((state) => state.hydrateMetricsData);
 
+  // B7: the user's own location choice for the routine on screen, if any.
+  const adaptation = useWorkoutAdaptationStore((state) =>
+    adaptationForRoutine(state.byChallenge[selectedChallengeId], currentRoutineId),
+  );
+
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [challengeLoadError, setChallengeLoadError] = useState<string | null>(null);
   // Cycle-day number + routine name for the header ("Day {{n}} · {{routine}}").
@@ -38,6 +57,21 @@ export function useMetricsScreen() {
   // since getTodayRoutine only returns routine_id, not the routine's name).
   const [currentDay, setCurrentDay] = useState<number | null>(null);
   const [routineName, setRoutineName] = useState<string | null>(null);
+  // B7: the user's location swaps were rejected by the backend and dropped.
+  const [adaptationInvalid, setAdaptationInvalid] = useState(false);
+  // The routine's exercises as WRITTEN (not the user's swapped view): the location sheet always
+  // derives its alternatives from these, so changing location twice never compounds swaps.
+  const [baseExercises, setBaseExercises] = useState<RoutineExerciseRef[]>([]);
+  const setAdaptationInStore = useWorkoutAdaptationStore((state) => state.setAdaptation);
+  const clearAdaptationInStore = useWorkoutAdaptationStore((state) => state.clearAdaptation);
+  const rememberBase = useCallback((base: TodayRoutineContract) => {
+    const rows = (base.exercises ?? []) as Array<{ exercise?: { id?: number; name?: string } | null }>;
+    setBaseExercises(
+      rows
+        .filter((row) => typeof row.exercise?.id === 'number' && typeof row.exercise?.name === 'string')
+        .map((row) => ({ exerciseId: row.exercise!.id as number, name: row.exercise!.name as string })),
+    );
+  }, []);
 
   // Tracks which challengeId we last fetched a routine for, to avoid double-fetching
   // after the init effect sets selectedChallengeId via hydrateMetricsData.
@@ -54,10 +88,6 @@ export function useMetricsScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    console.log('[useMetricsScreen] store challenges after set', challenges, '| length:', challenges.length);
-  }, [challenges]);
-
   // Initial load: fetch enrolled challenges + today's routine for the first challenge.
   useEffect(() => {
     if (!userId) return;
@@ -66,7 +96,7 @@ export function useMetricsScreen() {
       setIsLoadingData(true);
       setChallengeLoadError(null);
       try {
-        const enrolledChallenges = await getMyChallenges();
+        const enrolledChallenges = await loadMyChallenges();
         // Only challenges the user is currently active in can receive a new workout log.
         const activeChallenges = enrolledChallenges.filter((c) => c.status === 'active');
         const adaptedChallenges = adaptChallengesForMetrics(activeChallenges);
@@ -80,7 +110,6 @@ export function useMetricsScreen() {
         const initialChallenge =
           adaptedChallenges.find((c) => c.id === requestedChallengeId) ?? adaptedChallenges[0];
         lastFetchedChallengeId.current = initialChallenge.id;
-        console.log('[useMetricsScreen] challenges before store', adaptedChallenges);
         hydrateMetricsData({
           challenges: adaptedChallenges,
           selectedChallengeId: initialChallenge.id,
@@ -90,19 +119,17 @@ export function useMetricsScreen() {
 
         // Then fetch today's routine separately — failure here won't block the dropdown.
         try {
-          const routineData = await getTodayRoutineForChallenge(initialChallenge.id);
+          const { routine: routineData, invalidAdaptation, base } = await loadTodayRoutine(initialChallenge.id);
+          setAdaptationInvalid(invalidAdaptation);
+          rememberBase(base);
           const exercises = adaptTodayRoutineExercises(routineData, initialChallenge);
           setExerciseMetrics(exercises, routineData.routine_id);
           loadDayAndRoutineName(routineData);
         } catch (routineErr: any) {
-          console.warn(
-            '[Metrics] Could not load today\'s routine (dropdown still works):',
-            routineErr?.response?.status,
-            routineErr?.response?.data ?? routineErr?.message,
-          );
+          logError('Metrics.initialRoutine', routineErr);
         }
       } catch (error: any) {
-        console.error('[Metrics] Challenge load failed:', error?.response?.status, error?.response?.data ?? error?.message);
+        logError('Metrics.challenges', error);
         if (error?.response?.status === 401) {
           setChallengeLoadError('401');
         } else {
@@ -126,15 +153,17 @@ export function useMetricsScreen() {
     async function loadRoutine() {
       setIsLoadingData(true);
       try {
-        const routineData = await getTodayRoutineForChallenge(selectedChallengeId);
+        const { routine: routineData, invalidAdaptation, base } = await loadTodayRoutine(selectedChallengeId);
+        setAdaptationInvalid(invalidAdaptation);
+        rememberBase(base);
         const exercises = adaptTodayRoutineExercises(routineData, challenge!);
 
         lastFetchedChallengeId.current = selectedChallengeId;
         setExerciseMetrics(exercises, routineData.routine_id);
         loadDayAndRoutineName(routineData);
       } catch (error: any) {
-        console.error('[Metrics] Routine load failed:', error?.response?.data ?? error?.message);
-        Alert.alert(t('metrics.alerts.submitErrorTitle'), t('metrics.alerts.submitErrorFallback'));
+        logError('Metrics.routine', error);
+        reportRoutineLoadError(error);
       } finally {
         setIsLoadingData(false);
       }
@@ -142,6 +171,38 @@ export function useMetricsScreen() {
 
     loadRoutine();
   }, [selectedChallengeId]);
+
+  // Re-reads today's routine in the user's own view after they pick (or drop) a location.
+  const reloadRoutine = useCallback(async () => {
+    const challenge = challenges.find((c) => c.id === selectedChallengeId);
+    if (!challenge) return;
+    setIsLoadingData(true);
+    try {
+      const { routine: routineData, invalidAdaptation, base } = await loadTodayRoutine(selectedChallengeId);
+      setAdaptationInvalid(invalidAdaptation);
+      rememberBase(base);
+      setExerciseMetrics(adaptTodayRoutineExercises(routineData, challenge), routineData.routine_id);
+      loadDayAndRoutineName(routineData);
+    } catch (error) {
+      logError('Metrics.reloadRoutine', error);
+      reportRoutineLoadError(error);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [challenges, selectedChallengeId, rememberBase, setExerciseMetrics, loadDayAndRoutineName, reportRoutineLoadError]);
+
+  const applyLocation = useCallback(
+    (next: WorkoutAdaptation) => {
+      setAdaptationInStore(selectedChallengeId, next);
+      void reloadRoutine();
+    },
+    [selectedChallengeId, setAdaptationInStore, reloadRoutine],
+  );
+
+  const resetLocation = useCallback(() => {
+    clearAdaptationInStore(selectedChallengeId);
+    void reloadRoutine();
+  }, [selectedChallengeId, clearAdaptationInStore, reloadRoutine]);
 
   const goToCamera = useCallback(() => {
     router.push('/(add)/camera');
@@ -163,6 +224,12 @@ export function useMetricsScreen() {
     challengeLoadError,
     currentDay,
     routineName,
+    adaptation,
+    adaptationInvalid,
+    routineId: currentRoutineId,
+    baseExercises,
+    applyLocation,
+    resetLocation,
     updateMetricValue,
     goToCamera,
     goToRestDay,

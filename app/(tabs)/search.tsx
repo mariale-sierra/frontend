@@ -1,3 +1,4 @@
+import { EmptyState } from '../../components/ui/emptyState';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,8 +10,9 @@ import { Text } from '../../components/ui/text';
 import { SearchBar } from '../../components/ui/searchBar';
 import { ExploreCard } from '../../components/challenge/list/challengeCards';
 import { SearchUserRow } from '../../components/search';
-import { getChallenges } from '../../services/challenge/challenge.service';
-import { getMyChallenges, searchUsers } from '../../services/user/user.service';
+import { searchUsers } from '../../services/user/user.service';
+import { loadMyChallenges } from '../../services/cache/loaders';
+import { loadAllChallenges } from '../../services/cache/challengeLoaders';
 import { toExploreChallengeViewModels } from '../../services/adapters/challengeListAdapter';
 import type { ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import type { PublicProfileContract } from '../../types/user';
@@ -52,7 +54,7 @@ export default function Search() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([getChallenges(), getMyChallenges()])
+    Promise.all([loadAllChallenges(), loadMyChallenges()])
       .then(([all, mine]) => {
         if (!active) return;
         const joinedIds = new Set(mine.map((c) => String(c.id)));
@@ -122,17 +124,23 @@ export default function Search() {
         </View>
 
         {!hasQuery ? (
-          <View style={styles.center}>
-            <Text tone="secondary" align="center">{t('search.emptyPrompt')}</Text>
-          </View>
+          <EmptyState
+            icon="search-outline"
+            title={t('search.emptyPromptTitle')}
+            message={t('search.emptyPrompt')}
+            actions={[{ label: t('search.exploreChallenges'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'search-explore' }]}
+          />
         ) : catalogLoading ? (
           <View style={styles.center}>
             <ActivityIndicator color={colors.primary} />
           </View>
         ) : hasNoResults ? (
-          <View style={styles.center}>
-            <Text tone="secondary" align="center">{t('search.emptyResults', { query: debouncedQuery })}</Text>
-          </View>
+          <EmptyState
+            icon="sad-outline"
+            title={t('search.emptyResults', { query: debouncedQuery })}
+            message={t('search.emptyResultsHint')}
+            actions={[{ label: t('search.exploreChallenges'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'search-explore' }]}
+          />
         ) : (
           <>
             {matchedChallenges.length > 0 && (

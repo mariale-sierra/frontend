@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { KeyboardAwareScroll } from '../../components/layout/keyboardAwareScroll';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Stack } from '../../components/layout/stack';
 import {
@@ -26,6 +27,7 @@ import { CATEGORY_OPTIONS, LOCATION_OPTIONS } from '../../constants/challengeCre
 import { useCreateChallengeFlow } from '../../hooks/useCreateChallengeFlow';
 import { getExerciseCount } from '../../services/exercises/exercises.service';
 import { MAX_CYCLE_LENGTH_DAYS, MAX_DURATION_DAYS, MIN_CYCLE_LENGTH_DAYS } from '../../store/challengeBuilderStore';
+import { logError } from '../../utils/apiError';
 
 export default function CreateChallenge() {
   const { t } = useTranslation();
@@ -87,7 +89,7 @@ export default function CreateChallenge() {
         if (!cancelled) setMatchingExerciseCount(count);
       })
       .catch((error: any) => {
-        console.error('[CreateChallenge] Failed to load exercise count:', error?.response?.data ?? error?.message);
+        logError('CreateChallenge.exerciseCount', error);
         if (!cancelled) setMatchingExerciseCount(null);
       });
 
@@ -217,7 +219,7 @@ export default function CreateChallenge() {
 
   return (
     <ScreenBackground variant="top" gradientBackground vividGradient={USE_VIVID_CREATE_FLOW_BACKGROUND}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <KeyboardAwareScroll contentContainerStyle={styles.container}>
         <Stack gap="lg">
           <CreateFlowProgressHeader
             currentIndex={currentStep}
@@ -235,7 +237,7 @@ export default function CreateChallenge() {
             {renderStepContent()}
           </View>
         </Stack>
-      </ScrollView>
+      </KeyboardAwareScroll>
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
         {isCycleFillStep && firstUnfilledDay !== null && (

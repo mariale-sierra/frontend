@@ -37,6 +37,8 @@ jest.mock('../../../components/layout/screenBackground', () => ({
   },
 }));
 jest.mock('../../../hooks/useMetricsScreen', () => ({ useMetricsScreen: jest.fn() }));
+// The location sheet has its own tests; here it is just a marker.
+jest.mock('../../../components/challenge/detail/LocationSwitchSheet', () => ({ LocationSwitchSheet: () => null }));
 // Stage 5's log-screen coach mark — not under test here, and pulls in the
 // real AsyncStorage native module (via utils/storage.ts) if left unmocked.
 jest.mock('../../../utils/logScreenCoachMark', () => ({
@@ -61,6 +63,12 @@ function mockScreen(overrides: Partial<ReturnType<typeof useMetricsScreen>> = {}
     challengeLoadError: null,
     currentDay: 3,
     routineName: 'Push',
+    adaptation: null,
+    adaptationInvalid: false,
+    routineId: null,
+    baseExercises: [],
+    applyLocation: jest.fn(),
+    resetLocation: jest.fn(),
     updateMetricValue: jest.fn(),
     goToCamera: jest.fn(),
     goToRestDay: jest.fn(),
@@ -134,5 +142,30 @@ describe('the Log Metrics screen', () => {
     expect(onSurface).toHaveLength(1);
     expect(textOf(onSurface[0])).toContain('logMetrics.entry.logDayCta');
     expect(textOf(onSurface[0])).not.toContain('Morning Strength');
+  });
+
+  describe('where you train (B7 on the register screen)', () => {
+    it('offers the location question when the routine has exercises', async () => {
+      mockScreen({ routineId: 7, baseExercises: [{ exerciseId: 9, name: 'Squat' }] });
+      const screen = await renderWithTheme(<Metrics />);
+      expect(screen.getByTestId('metrics-change-location')).toBeTruthy();
+      expect(screen.getByText('challengeRoutineDay.location.sheetTitle')).toBeTruthy();
+    });
+
+    it("shows the chosen location instead of the question once the user picked one", async () => {
+      mockScreen({
+        routineId: 7,
+        baseExercises: [{ exerciseId: 9, name: 'Squat' }],
+        adaptation: { routineId: 7, locationCode: 'home', locationName: 'Home', substitutions: [] },
+      });
+      const screen = await renderWithTheme(<Metrics />);
+      expect(screen.getByText('challengeRoutineDay.location.trainingAt')).toBeTruthy();
+    });
+
+    it('hides it on a rest day (no routine)', async () => {
+      mockScreen();
+      const screen = await renderWithTheme(<Metrics />);
+      expect(screen.queryByTestId('metrics-change-location')).toBeNull();
+    });
   });
 });

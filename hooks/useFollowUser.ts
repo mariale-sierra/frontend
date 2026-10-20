@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { followUser, unfollowUser } from '../services/follow/follow.service';
 import { useErrorNotificationStore } from '../store/errorNotificationStore';
+import { invalidateAfterFollowChanged } from '../services/cache/queries';
 
 /**
  * Follow/unfollow toggle for a single target user. Optimistic (flips
@@ -44,6 +45,8 @@ export function useFollowUser(userId: string, initialIsFollowing: boolean) {
       } else {
         await unfollowUser(userId);
       }
+      // Streaks, feed and both profiles' counters depend on who you follow.
+      invalidateAfterFollowChanged(userId);
       return next;
     } catch {
       setIsFollowing(wasFollowing);

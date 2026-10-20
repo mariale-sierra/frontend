@@ -4,6 +4,8 @@ import { useChallengeFinishedStore } from '../store/challengeFinishedStore';
 import type { ChallengeFinishedData } from '../store/challengeFinishedStore';
 import { useUploadSuccessStore } from '../store/uploadSuccessStore';
 import { markCompletionShown } from './shownCompletions';
+import { invalidateAfterMembershipChanged } from '../services/cache/queries';
+import { logError } from '../utils/apiError';
 
 /**
  * The popup after a day has been logged (a photo, or a rest day): the "Challenge
@@ -20,12 +22,13 @@ export async function showProgressLoggedFeedback(challengeId: string): Promise<v
   try {
     progress = await getChallengeProgress(challengeId);
   } catch (error) {
-    console.error('[progressLoggedFeedback] could not fetch challenge progress:', error);
+    logError('progressLoggedFeedback.progress', error);
   }
 
   if (progress && isChallengeFinished(progress)) {
     try {
       await completeChallenge(challengeId);
+      invalidateAfterMembershipChanged();
       const finished: ChallengeFinishedData = {
         challengeId,
         challengeName: progress.challenge.name,
@@ -35,7 +38,7 @@ export async function showProgressLoggedFeedback(challengeId: string): Promise<v
       useChallengeFinishedStore.getState().show(finished);
       return;
     } catch (error) {
-      console.error('[progressLoggedFeedback] could not complete the challenge:', error);
+      logError('progressLoggedFeedback.complete', error);
       // The day is already saved either way — fall through to the usual
       // "logged!" popup below rather than surfacing this as an error.
     }

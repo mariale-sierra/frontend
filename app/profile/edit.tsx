@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as ImagePicker from 'expo-image-picker';
+import { KeyboardAwareScroll } from '../../components/layout/keyboardAwareScroll';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { BackButton } from '../../components/ui/backButton';
 import { Text } from '../../components/ui/text';
@@ -19,10 +20,12 @@ import { LogoutButton } from '../../components/profile/LogoutButton';
 import { DeleteAccountRow } from '../../components/profile/DeleteAccountRow';
 import { ControlledFormField } from '../../components/form/ControlledFormField';
 import {
-  getMyProfile,
   updateMyProfile,
   updateMyProfilePhoto,
 } from '../../services/user/user.service';
+import { loadMyProfile } from '../../services/cache/loaders';
+import { queryKeys } from '../../services/cache/queries';
+import { setQueryData } from '../../services/cache/queryCache';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
 import { isContentRejectedError } from '../../utils/contentModeration';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
@@ -33,6 +36,7 @@ import i18n, { PREFERRED_LANGUAGE_KEY } from '../../i18n';
 import type { SupportedLanguage } from '../../i18n';
 import { storage } from '../../utils/storage';
 import { createProfileEditSchema, type ProfileEditFormValues } from '../../validation/profileSchemas';
+import { logError } from '../../utils/apiError';
 
 const DISPLAY_NAME_MAX = 150;
 const BIO_MAX = 1000;
@@ -77,7 +81,7 @@ export default function EditProfile() {
   const loadProfile = () => {
     setLoading(true);
     setLoadError(false);
-    getMyProfile()
+    loadMyProfile()
       .then((data) => {
         setProfile(data);
         reset({ displayName: data.display_name, bio: data.bio ?? '' });
@@ -111,6 +115,8 @@ export default function EditProfile() {
     try {
       const updated = await updateMyProfile(payload);
       setProfile(updated);
+      // The server's answer is the new cached profile: the tab shows it without refetching.
+      setQueryData(queryKeys.myProfile, updated);
       if (payload.is_private !== undefined) {
         showSuccess({ message: t('profileEdit.privacyUpdated') });
       } else {
@@ -144,6 +150,7 @@ export default function EditProfile() {
       const publicUrl = await uploadImageAsync(result.assets[0].uri, 'image/jpeg');
       const updated = await updateMyProfilePhoto(publicUrl);
       setProfile(updated);
+      setQueryData(queryKeys.myProfile, updated);
       showSuccess({ message: t('profileEdit.photoUpdated') });
     } catch {
       show({ message: t('profileEdit.photoError') });
@@ -180,7 +187,7 @@ export default function EditProfile() {
 
   return (
     <ScreenBackground variant="default">
-      <ScrollView
+      <KeyboardAwareScroll
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
@@ -265,7 +272,7 @@ export default function EditProfile() {
                       setLanguage(code);
                       i18n.changeLanguage(code as SupportedLanguage);
                       storage.setItem(PREFERRED_LANGUAGE_KEY, code).catch((error) => {
-                        console.error('[EditProfile] failed to persist language choice', error);
+                        logError('EditProfile.language', error);
                       });
                     }}
                     style={({ pressed }) => [
@@ -336,7 +343,7 @@ export default function EditProfile() {
 
         <LogoutButton />
         <DeleteAccountRow />
-      </ScrollView>
+      </KeyboardAwareScroll>
     </ScreenBackground>
   );
 }

@@ -38,6 +38,7 @@ import type { ActivityType } from '../../../types/activity';
 import { CATEGORY_TO_ACTIVITY, activityTypeForCategoryCode } from '../../../constants/challengeFilters';
 import { LOCATION_OPTIONS } from '../../../constants/challengeCreateOptions';
 import { buildActivityMetricTemplate } from '../../../services/adapters/routineAdapter';
+import { logError } from '../../../utils/apiError';
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -146,7 +147,7 @@ export default function ExercisesScreen() {
   useEffect(() => {
     getExerciseCategories()
       .then(setCategories)
-      .catch((error: any) => console.error('[Exercises] categories', error?.message));
+      .catch((error: any) => logError('Exercises.categories', error));
   }, []);
 
   // Real exercise_categories.code, keyed by the same display name this screen already
@@ -260,7 +261,7 @@ export default function ExercisesScreen() {
         });
       } catch (error: any) {
         if (requestId !== requestIdRef.current) return;
-        console.error('[Exercises] Failed to load:', error?.response?.data ?? error?.message);
+        logError('Exercises.load', error);
       } finally {
         if (requestId === requestIdRef.current) {
           setIsLoading(false);
@@ -326,7 +327,7 @@ export default function ExercisesScreen() {
         // with the category-aware fallback rather than leaving a
         // one-size-fits-all distance+duration template in place over one
         // exercise's metric lookup failing.
-        console.error('[Exercises] Failed to load real metric config for', exercise.name, error?.response?.data ?? error?.message);
+        logError('Exercises.metricConfig', error);
         if (activityFallback) {
           applyBackendMetricTemplate(exercise.id, activityFallback);
         }

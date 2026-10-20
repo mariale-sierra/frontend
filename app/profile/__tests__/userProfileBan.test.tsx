@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 import { fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import UserProfile from '../[userId]';
+import { router } from 'expo-router';
 import { banUser, getPublicProfile } from '../../../services/user/user.service';
 import { useIsAdmin } from '../../../hooks/useIsAdmin';
 import { useErrorNotificationStore } from '../../../store/errorNotificationStore';
@@ -37,6 +38,8 @@ jest.mock('../../../services/user/user.service', () => ({ getPublicProfile: jest
 jest.mock('../../../services/challenge/challenge.service', () => ({
   getUserPosts: jest.fn().mockResolvedValue({ photos: [] }),
 }));
+// Badges have their own tests (components/badges); here the row is just absent.
+jest.mock('../../../components/badges', () => ({ BadgesSection: () => null }));
 // The profile's own parts are tested on their own; here they are markers, and the follow button is
 // the one thing the admin's button sits under.
 jest.mock('../../../components/profile', () => {
@@ -44,7 +47,8 @@ jest.mock('../../../components/profile', () => {
   return {
     ProfileHeader: ({ actions }: { actions?: React.ReactNode }) => <View>{actions}</View>,
     FollowButton: () => <Text>follow-button</Text>,
-    UserPostsGrid: () => null,
+    // The list renders the profile header above the (empty here) photo grid.
+    PhotoGridList: ({ header }: { header?: React.ReactNode }) => <View>{header}</View>,
 
   };
 });
@@ -83,6 +87,15 @@ describe("Another user's profile — the admin's ban action", () => {
     useErrorNotificationStore.setState({ visible: false, config: { message: '' } });
   });
 
+  it('has a Message button that opens a chat with that person (Instagram-style), for any viewer', async () => {
+    const screen = await renderProfile(false);
+    fireEvent.press(screen.getByTestId('profile-message-button'));
+    expect(router.push).toHaveBeenCalledWith({
+      pathname: '/messaging/new',
+      params: { recipientUserId: USER_ID },
+    });
+  });
+
   it('is only for an admin', async () => {
     const other = await renderProfile(false);
     expect(other.queryByText('profile.banUserButton')).toBeNull();
@@ -109,8 +122,8 @@ describe("Another user's profile — the admin's ban action", () => {
 
     expect(screen.getByText('profile.banUserTitle')).toBeTruthy();
     expect(screen.getByText('profile.banUserDescription')).toBeTruthy();
-    // One ban icon on the button, one on the popup, in the destructive color.
-    expect(stringify(screen.toJSON())).toContain(`"icon":"ban-outline","iconColor":"${colors.error}"`);
+    // One ban icon on the button, one on the popup (popup icons are always `paper`).
+    expect(stringify(screen.toJSON()).match(/"name":"ban-outline"/g)).toHaveLength(2);
     expect(banUser).not.toHaveBeenCalled();
   });
 

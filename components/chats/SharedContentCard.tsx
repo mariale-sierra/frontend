@@ -12,10 +12,10 @@ import { withAlpha } from '../../utils/color';
 import { Skeleton } from '../ui/skeleton';
 import { ExploreCard } from '../challenge/list/challengeCards';
 import { CHALLENGE_CARD_HEIGHT } from '../challenge/card/ChallengeCard';
-import { getChallenge } from '../../services/challenge/challenge.service';
 import { toExploreChallengeViewModels } from '../../services/adapters';
 import type { ExploreChallengeViewModel } from '../challenge/list/challengeListSections';
 import type { SharedChallengePreviewContract, SharedPostPreviewContract } from '../../types/chat';
+import { loadChallenge } from '../../services/cache/challengeLoaders';
 
 const CARD_WIDTH = 220;
 // A shared challenge is the full Explore card, so it gets more room than a
@@ -110,7 +110,7 @@ export function SharedChallengeCard({
   useEffect(() => {
     if (!challenge.available) return;
     let active = true;
-    getChallenge(challenge.id)
+    loadChallenge(challenge.id)
       .then((full) => {
         if (active) setCard(toExploreChallengeViewModels([full])[0] ?? null);
       })

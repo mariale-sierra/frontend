@@ -1,3 +1,4 @@
+import type { ViewStyle } from 'react-native';
 import { Animated, Dimensions, StyleSheet, Text as RNText } from 'react-native';
 import { render } from '@testing-library/react-native';
 
@@ -46,7 +47,7 @@ function gradientOffset(screen: Awaited<ReturnType<typeof render>>) {
   const visit = (node: unknown) => {
     if (!node || typeof node !== 'object') return;
     const { props, children } = node as { props?: { style?: unknown }; children?: unknown[] };
-    const transform = StyleSheet.flatten(props?.style as never)?.transform as { translateY?: number }[] | undefined;
+    const transform = StyleSheet.flatten(props?.style as ViewStyle)?.transform as { translateY?: number }[] | undefined;
     if (transform?.[0]?.translateY !== undefined) offset = transform[0].translateY;
     children?.forEach(visit);
   };

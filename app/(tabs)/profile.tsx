@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -7,8 +7,7 @@ import { colors, spacing } from '../../constants/theme';
 import { Text } from '../../components/ui/text';
 import { IconButton } from '../../components/ui/iconButton';
 import { getMyProfile } from '../../services/user/user.service';
-import type { MyProfileContract } from '../../types/user';
-import { ProfileHeader, PostsViewToggle, PostsGrid, ProfileContentSkeleton } from '../../components/profile';
+import { ProfileHeader, PostsViewToggle, PhotoGridList, ProfileContentSkeleton } from '../../components/profile';
 import { openPostViewer } from '../../utils/postViewer';
 import type { PostsView } from '../../components/profile';
 import type { ChallengePhoto } from '../../types/challenge';
@@ -16,63 +15,71 @@ import { Row } from '../../components/layout/row';
 import { useAuth } from '../../hooks/useAuth';
 import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
+import { useCachedQuery } from '../../hooks/useCachedQuery';
+import { useUserPosts } from '../../hooks/useUserPosts';
+import { queryKeys, staleTimes } from '../../services/cache/queries';
+import { invalidateQueries } from '../../services/cache/queryCache';
+import { BadgesSection } from '../../components/badges';
 
 /**
- * Profile tab. Structured so future sections (followers, stats) can slot in
- * between the header and the posts grid without another reshuffle. Reloads
- * on focus so edits made in /profile/edit show up immediately.
+ * Profile tab: one virtualized list (header, badges, toggle, then the photo
+ * grid), so a long history only mounts the rows on screen and the next page
+ * loads while scrolling. Data comes from the shared cache — an edit in
+ * /profile/edit or a new log updates it without a full reload here.
  */
 export default function Profile() {
   const { t } = useTranslation();
   const router = useRouter();
   const { username: sessionUsername, userId: sessionUserId } = useAuth();
   const isAdmin = useIsAdmin();
-  const [profile, setProfile] = useState<MyProfileContract | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   // Default to "all" so your own profile isn't a surprise empty state the
   // moment most of your history happens to be private (rest-day check-ins
   // and any log without an explicit visibility default to private
   // server-side). "Public" stays one tap away via the eye toggle.
   const [view, setView] = useState<PostsView>('photos');
 
+  // Cached (and kept on disk): opening the tab again shows the last profile at
+  // once; an edit in /profile/edit writes its answer straight into this entry.
+  const profileQuery = useCachedQuery(queryKeys.myProfile, getMyProfile, {
+    staleTime: staleTimes.catalog,
+    persist: true,
+  });
+  const profile = profileQuery.data;
+  // Own posts come a page at a time (GET /workout-posts/user/:me): the unpaginated
+  // /workout-posts/mine returns and enriches the whole history, which is what made this slow.
+  const posts = useUserPosts(sessionUserId);
+
+  const revalidateProfile = profileQuery.revalidate;
+  const revalidatePosts = posts.revalidate;
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-      getMyProfile()
-        .then((data) => {
-          if (!active) return;
-          setProfile(data);
-          setError(null);
-        })
-        .catch(() => {
-          if (active) setError(t('profileEdit.loadError'));
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-      return () => {
-        active = false;
-      };
-    }, [t]),
+      void revalidateProfile();
+      void revalidatePosts();
+    }, [revalidateProfile, revalidatePosts]),
   );
 
-  // PostsGrid fetches its own photos internally (see components/profile/PostsGrid.tsx)
-  // — bumping this signal is the only way this screen's pull-to-refresh can
-  // also force it to refetch, alongside this screen's own profile data.
-  const [postsRefreshSignal, setPostsRefreshSignal] = useState(0);
+  const refetchProfile = profileQuery.refetch;
+  const refetchPosts = posts.refetch;
   const refreshProfile = useCallback(async () => {
-    await Promise.allSettled([getMyProfile().then(setProfile)]);
-    setPostsRefreshSignal((n) => n + 1);
-  }, []);
+    invalidateQueries(queryKeys.myBadges);
+    await Promise.all([refetchProfile(), refetchPosts()]);
+  }, [refetchProfile, refetchPosts]);
   const { refreshing, onRefresh } = usePullToRefresh(refreshProfile);
 
+  // 'posts' = only photos visible to followers; 'photos' = everything,
+  // including private ones (only the owner ever sees this screen).
+  const allPhotos = posts.photos;
+  const visiblePhotos = useMemo(
+    () => (view === 'posts' ? (allPhotos ?? []).filter((photo) => photo.visibility === 'public') : allPhotos ?? []),
+    [allPhotos, view],
+  );
+
   // Tapping a photo opens your posts as a feed (react, comment, share, and
-  // delete from each post's "..." menu — B4). PostsGrid refetches on focus,
-  // so a post deleted there is gone when you come back.
+  // delete from each post's "..." menu — B4); a deletion there drops it from
+  // this cached grid too.
   const handlePhotoPress = useCallback(
-    (photo: ChallengePhoto, photos: ChallengePhoto[]) => openPostViewer(photos, photo, { ownerId: sessionUserId }),
-    [sessionUserId],
+    (photo: ChallengePhoto) => openPostViewer(visiblePhotos, photo, { ownerId: sessionUserId }),
+    [sessionUserId, visiblePhotos],
   );
 
   const displayName = profile?.display_name ?? sessionUsername ?? 'User name';
@@ -102,41 +109,68 @@ export default function Profile() {
     </Row>
   );
 
+  const refreshControl = <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />;
+
+  if (profileQuery.isLoading || !profile) {
+    return (
+      <ScreenBackground variant="default" gradientBackground>
+        {topBar}
+        <ScrollView contentContainerStyle={styles.container} refreshControl={refreshControl}>
+          {profileQuery.isLoading ? (
+            <ProfileContentSkeleton />
+          ) : (
+            <View style={styles.center}>
+              <Text tone="secondary">{t('profileEdit.loadError')}</Text>
+            </View>
+          )}
+        </ScrollView>
+      </ScreenBackground>
+    );
+  }
+
   return (
     <ScreenBackground variant="default" gradientBackground>
       {topBar}
-      <ScrollView
+      <PhotoGridList
+        photos={visiblePhotos}
+        loading={posts.isLoading}
+        emptyLabel={view === 'posts' ? t('profile.emptyPublicPhotos') : t('profile.emptyAllPhotos')}
+        emptyTitle={t('profile.emptyPostsTitle')}
+        emptyActions={[
+          { label: t('profile.emptyPostsExplore'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'empty-posts-explore' },
+          { label: t('profile.emptyPostsLog'), onPress: () => router.push('/log'), testID: 'empty-posts-log' },
+        ]}
+        onPhotoPress={handlePhotoPress}
+        hasMore={posts.hasMore}
+        loadingMore={posts.loadingMore}
+        onLoadMore={posts.loadMore}
+        loadMoreLabel={t('profile.loadMorePosts')}
+        refreshControl={refreshControl}
         contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-      >
-        {loading ? (
-          <ProfileContentSkeleton />
-        ) : error ? (
-          <View style={styles.center}>
-            <Text tone="secondary">{error}</Text>
-          </View>
-        ) : (
+        header={
           <>
             <ProfileHeader
               displayName={displayName}
               username={username}
-              bio={profile?.bio}
-              imageUrl={profile?.profile_image_url}
-              streakDays={profile?.streak_days}
-              followersCount={profile?.followers_count ?? 0}
-              followingCount={profile?.following_count ?? 0}
+              bio={profile.bio}
+              imageUrl={profile.profile_image_url}
+              streakDays={profile.streak_days}
+              followersCount={profile.followers_count ?? 0}
+              followingCount={profile.following_count ?? 0}
               onPressFollowers={() => router.push('/profile/followers')}
               onPressFollowing={() => router.push('/profile/following')}
-              practices={profile?.practice_preferences}
+              practices={profile.practice_preferences}
             />
+            <BadgesSection />
             <PostsViewToggle view={view} onViewChange={setView} />
-            <PostsGrid view={view} onPhotoPress={handlePhotoPress} refreshSignal={postsRefreshSignal} />
-            <Pressable onPress={() => router.push('/profile/about')} style={styles.aboutLink}>
-              <Text variant="caption" tone="secondary">{t('about.title')}</Text>
-            </Pressable>
           </>
-        )}
-      </ScrollView>
+        }
+        footer={
+          <Pressable onPress={() => router.push('/profile/about')} style={styles.aboutLink}>
+            <Text variant="caption" tone="secondary">{t('about.title')}</Text>
+          </Pressable>
+        }
+      />
     </ScreenBackground>
   );
 }
@@ -155,7 +189,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingTop: spacing.base,
     paddingBottom: spacing['2xl'],
-    gap: spacing.lg,
   },
   center: {
     minHeight: 280,

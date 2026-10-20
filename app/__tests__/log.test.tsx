@@ -6,7 +6,7 @@ import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-han
 import { renderWithTheme } from '../../test-utils/renderWithTheme';
 import LogChallengePicker from '../log';
 import { getMyChallenges } from '../../services/user/user.service';
-import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
+import { getUserPosts } from '../../services/challenge/challenge.service';
 import { router } from 'expo-router';
 import { DECK_IMAGES_TIMEOUT_MS } from '../../constants/challengeDeck';
 
@@ -28,7 +28,8 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Light: 'light' },
 }));
 jest.mock('../../services/user/user.service', () => ({ getMyChallenges: jest.fn() }));
-jest.mock('../../services/challenge/challenge.service', () => ({ getMyProgressPhotos: jest.fn() }));
+jest.mock('../../services/challenge/challenge.service', () => ({ getUserPosts: jest.fn() }));
+jest.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ userId: 'user-1' }) }));
 // The glow is drawn once a card has been measured; this hands it a size at once.
 jest.mock('../../components/ui/accentGlow', () => ({
   AccentGlow: ({ children }: { children: (size: { width: number; height: number }) => React.ReactNode }) =>
@@ -62,7 +63,7 @@ async function giveDeckItsWidth() {
 describe('the log-progress picker', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (getMyProgressPhotos as jest.Mock).mockResolvedValue([]);
+    (getUserPosts as jest.Mock).mockResolvedValue({ photos: [] });
   });
 
   it('asks which challenge, over a deck of cards — one per challenge that can be logged today', async () => {
@@ -195,7 +196,7 @@ describe('the log-progress picker', () => {
 
     async function renderWithPhotos(challengeIds = [1, 2]) {
       (getMyChallenges as jest.Mock).mockResolvedValue(challengeIds.map((id) => challenge(id, `Challenge ${id}`)));
-      (getMyProgressPhotos as jest.Mock).mockResolvedValue(challengeIds.map((id) => photo(String(id))));
+      (getUserPosts as jest.Mock).mockResolvedValue({ photos: challengeIds.map((id) => photo(String(id))) });
       await renderPicker();
       await giveDeckItsWidth();
       await waitFor(() => expect(screen.queryByTestId('challenge-deck')).toBeTruthy());

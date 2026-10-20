@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { FlatList, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +8,8 @@ import { Text } from '../../components/ui/text';
 import { StreakGridItem, StreaksGridSkeleton } from '../../components/home';
 import { getFollowingStreaks } from '../../services/follow/follow.service';
 import { toFriendStreakViewModels, type FriendStreakViewModel } from '../../services/adapters/followAdapter';
+import { useCachedQuery } from '../../hooks/useCachedQuery';
+import { queryKeys, staleTimes } from '../../services/cache/queries';
 import { STREAK_GRID_COLUMNS } from '../../constants/streaksGrid';
 import { spacing } from '../../constants/theme';
 import { getStreakGridLayout } from '../../utils/streaksGrid';
@@ -31,34 +33,20 @@ export default function StreaksAllScreen() {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const { avatarSize } = getStreakGridLayout(width);
-  const [friends, setFriends] = useState<FriendStreakViewModel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
+  // Same cached entry as Home's streaks row: opening "See more" shows what
+  // Home already loaded right away instead of a spinner and a second request.
+  const streaksQuery = useCachedQuery(queryKeys.followingStreaks, getFollowingStreaks, {
+    staleTime: staleTimes.social,
+    persist: true,
+  });
+  const friends = useMemo(() => toFriendStreakViewModels(streaksQuery.data ?? []), [streaksQuery.data]);
+  const loading = streaksQuery.isLoading;
+  const error = !streaksQuery.data && Boolean(streaksQuery.error);
+  const revalidate = streaksQuery.revalidate;
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-      setLoading(true);
-      setError(false);
-
-      getFollowingStreaks()
-        .then((rows) => {
-          if (!active) return;
-          setFriends(toFriendStreakViewModels(rows));
-        })
-        .catch(() => {
-          if (!active) return;
-          setFriends([]);
-          setError(true);
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-
-      return () => {
-        active = false;
-      };
-    }, []),
+      void revalidate();
+    }, [revalidate]),
   );
 
   const gridData = useMemo<GridRow[]>(() => {

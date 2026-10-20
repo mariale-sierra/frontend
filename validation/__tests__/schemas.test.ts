@@ -17,17 +17,27 @@ describe('validation schemas', () => {
     expect(schema.safeParse({ email: '', password: '' }).success).toBe(false);
     expect(schema.safeParse({ email: 'not-an-email', password: 'x' }).success).toBe(false);
     expect(schema.safeParse({ email: 'a@b.com', password: 'x' }).success).toBe(true);
+    // Autofill's trailing space is not an invalid address.
+    expect(schema.safeParse({ email: 'a@b.com ', password: 'x' }).success).toBe(true);
   });
 
   it('register: requires email/username/password', () => {
     const schema = createRegisterSchema(t);
-    expect(schema.safeParse({ email: 'a@b.com', username: '', password: 'x' }).success).toBe(false);
-    expect(schema.safeParse({ email: 'a@b.com', username: 'esteban', password: 'x' }).success).toBe(true);
+    expect(schema.safeParse({ email: 'a@b.com', username: '', password: 'password1' }).success).toBe(false);
+    expect(schema.safeParse({ email: 'a@b.com', username: '   ', password: 'password1' }).success).toBe(false);
+    expect(schema.safeParse({ email: 'a@b.com', username: 'esteban', password: 'password1' }).success).toBe(true);
+  });
+
+  it('register: the password has the backend minimum (RegisterDto @MinLength(8))', () => {
+    const schema = createRegisterSchema(t);
+    expect(schema.safeParse({ email: 'a@b.com', username: 'esteban', password: 'short12' }).success).toBe(false);
+    expect(schema.safeParse({ email: 'a@b.com', username: 'esteban', password: '12345678' }).success).toBe(true);
   });
 
   it('profile edit: display name required, bio optional/empty allowed', () => {
     const schema = createProfileEditSchema(t);
     expect(schema.safeParse({ displayName: '', bio: '' }).success).toBe(false);
+    expect(schema.safeParse({ displayName: '   ', bio: '' }).success).toBe(false);
     expect(schema.safeParse({ displayName: 'Esteban', bio: '' }).success).toBe(true);
   });
 

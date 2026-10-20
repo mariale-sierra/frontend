@@ -136,10 +136,16 @@ export async function completeChallenge(id: string) {
   return response.data;
 }
 
+/** Today's routine. With `adaptation` (B7) the backend returns the user's own
+ * effective view — their location's substitutes in place of the routine's
+ * exercises; the shared routine itself is never changed. */
 export async function getTodayRoutineForChallenge(
   challengeId: string,
+  adaptation?: { locationCode: string; substitutions: string },
 ): Promise<TodayRoutineContract> {
-  const response = await api.get(`/routine/today/${challengeId}`);
+  const response = await api.get(`/routine/today/${challengeId}`, {
+    params: adaptation ? { location: adaptation.locationCode, substitutions: adaptation.substitutions } : undefined,
+  });
   return response.data;
 }
 
@@ -237,6 +243,21 @@ export async function removeChallengeParticipant(challengeId: string, userId: st
 /** Admin-only (global) — closes any challenge. */
 export async function closeChallenge(challengeId: string) {
   const response = await api.patch(`/challenges/${challengeId}/close`);
+  return response.data;
+}
+
+/** Admin-only (AdminGuard server-side) — the inverse of closeChallenge: joining and
+ * logging progress are accepted again; members and history are untouched. */
+export async function reopenChallenge(challengeId: string) {
+  const response = await api.patch(`/challenges/${challengeId}/reopen`);
+  return response.data;
+}
+
+/** The session user's own pending request to join this challenge (only ever theirs),
+ * so the screen can show "request sent" again after being reopened. A background
+ * check: no global error toast if it fails. */
+export async function getMyChallengeJoinRequest(challengeId: string): Promise<{ hasPendingRequest: boolean }> {
+  const response = await api.get(`/challenges/${challengeId}/join-requests/mine`, { suppressErrorToast: true });
   return response.data;
 }
 

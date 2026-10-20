@@ -1,4 +1,5 @@
 import { fireEvent } from '@testing-library/react-native';
+import type { ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { FeedPostCard } from '../FeedPostCard';
@@ -123,7 +124,7 @@ describe('FeedPostCard — metrics, trophy and visibility (B5)', () => {
 // The nearest ancestor with a top margin: the card's actions row.
 function actionsRowOf(node: { parent: unknown; props: { style?: unknown } } | null) {
   let current = node as { parent: unknown; props: { style?: unknown } } | null;
-  while (current && StyleSheet.flatten(current.props.style as never)?.marginTop === undefined) {
+  while (current && StyleSheet.flatten(current.props.style as ViewStyle)?.marginTop === undefined) {
     current = current.parent as typeof current;
   }
   return current;

@@ -12,6 +12,22 @@ import type { ChallengeContract } from '../../../types/challenge';
 // load as a result, with or without this session's changes. Same two mock
 // lines `challengesTab.test.tsx` already uses successfully for the same
 // import chain.
+// The auth/token services reached through the providers read AsyncStorage on import.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);
+// Home reloads on focus (useFocusEffect) and routes through expo-router; there is no
+// NavigationContainer here, so run the focus effect like a mount effect.
+jest.mock('expo-router', () => {
+  const router = { push: jest.fn(), back: jest.fn(), replace: jest.fn(), canGoBack: () => true };
+  return {
+    router,
+    useRouter: () => router,
+    useFocusEffect: (callback: () => void | (() => void)) => require('react').useEffect(callback, [callback]),
+    useIsFocused: () => true,
+    useLocalSearchParams: () => ({}),
+  };
+});
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 
@@ -60,7 +76,8 @@ describe('Home screen', () => {
 
     const screen = await renderWithProviders(<Home />);
 
-    expect(screen.getByText('testuser')).toBeTruthy();
+    // The greeting is a translated sentence (home.greeting) that contains the name.
+    expect(await screen.findByText(/testuser/)).toBeTruthy();
   });
 
   it('renders ActiveChallengeSection with the challenges returned by the challenges service', async () => {

@@ -1,7 +1,7 @@
 import { View } from 'react-native';
-import { spacing, colors } from '../../constants/theme';
+import { spacing } from '../../constants/theme';
 import { Input } from './input';
-import { Text } from './text';
+import { FieldError } from './fieldError';
 import type { ComponentProps } from 'react';
 
 type InputProps = ComponentProps<typeof Input>;
@@ -20,11 +20,7 @@ export function FormField({ error, ...inputProps }: FormFieldProps) {
   return (
     <View style={{ gap: spacing.xs }}>
       <Input variant="filled" {...inputProps} error={Boolean(error)} />
-      {error ? (
-        <Text variant="caption" style={{ color: colors.error }}>
-          {error}
-        </Text>
-      ) : null}
+      <FieldError message={error} />
     </View>
   );
 }

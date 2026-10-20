@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../../../components/layout/screenBackground';
 import { Row } from '../../../../components/layout/row';
 import { BackButton } from '../../../../components/ui/backButton';
+import { Button } from '../../../../components/ui/button';
 import { Icon } from '../../../../components/ui/icon';
 import { Text } from '../../../../components/ui/text';
 import { ChallengeAccentBackdrop } from '../../../../components/challenge/challengeAccentBackdrop';
@@ -16,8 +17,8 @@ import { withAlpha } from '../../../../utils/color';
 import { toTitleCase } from '../../../../utils/format';
 import { toChallengeDetailViewModel } from '../../../../services/adapters/index';
 import { getUpcomingDays } from '../../../../services/adapters/challengeDetailAdapter';
-import { getChallenge, joinChallenge } from '../../../../services/challenge/challenge.service';
-import { getMyChallenges } from '../../../../services/user/user.service';
+import { joinChallenge } from '../../../../services/challenge/challenge.service';
+import { getMyMembership } from '../../../../services/challenge/myMembership';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../../services/adapters/challengeState';
 import {
   activityTypeFromMetricCodes,
@@ -31,8 +32,14 @@ import { useErrorNotificationStore } from '../../../../store/errorNotificationSt
 import type { ChallengeContract, ChallengeCycleDayContract, ChallengeExerciseSetContract, ChallengeExerciseTargetContract } from '../../../../types/challenge';
 import type { TFunction } from 'i18next';
 import { shareChallengeExternally } from '../../../../utils/shareChallenge';
+import { LocationSwitchSheet } from '../../../../components/challenge/detail/LocationSwitchSheet';
+import { getLocationAvailability, type LocationAvailability } from '../../../../services/exercises/exercises.service';
+import { adaptationForRoutine, useWorkoutAdaptationStore } from '../../../../store/workoutAdaptationStore';
+import type { WorkoutAdaptation } from '../../../../store/workoutAdaptationStore';
+import { invalidateAfterMembershipChanged } from '../../../../services/cache/queries';
+import { loadChallenge } from '../../../../services/cache/challengeLoaders';
 
-type MembershipStatus = 'creator' | 'joined' | 'none';
+type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
 
 // The chevron on an exercise row, that says tapping it opens the exercise.
 const EXERCISE_CHEVRON_SIZE = 14;
@@ -45,6 +52,8 @@ interface ExerciseRow {
   /** The exercise's name as the catalog stores it ("HIP THRUST") — what tapping
    * the row looks the exercise up by, to open its screen. */
   catalogName: string;
+  /** B7: set when this row shows the user's own substitute — the routine's exercise. */
+  replacedName?: string;
 }
 
 /** "45" → "45s", "90" → "1m 30s" — the terse table-cell form. Distinct from
@@ -81,7 +90,11 @@ function formatFieldValue(field: 'reps' | 'lbs' | 'duration' | 'distance' | 'rou
  * second parallel implementation — the response shape is deliberately the
  * same one `RoutineService.getTodayRoutine()` already returns.
  */
-function buildExerciseRows(cycleDay: ChallengeCycleDayContract | undefined, t: TFunction): ExerciseRow[] {
+function buildExerciseRows(
+  cycleDay: ChallengeCycleDayContract | undefined,
+  t: TFunction,
+  adaptation: WorkoutAdaptation | null = null,
+): ExerciseRow[] {
   const exercises = Array.isArray(cycleDay?.exercises) ? cycleDay.exercises : [];
   return exercises.map((exercise, index) => {
     const rawName = typeof exercise.name === 'string' && exercise.name.trim() ? exercise.name.trim() : `Exercise ${index + 1}`;
@@ -114,6 +127,9 @@ function buildExerciseRows(cycleDay: ChallengeCycleDayContract | undefined, t: T
     const restSeconds = toNum(sets[0]?.rest_seconds_after ?? null);
     const restLabel = restSeconds != null ? formatSeconds(restSeconds) : '—';
 
+    const swap = adaptation?.substitutions.find((s) => s.originalExerciseId === exercise.exercise_id);
+    const shownName = swap ? swap.substituteName : rawName;
+
     return {
       // The shared exercise-library catalog stores names in all caps
       // ("HIP THRUST") — toTitleCase() normalizes that for display without
@@ -121,10 +137,11 @@ function buildExerciseRows(cycleDay: ChallengeCycleDayContract | undefined, t: T
       // comment (utils/format.ts) for why this looked like a font bug at
       // first: shouty-uppercase text read as "unstyled" against the
       // wireframe's plain-case design, not an actual missing-font issue.
-      name: toTitleCase(rawName),
+      name: toTitleCase(shownName),
       setsLabel,
       restLabel,
-      catalogName: rawName,
+      catalogName: shownName,
+      replacedName: swap ? toTitleCase(rawName) : undefined,
     };
   });
 }
@@ -147,7 +164,17 @@ export default function RoutineDayDetail() {
       const challengeId = typeof id === 'string' ? id : '';
       if (!challengeId) return;
       try {
-        await joinChallenge(challengeId);
+        const response = await joinChallenge(challengeId);
+        invalidateAfterMembershipChanged();
+        // Same as app/challenge/[id]/index.tsx: a private challenge only files a
+        // request — not a member yet, so no "joined" toast and no redirect.
+        if (response?.status === 'requested') {
+          setMembershipStatus('requested');
+          showSuccess({
+            message: t('challenges.joinConfirm.requestSent', { name: challenge?.name ?? t('challenges.fallbackName') }),
+          });
+          return;
+        }
         setMembershipStatus('joined');
         // Same fix as app/challenge/[id]/index.tsx's own join flow, per
         // explicit follow-up — this screen has its own separate Join
@@ -168,7 +195,7 @@ export default function RoutineDayDetail() {
       return;
     }
     let cancelled = false;
-    getChallenge(String(id))
+    loadChallenge(String(id))
       .then((data) => {
         if (!cancelled) setChallenge(data);
       })
@@ -185,11 +212,8 @@ export default function RoutineDayDetail() {
 
   useEffect(() => {
     if (!challenge) return;
-    getMyChallenges()
-      .then((enrolled) => {
-        const isMember = enrolled.some((c) => String(c.id) === String(challenge.id) && c.status !== 'left');
-        setMembershipStatus(isMember ? 'joined' : 'none');
-      })
+    getMyMembership(challenge)
+      .then(setMembershipStatus)
       .catch(() => setMembershipStatus('none'))
       .finally(() => setMembershipLoading(false));
   }, [challenge]);
@@ -207,7 +231,49 @@ export default function RoutineDayDetail() {
   const rawCycleDay = Array.isArray(challenge?.cycle_days)
     ? challenge.cycle_days.find((item) => Number(item.day_number) === requestedDay)
     : undefined;
-  const exercises = useMemo(() => buildExerciseRows(rawCycleDay, t), [rawCycleDay, t]);
+  // B7: the user's own location choice for this routine (never the shared routine).
+  const routineId = typeof rawCycleDay?.routine_id === 'number' ? rawCycleDay.routine_id : null;
+  const challengeKey = typeof id === 'string' ? id : '';
+  const storedAdaptation = useWorkoutAdaptationStore((s) => s.byChallenge[challengeKey]);
+  const setAdaptation = useWorkoutAdaptationStore((s) => s.setAdaptation);
+  const clearAdaptation = useWorkoutAdaptationStore((s) => s.clearAdaptation);
+  const adaptation = adaptationForRoutine(storedAdaptation, routineId);
+  const exercises = useMemo(() => buildExerciseRows(rawCycleDay, t, adaptation), [rawCycleDay, t, adaptation]);
+
+  const routineExerciseRefs = useMemo(
+    () =>
+      (rawCycleDay?.exercises ?? [])
+        .filter((exercise) => typeof exercise.exercise_id === 'number' && typeof exercise.name === 'string')
+        .map((exercise) => ({ exerciseId: exercise.exercise_id as number, name: exercise.name as string })),
+    [rawCycleDay],
+  );
+  const [locationSheetVisible, setLocationSheetVisible] = useState(false);
+  const [locationAvailability, setLocationAvailability] = useState<LocationAvailability[]>([]);
+  const refsKey = routineExerciseRefs.map((e) => e.exerciseId).join(',');
+  useEffect(() => {
+    if (routineExerciseRefs.length === 0) {
+      setLocationAvailability([]);
+      return;
+    }
+    let cancelled = false;
+    getLocationAvailability(routineExerciseRefs.map((e) => e.exerciseId))
+      .then((result) => {
+        if (!cancelled) setLocationAvailability(result);
+      })
+      .catch(() => {
+        if (!cancelled) setLocationAvailability([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refsKey]);
+  // Same bottom-bar rules as app/challenge/[id]/index.tsx: nothing to join once
+  // an admin closed the challenge, and a pending request shows "Request sent".
+  const isClosed = challenge?.status === 'closed';
+  const showsBottomBar =
+    !isClosed && !membershipLoading && (membershipStatus === 'none' || membershipStatus === 'requested');
+  const canChangeLocation =
+    membershipStatus !== 'none' && membershipStatus !== 'requested' && routineId != null && routineExerciseRefs.length > 0;
 
   // Tapping an exercise opens its own screen — everything the catalog knows about
   // it, not just the one-line description this row used to expand into. Keyed by
@@ -274,7 +340,7 @@ export default function RoutineDayDetail() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: membershipStatus === 'none' ? spacing['2xl'] : insets.bottom + spacing.xl }}
+        contentContainerStyle={{ paddingBottom: showsBottomBar ? spacing['2xl'] : insets.bottom + spacing.xl }}
       >
         <Row justify="space-between" align="center" style={styles.topBar}>
           <BackButton style={styles.backButton} />
@@ -300,6 +366,45 @@ export default function RoutineDayDetail() {
           </View>
         </View>
 
+        {locationAvailability.length > 0 && (
+          <View style={styles.locationSection}>
+            <Text variant="label" weight="bold">{t('challengeRoutineDay.location.availableAt')}</Text>
+            <Row gap="sm" style={styles.locationChips}>
+              {locationAvailability.map((location) => (
+                <View
+                  key={location.code}
+                  style={[styles.locationChip, location.requiresSubstitution && styles.locationChipWarn]}
+                >
+                  <Text variant="caption" weight="medium">{location.name}</Text>
+                  {location.requiresSubstitution && (
+                    <Text variant="caption" tone="secondary">
+                      {t('challengeRoutineDay.location.needsSwapsShort', { count: location.unsupportedExerciseIds.length })}
+                    </Text>
+                  )}
+                </View>
+              ))}
+            </Row>
+            {adaptation && (
+              <Text variant="caption" tone="secondary">
+                {t('challengeRoutineDay.location.yourVersion', { location: adaptation.locationName })}
+              </Text>
+            )}
+            {canChangeLocation && (
+              <Pressable
+                onPress={() => setLocationSheetVisible(true)}
+                style={({ pressed }) => [styles.locationButton, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel={t('challengeRoutineDay.location.changeA11y')}
+              >
+                <Icon name="location-outline" size={16} color={accentColor} />
+                <Text variant="label" weight="bold" style={{ color: accentColor }}>
+                  {t('challengeRoutineDay.location.changeCta')}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
         <View style={styles.tableSection}>
           <Row justify="space-between" style={styles.tableHeaderRow}>
             <Text variant="caption" tone="secondary" style={styles.tableHeaderExercise}>
@@ -324,9 +429,16 @@ export default function RoutineDayDetail() {
               >
                 <Row justify="space-between" align="center" style={styles.exerciseRow}>
                   <Row align="center" gap="xs" style={styles.exerciseName}>
-                    <Text variant="body" weight="regular" numberOfLines={1} style={styles.exerciseNameText}>
-                      {exercise.name}
-                    </Text>
+                    <View style={styles.exerciseNameText}>
+                      <Text variant="body" weight="regular" numberOfLines={1}>
+                        {exercise.name}
+                      </Text>
+                      {exercise.replacedName && (
+                        <Text variant="caption" tone="secondary" numberOfLines={1}>
+                          {t('challengeRoutineDay.location.swappedFrom', { name: exercise.replacedName })}
+                        </Text>
+                      )}
+                    </View>
                     {/* The way in to the exercise's screen: a chevron, or a spinner
                         on the row being looked up. */}
                     {openingKey === index ? (
@@ -371,7 +483,15 @@ export default function RoutineDayDetail() {
         )}
       </ScrollView>
 
-      {!membershipLoading && membershipStatus === 'none' && (
+      {showsBottomBar && membershipStatus === 'requested' && (
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
+          <Button variant="subtle" size="md" disabled leftIcon={<Icon name="time-outline" size={20} color={colors.paper} />}>
+            {t('challenges.requestPendingLabel')}
+          </Button>
+        </View>
+      )}
+
+      {showsBottomBar && membershipStatus === 'none' && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
           <Pressable
             onPress={joinPopup.show}
@@ -386,6 +506,15 @@ export default function RoutineDayDetail() {
         </View>
       )}
 
+      <LocationSwitchSheet
+        visible={locationSheetVisible}
+        onClose={() => setLocationSheetVisible(false)}
+        routineId={routineId}
+        exercises={routineExerciseRefs}
+        current={adaptation}
+        onApply={(next) => setAdaptation(challengeKey, next)}
+        onReset={() => clearAdaptation(challengeKey)}
+      />
       <joinPopup.Component />
     </ScreenBackground>
   );
@@ -473,6 +602,31 @@ const styles = StyleSheet.create({
   exerciseSets: {
     // color set inline — this challenge's own accent color, see accentColor above.
     opacity: 1,
+  },
+  locationSection: {
+    paddingHorizontal: spacing.base,
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  locationChips: {
+    flexWrap: 'wrap',
+  },
+  locationChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.big,
+    backgroundColor: withAlpha(colors.paper, 0.08),
+  },
+  locationChipWarn: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: withAlpha(colors.paper, 0.4),
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.xs,
   },
   notesSection: {
     paddingHorizontal: spacing.base,

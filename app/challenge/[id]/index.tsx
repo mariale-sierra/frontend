@@ -17,8 +17,8 @@ import { ShareToChatSheet } from '../../../components/social/ShareToChatSheet';
 import type { ChallengeInfoRow } from '../../../components/challenge/detail';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
-import { closeChallenge, getChallenge, isChallengeOwner, joinChallenge } from '../../../services/challenge/challenge.service';
-import { getMyChallenges } from '../../../services/user/user.service';
+import { closeChallenge, isChallengeOwner, joinChallenge, reopenChallenge } from '../../../services/challenge/challenge.service';
+import { getMyMembership } from '../../../services/challenge/myMembership';
 import { acceptInvite, declineInvite, getReceivedInvites } from '../../../services/invites/invite.service';
 import { invalidateChallengeProgressCache } from '../../../hooks/useChallengeProgress';
 import type { ChallengeInviteContract } from '../../../types/invite';
@@ -33,6 +33,8 @@ import { hasSeenChallengeJoinCallout, markChallengeJoinCalloutSeen } from '../..
 import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../../constants/onboardingDebug';
 import { shareChallengeExternally } from '../../../utils/shareChallenge';
 import type { ChallengeContract } from '../../../types/challenge';
+import { invalidateAfterMembershipChanged, invalidateChallenge } from '../../../services/cache/queries';
+import { loadChallenge } from '../../../services/cache/challengeLoaders';
 
 type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
 
@@ -95,10 +97,29 @@ export default function ChallengeDetail() {
       if (!challengeId) return;
       try {
         await closeChallenge(challengeId);
+        invalidateChallenge(challengeId);
         setChallenge((prev) => (prev ? { ...prev, status: 'closed' } : prev));
         showSuccess({ message: t('challengeProgress.closeChallengeSuccess') });
       } catch {
         // The confirmation popup itself surfaces failure via its own error state; nothing else to do here.
+      }
+    },
+  });
+
+  // Admin-only too (AdminGuard server-side): the inverse of closing.
+  const reopenChallengePopup = useConfirmationPopup({
+    type: 'reopenChallenge',
+    challengeName: challenge?.name ?? t('challenges.fallbackName'),
+    onConfirm: async () => {
+      const challengeId = typeof id === 'string' ? id : '';
+      if (!challengeId) return;
+      try {
+        await reopenChallenge(challengeId);
+        invalidateChallenge(challengeId);
+        setChallenge((prev) => (prev ? { ...prev, status: 'open' } : prev));
+        showSuccess({ message: t('challengeProgress.reopenChallengeSuccess') });
+      } catch {
+        // The global api.ts interceptor already surfaces the error toast.
       }
     },
   });
@@ -111,6 +132,7 @@ export default function ChallengeDetail() {
       if (!challengeId) return;
       try {
         const response = await joinChallenge(challengeId);
+        invalidateAfterMembershipChanged();
         const name = challenge?.name ?? t('challenges.fallbackName');
 
         // Private challenge: files a pending request instead of joining
@@ -150,7 +172,7 @@ export default function ChallengeDetail() {
 
   useEffect(() => {
     if (!id) return;
-    getChallenge(id)
+    loadChallenge(id)
       .then(setChallenge)
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -162,13 +184,10 @@ export default function ChallengeDetail() {
     // See app/challenge/[id]/routine/[day].tsx and progress.tsx — same
     // "created_by_user_id vs enrolled-list membership" check used everywhere
     // else in the app to decide whether the current user is already in.
-    getMyChallenges()
-      .then((enrolled) => {
-        const isMember = enrolled.some(
-          (c) => String(c.id) === String(challenge.id) && c.status !== 'left',
-        );
-        setMembershipStatus(isMember ? 'joined' : 'none');
-      })
+    // B8: a private challenge's pending request comes back from the backend
+    // too, so reopening this screen shows "Request sent" instead of Join.
+    getMyMembership(challenge)
+      .then(setMembershipStatus)
       .catch(() => setMembershipStatus('none'))
       .finally(() => setMembershipLoading(false));
   }, [challenge]);
@@ -200,9 +219,11 @@ export default function ChallengeDetail() {
     try {
       if (action === 'accept') {
         await acceptInvite(pendingInvite.id);
-        // Membership changed — the challenge tabs refetch; and this is its own
-        // explicit confirmation, so the Challenges tab's "You're in!" never fires too.
+        // Membership changed — the challenge tabs refetch (both caches, like
+        // useInvites' accept); and this is its own explicit confirmation, so the
+        // Challenges tab's "You're in!" never fires too.
         invalidateChallengeProgressCache();
+        invalidateAfterMembershipChanged();
         void markChallengeMembershipSeen(String(challenge?.id ?? id));
         showSuccess({ message: t('invites.successAccepted', { challenge: name }) });
         router.replace('/(tabs)/challenges?view=mine');
@@ -357,6 +378,16 @@ export default function ChallengeDetail() {
                 <Icon name="lock-closed-outline" size={22} color={colors.error} />
               </Pressable>
             )}
+            {isAdmin && isClosed && (
+              <Pressable
+                onPress={reopenChallengePopup.show}
+                style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel={t('challengeProgress.reopenChallengeA11y')}
+              >
+                <Icon name="lock-open-outline" size={22} color={colors.paper} />
+              </Pressable>
+            )}
           </Row>
         </Row>
 
@@ -473,6 +504,7 @@ export default function ChallengeDetail() {
 
       <joinPopup.Component />
       <closeChallengePopup.Component />
+      <reopenChallengePopup.Component />
     </ScreenBackground>
   );
 }

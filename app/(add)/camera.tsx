@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -26,14 +25,22 @@ import { submitWorkoutProgress } from '../../services/workout-log/workout-log.se
 import type { WorkoutLogContract } from '../../types/workout-log';
 import { applyExerciseMetrics } from '../../services/metrics/applyExerciseMetrics';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
+import {
+  adaptationForRoutine,
+  toSubstitutionPayload,
+  useWorkoutAdaptationStore,
+} from '../../store/workoutAdaptationStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
+import { invalidateAfterWorkoutLogged } from '../../services/cache/queries';
 import { showProgressLoggedFeedback } from '../../utils/progressLoggedFeedback';
 import { useAuth } from '../../hooks/useAuth';
 import { useChallengeParticipants } from '../../hooks/useChallengeParticipants';
-import { getChallenge, isChallengeOwner } from '../../services/challenge/challenge.service';
+import { isChallengeOwner } from '../../services/challenge/challenge.service';
 import { TagParticipantsSheet } from '../../components/challenge/TagParticipantsSheet';
 import type { ChallengeContract } from '../../types/challenge';
 import { extractHashtags } from '../../utils/hashtags';
+import { getApiErrorMessage, logError } from '../../utils/apiError';
+import { loadChallenge } from '../../services/cache/challengeLoaders';
 
 // Same cap as the backend's CreateWorkoutProgressDto.caption.
 const MAX_CAPTION_LENGTH = 500;
@@ -94,6 +101,11 @@ export default function Camera() {
   const selectedChallengeId = useMetricsEntryStore((s) => s.selectedChallengeId);
   const currentRoutineId = useMetricsEntryStore((s) => s.currentRoutineId);
   const exerciseMetrics = useMetricsEntryStore((s) => s.exerciseMetrics);
+  const clearAdaptation = useWorkoutAdaptationStore((s) => s.clearAdaptation);
+  // B7: the user's location choice, only when it was made for the routine being logged.
+  const adaptation = useWorkoutAdaptationStore((s) =>
+    selectedChallengeId ? adaptationForRoutine(s.byChallenge[selectedChallengeId], currentRoutineId) : null,
+  );
 
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
@@ -124,7 +136,7 @@ export default function Camera() {
       setSelectedChallenge(null);
       return;
     }
-    getChallenge(selectedChallengeId).then(setSelectedChallenge).catch(() => setSelectedChallenge(null));
+    loadChallenge(selectedChallengeId).then(setSelectedChallenge).catch(() => setSelectedChallenge(null));
   }, [selectedChallengeId]);
 
   const isOwner = isChallengeOwner(selectedChallenge, userId);
@@ -182,8 +194,8 @@ export default function Camera() {
     if (isBusy || !capturedUri || confirmingRef.current) return;
 
     if (!selectedChallengeId) {
+      // Shown inline under the challenge picker — one message, not an Alert on top.
       setError(t('camera.selectChallengeError'));
-      Alert.alert(t('camera.noChallengeSelectedTitle'), t('camera.noChallengeSelectedMessage'));
       return;
     }
 
@@ -202,10 +214,8 @@ export default function Camera() {
     try {
       publicUrl = await uploadImageAsync(capturedUri, 'image/jpeg');
     } catch (e: unknown) {
-      type AxiosLike = { response?: { status?: number; data?: unknown }; message?: string };
-      const err = e as AxiosLike;
-      console.error('[Camera] upload failed:', err?.response?.status, err?.response?.data ?? err?.message);
-      setError(t('camera.uploadError'));
+      logError('Camera.upload', e);
+      setError(getApiErrorMessage(e, t, t('camera.uploadError')));
       setUploadingImage(false);
       return;
     }
@@ -218,6 +228,10 @@ export default function Camera() {
       visibility,
       caption: caption.trim() || undefined,
       routineId: currentRoutineId ?? undefined,
+      // B7: where the user trained and the swaps they chose (only if made for this routine).
+      ...(adaptation
+        ? { locationCode: adaptation.locationCode, substitutions: toSubstitutionPayload(adaptation) }
+        : {}),
       taggedUserIds: isOwner && taggedUserIds.length > 0 ? taggedUserIds : undefined,
     };
 
@@ -226,12 +240,10 @@ export default function Camera() {
     try {
       workout = await submitWorkoutProgress(progressPayload);
     } catch (e: unknown) {
-      type AxiosLike = { response?: { status?: number; data?: { message?: string } }; message?: string };
-      const err = e as AxiosLike;
-      console.error('[Camera] confirm failed:', err?.response?.status, err?.response?.data ?? err?.message);
-      const msg = err?.response?.data?.message ?? t('camera.saveProgressError');
-      setError(msg);
-      Alert.alert(t('common.errors.genericTitle'), msg);
+      logError('Camera.confirm', e);
+      // Inline, next to the button; the global toast already covered an API
+      // failure, so no Alert on top of it.
+      setError(getApiErrorMessage(e, t, t('camera.saveProgressError')));
       setSubmittingProgress(false);
       return;
     }
@@ -254,10 +266,12 @@ export default function Camera() {
         // The workout + photo already saved successfully — a metrics
         // save failure shouldn't block the flow or look like data loss,
         // just log it for now.
-        console.error('[Camera] applyExerciseMetrics failed:', metricsError);
+        logError('Camera.applyExerciseMetrics', metricsError);
       }
     }
+    clearAdaptation(selectedChallengeId);
     invalidateChallengeProgressCache();
+    invalidateAfterWorkoutLogged();
     setSubmittingProgress(false);
     try {
       // Closes the whole (add) modal group, back to whatever screen the user
@@ -281,7 +295,7 @@ export default function Camera() {
       // itself off the root stack too, actually closing the whole modal.
       safeBackTimes(2);
     } catch (navError) {
-      console.error('[Camera] closing the (add) modal failed after a successful save:', navError);
+      logError('Camera.closeModal', navError);
     }
     // The popup itself is global (mounted at app root), so it shows on top of
     // wherever the back() calls above landed: "Challenge complete" if that was

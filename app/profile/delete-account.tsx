@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { KeyboardAwareScroll } from '../../components/layout/keyboardAwareScroll';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { Row } from '../../components/layout/row';
 import { BackButton } from '../../components/ui/backButton';
@@ -16,6 +17,7 @@ import {
 } from '../../services/user/accountDeletion.service';
 import { useAuth } from '../../hooks/useAuth';
 import { colors, radius, spacing } from '../../constants/theme';
+import { FieldError } from '../../components/ui/fieldError';
 
 const CONSEQUENCES = ['posts', 'metrics', 'messages', 'social', 'irreversible'] as const;
 
@@ -102,7 +104,7 @@ export default function DeleteAccountScreen() {
         <View style={styles.trailingSpacer} />
       </Row>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScroll contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {loading ? null : status?.pending ? (
           <>
             <View style={styles.card}>
@@ -111,11 +113,7 @@ export default function DeleteAccountScreen() {
                 {t('deleteAccount.pendingBody', { date: scheduledDate })}
               </Text>
             </View>
-            {errorMessage && (
-              <Text variant="caption" style={styles.error}>
-                {errorMessage}
-              </Text>
-            )}
+            <FieldError message={errorMessage} />
             <Button variant="primary" size="md" onPress={handleCancel} loading={busy}>
               {t('deleteAccount.cancelCta')}
             </Button>
@@ -153,11 +151,7 @@ export default function DeleteAccountScreen() {
               autoCorrect={false}
               textContentType="password"
             />
-            {errorMessage && (
-              <Text variant="caption" style={styles.error}>
-                {errorMessage}
-              </Text>
-            )}
+            <FieldError message={errorMessage} />
 
             <Button
               variant="danger"
@@ -170,7 +164,7 @@ export default function DeleteAccountScreen() {
             </Button>
           </>
         )}
-      </ScrollView>
+      </KeyboardAwareScroll>
 
       <ConfirmationPopup
         visible={confirmVisible}
@@ -206,5 +200,4 @@ const styles = StyleSheet.create({
   },
   bulletRow: { flexDirection: 'row', gap: spacing.sm },
   bulletText: { flex: 1 },
-  error: { color: colors.error },
 });
