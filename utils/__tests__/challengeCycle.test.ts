@@ -1,4 +1,4 @@
-import { buildDayRingTicks, classifyDay, dayInCycle, findCycleDayFor, getProgressFraction, isRestDay } from '../challengeCycle';
+import { buildDayRingTicks, classifyDay, dayInCycle, findCycleDayFor, getCycleBreakdown, getProgressFraction, isRestDay } from '../challengeCycle';
 import type { DayStatus } from '../challengeCycle';
 import type { ChallengeCycleDayContract } from '../../types/challenge';
 
@@ -196,5 +196,20 @@ describe('getProgressFraction', () => {
 
   it('is 0 for a challenge with no length', () => {
     expect(getProgressFraction(3, 0)).toBe(0);
+  });
+});
+
+describe('getCycleBreakdown (53A summary)', () => {
+  it('splits a length that divides evenly into full cycles only', () => {
+    expect(getCycleBreakdown(28, 4)).toEqual({ fullCycles: 7, remainderDays: 0 });
+  });
+
+  it('counts the leftover days of a cut-short last cycle', () => {
+    expect(getCycleBreakdown(30, 4)).toEqual({ fullCycles: 7, remainderDays: 2 });
+  });
+
+  it('handles a one-day cycle and a length equal to the cycle', () => {
+    expect(getCycleBreakdown(10, 1)).toEqual({ fullCycles: 10, remainderDays: 0 });
+    expect(getCycleBreakdown(5, 5)).toEqual({ fullCycles: 1, remainderDays: 0 });
   });
 });

@@ -8,10 +8,12 @@ import {
   CreateFlowProgressHeader,
   ChallengeNameFields,
   OptionPillGrid,
+  CycleLengthCard,
+  CycleCalendarPreview,
   CycleDayList,
-  RepeatsStepper,
   VisibilityCardGroup,
   ChallengeReviewSummary,
+  ChallengeRulesStep,
   CreateFlowPrimaryButton,
 } from '../../components/challenge/create';
 import { ActivityIcon } from '../../components/icons/activityIcon';
@@ -23,6 +25,7 @@ import { withAlpha } from '../../utils/color';
 import { CATEGORY_OPTIONS, LOCATION_OPTIONS } from '../../constants/challengeCreateOptions';
 import { useCreateChallengeFlow } from '../../hooks/useCreateChallengeFlow';
 import { getExerciseCount } from '../../services/exercises/exercises.service';
+import { MAX_CYCLE_LENGTH_DAYS, MAX_DURATION_DAYS, MIN_CYCLE_LENGTH_DAYS } from '../../store/challengeBuilderStore';
 
 export default function CreateChallenge() {
   const { t } = useTranslation();
@@ -31,9 +34,8 @@ export default function CreateChallenge() {
     title,
     description,
     cycleLengthDays,
-    cyclesCount,
     durationDays,
-    endDateLabel,
+    startWeekday,
     visibility,
     selectedCategories,
     selectedLocations,
@@ -42,13 +44,15 @@ export default function CreateChallenge() {
     steps,
     isSubmitting,
     hasRoutineForEveryDay,
+    firstUnfilledDay,
     setTitle,
     titleError,
     onBlurTitle,
     setDescription,
     addCycleDay,
     removeCycleDay,
-    setCyclesCount,
+    setCycleLengthDays,
+    setDurationDays,
     setVisibility,
     setCurrentStep,
     getDayStatus,
@@ -64,9 +68,10 @@ export default function CreateChallenge() {
     openDayRoutineSelector,
   } = useCreateChallengeFlow();
 
-  const isCycleStep = activeStep.kind === 'cycle';
-  const isReviewStep = activeStep.kind === 'review';
-  const continueDisabled = isCycleStep && !hasRoutineForEveryDay;
+  const isCycleFillStep = activeStep.kind === 'cycleFill';
+  const isFinalStep = activeStep.kind === 'rules';
+  // 53B: Continue stays off until every cycle day has a routine or is a rest day.
+  const continueDisabled = isCycleFillStep && !hasRoutineForEveryDay;
 
   // Live "N exercises unlocked" count for the Activity & Location step (GET
   // /exercises/count, backend added 2026-08-29, commit `bfd502f`) — was
@@ -137,42 +142,63 @@ export default function CreateChallenge() {
           </Stack>
         );
 
-      case 'cycle':
-        return (
-          <CycleDayList
-            totalDays={cycleLengthDays}
-            getDayStatus={getDayStatus}
-            getDayRoutineLabel={getDayRoutineLabel}
-            getDayRoutineMeta={getDayRoutineMeta}
-            getDayRoutineColor={getDayRoutineColor}
-            onPressDay={openDayRoutineSelector}
-            onRemoveDay={removeCycleDay}
-            onAddDay={addCycleDay}
-          />
-        );
-
-      case 'durationVisibility':
+      // 53A — Cycle & length: the two steppers, and the whole challenge as a
+      // calendar that follows them.
+      case 'cycleLength':
         return (
           <Stack gap="xl">
-            <RepeatsStepper
+            <CycleLengthCard
               cycleLengthDays={cycleLengthDays}
-              cyclesCount={cyclesCount}
               durationDays={durationDays}
-              endDateLabel={endDateLabel}
-              onIncrement={() => setCyclesCount(cyclesCount + 1)}
-              onDecrement={() => setCyclesCount(cyclesCount - 1)}
+              onChangeCycleLength={setCycleLengthDays}
+              onChangeDuration={setDurationDays}
+              minCycleLength={MIN_CYCLE_LENGTH_DAYS}
+              maxCycleLength={MAX_CYCLE_LENGTH_DAYS}
+              maxDuration={MAX_DURATION_DAYS}
             />
-
-            <VisibilityCardGroup selectedVisibility={visibility} onChange={setVisibility} />
+            <CycleCalendarPreview
+              durationDays={durationDays}
+              cycleLengthDays={cycleLengthDays}
+              getDayStatus={getDayStatus}
+              getDayRoutineColor={getDayRoutineColor}
+              startWeekday={startWeekday}
+            />
           </Stack>
         );
+
+      // 53B — Fill in your cycle: the day list (Add opens the existing
+      // day-assignment screen), then the same calendar.
+      case 'cycleFill':
+        return (
+          <Stack gap="xl">
+            <CycleDayList
+              totalDays={cycleLengthDays}
+              getDayStatus={getDayStatus}
+              getDayRoutineLabel={getDayRoutineLabel}
+              getDayRoutineMeta={getDayRoutineMeta}
+              getDayRoutineColor={getDayRoutineColor}
+              onPressDay={openDayRoutineSelector}
+              onRemoveDay={removeCycleDay}
+              onAddDay={addCycleDay}
+            />
+            <CycleCalendarPreview
+              durationDays={durationDays}
+              cycleLengthDays={cycleLengthDays}
+              getDayStatus={getDayStatus}
+              getDayRoutineColor={getDayRoutineColor}
+              startWeekday={startWeekday}
+            />
+          </Stack>
+        );
+
+      case 'visibility':
+        return <VisibilityCardGroup selectedVisibility={visibility} onChange={setVisibility} />;
 
       case 'review':
         return (
           <ChallengeReviewSummary
             title={title}
             cycleLengthDays={cycleLengthDays}
-            cyclesCount={cyclesCount}
             durationDays={durationDays}
             visibility={visibility}
             selectedCategories={selectedCategories}
@@ -180,9 +206,12 @@ export default function CreateChallenge() {
             getDayStatus={getDayStatus}
             getDayRoutineLabel={getDayRoutineLabel}
             accentColor={challengeAccentColor}
-            onEditCycle={() => setCurrentStep(steps.findIndex((step) => step.kind === 'cycle'))}
+            onEditCycle={() => setCurrentStep(steps.findIndex((step) => step.kind === 'cycleFill'))}
           />
         );
+
+      case 'rules':
+        return <ChallengeRulesStep accentColor={challengeAccentColor} />;
     }
   }
 
@@ -209,23 +238,23 @@ export default function CreateChallenge() {
       </ScrollView>
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
-        {isCycleStep && !hasRoutineForEveryDay && (
-          <Text variant="caption" tone="secondary" align="center" style={styles.bottomHint}>
-            {t('challengeCreate.cycle.setAllDaysHint', { count: cycleLengthDays })}
+        {isCycleFillStep && firstUnfilledDay !== null && (
+          <Text variant="caption" tone="secondary" align="center" style={styles.bottomHint} testID="cycle-fill-hint">
+            {t('challengeCreate.cycle.fillDayHint', { day: firstUnfilledDay })}
           </Text>
         )}
 
-        {isReviewStep && (
+        {isFinalStep && (
           <Text variant="caption" tone="secondary" align="center" style={styles.bottomHint}>
             {t('challengeCreate.review.firstMemberHint')}
           </Text>
         )}
 
         <CreateFlowPrimaryButton
-          label={isReviewStep ? t('challengeCreate.submit.startChallenge') : t('common.actions.continue')}
-          loading={isReviewStep ? isSubmitting : false}
+          label={isFinalStep ? t('challengeCreate.submit.startChallenge') : t('common.actions.continue')}
+          loading={isFinalStep ? isSubmitting : false}
           disabled={continueDisabled}
-          onPress={isReviewStep ? handleActionPress : handleNext}
+          onPress={isFinalStep ? handleActionPress : handleNext}
         />
       </View>
     </ScreenBackground>

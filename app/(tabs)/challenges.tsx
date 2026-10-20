@@ -12,6 +12,8 @@ import { ExploreCard, MineCard } from '../../components/challenge/list/challenge
 import { ChallengesViewToggle } from '../../components/challenge/list/ChallengesViewToggle';
 import { ChallengesContentSkeleton } from '../../components/challenge/list/ChallengesContentSkeleton';
 import { FinishedChallengesToggle } from '../../components/challenge/list/FinishedChallengesToggle';
+import { ACTIVITY_FILTER_ORDER, ActivityFilterChips } from '../../components/challenge/list/ActivityFilterChips';
+import type { ActivityType } from '../../types/activity';
 import type { ChallengesView } from '../../components/challenge/list/ChallengesViewToggle';
 import type { ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import type { ChallengeMineCardViewModel } from '../../services/adapters/challengeListAdapter';
@@ -63,6 +65,25 @@ export default function Challenges() {
   }, [requestedView]);
   const [mineChallenges, setMineChallenges] = useState<ChallengeMineCardViewModel[]>([]);
   const [exploreChallenges, setExploreChallenges] = useState<ExploreChallengeViewModel[]>([]);
+  // Browse's activity filter: challenges whose MAIN activity (the one that colors
+  // their card) is this one; null for all. Every page of GET /challenges is already
+  // loaded, so filtering here never misses a challenge.
+  const [activityFilter, setActivityFilter] = useState<ActivityType | null>(null);
+  const filterActivities = useMemo(
+    () => ACTIVITY_FILTER_ORDER.filter((activity) =>
+      exploreChallenges.some((challenge) => challenge.dominantActivityCategory === activity)),
+    [exploreChallenges],
+  );
+  // A refresh can take away the last challenge of the picked activity — back to all.
+  useEffect(() => {
+    if (activityFilter && !filterActivities.includes(activityFilter)) setActivityFilter(null);
+  }, [activityFilter, filterActivities]);
+  const visibleExploreChallenges = useMemo(
+    () => (activityFilter
+      ? exploreChallenges.filter((challenge) => challenge.dominantActivityCategory === activityFilter)
+      : exploreChallenges),
+    [exploreChallenges, activityFilter],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Finished challenges are collapsed out of the main Mine list by default —
@@ -288,9 +309,13 @@ export default function Challenges() {
         // per explicit request.
         <CoachMark message={t('challenges.exploreTip')} onDismiss={dismissExploreTip} arrowPlacement="topRight" />
       )}
+
+      {view === 'explore' && filterActivities.length > 0 && (
+        <ActivityFilterChips activities={filterActivities} selected={activityFilter} onSelect={setActivityFilter} />
+      )}
       </View>
     ),
-    [handleCreateChallenge, t, view, showExploreTip, dismissExploreTip],
+    [handleCreateChallenge, t, view, showExploreTip, dismissExploreTip, filterActivities, activityFilter],
   );
 
   if (loading) {
@@ -356,7 +381,7 @@ export default function Challenges() {
         />
       ) : (
         <FlatList
-          data={exploreChallenges}
+          data={visibleExploreChallenges}
           keyExtractor={(item) => item.challengeId}
           renderItem={renderExploreItem}
           ListHeaderComponent={listHeader}
@@ -364,7 +389,7 @@ export default function Challenges() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Text variant="body" tone="secondary" align="center">
-                {t('challenges.emptyExplore')}
+                {activityFilter ? t('challenges.emptyExploreFilter') : t('challenges.emptyExplore')}
               </Text>
             </View>
           }

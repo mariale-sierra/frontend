@@ -37,3 +37,13 @@ describe('rotateHue', () => {
     expect(rotateHue('#FFF', 90)).toBe('#FFF');
   });
 });
+
+describe('hueOf', () => {
+  const { hueOf } = require('../color');
+
+  it('reads a color\'s hue, and null for grays', () => {
+    expect(hueOf('#FF0000')).toBeCloseTo(0);
+    expect(hueOf('#00FF00')).toBeCloseTo(120);
+    expect(hueOf('#808080')).toBeNull();
+  });
+});

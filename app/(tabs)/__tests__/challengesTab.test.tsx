@@ -15,13 +15,16 @@ import { useChallengeJoinApprovedStore } from '../../../store/challengeJoinAppro
 
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
+// The route's params — Browse's tests open the tab on `view=explore`, as the
+// deep link does (the toggle itself is a gesture-handler tap tests can't press).
+let mockSearchParams: Record<string, string> = {};
 jest.mock('expo-router', () => {
   const { useEffect } = require('react');
   return {
     // Runs the screen's focus effect when it mounts, as focusing it would.
     useFocusEffect: (callback: () => void | (() => void)) => useEffect(callback, [callback]),
     useIsFocused: () => true,
-    useLocalSearchParams: () => ({}),
+    useLocalSearchParams: () => mockSearchParams,
     useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
     router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },
   };
@@ -230,5 +233,79 @@ describe('the Challenges tab — "You\'re in!" (an approved join request)', () =
     await waitFor(() => expect(establishMembershipBaseline).toHaveBeenCalledWith(['3']));
     expect(useChallengeJoinApprovedStore.getState().visible).toBe(false);
     expect(hasSeenChallengeMembership).not.toHaveBeenCalled();
+  });
+});
+
+describe('the Challenges tab — Browse activity filter', () => {
+  const browse = (id: number, name: string, dominant: string | null) =>
+    challenge(id, name, { dominant_activity_category: dominant, created_by_user_id: 'someone-else' });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useChallengeFinishedStore.setState({ visible: false, challenge: null });
+    useChallengeJoinApprovedStore.setState({ visible: false, challenge: null });
+    (getMyChallenges as jest.Mock).mockResolvedValue([]);
+    (getMyProgressPhotos as jest.Mock).mockResolvedValue([]);
+    (hasShownCompletion as jest.Mock).mockResolvedValue(true);
+    (hasEstablishedMembershipBaseline as jest.Mock).mockResolvedValue(true);
+    (hasSeenChallengeMembership as jest.Mock).mockResolvedValue(true);
+    (getChallenges as jest.Mock).mockResolvedValue([
+      browse(11, 'Iron Will', 'strength'),
+      browse(12, 'Sunrise Run', 'cardioLow'),
+      browse(13, 'Deadlift Club', 'strength'),
+      browse(14, 'Fresh Start', null),
+    ]);
+    mockSearchParams = { view: 'explore' };
+  });
+
+  afterEach(() => {
+    mockSearchParams = {};
+  });
+
+  async function openBrowse() {
+    const screen = await renderWithProviders(<Challenges />);
+    await waitFor(() => expect(screen.getByText('Iron Will')).toBeTruthy());
+    return screen;
+  }
+
+  it('offers "All" plus only the activities some challenge has as its main one, in order', async () => {
+    const screen = await openBrowse();
+
+    expect(screen.getByTestId('activity-filter-all')).toBeTruthy();
+    expect(screen.getByTestId('activity-filter-strength')).toBeTruthy();
+    expect(screen.getByTestId('activity-filter-cardioLow')).toBeTruthy();
+    expect(screen.queryByTestId('activity-filter-flexibility')).toBeNull();
+  });
+
+  it('shows only the challenges whose main activity is the picked one, and all of them again on "All"', async () => {
+    const screen = await openBrowse();
+
+    await fireEvent.press(screen.getByTestId('activity-filter-strength'));
+    expect(screen.getByText('Iron Will')).toBeTruthy();
+    expect(screen.getByText('Deadlift Club')).toBeTruthy();
+    expect(screen.queryByText('Sunrise Run')).toBeNull();
+    expect(screen.queryByText('Fresh Start')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('activity-filter-all'));
+    // (The list draws its first 3 cards up front, so only those are checked.)
+    expect(screen.getByText('Sunrise Run')).toBeTruthy();
+  });
+
+  it('tapping the picked chip again clears it', async () => {
+    const screen = await openBrowse();
+
+    await fireEvent.press(screen.getByTestId('activity-filter-cardioLow'));
+    expect(screen.queryByText('Iron Will')).toBeNull();
+    await fireEvent.press(screen.getByTestId('activity-filter-cardioLow'));
+    expect(screen.getByText('Iron Will')).toBeTruthy();
+  });
+
+  it('is not on Mine', async () => {
+    mockSearchParams = {};
+    (getMyChallenges as jest.Mock).mockResolvedValue([GOING]);
+    const screen = await renderWithProviders(<Challenges />);
+    await waitFor(() => expect(screen.getByText(GOING.name)).toBeTruthy());
+
+    expect(screen.queryByTestId('activity-filter-chips')).toBeNull();
   });
 });

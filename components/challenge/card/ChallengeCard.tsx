@@ -26,6 +26,12 @@ interface ChallengeCardProps {
   titleLines?: number;
   /** A small line under the title. */
   subtitle?: string;
+  /** Sets the subtitle in the title's own color (`primary`) instead of the
+   * secondary tone — Browse's "By @name". */
+  subtitleInTitleColor?: boolean;
+  /** Sits at the end of the title's row, top right (Browse's days badge); the
+   * title takes the space left of it, so a long title never runs under it. */
+  titleAccessory?: ReactNode;
   /** Sits directly below `subtitle` (e.g. who made the challenge) — still part of
    * the header, above the footer, but its own row rather than sharing the tight
    * title/subtitle stack. */
@@ -66,6 +72,8 @@ export function ChallengeCard({
   title,
   titleLines,
   subtitle,
+  subtitleInTitleColor = false,
+  titleAccessory,
   belowSubtitle,
   footer,
   side,
@@ -83,11 +91,19 @@ export function ChallengeCard({
         <View style={styles.header}>
           {top}
           <View style={styles.titleBlock}>
-            <Text variant="subheader" numberOfLines={titleLines} style={challengeCardText.primary}>
-              {title}
-            </Text>
+            <View style={styles.titleRow}>
+              <Text variant="subheader" numberOfLines={titleLines} style={[challengeCardText.primary, styles.title]}>
+                {title}
+              </Text>
+              {titleAccessory}
+            </View>
             {subtitle ? (
-              <Text variant="caption" tone="secondary" numberOfLines={1}>
+              <Text
+                variant="caption"
+                tone={subtitleInTitleColor ? undefined : 'secondary'}
+                numberOfLines={1}
+                style={subtitleInTitleColor ? challengeCardText.primary : undefined}
+              >
                 {subtitle}
               </Text>
             ) : null}
@@ -139,6 +155,15 @@ const styles = StyleSheet.create({
     // A tight title / subtitle stack — the design system's one `gap: 2` exception.
     alignSelf: 'stretch',
     gap: 2,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  title: {
+    flex: 1,
+    minWidth: 0,
   },
   // Real bug, found 2026-09-22: `top: 0, right: 0` sat flush with the
   // card's own OUTER edge, not its padded content edge — RN positions an

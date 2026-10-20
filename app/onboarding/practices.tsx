@@ -15,6 +15,7 @@ import { getMyProfile, updateMyProfile } from '../../services/user/user.service'
 import { colors, spacing, activityColors } from '../../constants/theme';
 import { MAX_PRACTICE_PREFERENCES, PRACTICE_OPTIONS } from '../../constants/practiceOptions';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
+import { safeBack } from '../../utils/navigation';
 
 /**
  * Two entry points into the same picker:
@@ -83,7 +84,7 @@ export default function OnboardingPractices() {
 
   function finish() {
     if (isEditMode) {
-      router.back();
+      safeBack('/(tabs)/profile');
     } else {
       router.replace('/(tabs)');
     }

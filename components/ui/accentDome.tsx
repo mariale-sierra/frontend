@@ -1,6 +1,6 @@
 import { Blur, FractalNoise, Group, LinearGradient, Oval, RadialGradient, Rect, vec } from '@shopify/react-native-skia';
 import { colors } from '../../constants/theme';
-import { boostSaturation, lighten, rotateHue, withAlpha } from '../../utils/color';
+import { boostSaturation, hueOf, lighten, rotateHue, withAlpha } from '../../utils/color';
 
 // A touch more saturated than the (intentionally muted) activity token, so
 // the light reads as colored light instead of a gray wash.
@@ -17,6 +17,24 @@ const HUE_SPREAD = 22;
 // seam.
 const TONE_STEPS = [1, 2 / 3, 1 / 3, 0, -1 / 3, -2 / 3, -1];
 
+// The warm accents (gold, lime) get a narrower, green-free ramp (2026-10-20,
+// explicit requests: first "I just don't like the green hues in them", then "the
+// variation colors are way too different from each other, they look like many
+// colors, not one"). Their ramp spans only ±WARM_HUE_SPREAD around the color, and
+// its yellow end stops where yellow turns green — so lime (~61°), whose ramp used
+// to reach ~83°, now stays between gold and its own lime.
+const GREEN_START_HUE = 64;
+const WARM_ACCENT_MIN_HUE = 20;
+const WARM_HUE_SPREAD = 10;
+
+/** Degrees of hue rotation for one step of the ramp (`step` in -1…1). */
+export function toneRotation(color: string, step: number) {
+  const hue = hueOf(color);
+  if (hue === null || hue < WARM_ACCENT_MIN_HUE || hue > GREEN_START_HUE) return step * HUE_SPREAD;
+  const rotation = step * WARM_HUE_SPREAD;
+  return Math.min(rotation, Math.max(0, GREEN_START_HUE - hue));
+}
+
 // How strong the wash is by distance from the circle's center, as [position out
 // to the rim (0 = center, 1 = rim), share of full strength]. From the strong
 // core it drops away decisively toward the rim. One smooth curve — the dome's
@@ -28,6 +46,21 @@ const DOME_PROFILE: [number, number][] = [
   [0.65, 0.42],
   [0.8, 0.18],
   [0.92, 0.06],
+  [1, 0],
+];
+
+// A gentler wash profile (`softEdge`): it starts easing out much earlier and
+// trails off over a long, slow tail, so where the light meets the dark there is
+// no visible edge — Log Metrics' light (2026-10-20, "the fade into the middle
+// should be softer, not so cutting edge").
+const SOFT_EDGE_PROFILE: [number, number][] = [
+  [0, 1],
+  [0.2, 0.86],
+  [0.38, 0.64],
+  [0.54, 0.42],
+  [0.68, 0.24],
+  [0.8, 0.12],
+  [0.9, 0.04],
   [1, 0],
 ];
 
@@ -116,6 +149,9 @@ interface AccentDomeProps {
    * higher, never past what that color already looks like at full opacity,
    * so it can't produce this on its own. */
   coreBoost?: number;
+  /** Fades the wash out over a long, gentle tail (`SOFT_EDGE_PROFILE`) instead
+   * of the default decisive drop — no visible edge where it meets the dark. */
+  softEdge?: boolean;
 }
 
 // How far toward the rim (as a fraction of the bloom's own falloff, 0 =
@@ -162,16 +198,17 @@ export function AccentDome({
   vividFactor = ACCENT_VIVID_FACTOR,
   bloomSquashY = 1,
   coreBoost = 0,
+  softEdge = false,
 }: AccentDomeProps) {
   const accent = boostSaturation(color, vividFactor);
-  const tones = TONE_STEPS.map((step) => rotateHue(accent, step * HUE_SPREAD));
+  const tones = TONE_STEPS.map((step) => rotateHue(accent, toneRotation(accent, step)));
   // Raising a share to a power > 1 leaves it close to its own value near 1
   // (the core) but pulls it down much faster through the middle distance —
   // see `falloffSharpness`'s own prop doc. `=== 1` skips the (harmless but
   // pointless) `Math.pow` call for every other caller, which never sets this.
   const sharpen = (curve: [number, number][]) =>
     falloffSharpness === 1 ? curve : curve.map(([position, share]): [number, number] => [position, share ** falloffSharpness]);
-  const washProfile = sharpen(DOME_PROFILE);
+  const washProfile = sharpen(softEdge ? SOFT_EDGE_PROFILE : DOME_PROFILE);
   const bloomFalloff = sharpen(SOFT_FALLOFF);
   // Lightens toward white near position 0 (the core), linearly back down to
   // 0 extra lightening by `CORE_LIGHTEN_REACH` — see `coreBoost`'s own prop

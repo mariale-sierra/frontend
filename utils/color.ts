@@ -97,3 +97,14 @@ export function lighten(hex: string, amount: number) {
 export function rotateHue(hex: string, degrees: number) {
   return transformHsl(hex, (h, s, l) => [(((h + degrees) % 360) + 360) % 360, s, l]);
 }
+
+/** A hex color's HSL hue in degrees (0–360), or null for a gray or a
+ * non-6-digit hex value (no hue to speak of). */
+export function hueOf(hex: string): number | null {
+  let hue: number | null = null;
+  transformHsl(hex, (h, s, l) => {
+    hue = h;
+    return [h, s, l];
+  });
+  return hue;
+}

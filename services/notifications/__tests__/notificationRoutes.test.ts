@@ -18,7 +18,12 @@ describe('resolveNotificationTarget', () => {
     ['space_join_request', 'space', UUID, {}, `/messaging/spaces/${UUID}/join-requests`],
     ['space_join_response', 'space', UUID, { approved: 'true' }, `/messaging/spaces/${UUID}`],
     ['space_join_response', 'space', UUID, { approved: 'false' }, '/messaging/spaces'],
-    ['challenge_invite', 'challenge_invite', '42', { challengeId: UUID }, '/notifications'],
+    // An invite opens its challenge, carrying the invite, to accept or decline there.
+    ['challenge_invite', 'challenge_invite', '42', { challengeId: UUID }, `/challenge/${UUID}?inviteId=42`],
+    // Without the challenge id: the Notifications screen's own invites section.
+    ['challenge_invite', 'challenge_invite', '42', {}, '/notifications'],
+    // A malformed challenge id never makes it into a route.
+    ['challenge_invite', 'challenge_invite', '42', { challengeId: '../x?y' }, '/notifications'],
     ['challenge_invite_response', 'challenge', UUID, { accepted: 'true' }, `/challenge/${UUID}`],
     ['challenge_join_request', 'challenge', UUID, {}, `/challenge/${UUID}/manage`],
     ['challenge_join_response', 'challenge', UUID, { approved: 'false' }, `/challenge/${UUID}`],

@@ -27,7 +27,7 @@ interface CycleDayListProps {
 
 const REMOVE_ICON_COLOR = withAlpha(colors.paper, textOpacity.tertiary);
 
-/** "Build the cycle" day list — a numbered-badge row per day, adapted from the
+/** "Fill in your cycle" (Create challenge, 53B) day list — a numbered-badge row per day, adapted from the
  * same badge/card tokens as Challenge-Info's `ChallengeRoutineDayCard` (30×30
  * `radius.big` badge, `surface`/`medium` card) but with its own Add/Edit/×
  * interaction contract, since this screen builds the cycle rather than
@@ -45,17 +45,6 @@ export function CycleDayList({
   const { t } = useTranslation();
   const days = useMemo(() => Array.from({ length: totalDays }, (_, index) => index + 1), [totalDays]);
   const canRemove = totalDays > 1;
-
-  const { trainingDays, restDays, allConfigured } = useMemo(() => {
-    let training = 0;
-    let rest = 0;
-    for (const day of days) {
-      const status = getDayStatus(day);
-      if (status === 'configured') training += 1;
-      if (status === 'rest') rest += 1;
-    }
-    return { trainingDays: training, restDays: rest, allConfigured: training + rest === days.length };
-  }, [days, getDayStatus]);
 
   return (
     <View style={styles.container}>
@@ -144,18 +133,6 @@ export function CycleDayList({
         </Pressable>
       </View>
 
-      <View style={[styles.banner, { backgroundColor: withAlpha(allConfigured ? colors.success : colors.rest, allConfigured ? 0.1 : 0.12) }]}>
-        <Icon
-          name={allConfigured ? 'checkmark-circle-outline' : 'information-circle-outline'}
-          size={18}
-          color={allConfigured ? colors.success : colors.rest}
-        />
-        <Text variant="caption" style={styles.bannerText}>
-          {allConfigured
-            ? t('challengeCreate.cycle.bannerComplete', { count: restDays, trainingDays, restDays })
-            : t('challengeCreate.cycle.bannerIncomplete')}
-        </Text>
-      </View>
     </View>
   );
 }
@@ -233,16 +210,5 @@ const styles = StyleSheet.create({
   addDayLabel: {
     color: colors.primary,
     opacity: 1,
-  },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderRadius: radius.medium,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-  },
-  bannerText: {
-    flex: 1,
   },
 });

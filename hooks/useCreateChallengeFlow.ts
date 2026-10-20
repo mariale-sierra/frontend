@@ -16,12 +16,21 @@ import type { ActivityType } from '../types/activity';
 import { useTranslation } from 'react-i18next';
 import { createChallengeNameSchema, type ChallengeNameFormValues } from '../validation/challengeSchemas';
 
+// The old single "Build the cycle" step is two steps now: 'cycleLength'
+// (53A — the cycle's length and the challenge's length, with a calendar
+// preview) then 'cycleFill' (53B — a routine or rest for every cycle day).
+// The challenge's length moved out of the old step 4, which is now only
+// 'visibility'.
 export type CreateStep =
   | { kind: 'name'; title: string; description: string }
   | { kind: 'activityLocation'; title: string; description: string }
-  | { kind: 'cycle'; title: string; description: string }
-  | { kind: 'durationVisibility'; title: string; description: string }
-  | { kind: 'review'; title: string; description: string };
+  | { kind: 'cycleLength'; title: string; description: string }
+  | { kind: 'cycleFill'; title: string; description: string }
+  | { kind: 'visibility'; title: string; description: string }
+  | { kind: 'review'; title: string; description: string }
+  // The last step (2026-10-20): how every challenge works — a photo a day —
+  // and where "Start challenge" lives.
+  | { kind: 'rules'; title: string; description: string };
 
 function toggleValue(values: string[], value: string) {
   return values.includes(value)
@@ -53,30 +62,35 @@ function getStepErrors(step: CreateStep, params: {
         ...(params.selectedCategories.length === 0 ? [params.labels.exerciseCategories] : []),
         ...(params.selectedLocations.length === 0 ? [params.labels.challengeLocation] : []),
       ];
-    case 'cycle':
+    case 'cycleLength':
+      // Both steppers are clamped to valid values — nothing to complete.
+      return [];
+    case 'cycleFill':
       return params.hasRoutineForEveryDay ? [] : [params.labels.configureEveryDay];
-    case 'durationVisibility':
+    case 'visibility':
       return params.visibility ? [] : [params.labels.visibility];
     case 'review':
+    case 'rules':
       return [];
   }
 }
 
 export function useCreateChallengeFlow() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const title = useChallengeBuilder((state) => state.title);
   const description = useChallengeBuilder((state) => state.description);
   const cycleLengthDays = useChallengeBuilder((state) => state.cycleLengthDays);
-  const cyclesCount = useChallengeBuilder((state) => state.cyclesCount);
+  const durationDays = useChallengeBuilder((state) => state.durationDays);
   const visibility = useChallengeBuilder((state) => state.visibility);
   const currentStep = useChallengeBuilder((state) => state.currentStep);
   const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
   const selectedLocations = useChallengeBuilder((state) => state.selectedLocations);
   const setTitle = useChallengeBuilder((state) => state.setTitle);
   const setDescription = useChallengeBuilder((state) => state.setDescription);
+  const setCycleLengthInStore = useChallengeBuilder((state) => state.setCycleLengthDays);
   const addCycleDayInStore = useChallengeBuilder((state) => state.addCycleDay);
   const removeCycleDayInStore = useChallengeBuilder((state) => state.removeCycleDay);
-  const setCyclesCount = useChallengeBuilder((state) => state.setCyclesCount);
+  const setDurationDays = useChallengeBuilder((state) => state.setDurationDays);
   const setVisibility = useChallengeBuilder((state) => state.setVisibility);
   const setCurrentStep = useChallengeBuilder((state) => state.setCurrentStep);
   const setSelectedCategories = useChallengeBuilder((state) => state.setSelectedCategories);
@@ -140,38 +154,50 @@ export function useCreateChallengeFlow() {
       description: t('challengeCreate.steps.activityLocation.description'),
     },
     {
-      kind: 'cycle',
-      title: t('challengeCreate.steps.cycle.title'),
-      description: t('challengeCreate.steps.cycle.description'),
+      kind: 'cycleLength',
+      title: t('challengeCreate.steps.cycleLength.title'),
+      description: t('challengeCreate.steps.cycleLength.description'),
     },
     {
-      kind: 'durationVisibility',
-      title: t('challengeCreate.steps.durationVisibility.title'),
-      description: t('challengeCreate.steps.durationVisibility.description'),
+      kind: 'cycleFill',
+      title: t('challengeCreate.steps.cycleFill.title'),
+      description: t('challengeCreate.steps.cycleFill.description'),
+    },
+    {
+      kind: 'visibility',
+      title: t('challengeCreate.steps.visibility.title'),
+      description: t('challengeCreate.steps.visibility.description'),
     },
     {
       kind: 'review',
       title: t('challengeCreate.steps.review.title'),
       description: t('challengeCreate.steps.review.description'),
     },
+    {
+      kind: 'rules',
+      title: t('challengeCreate.steps.rules.title'),
+      description: t('challengeCreate.steps.rules.description'),
+    },
   ]), [t]);
 
-  const hasRoutineForEveryDay = useMemo(
-    () => Array.from({ length: cycleLengthDays }, (_, index) => index + 1)
-      .every((dayNumber) => Boolean(routinesByDay[dayNumber])),
-    [cycleLengthDays, routinesByDay],
-  );
+  // The first cycle day with nothing assigned yet (53B's "Fill day N to
+  // continue"), or null once every day has a routine or is a rest day.
+  const firstUnfilledDay = useMemo(() => {
+    for (let day = 1; day <= cycleLengthDays; day += 1) {
+      if (!routinesByDay[day]) return day;
+    }
+    return null;
+  }, [cycleLengthDays, routinesByDay]);
+  const hasRoutineForEveryDay = firstUnfilledDay === null;
 
-  const durationDays = cycleLengthDays * cyclesCount;
   const activeStep = steps[Math.min(currentStep, steps.length - 1)];
   const isReviewStep = activeStep.kind === 'review';
+  // The step that submits: the last one, the rules.
+  const isFinalStep = activeStep.kind === 'rules';
 
-  const endDateLabel = useMemo(() => {
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + durationDays - 1);
-    const locale = i18n.language?.startsWith('es') ? 'es-ES' : 'en-US';
-    return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(endDate);
-  }, [durationDays, i18n.language]);
+  // Monday-based weekday of today (0 = Mon … 6 = Sun): day 1 of the calendar
+  // preview sits in today's column — the challenge starts the day it's made.
+  const startWeekday = useMemo(() => (new Date().getDay() + 6) % 7, []);
 
   const activeStepErrors = getStepErrors(activeStep, {
     title,
@@ -275,7 +301,7 @@ export function useCreateChallengeFlow() {
       description,
       visibility,
       cycleLengthDays,
-      cyclesCount,
+      durationDays,
       selectedCategories,
       selectedLocations,
       routinesByDay,
@@ -283,7 +309,7 @@ export function useCreateChallengeFlow() {
 
     setIsSubmitting(true);
     try {
-      const created = await createChallenge(payload);
+      await createChallenge(payload);
       resetChallengeBuilder();
       // Real bug, fixed 2026-08-29, per user report ("the previous cycle
       // configured shows set up" on the NEXT challenge creation): this store
@@ -294,15 +320,12 @@ export function useCreateChallengeFlow() {
       // `routinesByDay[day]`) would silently hydrate the NEXT challenge's
       // "New workout" flow from the PREVIOUS challenge's leftover data.
       resetRoutineBuilder();
-      if (created?.id) {
-        router.replace(`/challenge/${created.id}`);
-      } else {
-        // Fallback for the rare case the create response has no id — the
-        // Challenges tab's Mine view (its default) is where a just-created
-        // challenge shows up anyway, now that app/challenge/active-all.tsx
-        // (the old dedicated screen) is retired.
-        router.replace('/(tabs)/challenges');
-      }
+      // Lands on Mine, where the new challenge now is — the same place joining
+      // one from Browse (or accepting an invite) ends (2026-10-20, explicit
+      // request; it used to open the new challenge's info screen). `view=mine`
+      // switches the Challenges tab even if it's still mounted underneath on
+      // Browse (see its own `requestedView` effect).
+      router.replace('/(tabs)/challenges?view=mine');
     } catch (err: unknown) {
       type AxiosLike = {
         response?: { status?: number; data?: { message?: string | string[] } };
@@ -339,6 +362,7 @@ export function useCreateChallengeFlow() {
     addCycleDayInStore();
   }
 
+  // × on a day row (53B): drop that day and renumber the ones after it.
   function removeCycleDay(dayNumber: number) {
     if (cycleLengthDays <= 1) {
       return;
@@ -346,6 +370,18 @@ export function useCreateChallengeFlow() {
 
     removeDayAndShift(dayNumber, cycleLengthDays);
     removeCycleDayInStore();
+  }
+
+  // The "Cycle" stepper (53A). Growing it adds empty days at the end;
+  // shrinking it drops the last days, with whatever was assigned to them, so
+  // growing it back gives empty days — never stale routines.
+  function setCycleLengthDays(next: number) {
+    if (next < cycleLengthDays) {
+      for (let day = cycleLengthDays; day > Math.max(next, 1); day -= 1) {
+        removeDayAndShift(day, day);
+      }
+    }
+    setCycleLengthInStore(next);
   }
 
   function openDayRoutineSelector(day: number) {
@@ -438,9 +474,8 @@ export function useCreateChallengeFlow() {
     title,
     description,
     cycleLengthDays,
-    cyclesCount,
     durationDays,
-    endDateLabel,
+    startWeekday,
     visibility,
     selectedCategories,
     selectedLocations,
@@ -449,6 +484,7 @@ export function useCreateChallengeFlow() {
     steps,
     progress: (currentStep + 1) / steps.length,
     isReviewStep,
+    isFinalStep,
     activeStepErrors,
     isFormComplete,
     missingConfigurationFields,
@@ -458,11 +494,13 @@ export function useCreateChallengeFlow() {
     setDescription,
     addCycleDay,
     removeCycleDay,
-    setCyclesCount,
+    setCycleLengthDays,
+    setDurationDays,
     setVisibility,
     setCurrentStep,
     isSubmitting,
     hasRoutineForEveryDay,
+    firstUnfilledDay,
     getDayStatus,
     getDayRoutineLabel,
     getDayRoutineMeta,

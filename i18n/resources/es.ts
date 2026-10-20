@@ -111,7 +111,7 @@ const es = {
     },
     loadError: 'No se pudieron cargar los retos.',
     mineTab: 'Míos',
-    exploreTab: 'Explorar',
+    exploreTab: 'Descubrir',
     newButton: 'Nuevo',
     trainDay: 'Día de entreno',
     restDay: 'Día de descanso',
@@ -126,8 +126,11 @@ const es = {
     noRestDays: 'sin días de descanso',
     membersCount: '{{count}} miembros',
     view: 'Ver',
+    join: 'Unirme',
     emptyMine: 'Aún no te has unido a ningún reto.',
     emptyExplore: 'No hay retos para explorar por ahora.',
+    emptyExploreFilter: 'Aún no hay retos en esta categoría.',
+    filterAll: 'Todos',
     showFinishedChallenges_one: 'Mostrar {{count}} reto terminado',
     showFinishedChallenges_other: 'Mostrar {{count}} retos terminados',
     hideFinishedChallenges: 'Ocultar retos terminados',
@@ -215,6 +218,7 @@ const es = {
     shareLinkLine: 'Ábrelo en la app: {{link}}',
   },
   challengeProgress: {
+    logTodayA11y: 'Registrar hoy',
     gallery: {
       feedTitle: 'Feed de progreso',
       emptyMessage: 'Aún no hay fotos.',
@@ -344,16 +348,24 @@ const es = {
       nothingSetYet: 'Nada configurado aún',
       add: 'Agregar',
       addDay: 'Agregar día',
-      bannerIncomplete: 'Toca Agregar en cualquier día para elegir una rutina o marcarlo como descanso. Usa Agregar día o × para cambiar la duración del ciclo.',
-      bannerComplete_one: '{{trainingDays}} días de entrenamiento, {{restDays}} día de descanso. Toca × para quitar un día, o Agregar día para más.',
-      bannerComplete_other: '{{trainingDays}} días de entrenamiento, {{restDays}} días de descanso. Toca × para quitar un día, o Agregar día para más.',
-      setAllDaysHint_one: 'Configura el día para continuar',
-      setAllDaysHint_other: 'Configura los {{count}} días para continuar',
+      fillDayHint: 'Llena el día {{day}} para continuar',
     },
-    duration: {
-      repeats: 'Repeticiones',
-      cycles: 'Ciclos',
-      callout: '{{cycleLengthDays}} × {{cyclesCount}} = {{totalDays}}, termina el {{endDate}}',
+    cycleLength: {
+      cycleLabel: 'Ciclo',
+      cycleHint: 'Días antes de que vuelva a empezar',
+      lengthLabel: 'Duración del reto',
+      lengthHint: 'Días en total',
+      daysUnit_one: 'día',
+      daysUnit_other: 'días',
+      decreaseA11y: 'Restar un día a {{label}}',
+      increaseA11y: 'Sumar un día a {{label}}',
+    },
+    calendar: {
+      fullCycles_one: '{{count}} ciclo completo',
+      fullCycles_other: '{{count}} ciclos completos',
+      leftoverDays_one: '{{count}} día',
+      leftoverDays_other: '{{count}} días',
+      cyclesAndDays: '{{cycles}} + {{days}}',
     },
     visibility: {
       publicLabel: 'Público',
@@ -363,6 +375,20 @@ const es = {
     },
     submit: {
       startChallenge: 'Iniciar reto',
+    },
+    rules: {
+      dailyPhoto: {
+        title: 'Una foto cada día de entrenamiento',
+        body: 'Registra cada día de entrenamiento con una foto rápida. Esa foto es tu check-in.',
+      },
+      consistency: {
+        title: 'La constancia es lo que cuenta',
+        body: 'Cumple cada día de entrenamiento del reto. Los días de descanso no requieren nada: solo descansa.',
+      },
+      together: {
+        title: 'Lo hacen juntos',
+        body: 'Todos en el reto ven las fotos de cada día, así se motivan entre ustedes.',
+      },
     },
     review: {
       daysUnit: 'días',
@@ -377,7 +403,7 @@ const es = {
       locationLabel: 'Ubicación',
       noneSelected: 'Nada seleccionado',
       cycleLabel: 'Ciclo',
-      cycleValue: '{{cycleLengthDays}} días, repitiendo {{cyclesCount}} veces',
+      cycleValue: 'Ciclo de {{cycleLength}} · {{breakdown}}',
       cycleSectionLabel: 'El ciclo',
       dayLabel: 'Día {{day}}',
       notSelectedYet: 'Aún sin seleccionar',
@@ -392,17 +418,25 @@ const es = {
         title: '¿Qué tipo de entrenamiento?',
         description: 'Estas dos elecciones definen qué ejercicios podrás agregar a las rutinas después, así que elige todo lo que aplique.',
       },
-      cycle: {
-        title: 'Arma el ciclo',
-        description: 'Dale una rutina a cada día, o márcalo como descanso. Agrega o quita días cuando quieras — la mayoría de los ciclos duran de 3 a 7 días.',
+      cycleLength: {
+        title: 'Ciclo y duración',
+        description: 'Planea unos cuantos días una vez. Los repetiremos hasta que termine el reto.',
       },
-      durationVisibility: {
-        title: '¿Cuánto dura y quién lo ve?',
-        description: 'El ciclo se repite hasta que termina el reto. Entre más largo, más difícil — 30 días es el punto ideal para un primer reto.',
+      cycleFill: {
+        title: 'Llena tu ciclo',
+        description: 'Dale una rutina a cada día, o márcalo como descanso. Agrega o quita días cuando quieras.',
+      },
+      visibility: {
+        title: '¿Quién lo puede ver?',
+        description: 'Elige si cualquiera puede encontrarlo y unirse, o solo las personas que tú apruebes.',
       },
       review: {
         title: 'Listo cuando quieras',
         description: 'El día 1 empieza hoy. Puedes editar el nombre y la descripción después, pero el ciclo queda bloqueado en cuanto alguien se une.',
+      },
+      rules: {
+        title: 'Cómo funciona',
+        description: 'Todos los retos siguen las mismas reglas sencillas.',
       },
     },
     validation: {
@@ -703,6 +737,8 @@ const es = {
     unknownChallenge: 'Reto',
     challengeWithDuration: '{{name}} · {{duration}}',
     viewChallengeA11y: 'Ver detalles de {{name}}',
+    invitedYou: '@{{username}} te invitó a este reto',
+    invitedYouAnonymous: 'Te invitaron a este reto',
     from: 'De @{{username}}',
     to: 'Para @{{username}}',
     status: {

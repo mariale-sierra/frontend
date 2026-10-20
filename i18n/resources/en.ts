@@ -111,7 +111,7 @@ const en = {
     },
     loadError: 'Could not load challenges.',
     mineTab: 'Mine',
-    exploreTab: 'Explore',
+    exploreTab: 'Browse',
     newButton: 'New',
     trainDay: 'Train day',
     restDay: 'Rest day',
@@ -126,8 +126,11 @@ const en = {
     noRestDays: 'no rest days',
     membersCount: '{{count}} members',
     view: 'View',
+    join: 'Join',
     emptyMine: "You haven't joined any challenges yet.",
     emptyExplore: 'No challenges to explore right now.',
+    emptyExploreFilter: 'No challenges in this category yet.',
+    filterAll: 'All',
     // The Mine list's collapsed-by-default finished-challenges disclosure —
     // see app/(tabs)/challenges.tsx.
     showFinishedChallenges_one: 'Show {{count}} finished challenge',
@@ -220,6 +223,7 @@ const en = {
     shareLinkLine: 'Open it in the app: {{link}}',
   },
   challengeProgress: {
+    logTodayA11y: 'Log today',
     gallery: {
       // "Progress Feed" is the header title when browsing every photo (grid
       // tap); a specific day's title reuses the plain challenges.dayLabel
@@ -352,16 +356,24 @@ const en = {
       nothingSetYet: 'Nothing set yet',
       add: 'Add',
       addDay: 'Add day',
-      bannerIncomplete: 'Tap Add on any day to pick a routine or set it as rest. Use Add day or × to change how long the cycle runs.',
-      bannerComplete_one: '{{trainingDays}} training days, {{restDays}} rest day. Tap × to remove a day, or Add day for more.',
-      bannerComplete_other: '{{trainingDays}} training days, {{restDays}} rest days. Tap × to remove a day, or Add day for more.',
-      setAllDaysHint_one: 'Set all {{count}} day to continue',
-      setAllDaysHint_other: 'Set all {{count}} days to continue',
+      fillDayHint: 'Fill day {{day}} to continue',
     },
-    duration: {
-      repeats: 'Repeats',
-      cycles: 'Cycles',
-      callout: '{{cycleLengthDays}} × {{cyclesCount}} = {{totalDays}}, ending {{endDate}}',
+    cycleLength: {
+      cycleLabel: 'Cycle',
+      cycleHint: 'Days before it starts again',
+      lengthLabel: 'Challenge length',
+      lengthHint: 'Total days',
+      daysUnit_one: 'day',
+      daysUnit_other: 'days',
+      decreaseA11y: 'One day less for {{label}}',
+      increaseA11y: 'One day more for {{label}}',
+    },
+    calendar: {
+      fullCycles_one: '{{count}} full cycle',
+      fullCycles_other: '{{count}} full cycles',
+      leftoverDays_one: '{{count}} day',
+      leftoverDays_other: '{{count}} days',
+      cyclesAndDays: '{{cycles}} + {{days}}',
     },
     visibility: {
       publicLabel: 'Public',
@@ -376,6 +388,20 @@ const en = {
     submit: {
       startChallenge: 'Start challenge',
     },
+    rules: {
+      dailyPhoto: {
+        title: 'A photo every training day',
+        body: 'Log each training day with a quick photo of your workout. That photo is your check-in.',
+      },
+      consistency: {
+        title: 'Consistency is the point',
+        body: 'Show up for every training day of the challenge. Rest days take care of themselves: nothing to do but rest.',
+      },
+      together: {
+        title: 'You do it together',
+        body: "Everyone in the challenge sees each day's photos, so you keep each other going.",
+      },
+    },
     review: {
       daysUnit: 'days',
       untitledChallenge: 'Untitled challenge',
@@ -389,7 +415,7 @@ const en = {
       locationLabel: 'Location',
       noneSelected: 'None selected',
       cycleLabel: 'Cycle',
-      cycleValue: '{{cycleLengthDays}} days, repeating {{cyclesCount}} times',
+      cycleValue: '{{cycleLength}} cycle · {{breakdown}}',
       cycleSectionLabel: 'The cycle',
       dayLabel: 'Day {{day}}',
       notSelectedYet: 'Not selected yet',
@@ -404,17 +430,25 @@ const en = {
         title: 'What kind of training?',
         description: 'These two choices decide which exercises you can add to routines later, so pick everything that applies.',
       },
-      cycle: {
-        title: 'Build the cycle',
-        description: 'Give each day a routine, or mark it as rest. Add a day or remove one anytime — most cycles run 3 to 7 days.',
+      cycleLength: {
+        title: 'Cycle & length',
+        description: "Plan a few days once. We'll repeat them until the challenge ends.",
       },
-      durationVisibility: {
-        title: 'How long and who sees it?',
-        description: 'The cycle repeats until the challenge ends. Longer is harder — 30 days is the sweet spot for a first challenge.',
+      cycleFill: {
+        title: 'Fill in your cycle',
+        description: 'Give each day a routine, or mark it as rest. Add or remove days any time.',
+      },
+      visibility: {
+        title: 'Who can see it?',
+        description: 'Choose whether anyone can find and join it, or only the people you approve.',
       },
       review: {
         title: 'Ready when you are',
         description: 'Day 1 starts today. You can edit the name and description later, but the cycle is locked once people join.',
+      },
+      rules: {
+        title: 'How it works',
+        description: 'Every challenge runs on the same simple rules.',
       },
     },
     validation: {
@@ -715,6 +749,8 @@ const en = {
     unknownChallenge: 'Challenge',
     challengeWithDuration: '{{name}} · {{duration}}',
     viewChallengeA11y: 'View {{name}} details',
+    invitedYou: '@{{username}} invited you to this challenge',
+    invitedYouAnonymous: 'You were invited to this challenge',
     from: 'From @{{username}}',
     to: 'To @{{username}}',
     status: {

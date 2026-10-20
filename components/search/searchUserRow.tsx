@@ -6,7 +6,7 @@ import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 import { FollowButton } from '../profile/FollowButton';
 import { Row } from '../layout/row';
-import { colors, radius, spacing } from '../../constants/theme';
+import { colors, spacing } from '../../constants/theme';
 import type { PublicProfileContract } from '../../types/user';
 
 interface SearchUserRowProps {
@@ -14,8 +14,8 @@ interface SearchUserRowProps {
 }
 
 /**
- * One "People" result row (Search-Results wireframe) — List-row card
- * pattern (`surface` bg, `medium` radius), reusing `FollowButton` (already
+ * One "People" result row (Search-Results wireframe) — a plain row, no card
+ * container (it had a `surface` card until 2026-10-20), reusing `FollowButton` (already
  * shipped on the other-user profile screen) rather than a new follow
  * control. The flame/streak badge only renders when `streak_days` is
  * present, same graceful-hide rule `ProfileHeader`'s own streak badge
@@ -29,7 +29,7 @@ export function SearchUserRow({ user }: SearchUserRowProps) {
   const { t } = useTranslation();
 
   return (
-    <View style={styles.card}>
+    <View style={styles.row}>
       <Pressable
         onPress={() => router.push(`/profile/${user.id}`)}
         style={({ pressed }) => [styles.identity, pressed && styles.pressed]}
@@ -63,13 +63,13 @@ export function SearchUserRow({ user }: SearchUserRowProps) {
 }
 
 const styles = StyleSheet.create({
-  card: {
+  // No card container (2026-10-20, explicit request): the row sits straight on
+  // the screen, its avatar on the screen's edge margin like the section title.
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.medium,
-    padding: spacing.md,
+    paddingVertical: spacing.sm,
   },
   pressed: {
     opacity: 0.85,

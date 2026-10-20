@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -30,6 +30,7 @@ import { activityColors, colors, fillOpacity, radius, shadows, spacing } from '.
 import { withAlpha } from '../../utils/color';
 import { createRegisterSchema, type RegisterFormValues } from '../../validation/authSchemas';
 import { LegalConsent, type LegalConsentValue } from '../../components/legal/LegalConsent';
+import { safeBack } from '../../utils/navigation';
 
 const INTRO_COUNT = 3;
 // Page 1 ("Real challenges, real routines") got a second photo, per explicit
@@ -190,11 +191,26 @@ export default function Register() {
   // `styles.contentLoading` below.
   const [loadedImageCount, setLoadedImageCount] = useState(0);
   const introImagesReady = loadedImageCount >= TOTAL_INTRO_IMAGES;
-  function handleIntroImageSettled() {
-    // Counts errors too (not just successful loads) — a broken image must
-    // never leave the spinner stuck forever.
-    setLoadedImageCount((c) => c + 1);
-  }
+  // Counts errors too (not just successful loads) — a broken image must
+  // never leave the spinner stuck forever. Each image counts ONCE, and each
+  // gets the same handler on every render: on web, react-native-web's
+  // <Image> fires onLoad again whenever its handler changes, so a fresh
+  // function per render made every load re-render, re-fire and re-count —
+  // "Maximum update depth exceeded" (real, reported bug).
+  const settledImagesRef = useRef(new Set<string>());
+  const settleHandlersRef = useRef(new Map<string, () => void>());
+  const handleIntroImageSettled = useCallback((key: string) => {
+    let handler = settleHandlersRef.current.get(key);
+    if (!handler) {
+      handler = () => {
+        if (settledImagesRef.current.has(key)) return;
+        settledImagesRef.current.add(key);
+        setLoadedImageCount((c) => c + 1);
+      };
+      settleHandlersRef.current.set(key, handler);
+    }
+    return handler;
+  }, []);
 
   // Both consents are mandatory (T&C + Privacy/Community docs, and 16+); the
   // account is not created until both are checked. The backend enforces it too.
@@ -384,7 +400,7 @@ export default function Register() {
           // screen's own link TO register), so the button read "Register"
           // while actually doing the opposite: exiting register and
           // returning to login.
-          <Pressable onPress={() => router.back()} hitSlop={8} accessibilityRole="button">
+          <Pressable onPress={() => safeBack('/(auth)/login')} hitSlop={8} accessibilityRole="button">
             <Text variant="label" weight="bold" tone="secondary">
               {t('common.actions.login')}
             </Text>
@@ -445,14 +461,14 @@ export default function Register() {
                     <Image
                       source={p.image[1]}
                       style={[styles.fanImageBase, styles.fanImageRight]}
-                      onLoad={handleIntroImageSettled}
-                      onError={handleIntroImageSettled}
+                      onLoad={handleIntroImageSettled(`${i}-1`)}
+                      onError={handleIntroImageSettled(`${i}-1`)}
                     />
                     <Image
                       source={p.image[0]}
                       style={[styles.fanImageBase, styles.fanImageLeft, styles.fanImageShadow]}
-                      onLoad={handleIntroImageSettled}
-                      onError={handleIntroImageSettled}
+                      onLoad={handleIntroImageSettled(`${i}-0`)}
+                      onError={handleIntroImageSettled(`${i}-0`)}
                     />
                   </View>
                 ) : (
@@ -460,8 +476,8 @@ export default function Register() {
                     <Image
                       source={p.image}
                       style={styles.image}
-                      onLoad={handleIntroImageSettled}
-                      onError={handleIntroImageSettled}
+                      onLoad={handleIntroImageSettled(`${i}`)}
+                      onError={handleIntroImageSettled(`${i}`)}
                     />
                     {i === STREAK_DEMO_PAGE && (
                       <View style={styles.streakBadge}>

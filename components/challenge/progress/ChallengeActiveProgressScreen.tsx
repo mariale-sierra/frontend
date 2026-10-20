@@ -1,9 +1,10 @@
-import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { spacing } from '../../../constants/theme';
+import { colors, radius, shadows, spacing } from '../../../constants/theme';
+import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
 import { SegmentedIconToggle } from '../../ui/segmentedIconToggle';
 import { useChallengeActiveProgress } from '../../../hooks/useChallengeActiveProgress';
@@ -36,6 +37,9 @@ export function ChallengeActiveProgressScreen() {
 
   const galleryVisible = selectedPhotoId != null || selectedDay != null;
   const accentColor = getChallengeAccentColor(data.dominantActivityCategory);
+  // Today can still be logged: a training or rest day not yet completed, in a
+  // challenge that isn't finished or left.
+  const canLogToday = data.state === 'active' || data.state === 'rest';
 
   const leavePopup = useConfirmationPopup({
     type: 'leave',
@@ -69,6 +73,12 @@ export function ChallengeActiveProgressScreen() {
       router.push(
         `/challenge/${data.challengeId}/members?dominantActivityCategory=${data.dominantActivityCategory ?? ''}`,
       );
+    }
+  }
+
+  function handlePressLogToday() {
+    if (data.challengeId) {
+      router.push(`/(add)/metrics?challengeId=${data.challengeId}`);
     }
   }
 
@@ -112,7 +122,10 @@ export function ChallengeActiveProgressScreen() {
           viewport height. */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + spacing['2xl'] }}
+        contentContainerStyle={{
+          // Clears the floating log button too, so the last photos aren't under it.
+          paddingBottom: insets.bottom + spacing['2xl'] + (canLogToday ? LOG_BUTTON_SIZE : 0),
+        }}
       >
         <ChallengeProgressHeader
           state={data.state}
@@ -173,6 +186,25 @@ export function ChallengeActiveProgressScreen() {
         onClose={closeGallery}
       />
 
+      {/* Log today: a floating camera button in the challenge's own color (`ink`
+          icon, as activity colors pair with), bottom right — always in reach while
+          scrolling the photos, and apart from the header's own controls. */}
+      {canLogToday && (
+        <Pressable
+          onPress={handlePressLogToday}
+          accessibilityRole="button"
+          accessibilityLabel={t('challengeProgress.logTodayA11y')}
+          testID="progress-log-today"
+          style={({ pressed }) => [
+            styles.logButton,
+            { backgroundColor: accentColor, bottom: Math.max(insets.bottom, spacing.lg) + spacing.sm },
+            pressed && styles.logButtonPressed,
+          ]}
+        >
+          <Icon name="camera" size={26} color={colors.ink} />
+        </Pressable>
+      )}
+
       <leavePopup.Component />
 
       {/* Rendered LAST, not right after ChallengeAccentBackdrop — real bug,
@@ -188,7 +220,22 @@ export function ChallengeActiveProgressScreen() {
   );
 }
 
+const LOG_BUTTON_SIZE = 56;
+
 const styles = StyleSheet.create({
+  logButton: {
+    position: 'absolute',
+    right: spacing.lg,
+    width: LOG_BUTTON_SIZE,
+    height: LOG_BUTTON_SIZE,
+    borderRadius: radius.big,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.lg,
+  },
+  logButtonPressed: {
+    opacity: 0.85,
+  },
   consistencyHeader: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -2,7 +2,7 @@ import { StyleProp, StyleSheet, View, ViewStyle, useWindowDimensions } from 'rea
 import { AccentDome } from '../ui/accentDome';
 import { WebSafeCanvas } from '../ui/webSafeCanvas';
 import { colors } from '../../constants/theme';
-import { PAPER_GRADIENT, PAPER_GRADIENT_EDGE, TINTED_GRADIENT } from '../../constants/screenBackground';
+import { PAPER_GRADIENT, PAPER_GRADIENT_EDGE, SOFT_TINTED_GRADIENT, TINTED_GRADIENT } from '../../constants/screenBackground';
 
 // A fine film grain over the light, on top of the dome's dither, against banding:
 // a slow fade from a near-black to a slightly lighter gray has only a few dozen
@@ -23,6 +23,8 @@ interface PaperGradientBackgroundProps {
   /** Colors the light (an activity color) instead of `paper`. A tinted light is a
    * little stronger (`TINTED_GRADIENT`). */
   tint?: string;
+  /** With a `tint`: the softer, more blended light (`SOFT_TINTED_GRADIENT`). */
+  soft?: boolean;
   style?: StyleProp<ViewStyle>;
   /** Unmount the web Skia surface while its route is covered. */
   unmountOnBlur?: boolean;
@@ -44,10 +46,14 @@ interface PaperGradientBackgroundProps {
 export function PaperGradientBackground({
   edge = PAPER_GRADIENT_EDGE,
   tint,
+  soft = false,
   style,
   unmountOnBlur = false,
 }: PaperGradientBackgroundProps) {
   const { width, height } = useWindowDimensions();
+  const { bloomBlurShare, ...softDome } = SOFT_TINTED_GRADIENT;
+  const dome = tint ? (soft ? softDome : TINTED_GRADIENT) : PAPER_GRADIENT;
+  const bloomBlur = width * (tint && soft ? bloomBlurShare : BLOOM_BLUR);
 
   return (
     <View style={[StyleSheet.absoluteFill, style]} pointerEvents="none">
@@ -57,8 +63,8 @@ export function PaperGradientBackground({
           height={height}
           color={tint ?? colors.paper}
           edge={edge}
-          {...(tint ? TINTED_GRADIENT : PAPER_GRADIENT)}
-          bloomBlur={width * BLOOM_BLUR}
+          {...dome}
+          bloomBlur={bloomBlur}
           grainOpacity={GRAIN_OPACITY}
         />
       </WebSafeCanvas>

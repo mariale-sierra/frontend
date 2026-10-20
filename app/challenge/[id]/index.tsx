@@ -19,6 +19,9 @@ import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { closeChallenge, getChallenge, isChallengeOwner, joinChallenge } from '../../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../../services/user/user.service';
+import { acceptInvite, declineInvite, getReceivedInvites } from '../../../services/invites/invite.service';
+import { invalidateChallengeProgressCache } from '../../../hooks/useChallengeProgress';
+import type { ChallengeInviteContract } from '../../../types/invite';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
 import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
@@ -45,13 +48,19 @@ export default function ChallengeDetail() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `inviteId`: opened from a challenge-invite notification (notificationRoutes.ts).
+  const { id, inviteId } = useLocalSearchParams<{ id: string; inviteId?: string }>();
   const [challenge, setChallenge] = useState<ChallengeContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('none');
   const [membershipLoading, setMembershipLoading] = useState(true);
-  const { showSuccess } = useErrorNotificationStore();
+  const { show, showSuccess } = useErrorNotificationStore();
+  // A pending invite to this challenge for the current user: the bottom bar then
+  // offers Accept / Decline instead of Join (2026-10-20 — tapping an invite
+  // notification lands here, so the user sees what they're invited to first).
+  const [pendingInvite, setPendingInvite] = useState<ChallengeInviteContract | null>(null);
+  const [inviteAction, setInviteAction] = useState<'accept' | 'decline' | null>(null);
   const [shareVisible, setShareVisible] = useState(false);
 
   // Onboarding Stage 4's join callout — teaches the general concept of
@@ -163,6 +172,51 @@ export default function ChallengeDetail() {
       .catch(() => setMembershipStatus('none'))
       .finally(() => setMembershipLoading(false));
   }, [challenge]);
+
+  useEffect(() => {
+    if (!challenge) return;
+    let active = true;
+    getReceivedInvites()
+      .then((invites) => {
+        if (!active) return;
+        const forThisChallenge = invites.filter(
+          (invite) => invite.status === 'pending' && String(invite.challenge?.id) === String(challenge.id),
+        );
+        // The one the notification pointed at, else any pending one for this challenge.
+        setPendingInvite(forThisChallenge.find((invite) => invite.id === inviteId) ?? forThisChallenge[0] ?? null);
+      })
+      .catch(() => {
+        // No invites to show — the regular Join button stays.
+      });
+    return () => {
+      active = false;
+    };
+  }, [challenge, inviteId]);
+
+  async function handleInvite(action: 'accept' | 'decline') {
+    if (!pendingInvite || inviteAction) return;
+    const name = challenge?.name ?? t('challenges.fallbackName');
+    setInviteAction(action);
+    try {
+      if (action === 'accept') {
+        await acceptInvite(pendingInvite.id);
+        // Membership changed — the challenge tabs refetch; and this is its own
+        // explicit confirmation, so the Challenges tab's "You're in!" never fires too.
+        invalidateChallengeProgressCache();
+        void markChallengeMembershipSeen(String(challenge?.id ?? id));
+        showSuccess({ message: t('invites.successAccepted', { challenge: name }) });
+        router.replace('/(tabs)/challenges?view=mine');
+        return;
+      }
+      await declineInvite(pendingInvite.id);
+      setPendingInvite(null);
+      showSuccess({ message: t('invites.successDeclined', { challenge: name }) });
+    } catch {
+      show({ message: t('invites.errorAction') });
+    } finally {
+      setInviteAction(null);
+    }
+  }
 
   // Sprint 9, B5: the share button opens "Send to…" — a chat inside Havit,
   // or "Other apps" for the native share sheet (WhatsApp, Instagram…).
@@ -339,7 +393,43 @@ export default function ChallengeDetail() {
         </View>
       )}
 
-      {showsBottomBar && membershipStatus === 'none' && (
+      {showsBottomBar && membershipStatus === 'none' && pendingInvite && (
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]} testID="challenge-invite-bar">
+          <Text variant="caption" tone="secondary" align="center" style={styles.inviteCaption}>
+            {pendingInvite.sender?.username
+              ? t('invites.invitedYou', { username: pendingInvite.sender.username })
+              : t('invites.invitedYouAnonymous')}
+          </Text>
+          <Row gap="sm">
+            <Button
+              variant="subtle"
+              size="md"
+              textWeight="bold"
+              style={styles.inviteButton}
+              onPress={() => handleInvite('decline')}
+              loading={inviteAction === 'decline'}
+              disabled={inviteAction !== null}
+              testID="challenge-invite-decline"
+            >
+              {t('invites.actions.decline')}
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              textWeight="bold"
+              style={styles.inviteButton}
+              onPress={() => handleInvite('accept')}
+              loading={inviteAction === 'accept'}
+              disabled={inviteAction !== null}
+              testID="challenge-invite-accept"
+            >
+              {t('invites.actions.accept')}
+            </Button>
+          </Row>
+        </View>
+      )}
+
+      {showsBottomBar && membershipStatus === 'none' && !pendingInvite && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
           {showJoinCallout && (
             <CoachMark
@@ -440,6 +530,12 @@ const styles = StyleSheet.create({
   // adds the gap before the Join button below it.
   joinCallout: {
     marginBottom: spacing.sm,
+  },
+  inviteCaption: {
+    marginBottom: spacing.sm,
+  },
+  inviteButton: {
+    flex: 1,
   },
   joinButton: {
     height: 52,

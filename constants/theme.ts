@@ -84,7 +84,7 @@ export const activityColors: Record<ActivityType, string> = {
   // warmer (hue 44 -> 38 degrees, gold toward amber). A first try at about 1.16x
   // was "way too much" and was cut back to this. Each entry's last "was" is the
   // value before that bump.
-  strength: '#FFC460', // amber-gold (power/alertness) — was #F7CF64 (golden-orange, swapped from cardioIntense) → #E9EB54 (lime, before the swap)
+  strength: '#FFBE51', // amber-gold (power/alertness) — HSV saturation 62% -> 68% (2026-10-20, "a bit more saturation, it's too taupe"), hue kept at 38 — was #FFC460 → #F7CF64 (golden-orange, swapped from cardioIntense) → #E9EB54 (lime, before the swap)
   cardioIntense: '#E9EB4D', // lime (fast/electric energy) — was #E9EB54 (lime, swapped from strength) → #F7CF64 (golden-orange, before the swap)
   cardioLow: '#3BEED6', // aqua-turquoise (steady/calm endurance) — was #43EDD7 → #5CD97A → #9ADB4F → #1BDCC4 → #43EDD7 → #1BDCC4 → #40B7A8 → #33C4B2 → #43EDD7
   flexibility: '#85ADFB', // electric blue (open/breath) — was #88ADF6 → #3DDBEE → #588AEE → #88ADF6 → #588AEE → #7493D2 → #6B90DB → #88ADF6

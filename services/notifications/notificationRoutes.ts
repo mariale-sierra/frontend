@@ -27,6 +27,21 @@ function safeId(id: string | null | undefined): string | null {
 }
 
 /**
+ * An invite opens the challenge it's for, carrying the invite, so the user sees
+ * what they were invited to and answers right there (Challenge-Info shows Accept /
+ * Decline for a pending invite). Without a challenge id it falls back to the
+ * Notifications screen's own invites section (B5).
+ */
+function inviteTarget(inviteId: string | null, data: Record<string, unknown>): NotificationTarget {
+  const challengeId = safeId(typeof data.challengeId === 'string' ? data.challengeId : null);
+  if (!challengeId) return { kind: 'route', href: '/notifications' };
+  return {
+    kind: 'route',
+    href: inviteId ? `/challenge/${challengeId}?inviteId=${inviteId}` : `/challenge/${challengeId}`,
+  };
+}
+
+/**
  * Maps a notification to an existing expo-router route. Pure (no I/O) so the
  * whole table is unit-tested. Types the app doesn't know yet (a newer backend)
  * fall back to the entity they point at; anything else opens nothing.
@@ -51,8 +66,7 @@ export function resolveNotificationTarget(input: NotificationTargetInput): Notif
     case 'challenge_join_request':
       return id ? { kind: 'route', href: `/challenge/${id}/manage` } : none;
     case 'challenge_invite':
-      // Pending invites live in the Notifications screen itself (B5).
-      return { kind: 'route', href: '/notifications' };
+      return inviteTarget(id, data);
     case 'report_resolved':
     case 'content_hidden':
       return none;
@@ -71,8 +85,7 @@ export function resolveNotificationTarget(input: NotificationTargetInput): Notif
     case 'direct_conversation':
       return id ? { kind: 'conversation', conversationId: id } : none;
     case 'challenge_invite':
-      // Pending invites live in the Notifications screen itself (B5).
-      return { kind: 'route', href: '/notifications' };
+      return inviteTarget(id, data);
     case 'workout_post':
       return { kind: 'route', href: '/(tabs)/profile' };
     default:
