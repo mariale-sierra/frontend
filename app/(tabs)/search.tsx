@@ -127,8 +127,8 @@ export default function Search() {
           <EmptyState
             icon="search-outline"
             title={t('search.emptyPromptTitle')}
-            message={t('search.emptyPrompt')}
-            actions={[{ label: t('search.exploreChallenges'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'search-explore' }]}
+            // The title in the search icon's own muted tone (2026-10-20).
+            muted
           />
         ) : catalogLoading ? (
           <View style={styles.center}>
@@ -139,7 +139,6 @@ export default function Search() {
             icon="sad-outline"
             title={t('search.emptyResults', { query: debouncedQuery })}
             message={t('search.emptyResultsHint')}
-            actions={[{ label: t('search.exploreChallenges'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'search-explore' }]}
           />
         ) : (
           <>

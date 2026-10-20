@@ -20,6 +20,9 @@ interface EmptyStateProps {
   message?: string;
   /** Where to go next: an empty screen should point somewhere, not dead-end. Two read well. */
   actions?: EmptyStateAction[];
+  /** Sets the title in the icon's own muted tone (`tertiary`) instead of full
+   * `primary` — a quiet hint rather than a statement (Search's starting state). */
+  muted?: boolean;
   testID?: string;
 }
 
@@ -28,11 +31,11 @@ interface EmptyStateProps {
  * two outline buttons toward the relevant place (challenges, people). Same look
  * as the Home feed's empty state, which it generalizes.
  */
-export function EmptyState({ icon, title, message, actions, testID }: EmptyStateProps) {
+export function EmptyState({ icon, title, message, actions, muted = false, testID }: EmptyStateProps) {
   return (
     <View style={styles.container} testID={testID}>
       <Icon name={icon} size={34} color={withAlpha(colors.paper, textOpacity.tertiary)} />
-      <Text variant="body" weight="bold" align="center">
+      <Text variant="body" weight="bold" align="center" tone={muted ? 'tertiary' : undefined}>
         {title}
       </Text>
       {message ? (
