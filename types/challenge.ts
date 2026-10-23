@@ -265,6 +265,9 @@ export interface ChallengePhotoMetric {
   value: string;
 }
 
+/** workout_posts.moderation_status — the photo is reviewed after it is saved. */
+export type PhotoModerationStatus = 'pending' | 'approved' | 'rejected';
+
 export interface ChallengePhoto {
   id: string;
   challengeId: string;
@@ -296,4 +299,7 @@ export interface ChallengePhoto {
     profileImageUrl: string | null;
   }>;
   hashtags?: string[];
+  /** Sprint 10, B2: the async review of your OWN photo (the backend only sends
+   * it to the author). Absent for someone else's photo or an older API. */
+  moderationStatus?: PhotoModerationStatus;
 }

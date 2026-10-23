@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { PhotoReview } from '../utils/photoModeration';
 
 /** Optional context for the richer version of the message — all three
  * present together is the common case (a normal logged day); any subset
@@ -8,6 +9,9 @@ export interface UploadSuccessData {
   challengeName?: string;
   currentDay?: number;
   totalDays?: number;
+  /** Sprint 10, B2: where the day's photo stands, from the server's answer.
+   * Absent for a rest day (no photo) or when the API did not say. */
+  photo?: PhotoReview | null;
 }
 
 /**

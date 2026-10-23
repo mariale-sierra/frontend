@@ -11,7 +11,10 @@
     "ios": "node scripts/dev-server.js && expo start --ios",
     "web": "node scripts/dev-server.js && expo start --web",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "test:coverage": "jest --coverage",
+    "typecheck": "tsc --noEmit",
+    "i18n:check": "node scripts/check-i18n-keys.js",
+    "metrics": "node scripts/code-metrics.js"
   },
   "dependencies": {
     "@expo-google-fonts/dm-sans": "^0.4.2",
@@ -85,7 +88,12 @@
     "collectCoverageFrom": [
       "services/**/*.{ts,tsx}",
       "hooks/**/*.{ts,tsx}",
-      "i18n/**/*.{ts,tsx}"
+      "i18n/**/*.{ts,tsx}",
+      "components/**/*.{ts,tsx}",
+      "app/**/*.{ts,tsx}",
+      "!**/__tests__/**",
+      "!**/*.d.ts",
+      "!components/**/index.ts"
     ],
     "coveragePathIgnorePatterns": [
       "/node_modules/"

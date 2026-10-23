@@ -6,6 +6,14 @@ import { useUploadSuccessStore } from '../store/uploadSuccessStore';
 import { markCompletionShown } from './shownCompletions';
 import { invalidateAfterMembershipChanged } from '../services/cache/queries';
 import { logError } from '../utils/apiError';
+import type { PhotoReview } from './photoModeration';
+import { challengeRewardFromBadges, type ChallengeRewardOutcome } from './challengeReward';
+import { getMyBadges } from '../services/badges/badges.service';
+
+export interface ProgressLoggedExtras {
+  /** The photo's review state from POST /workout-logs/progress (null = rest day / unknown). */
+  photo?: PhotoReview | null;
+}
 
 /**
  * The popup after a day has been logged (a photo, or a rest day): the "Challenge
@@ -17,7 +25,10 @@ import { logError } from '../utils/apiError';
  * generic copy in `UploadSuccessPopup.tsx` if any piece is missing). Only one of
  * the two popups ever shows.
  */
-export async function showProgressLoggedFeedback(challengeId: string): Promise<void> {
+export async function showProgressLoggedFeedback(
+  challengeId: string,
+  extras: ProgressLoggedExtras = {},
+): Promise<void> {
   let progress: Awaited<ReturnType<typeof getChallengeProgress>> | null = null;
   try {
     progress = await getChallengeProgress(challengeId);
@@ -33,6 +44,8 @@ export async function showProgressLoggedFeedback(challengeId: string): Promise<v
         challengeId,
         challengeName: progress.challenge.name,
         totalDays: progress.totalDays,
+        photo: extras.photo ?? null,
+        reward: await loadChallengeReward(),
       };
       await markCompletionShown(finished.challengeId);
       useChallengeFinishedStore.getState().show(finished);
@@ -48,5 +61,18 @@ export async function showProgressLoggedFeedback(challengeId: string): Promise<v
     challengeName: progress?.challenge.name,
     currentDay: progress?.currentDay,
     totalDays: progress?.totalDays,
+    photo: extras.photo ?? null,
   });
+}
+
+/** Sprint 10, B2: what this completion did for the challenge badges, read from the
+ * real GET /badges/me (the challenge is already marked completed). Best effort:
+ * null on failure, and the popup then promises nothing. */
+async function loadChallengeReward(): Promise<ChallengeRewardOutcome | null> {
+  try {
+    return challengeRewardFromBadges(await getMyBadges());
+  } catch (error) {
+    logError('progressLoggedFeedback.badges', error);
+    return null;
+  }
 }

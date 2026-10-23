@@ -74,10 +74,10 @@ describe('the camera confirm button — B5 double-tap guard', () => {
     // the exact "before React commits the isBusy re-render" window a real
     // fast double tap can land in. Sequential `await fireEvent.press()`
     // calls would not reproduce this: each would let the first submission's
-    // state update (and confirmingRef write) land before the second tap
+    // state update (and the busyRef write in usePhotoProgressSubmit) land before the second tap
     // starts — separate, un-awaited fireEvent.press() calls instead trip
     // React's "overlapping act() calls" guard, since each opens its own
-    // scope around an async handler. The confirmingRef write itself is a
+    // scope around an async handler. The busyRef write itself is a
     // plain synchronous assignment, not a React state update, so it's
     // already in effect for the second press regardless of batching.
     await act(async () => {

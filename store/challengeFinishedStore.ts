@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import type { PhotoReview } from '../utils/photoModeration';
+import type { ChallengeRewardOutcome } from '../utils/challengeReward';
 
 /** The challenge that just finished, for the "Challenge complete" popup. */
 export interface ChallengeFinishedData {
@@ -7,6 +9,10 @@ export interface ChallengeFinishedData {
   /** Whole-challenge length in days, e.g. 75 — raw data, not a formatted
    * string, so the popup can pluralize it through i18n. */
   totalDays?: number;
+  /** Sprint 10, B2: the last day's photo state, like the "logged!" popup. */
+  photo?: PhotoReview | null;
+  /** Sprint 10, B2: what finishing it did for the challenge badges (from GET /badges/me). */
+  reward?: ChallengeRewardOutcome | null;
 }
 
 /**

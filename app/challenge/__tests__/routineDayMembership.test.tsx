@@ -81,12 +81,14 @@ describe('Routine day — joining from this screen', () => {
     (joinChallenge as jest.Mock).mockResolvedValue({ status: 'requested', message: 'Join request sent' });
     const screen = await renderDay({ challenge: challenge({ visibility: 'private' }) });
 
-    await fireEvent.press(await screen.findByLabelText('challenges.joinButtonA11y'));
-    await fireEvent.press(screen.getByText('challenges.joinConfirm.confirm'));
+    // Sprint 10, B2: the button and its confirmation say it is a request, not a join.
+    await fireEvent.press(await screen.findByLabelText('challengeInfo.requestJoinButton'));
+    expect(screen.getByText('challenges.requestJoinConfirm.title')).toBeTruthy();
+    await fireEvent.press(screen.getByText('challenges.requestJoinConfirm.confirm'));
 
     await waitFor(() => expect(joinChallenge).toHaveBeenCalledWith('ch-1'));
     await waitFor(() => expect(screen.getByText('challenges.requestPendingLabel')).toBeTruthy());
-    expect(screen.queryByLabelText('challenges.joinButtonA11y')).toBeNull();
+    expect(screen.queryByLabelText('challengeInfo.requestJoinButton')).toBeNull();
     expect(router.replace).not.toHaveBeenCalled();
     expect(useErrorNotificationStore.getState()).toMatchObject({
       config: { message: 'challenges.joinConfirm.requestSent:Morning Run' },
@@ -97,7 +99,7 @@ describe('Routine day — joining from this screen', () => {
     const screen = await renderDay({ challenge: challenge({ visibility: 'private' }), pendingRequest: true });
 
     await waitFor(() => expect(screen.getByText('challenges.requestPendingLabel')).toBeTruthy());
-    expect(screen.queryByLabelText('challenges.joinButtonA11y')).toBeNull();
+    expect(screen.queryByLabelText('challengeInfo.requestJoinButton')).toBeNull();
   });
 
   it('offers nothing to join on a closed challenge', async () => {

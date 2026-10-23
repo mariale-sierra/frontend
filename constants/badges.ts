@@ -30,3 +30,24 @@ const FALLBACK_STYLE: BadgeStyle = { icon: 'ribbon-outline', color: colors.prima
 export function getBadgeStyle(code: string): BadgeStyle {
   return BADGE_STYLES[code] ?? FALLBACK_STYLE;
 }
+
+/** What a badge counts — the `metric` of each BADGE_CATALOG entry in the backend. */
+export type BadgeMetric = 'workouts' | 'streak' | 'challenges';
+
+/**
+ * Mirror of BADGE_CATALOG's `metric` per code (Sprint 10, B2), so the app can
+ * explain how each badge is counted — the API only sends code/name/description/
+ * progress/target. A code missing here just gets no extra explanation.
+ */
+const BADGE_METRICS: Record<string, BadgeMetric> = {
+  first_workout: 'workouts',
+  five_workouts: 'workouts',
+  ten_workouts: 'workouts',
+  streak_7_days: 'streak',
+  one_challenge_completed: 'challenges',
+  three_challenges_completed: 'challenges',
+};
+
+export function getBadgeMetric(code: string): BadgeMetric | null {
+  return BADGE_METRICS[code] ?? null;
+}

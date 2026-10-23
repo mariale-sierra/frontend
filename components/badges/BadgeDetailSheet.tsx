@@ -4,7 +4,7 @@ import { BottomSheetModal } from '../ui/bottomSheetModal';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
-import { getBadgeStyle } from '../../constants/badges';
+import { getBadgeMetric, getBadgeStyle } from '../../constants/badges';
 import { withAlpha } from '../../utils/color';
 import { BADGE_TILE_SIZE, useBadgeName } from './BadgeTile';
 import type { BadgeContract } from '../../types/badge';
@@ -19,7 +19,8 @@ interface BadgeDetailSheetProps {
 const DISC_SIZE = BADGE_TILE_SIZE * 1.5;
 const BAR_HEIGHT = 8;
 
-/** What a badge means and how to get it: name, criterion (the catalog's own description) and progress. */
+/** What a badge means and how to get it: name, criterion (the catalog's own description),
+ * how it is counted (Sprint 10, B2) and progress. */
 export function BadgeDetailSheet({ badge, isOwn, onClose }: BadgeDetailSheetProps) {
   const { t } = useTranslation();
   const badgeName = useBadgeName();
@@ -29,6 +30,7 @@ export function BadgeDetailSheet({ badge, isOwn, onClose }: BadgeDetailSheetProp
   const { icon, color } = getBadgeStyle(badge.code);
   const description = t(`badges.items.${badge.code}.description`, { defaultValue: badge.description });
   const ratio = badge.target > 0 ? Math.min(1, badge.progress / badge.target) : 0;
+  const metric = getBadgeMetric(badge.code);
 
   return (
     <BottomSheetModal visible onClose={onClose} glass maxHeight="60%">
@@ -42,6 +44,11 @@ export function BadgeDetailSheet({ badge, isOwn, onClose }: BadgeDetailSheetProp
         <Text variant="body" tone="secondary" align="center">
           {description}
         </Text>
+        {metric ? (
+          <Text variant="caption" tone="secondary" align="center" testID="badge-rule">
+            {t(`badges.rules.${metric}`)}
+          </Text>
+        ) : null}
 
         <View style={styles.progressBlock}>
           <View style={styles.track}>

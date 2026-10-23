@@ -31,7 +31,8 @@ Scripts found in `package.json`:
 - Web Skia setup: the custom `index.web.tsx` entry waits for CanvasKit/WASM via `LoadSkiaWeb()` before registering Expo Router; `postinstall` refreshes `public/canvaskit.wasm` after Skia upgrades. App canvases go through `components/ui/webSafeCanvas.tsx` on web so each draw waits for a non-zero layout, releases its WebGL context, and route-owned background canvases unmount while their screen is covered. Card-only `AccentGlow` decorations use the flat card surface on web because CanvasKit can receive a stale zero-sized layout while cards mount or resize; native keeps Skia's regular renderer. This prevents CanvasKit's `rangeMin` or zero-sized `drawImage` errors without removing card interaction or content.
 - Lint: no script exists.
 - Typecheck: `npm run typecheck` (`tsc --noEmit`).
-- Test: `npm test` (Jest).
+- Test: `npm test` (Jest). Coverage: `npm run test:coverage`; `collectCoverageFrom` covers `services`, `hooks`, `i18n`, `components` and `app` (minus `__tests__`, `.d.ts` and the re-export-only `components/**/index.ts`).
+- i18n parity: `npm run i18n:check`. Code metrics (screen lines, `console.*`, `any` as a type): `npm run metrics` — both used by `docs/sprint-10/`.
 
 ## 4. Root Folder Map
 - `app/`: Expo Router file-based routes, route groups, layouts, tabs, modals, dynamic challenge routes, auth screens, and add/metrics flows.
@@ -110,6 +111,7 @@ Future services should reuse `services/api.ts`, avoid creating another Axios cli
 - **Shared server-data cache** (`services/cache/`, `hooks/useCachedQuery.ts`) — see §8b.
 - `hooks/useCreateChallengeFlow.ts`: orchestrates challenge creation state, validation, payload building, backend submit, and navigation.
 - `hooks/useMetricsScreen.ts`: coordinates enrolled challenges, today's routine, workout log creation, metric submit, loading/error state, and navigation.
+- `hooks/usePhotoProgressSubmit.ts`: the camera's confirm flow (upload → `POST /workout-logs/progress` with the B7 location choice and B8 tags → metrics → cache invalidation → close the `(add)` modal → logged-day popup with the photo's real review state). Holds the B5 double-tap guard; `app/(add)/camera.tsx` only owns the camera and the form.
 - `hooks/useFilteredExercises.ts`: filters exercise candidates for routine exercise selection.
 - `hooks/usePullToRefresh.ts`: generic `{ refreshing, onRefresh }` pair for a `RefreshControl` — wraps a screen's own reload function with the refreshing-flag toggle so each screen doesn't hand-roll it. Used by Home, Challenges, Profile (own/other), and Messaging; a component that fetches its own data internally (e.g. `PostsGrid`, `UserPostsGrid`) instead takes a `refreshSignal` prop the parent screen bumps on refresh.
 - Zustand stores in `store/`: hold multi-screen local builder state for challenges, routines, and metrics. Routine day assignments remain transient per challenge, while the routine picker hydrates its reusable routine list from the backend.
@@ -237,6 +239,15 @@ Full decision record (computed-on-the-fly rewards, catalog, demo data): `docs/BA
 - Both profiles (`app/(tabs)/profile.tsx`, `app/profile/[userId].tsx`) are one virtualized `PhotoGridList` (`components/profile/PhotoGrid.tsx`): header + badges (+ toggle) as the list header, photos as a 2-column FlatList (only rows near the viewport are mounted), and the next page loads as the grid nears its end — the "Load more" button stays as the visible indicator/fallback. Pages already loaded are cached per user (`useUserPosts`).
 - Home/Feed layout: the feed list has no side padding; photos and both carousels (active challenges, streaks) run edge to edge, and every other row insets itself by `HOME_EDGE_INSET` (`constants/feed.ts`, `spacing.base`). `FeedPostCard`'s `edgeToEdgeInset` prop gives the Instagram layout (only Home passes it, with `FEED_POST_INSET` = `spacing.md`; the profile post viewer keeps its padded column).
 - Feed performance: `FeedPostCard` mounts each of its sheets/popups (comments, reactors, share, options, report, delete) the first time it opens, not with every card; `BottomSheetModal` only listens to the keyboard while it is on screen. Photos and avatars use `resizeMethod="resize"` so Android decodes them at display size.
+
+## 12f. Settings, training place, rewards and photo state (Sprint 10, B2)
+Full record: `docs/sprint-10/B2-navegacion-comprension.md`.
+- The profile's gear (`open-settings`) opens `app/profile/settings.tsx`: edit profile, notifications, legal documents (`/(auth)/legal?doc=`), about, log out and delete account, each a `components/profile/SettingsRow`. Edit profile is also the outline button in `ProfileHeader`'s `actions`. Help/FAQ (B9) is not linked until that screen exists — add a row in the "legal" section.
+- Log out / delete account live in Settings; Edit profile keeps log out only on its load-error state.
+- A private challenge's join button and confirmation say "Request to join" (`useConfirmationPopup` type `requestJoin`); the call is still `joinChallenge`.
+- Photo review state: `POST /workout-logs/progress` returns `posts[0].moderationStatus`; `utils/photoModeration.ts` turns it into the popup line (`camera.photoStatus.*`). Own photos in `GET /workout-posts/mine|user/:me` carry `moderationStatus` (backend sends it to the author only) and `PhotoGrid` labels pending/rejected ones. Never infer "published" from a finished upload.
+- Rewards: `constants/badges.ts` mirrors each badge's `metric` (`getBadgeMetric`) for the rule line in `BadgeDetailSheet`; after a completion `utils/progressLoggedFeedback.ts` reads `GET /badges/me` and `utils/challengeReward.ts` says what it earned (or how many are left). Finishing a challenge is not always a new badge.
+- i18n parity: `npm run i18n:check` (`scripts/check-i18n-keys.js`) compares nested keys of `en.ts`/`es.ts`; `i18n/__tests__/parity.test.ts` enforces the same in Jest.
 
 ## 13. Do and Don't Rules
 Do:
