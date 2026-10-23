@@ -1,20 +1,14 @@
 import { useState } from 'react';
-import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { colors, textOpacity } from '../../constants/theme';
-import { withAlpha } from '../../utils/color';
-import { Card } from '../ui/card';
-import { Icon } from '../ui/icon';
-import { Text } from '../ui/text';
 import { ConfirmationPopup } from '../ui/confirmationPopup';
-import { Row } from '../layout/row';
 import { useAuth } from '../../hooks/useAuth';
+import { SettingsRow } from './SettingsRow';
 
 /**
- * Settings-style logout row: a subtle tappable card (icon + label + chevron)
- * that confirms via the shared ConfirmationPopup before signing out. Lives
- * on the edit-profile screen so "configuration" is the single place session
- * management happens, instead of a standalone danger button on the profile tab.
+ * Settings-style logout row that confirms via the shared ConfirmationPopup
+ * before signing out. Lives on the Settings screen (Sprint 10, B2) — the one
+ * place for session management — and stays on edit-profile's load-error state
+ * as a way out when the profile cannot be read.
  */
 export function LogoutButton() {
   const { t } = useTranslation();
@@ -23,23 +17,14 @@ export function LogoutButton() {
 
   return (
     <>
-      <Card
-        variant="basic"
-        radius="medium"
-        onPress={() => setConfirmVisible(true)}
-        accessibilityRole="button"
+      <SettingsRow
+        icon="log-out-outline"
+        label={t('profile.logoutButton')}
         accessibilityLabel={t('profile.logoutButtonA11y')}
-      >
-        <Row justify="space-between" align="center">
-          <Row gap="sm" align="center">
-            <Icon name="log-out-outline" size={20} color={colors.error} />
-            <Text variant="body" style={styles.label}>
-              {t('profile.logoutButton')}
-            </Text>
-          </Row>
-          <Icon name="chevron-forward-outline" size={18} color={withAlpha(colors.paper, textOpacity.tertiary)} />
-        </Row>
-      </Card>
+        tone="danger"
+        onPress={() => setConfirmVisible(true)}
+        testID="settings-logout"
+      />
 
       <ConfirmationPopup
         visible={confirmVisible}
@@ -62,9 +47,3 @@ export function LogoutButton() {
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  label: {
-    color: colors.error,
-  },
-});

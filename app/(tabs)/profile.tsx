@@ -20,6 +20,8 @@ import { useUserPosts } from '../../hooks/useUserPosts';
 import { queryKeys, staleTimes } from '../../services/cache/queries';
 import { invalidateQueries } from '../../services/cache/queryCache';
 import { BadgesSection } from '../../components/badges';
+import { Button } from '../../components/ui/button';
+import { Icon } from '../../components/ui/icon';
 
 /**
  * Profile tab: one virtualized list (header, badges, toggle, then the photo
@@ -98,13 +100,17 @@ export default function Profile() {
           testID="open-moderation"
         />
       )}
+      {/* Sprint 10, B2: a gear for Settings (log out, notifications, legal...).
+          Neurolab participants looked for those behind the old pencil, which
+          only opened Edit profile — that is now the button under the header. */}
       <IconButton
-        name="pencil-outline"
+        name="settings-outline"
         iconSize={22}
-        onPress={() => router.push('/profile/edit')}
+        onPress={() => router.push('/profile/settings')}
         accessibilityRole="button"
-        accessibilityLabel={t('profile.editButtonA11y')}
+        accessibilityLabel={t('settings.openA11y')}
         hitSlop={10}
+        testID="open-settings"
       />
     </Row>
   );
@@ -160,6 +166,18 @@ export default function Profile() {
               onPressFollowers={() => router.push('/profile/followers')}
               onPressFollowing={() => router.push('/profile/following')}
               practices={profile.practice_preferences}
+              actions={
+                <Button
+                  variant="outline"
+                  size="md"
+                  leftIcon={<Icon name="create-outline" size={16} color={colors.paper} />}
+                  onPress={() => router.push('/profile/edit')}
+                  accessibilityLabel={t('profile.editButtonA11y')}
+                  testID="profile-edit-button"
+                >
+                  {t('profile.editButton')}
+                </Button>
+              }
             />
             <BadgesSection />
             <PostsViewToggle view={view} onViewChange={setView} />
