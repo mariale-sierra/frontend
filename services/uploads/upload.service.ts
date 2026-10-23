@@ -31,10 +31,7 @@ export async function uploadImageAsync(
 ): Promise<string> {
   // Step 1: request a signed upload URL from the backend
   const signRes = await api.post<unknown>('/uploads/sign', { fileType });
-
-
   const { signedUrl, publicUrl } = extractSignedUrls(signRes.data);
-
 
   if (!signedUrl || signedUrl === publicUrl) {
     throw new Error('Invalid signed upload URL received.');
@@ -48,12 +45,10 @@ export async function uploadImageAsync(
   // Must use native fetch — api would inject Authorization + baseURL, both break pre-signed URLs.
   // No Content-Type header: R2 signed URLs encode the expected headers in the signature,
   // sending extra headers invalidates it and causes a 401.
-
   const putRes = await fetch(signedUrl, {
     method: 'PUT',
     body: blob,
   });
-
 
   if (!putRes.ok) {
     // Only the status: the signed URL is a credential, and the storage
