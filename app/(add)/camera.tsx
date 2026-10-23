@@ -9,8 +9,7 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import type { StyleProp, ViewStyle } from 'react-native';
-import { safeBack, safeBackTimes } from '../../utils/navigation';
+import { safeBack } from '../../utils/navigation';
 import { CameraView, useCameraPermissions, type CameraType } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -18,104 +17,38 @@ import { IconButton } from '../../components/ui/iconButton';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
 import { GlassInput } from '../../components/ui/glassInput';
+import { CameraChip, VisibilityToggle, type CameraPostVisibility } from '../../components/add/camera/CameraChips';
 import { activityColors, colors, spacing, radius } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
-import { uploadImageAsync } from '../../services/uploads/upload.service';
-import { submitWorkoutProgress } from '../../services/workout-log/workout-log.service';
-import type { WorkoutLogContract } from '../../types/workout-log';
-import { applyExerciseMetrics } from '../../services/metrics/applyExerciseMetrics';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
-import {
-  adaptationForRoutine,
-  toSubstitutionPayload,
-  useWorkoutAdaptationStore,
-} from '../../store/workoutAdaptationStore';
-import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
-import { invalidateAfterWorkoutLogged } from '../../services/cache/queries';
-import { showProgressLoggedFeedback } from '../../utils/progressLoggedFeedback';
 import { useAuth } from '../../hooks/useAuth';
 import { useChallengeParticipants } from '../../hooks/useChallengeParticipants';
+import { MAX_CAPTION_LENGTH, usePhotoProgressSubmit } from '../../hooks/usePhotoProgressSubmit';
 import { isChallengeOwner } from '../../services/challenge/challenge.service';
 import { TagParticipantsSheet } from '../../components/challenge/TagParticipantsSheet';
 import type { ChallengeContract } from '../../types/challenge';
 import { extractHashtags } from '../../utils/hashtags';
-import { getApiErrorMessage, logError } from '../../utils/apiError';
 import { loadChallenge } from '../../services/cache/challengeLoaders';
 
-// Same cap as the backend's CreateWorkoutProgressDto.caption.
-const MAX_CAPTION_LENGTH = 500;
-
-const CHIP_ICON_SIZE = 19;
-
-/** A chip over the captured photo — an icon and a label in a dark, rimmed pill: the
- * visibility toggle (top right) and, for a challenge's owner, the tag picker (top left)
- * are both this one, so they cannot drift apart. `style` places it; `scale` lets it pulse. */
-function CameraChip({
-  icon,
-  label,
-  onPress,
-  style,
-  scale,
-}: {
-  icon: React.ComponentProps<typeof Icon>['name'];
-  label: string;
-  onPress: () => void;
-  style: StyleProp<ViewStyle>;
-  scale?: Animated.Value;
-}) {
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [style, pressed && styles.pressed]} hitSlop={8}>
-      <Animated.View style={[styles.chipInner, scale && { transform: [{ scale }] }]}>
-        <Icon name={icon} size={CHIP_ICON_SIZE} color={colors.paper} />
-        <Text style={styles.chipLabel}>{label}</Text>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-function VisibilityToggle({
-  visibility,
-  anim,
-  onToggle,
-}: {
-  visibility: 'followers' | 'private';
-  anim: Animated.Value;
-  onToggle: () => void;
-}) {
-  const { t } = useTranslation();
-  const isFollowers = visibility === 'followers';
-  return (
-    <CameraChip
-      icon={isFollowers ? 'eye-outline' : 'eye-off-outline'}
-      label={isFollowers ? t('camera.visibilityFollowers') : t('camera.visibilityPrivate')}
-      onPress={onToggle}
-      style={styles.visibilityToggle}
-      scale={anim}
-    />
-  );
-}
-
+/**
+ * Daily evidence photo: take it, pick who sees it, add a caption (and, for a
+ * challenge's owner, tag participants), then confirm. The upload + save +
+ * close flow lives in usePhotoProgressSubmit; this screen owns the camera and
+ * the form around the captured photo.
+ */
 export default function Camera() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const selectedChallengeId = useMetricsEntryStore((s) => s.selectedChallengeId);
-  const currentRoutineId = useMetricsEntryStore((s) => s.currentRoutineId);
-  const exerciseMetrics = useMetricsEntryStore((s) => s.exerciseMetrics);
-  const clearAdaptation = useWorkoutAdaptationStore((s) => s.clearAdaptation);
-  // B7: the user's location choice, only when it was made for the routine being logged.
-  const adaptation = useWorkoutAdaptationStore((s) =>
-    selectedChallengeId ? adaptationForRoutine(s.byChallenge[selectedChallengeId], currentRoutineId) : null,
-  );
 
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<CameraType>('back');
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
   const [isTakingPicture, setIsTakingPicture] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [submittingProgress, setSubmittingProgress] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const progress = usePhotoProgressSubmit();
 
-  const [visibility, setVisibility] = useState<'followers' | 'private'>('followers');
+  const [visibility, setVisibility] = useState<CameraPostVisibility>('followers');
   // Optional caption on the photo (Sprint 9, B5) — #hashtags typed here are
   // parsed and stored by the backend; the chips below the field preview them.
   const [caption, setCaption] = useState('');
@@ -146,15 +79,7 @@ export default function Camera() {
   const taggable = useMemo(() => participants.filter((participant) => participant.id !== userId), [participants, userId]);
 
   const cameraRef = useRef<CameraView>(null);
-  const isBusy = isTakingPicture || uploadingImage || submittingProgress;
-  // B5: a double tap fired back-to-back (before React has committed the
-  // `isBusy` re-render that disables the button) would both read the same
-  // stale `false` and both call submitWorkoutProgress — `useRef` updates
-  // are visible synchronously, so the second tap's check always sees the
-  // first tap's write. Same pattern as FeedPostCard's `reactingRef`. This
-  // is UX defense only — the actual guarantee against a duplicate is the
-  // backend's uq_workout_logs_user_challenge_local_day constraint.
-  const confirmingRef = useRef(false);
+  const isBusy = isTakingPicture || progress.isSubmitting;
 
   function toggleVisibility() {
     setVisibility((v) => (v === 'followers' ? 'private' : 'followers'));
@@ -191,7 +116,7 @@ export default function Camera() {
   }
 
   async function handleConfirm() {
-    if (isBusy || !capturedUri || confirmingRef.current) return;
+    if (isBusy || !capturedUri) return;
 
     if (!selectedChallengeId) {
       // Shown inline under the challenge picker — one message, not an Alert on top.
@@ -199,108 +124,15 @@ export default function Camera() {
       return;
     }
 
-    confirmingRef.current = true;
-    try {
-      await confirmProgress(capturedUri, selectedChallengeId);
-    } finally {
-      confirmingRef.current = false;
-    }
-  }
-
-  async function confirmProgress(capturedUri: string, selectedChallengeId: string) {
     setError(null);
-    setUploadingImage(true);
-    let publicUrl: string;
-    try {
-      publicUrl = await uploadImageAsync(capturedUri, 'image/jpeg');
-    } catch (e: unknown) {
-      logError('Camera.upload', e);
-      setError(getApiErrorMessage(e, t, t('camera.uploadError')));
-      setUploadingImage(false);
-      return;
-    }
-    setUploadingImage(false);
-
-    const progressPayload = {
+    const failure = await progress.submit({
       challengeId: selectedChallengeId,
-      imageUrl: publicUrl,
-      isRestDay: false as const,
+      imageUri: capturedUri,
       visibility,
-      caption: caption.trim() || undefined,
-      routineId: currentRoutineId ?? undefined,
-      // B7: where the user trained and the swaps they chose (only if made for this routine).
-      ...(adaptation
-        ? { locationCode: adaptation.locationCode, substitutions: toSubstitutionPayload(adaptation) }
-        : {}),
-      taggedUserIds: isOwner && taggedUserIds.length > 0 ? taggedUserIds : undefined,
-    };
-
-    setSubmittingProgress(true);
-    let workout: WorkoutLogContract;
-    try {
-      workout = await submitWorkoutProgress(progressPayload);
-    } catch (e: unknown) {
-      logError('Camera.confirm', e);
-      // Inline, next to the button; the global toast already covered an API
-      // failure, so no Alert on top of it.
-      setError(getApiErrorMessage(e, t, t('camera.saveProgressError')));
-      setSubmittingProgress(false);
-      return;
-    }
-
-    // The workout + photo are already saved server-side at this point —
-    // nothing below is allowed to surface as a "failed to save progress"
-    // error, since that would misreport a successful save as a failure
-    // (confirmed bug: a post-save hiccup here, e.g. router.dismissAll()
-    // finding nothing left to dismiss, was being caught by the same
-    // try/catch as the actual submission and shown as an upload error even
-    // though the photo had already been persisted).
-
-    // The routine copy inside POST /workout-logs/progress only creates
-    // target (goal) rows for each exercise — the values actually entered
-    // on the metrics screen still need to be saved against them here.
-    if (exerciseMetrics.length > 0) {
-      try {
-        await applyExerciseMetrics(workout, exerciseMetrics);
-      } catch (metricsError) {
-        // The workout + photo already saved successfully — a metrics
-        // save failure shouldn't block the flow or look like data loss,
-        // just log it for now.
-        logError('Camera.applyExerciseMetrics', metricsError);
-      }
-    }
-    clearAdaptation(selectedChallengeId);
-    invalidateChallengeProgressCache();
-    invalidateAfterWorkoutLogged();
-    setSubmittingProgress(false);
-    try {
-      // Closes the whole (add) modal group, back to whatever screen the user
-      // actually started this flow from — NOT router.dismissAll(). Fixed
-      // 2026-08-29, real bug confirmed by user report ("it sends me back to
-      // log metrics... I leave and then I get the success message"):
-      // dismissAll() dispatches POP_TO_TOP, which React Navigation resolves
-      // against the NEAREST Stack navigator — here, (add)'s own nested Stack
-      // (app/(add)/_layout.tsx: metrics -> camera), not the root Stack (add)
-      // itself is presented on (see app/_layout.tsx's `fullScreenModal`
-      // Stack.Screen). So it only ever popped back to metrics.tsx, leaving
-      // the (add) modal still open — the user then had to manually back out,
-      // and only saw the success popup once they did (it was queued the
-      // whole time, just hidden behind the still-open modal).
-      // log.tsx reaches metrics.tsx via router.replace(), never push(), so
-      // the (add) group is always exactly 2 screens deep here (metrics,
-      // camera) in every real flow — two plain back() calls pop camera then
-      // metrics off (add)'s own stack, and since GO_BACK bubbles to the
-      // parent navigator once the current one has nothing left to pop, the
-      // second call correctly continues upward and pops the (add) entry
-      // itself off the root stack too, actually closing the whole modal.
-      safeBackTimes(2);
-    } catch (navError) {
-      logError('Camera.closeModal', navError);
-    }
-    // The popup itself is global (mounted at app root), so it shows on top of
-    // wherever the back() calls above landed: "Challenge complete" if that was
-    // the challenge's last day (it is marked completed first), else "logged!".
-    void showProgressLoggedFeedback(selectedChallengeId);
+      caption,
+      taggedUserIds: isOwner ? taggedUserIds : undefined,
+    });
+    if (failure) setError(failure);
   }
 
   if (!permission) {
@@ -398,7 +230,7 @@ export default function Camera() {
               pressed && styles.pressed,
             ]}
           >
-            {uploadingImage || submittingProgress ? (
+            {progress.isSubmitting ? (
               <ActivityIndicator color={colors.ink} size="large" />
             ) : (
               <Icon name="checkmark-outline" size={38} color={colors.ink} />
@@ -547,37 +379,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  visibilityToggle: {
-    position: 'absolute',
-    top: spacing.md,
-    right: spacing.md,
-  },
   // The tag picker's chip sits at the top left, the visibility chip's mirror.
   tagToggle: {
     position: 'absolute',
     top: spacing.md,
     left: spacing.md,
-  },
-  chipInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingVertical: 8,
-    paddingHorizontal: spacing.md,
-    // Legacy radius.xl (18) — nearest current token is `medium` (16).
-    borderRadius: radius.medium,
-    backgroundColor: withAlpha(colors.ink, 0.45),
-    borderWidth: 1,
-    borderColor: withAlpha(colors.paper, 0.18),
-  },
-  // No `opacity: 1` alongside this custom color, unlike the usual rule for
-  // Text custom-color overrides — kept exactly as shipped (already rendering
-  // at the tone's default 85%) per an explicit "don't change this visually" request.
-  chipLabel: {
-    color: colors.paper,
-    fontSize: 14,
-    fontWeight: '600',
-    letterSpacing: 0.3,
   },
   errorText: {
     color: colors.error,
