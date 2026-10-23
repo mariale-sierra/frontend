@@ -1,7 +1,12 @@
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { ConfirmationPopup } from './confirmationPopup';
 import { ConfettiBurst } from '../challenge/progress/ConfettiBurst';
 import { useChallengeFinishedStore } from '../../store/challengeFinishedStore';
+import { photoReviewMessageKey } from '../../utils/photoModeration';
+import type { ChallengeRewardOutcome } from '../../utils/challengeReward';
+
+const PARAGRAPH_BREAK = '\n\n';
 
 /**
  * The "Challenge complete" success popup. Mounted once at the app root
@@ -25,12 +30,21 @@ export function ChallengeFinishedPopup() {
 
   if (!challenge) return null;
 
-  const description = challenge.totalDays
+  const finished = challenge.totalDays
     ? t('challenges.completionPopup.descriptionWithDuration', {
         name: challenge.challengeName,
         count: challenge.totalDays,
       })
     : t('challenges.completionPopup.description', { name: challenge.challengeName });
+  // Sprint 10, B2: what it did for your badges (finishing is not always a new
+  // badge) and the last photo's state, each only when it is actually known.
+  const description = [
+    finished,
+    challenge.reward ? rewardLine(challenge.reward, t) : null,
+    challenge.photo ? t(photoReviewMessageKey(challenge.photo)) : null,
+  ]
+    .filter(Boolean)
+    .join(PARAGRAPH_BREAK);
 
   return (
     <ConfirmationPopup
@@ -44,4 +58,12 @@ export function ChallengeFinishedPopup() {
       overlay={<ConfettiBurst active={visible} />}
     />
   );
+}
+
+function rewardLine(reward: ChallengeRewardOutcome, t: TFunction): string {
+  if (reward.kind === 'allEarned') return t('challenges.completionPopup.reward.allEarned');
+  const badge = t(`badges.items.${reward.badgeCode}.name`, { defaultValue: reward.badgeCode });
+  return reward.kind === 'earned'
+    ? t('challenges.completionPopup.reward.earned', { badge })
+    : t('challenges.completionPopup.reward.next', { badge, count: reward.remaining });
 }

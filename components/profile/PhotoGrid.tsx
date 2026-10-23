@@ -4,7 +4,9 @@ import { memo, useCallback, type ReactElement } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View, type RefreshControlProps } from 'react-native';
 import { colors, fillOpacity, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
+import { useTranslation } from 'react-i18next';
 import { Text } from '../ui/text';
+import { Icon } from '../ui/icon';
 import { Button } from '../ui/button';
 import type { ChallengePhoto } from '../../types/challenge';
 
@@ -22,6 +24,10 @@ const PhotoTile = memo(function PhotoTile({
   photo: ChallengePhoto;
   onPhotoPress?: (photo: ChallengePhoto) => void;
 }) {
+  const { t } = useTranslation();
+  // Sprint 10, B2: only your own photos carry a review state (the API sends it
+  // to the author alone); an approved one needs no label.
+  const status = photo.moderationStatus === 'pending' || photo.moderationStatus === 'rejected' ? photo.moderationStatus : null;
   return (
     <Pressable
       style={({ pressed }) => [styles.tile, pressed && styles.pressed]}
@@ -32,6 +38,18 @@ const PhotoTile = memo(function PhotoTile({
       ) : (
         <View style={styles.skeletonInner} />
       )}
+      {status ? (
+        <View style={styles.statusPill} testID={`photo-status-${status}`}>
+          <Icon
+            name={status === 'pending' ? 'time-outline' : 'close-circle-outline'}
+            size={14}
+            color={status === 'pending' ? colors.paper : colors.error}
+          />
+          <Text variant="caption" weight="bold">
+            {t(status === 'pending' ? 'profile.photoStatus.pending' : 'profile.photoStatus.rejected')}
+          </Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 });
@@ -213,6 +231,18 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  statusPill: {
+    position: 'absolute',
+    left: spacing.sm,
+    bottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.big,
+    backgroundColor: withAlpha(colors.ink, 0.7),
   },
   empty: {
     paddingTop: spacing['2xl'],
