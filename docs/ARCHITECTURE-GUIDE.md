@@ -238,6 +238,15 @@ Full decision record (computed-on-the-fly rewards, catalog, demo data): `docs/BA
 - Home/Feed layout: the feed list has no side padding; photos and both carousels (active challenges, streaks) run edge to edge, and every other row insets itself by `HOME_EDGE_INSET` (`constants/feed.ts`, `spacing.base`). `FeedPostCard`'s `edgeToEdgeInset` prop gives the Instagram layout (only Home passes it, with `FEED_POST_INSET` = `spacing.md`; the profile post viewer keeps its padded column).
 - Feed performance: `FeedPostCard` mounts each of its sheets/popups (comments, reactors, share, options, report, delete) the first time it opens, not with every card; `BottomSheetModal` only listens to the keyboard while it is on screen. Photos and avatars use `resizeMethod="resize"` so Android decodes them at display size.
 
+## 12f. Settings, training place, rewards and photo state (Sprint 10, B2)
+Full record: `docs/sprint-10/B2-navegacion-comprension.md`.
+- The profile's gear (`open-settings`) opens `app/profile/settings.tsx`: edit profile, notifications, legal documents (`/(auth)/legal?doc=`), about, log out and delete account, each a `components/profile/SettingsRow`. Edit profile is also the outline button in `ProfileHeader`'s `actions`. Help/FAQ (B9) is not linked until that screen exists — add a row in the "legal" section.
+- Log out / delete account live in Settings; Edit profile keeps log out only on its load-error state.
+- A private challenge's join button and confirmation say "Request to join" (`useConfirmationPopup` type `requestJoin`); the call is still `joinChallenge`.
+- Photo review state: `POST /workout-logs/progress` returns `posts[0].moderationStatus`; `utils/photoModeration.ts` turns it into the popup line (`camera.photoStatus.*`). Own photos in `GET /workout-posts/mine|user/:me` carry `moderationStatus` (backend sends it to the author only) and `PhotoGrid` labels pending/rejected ones. Never infer "published" from a finished upload.
+- Rewards: `constants/badges.ts` mirrors each badge's `metric` (`getBadgeMetric`) for the rule line in `BadgeDetailSheet`; after a completion `utils/progressLoggedFeedback.ts` reads `GET /badges/me` and `utils/challengeReward.ts` says what it earned (or how many are left). Finishing a challenge is not always a new badge.
+- i18n parity: `npm run i18n:check` (`scripts/check-i18n-keys.js`) compares nested keys of `en.ts`/`es.ts`; `i18n/__tests__/parity.test.ts` enforces the same in Jest.
+
 ## 13. Do and Don't Rules
 Do:
 - Read this guide and inspect the target route before editing.
