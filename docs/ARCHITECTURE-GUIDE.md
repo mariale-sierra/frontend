@@ -31,7 +31,8 @@ Scripts found in `package.json`:
 - Web Skia setup: the custom `index.web.tsx` entry waits for CanvasKit/WASM via `LoadSkiaWeb()` before registering Expo Router; `postinstall` refreshes `public/canvaskit.wasm` after Skia upgrades. App canvases go through `components/ui/webSafeCanvas.tsx` on web so each draw waits for a non-zero layout, releases its WebGL context, and route-owned background canvases unmount while their screen is covered. Card-only `AccentGlow` decorations use the flat card surface on web because CanvasKit can receive a stale zero-sized layout while cards mount or resize; native keeps Skia's regular renderer. This prevents CanvasKit's `rangeMin` or zero-sized `drawImage` errors without removing card interaction or content.
 - Lint: no script exists.
 - Typecheck: `npm run typecheck` (`tsc --noEmit`).
-- Test: `npm test` (Jest).
+- Test: `npm test` (Jest). Coverage: `npm run test:coverage`; `collectCoverageFrom` covers `services`, `hooks`, `i18n`, `components` and `app` (minus `__tests__`, `.d.ts` and the re-export-only `components/**/index.ts`).
+- i18n parity: `npm run i18n:check`. Code metrics (screen lines, `console.*`, `any` as a type): `npm run metrics` — both used by `docs/sprint-10/`.
 
 ## 4. Root Folder Map
 - `app/`: Expo Router file-based routes, route groups, layouts, tabs, modals, dynamic challenge routes, auth screens, and add/metrics flows.
@@ -110,6 +111,7 @@ Future services should reuse `services/api.ts`, avoid creating another Axios cli
 - **Shared server-data cache** (`services/cache/`, `hooks/useCachedQuery.ts`) — see §8b.
 - `hooks/useCreateChallengeFlow.ts`: orchestrates challenge creation state, validation, payload building, backend submit, and navigation.
 - `hooks/useMetricsScreen.ts`: coordinates enrolled challenges, today's routine, workout log creation, metric submit, loading/error state, and navigation.
+- `hooks/usePhotoProgressSubmit.ts`: the camera's confirm flow (upload → `POST /workout-logs/progress` with the B7 location choice and B8 tags → metrics → cache invalidation → close the `(add)` modal → logged-day popup with the photo's real review state). Holds the B5 double-tap guard; `app/(add)/camera.tsx` only owns the camera and the form.
 - `hooks/useFilteredExercises.ts`: filters exercise candidates for routine exercise selection.
 - `hooks/usePullToRefresh.ts`: generic `{ refreshing, onRefresh }` pair for a `RefreshControl` — wraps a screen's own reload function with the refreshing-flag toggle so each screen doesn't hand-roll it. Used by Home, Challenges, Profile (own/other), and Messaging; a component that fetches its own data internally (e.g. `PostsGrid`, `UserPostsGrid`) instead takes a `refreshSignal` prop the parent screen bumps on refresh.
 - Zustand stores in `store/`: hold multi-screen local builder state for challenges, routines, and metrics. Routine day assignments remain transient per challenge, while the routine picker hydrates its reusable routine list from the backend.
