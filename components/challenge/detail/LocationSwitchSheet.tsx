@@ -26,7 +26,8 @@ interface LocationSwitchSheetProps {
 }
 
 /**
- * "Change location" (Sprint 9, B7): pick where you are training; exercises that
+ * "Where are you training today?" (Sprint 9, B7; copy reworked in Sprint 10, B2):
+ * pick where you are training; exercises that
  * do not fit there can be swapped for compatible alternatives (same metrics,
  * so targets and results stay with the right exercise). The choice is the
  * user's own and never touches the routine other participants see.
@@ -56,6 +57,16 @@ export function LocationSwitchSheet({
         <Text variant="subheader" align="center" style={styles.title}>
           {flow.selected ? t('challengeRoutineDay.location.substitutionsTitle', { location: flow.selected.name }) : t('challengeRoutineDay.location.sheetTitle')}
         </Text>
+        {/* Sprint 10, B2: what changing the place does, before and while choosing. */}
+        {!flow.selected ? (
+          <Text variant="caption" tone="secondary" align="center" style={styles.hint} testID="location-sheet-hint">
+            {t('challengeRoutineDay.location.sheetHint')}
+          </Text>
+        ) : flow.items.length > 0 ? (
+          <Text variant="caption" tone="secondary" align="center" style={styles.hint}>
+            {t('challengeRoutineDay.location.substitutionsHint')}
+          </Text>
+        ) : null}
 
         <ScrollView style={styles.fill} showsVerticalScrollIndicator={false}>
           {flow.loadError ? (
@@ -176,7 +187,8 @@ export function LocationSwitchSheet({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  title: { paddingBottom: spacing.md },
+  title: { paddingBottom: spacing.xs },
+  hint: { paddingBottom: spacing.md },
   locationRow: { paddingVertical: spacing.md },
   swapList: { gap: spacing.lg, paddingBottom: spacing.md },
   swapItem: { gap: spacing.xs },

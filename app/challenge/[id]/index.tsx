@@ -124,8 +124,10 @@ export default function ChallengeDetail() {
     },
   });
 
+  // B2: a private challenge files a request — the button and the confirmation say so.
+  const isPrivateChallenge = challenge?.visibility === 'private';
   const joinPopup = useConfirmationPopup({
-    type: 'join',
+    type: isPrivateChallenge ? 'requestJoin' : 'join',
     challengeName: challenge?.name ?? t('challenges.fallbackName'),
     onConfirm: async () => {
       const challengeId = typeof id === 'string' ? id : '';
@@ -302,6 +304,8 @@ export default function ChallengeDetail() {
     { icon: 'location-outline', label: t('challengeInfo.doItAtLabel'), value: view.locationsLabel },
     { icon: 'flash-outline', label: t('challengeInfo.focusLabel'), value: view.categoriesLabel },
     { icon: 'camera-outline', label: t('challengeInfo.dailyProofLabel'), value: t('challengeInfo.dailyProofValue') },
+    // B2: what finishing it gives you (the challenge badges of BADGE_CATALOG) and when it counts as finished.
+    { icon: 'ribbon-outline', label: t('challengeInfo.rewardLabel'), value: t('challengeInfo.rewardValue') },
     // A closed challenge says so, in the same rows as the rest of what there is to know
     // about it, so it is not a silent state.
     ...(isClosed
@@ -474,10 +478,10 @@ export default function ChallengeDetail() {
             onPress={joinPopup.show}
             style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}
             accessibilityRole="button"
-            accessibilityLabel={t('challenges.joinButtonA11y')}
+            accessibilityLabel={isPrivateChallenge ? t('challengeInfo.requestJoinButton') : t('challenges.joinButtonA11y')}
           >
             <Text variant="body" weight="bold" style={styles.joinButtonText}>
-              {t('challengeInfo.joinChallengeButton')}
+              {isPrivateChallenge ? t('challengeInfo.requestJoinButton') : t('challengeInfo.joinChallengeButton')}
             </Text>
           </Pressable>
         </View>

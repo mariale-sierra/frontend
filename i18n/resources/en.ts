@@ -173,6 +173,12 @@ const en = {
       descriptionWithDuration_other: 'You finished "{{name}}" in {{count}} days.',
       description: 'You finished "{{name}}".',
       cta: 'Done',
+      reward: {
+        earned: 'You earned the "{{badge}}" badge! See it on your profile.',
+        next_one: '{{count}} more challenge for the "{{badge}}" badge.',
+        next_other: '{{count}} more challenges for the "{{badge}}" badge.',
+        allEarned: 'You already have every completed-challenge badge.',
+      },
     },
     joinApprovedPopup: {
       title: "You're in!",
@@ -180,7 +186,7 @@ const en = {
       cta: 'Nice',
     },
     joinConfirm: {
-      title: 'Join?',
+      title: 'Join this challenge?',
       description: 'Will you join "{{name}}"?',
       confirm: 'Join',
       cancel: 'Cancel',
@@ -189,6 +195,12 @@ const en = {
       // approve instead of joining directly (see the "Join requests"
       // section of Manage).
       requestSent: 'Your request to join "{{name}}" was sent!',
+    },
+    // Sprint 10, B2: a private challenge files a request, so it says so before you tap.
+    requestJoinConfirm: {
+      title: 'Request to join?',
+      description: '"{{name}}" is private: its creator reviews your request and you get a notification when they answer.',
+      confirm: 'Send request',
     },
     requestPendingLabel: 'Request sent',
     leaveConfirm: {
@@ -214,7 +226,7 @@ const en = {
     leaveSuccessTitle: 'Left Challenge',
     leaveSuccessMessage: 'You have left this challenge. Your progress was saved.',
     leaveError: 'Could not leave challenge right now.',
-    joinButton: 'Join Challenge',
+    joinButton: 'Join challenge',
     joinButtonA11y: 'Join challenge',
     participantsTitle: 'Participants',
     participantA11y: 'View {{name}}\'s profile',
@@ -227,6 +239,8 @@ const en = {
     focusLabel: 'Focus',
     dailyProofLabel: 'Daily proof',
     dailyProofValue: '1 photo per training day',
+    rewardLabel: 'When you finish',
+    rewardValue: 'Counts toward your completed-challenge badges (1 and 3 challenges). It is finished when you log its last day.',
     statusLabel: 'Status',
     closedValue: 'Closed',
     restEveryCycle_one: '{{count}} rest day every {{cycleLength}}',
@@ -242,6 +256,7 @@ const en = {
     exerciseCount_other: '{{count}} exercises',
     exerciseSummary: '{{exercises}} · {{location}}',
     joinChallengeButton: 'Join challenge',
+    requestJoinButton: 'Request to join',
     joinCallout: 'Joining adds this challenge to your list and starts your progress streak.',
     shareMessage: 'Join "{{name}}" on Havit!',
     shareDays_one: '{{count}} day',
@@ -599,13 +614,16 @@ const en = {
     restDayTitle: 'Rest day',
     restDayMessage: 'No exercises today — recovery day.',
     location: {
-      sectionLabel: 'Location',
-      changeCta: 'Change location',
-      changeA11y: 'Change the location you train at',
-      availableAt: 'Can be done at',
+      sectionLabel: 'Training place',
+      changeCta: 'Change where I train',
+      changeA11y: 'Change where you are training today',
+      availableAt: 'This routine works at',
+      dayHint: 'Training somewhere else today? Change the place and the exercises that do not work there get swapped, just for you.',
       needsSwapsShort_one: '{{count}} swap needed',
       needsSwapsShort_other: '{{count}} swaps needed',
-      sheetTitle: 'Where are you training?',
+      sheetTitle: 'Where are you training today?',
+      sheetHint: 'Pick a place. If an exercise cannot be done there, you choose a similar one that tracks the same things. Only your workout changes: the challenge routine stays the same for everyone else.',
+      substitutionsHint: 'Choose what replaces each exercise that cannot be done here.',
       trainingAt: 'Training at {{location}}',
       substitutionsTitle: 'Training at {{location}}',
       needsSwaps_one: '{{count}} exercise needs a swap',
@@ -617,13 +635,13 @@ const en = {
       alternativesFailed: 'Could not load alternatives. Try again.',
       keptAsWritten_one: '{{count}} exercise has no compatible alternative and stays as written.',
       keptAsWritten_other: '{{count}} exercises have no compatible alternative and stay as written.',
-      apply: 'Use this location',
+      apply: 'Train here',
       reset: 'Back to the original routine',
-      loadError: 'Could not load locations. Try again later.',
+      loadError: 'Could not load the training places. Try again later.',
       swappedFrom: 'Instead of {{name}}',
       usedFor: 'Already replacing {{name}}',
       yourVersion: 'Your version for {{location}} — only you see these swaps.',
-      invalidSwaps: 'Your location swaps are no longer valid, so the routine is shown as written.',
+      invalidSwaps: 'Your swaps for this place are no longer valid, so the routine is shown as written.',
     },
   },
   routineExercises: {
@@ -799,10 +817,17 @@ const en = {
     grantPermission: 'Grant Permission',
     goBack: '← Go Back',
     uploadSuccessTitle: 'Logged!',
-    uploadSuccessMessage: "Nice work! Today's progress is saved.",
+    uploadSuccessMessage: "Nice work! Today's progress is logged.",
     uploadSuccessMessageWithChallenge: 'Day {{currentDay}} of {{totalDays}} logged for "{{name}}".',
     uploadSuccessCta: 'Done',
     captionPlaceholder: 'Say something about your workout… use #hashtags',
+    // Sprint 10, B2: the day is logged at once; the photo is reviewed afterwards.
+    photoStatus: {
+      pending: 'Your photo is in review. Until it is approved only you can see it.',
+      approved: 'Your photo is published.',
+      approvedPrivate: 'Your photo was saved as private: only you can see it.',
+      rejected: 'Your photo did not pass the review and will not be published. Your day is still logged.',
+    },
   },
   invites: {
     screenTitle: 'Invitations',
@@ -864,6 +889,12 @@ const en = {
     earnedOther: 'Earned',
     progressOwn: '{{progress}} of {{target}} · keep going',
     progressOther: '{{progress}} of {{target}}',
+    // Sprint 10, B2: how each kind of badge is counted (backend BADGE_CATALOG metrics).
+    rules: {
+      workouts: 'Every day you log counts, with a photo or as a rest day.',
+      streak: 'Counts your current streak of consecutive logged days (rest days included). Break it and it starts over.',
+      challenges: 'Counts every challenge you finish. A challenge is finished when you log its last day.',
+    },
     items: {
       first_workout: { name: 'First workout', description: 'Log your first completed workout.' },
       five_workouts: { name: '5 workouts', description: 'Complete 5 workouts.' },
@@ -876,6 +907,12 @@ const en = {
   profile: {
     postsScreenTitle: 'Posts',
     editButtonA11y: 'Edit profile',
+    editButton: 'Edit profile',
+    // Sprint 10, B2: own photos show their review state on the grid.
+    photoStatus: {
+      pending: 'In review',
+      rejected: 'Not published',
+    },
     invitationsButtonA11y: 'Invitations',
     logoutButton: 'Log out',
     logoutButtonA11y: 'Log out',
@@ -1080,7 +1117,7 @@ const en = {
     // The preview screen's own sticky CTA once a request is already sent
     // (49B) — distinct copy from the shared `pendingCta` above, which stays
     // the compact "Pending" label SpaceCard's small pill (Chats-46A) uses.
-    requestPendingCta: 'Request pending',
+    requestPendingCta: 'Request sent',
     joinedLabel: "You're a member",
     ownerLabel: 'Owner',
     joinError: 'Could not join this space.',
@@ -1305,6 +1342,21 @@ const en = {
       gastrocnemius: 'Gastrocnemius',
       soleus: 'Soleus',
     },
+  },
+  // Sprint 10, B2: one place for account, preferences, legal and session.
+  settings: {
+    title: 'Settings',
+    openA11y: 'Open settings',
+    sections: {
+      account: 'Account',
+      preferences: 'Preferences',
+      legal: 'Legal and information',
+      session: 'Session',
+    },
+    editProfileHint: 'Photo, name, bio, language and privacy',
+    notifications: 'Notifications',
+    notificationsHint: 'What you get notified about, in the app and on your phone',
+    aboutHint: 'Credits for exercise data and illustrations',
   },
   about: {
     title: 'About & Credits',

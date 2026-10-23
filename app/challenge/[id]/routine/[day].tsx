@@ -157,8 +157,10 @@ export default function RoutineDayDetail() {
   const [membershipLoading, setMembershipLoading] = useState(true);
   const { showSuccess } = useErrorNotificationStore();
 
+  // B2: a private challenge files a request — the button and the confirmation say so.
+  const isPrivateChallenge = challenge?.visibility === 'private';
   const joinPopup = useConfirmationPopup({
-    type: 'join',
+    type: isPrivateChallenge ? 'requestJoin' : 'join',
     challengeName: challenge?.name ?? t('challenges.fallbackName'),
     onConfirm: async () => {
       const challengeId = typeof id === 'string' ? id : '';
@@ -384,11 +386,13 @@ export default function RoutineDayDetail() {
                 </View>
               ))}
             </Row>
-            {adaptation && (
+            {adaptation ? (
               <Text variant="caption" tone="secondary">
                 {t('challengeRoutineDay.location.yourVersion', { location: adaptation.locationName })}
               </Text>
-            )}
+            ) : canChangeLocation ? (
+              <Text variant="caption" tone="secondary">{t('challengeRoutineDay.location.dayHint')}</Text>
+            ) : null}
             {canChangeLocation && (
               <Pressable
                 onPress={() => setLocationSheetVisible(true)}
@@ -497,10 +501,10 @@ export default function RoutineDayDetail() {
             onPress={joinPopup.show}
             style={({ pressed }) => [styles.joinButton, { backgroundColor: accentColor }, pressed && styles.pressed]}
             accessibilityRole="button"
-            accessibilityLabel={t('challenges.joinButtonA11y')}
+            accessibilityLabel={isPrivateChallenge ? t('challengeInfo.requestJoinButton') : t('challenges.joinButtonA11y')}
           >
             <Text variant="body" weight="bold" style={styles.joinButtonText}>
-              {t('challengeInfo.joinChallengeButton')}
+              {isPrivateChallenge ? t('challengeInfo.requestJoinButton') : t('challengeInfo.joinChallengeButton')}
             </Text>
           </Pressable>
         </View>

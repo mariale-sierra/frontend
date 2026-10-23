@@ -237,11 +237,12 @@ describe('Challenge info — the owner and admin actions', () => {
       (joinChallenge as jest.Mock).mockResolvedValue({ status: 'requested', message: 'Join request sent' });
       const screen = await renderInfo({ challenge: challenge({ visibility: 'private' }) });
 
-      await fireEvent.press(screen.getByLabelText('challenges.joinButtonA11y'));
-      await fireEvent.press(screen.getByText('challenges.joinConfirm.confirm'));
+      // Sprint 10, B2: a private challenge says "request to join" before you tap.
+      await fireEvent.press(screen.getByLabelText('challengeInfo.requestJoinButton'));
+      await fireEvent.press(screen.getByText('challenges.requestJoinConfirm.confirm'));
 
       await waitFor(() => expect(joinChallenge).toHaveBeenCalledWith('ch-1'));
-      expect(screen.queryByLabelText('challenges.joinButtonA11y')).toBeNull();
+      expect(screen.queryByLabelText('challengeInfo.requestJoinButton')).toBeNull();
       expect(screen.getByText('challenges.requestPendingLabel')).toBeTruthy();
       // Not actually a member yet — never redirected to Mine.
       expect(router.replace).not.toHaveBeenCalled();
@@ -274,13 +275,14 @@ describe('Challenge info — the owner and admin actions', () => {
 
       await waitFor(() => expect(screen.getByText('challenges.requestPendingLabel')).toBeTruthy());
       expect(getMyChallengeJoinRequest).toHaveBeenCalledWith('ch-1');
-      expect(screen.queryByLabelText('challenges.joinButtonA11y')).toBeNull();
+      expect(screen.queryByLabelText('challengeInfo.requestJoinButton')).toBeNull();
     });
 
-    it('offers Join on a private challenge without a pending request', async () => {
+    it('offers "request to join" on a private challenge without a pending request', async () => {
       const screen = await renderInfo({ challenge: challenge({ visibility: 'private' }) });
 
-      await waitFor(() => expect(screen.getByLabelText('challenges.joinButtonA11y')).toBeTruthy());
+      await waitFor(() => expect(screen.getByLabelText('challengeInfo.requestJoinButton')).toBeTruthy());
+      expect(screen.getByText('challengeInfo.requestJoinButton')).toBeTruthy();
       expect(screen.queryByText('challenges.requestPendingLabel')).toBeNull();
     });
 
@@ -288,8 +290,8 @@ describe('Challenge info — the owner and admin actions', () => {
       (joinChallenge as jest.Mock).mockResolvedValue({ status: 'requested', message: 'Join request sent' });
       const screen = await renderInfo({ challenge: challenge({ visibility: 'private' }) });
 
-      await fireEvent.press(screen.getByLabelText('challenges.joinButtonA11y'));
-      await fireEvent.press(screen.getByText('challenges.joinConfirm.confirm'));
+      await fireEvent.press(screen.getByLabelText('challengeInfo.requestJoinButton'));
+      await fireEvent.press(screen.getByText('challenges.requestJoinConfirm.confirm'));
 
       await waitFor(() => expect(joinChallenge).toHaveBeenCalledWith('ch-1'));
       expect(markChallengeMembershipSeen).not.toHaveBeenCalled();
