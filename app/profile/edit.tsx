@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Switch, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { safeBack } from '../../utils/navigation';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +17,7 @@ import { Divider } from '../../components/ui/divider';
 import { Row } from '../../components/layout/row';
 import { Stack } from '../../components/layout/stack';
 import { LogoutButton } from '../../components/profile/LogoutButton';
-import { DeleteAccountRow } from '../../components/profile/DeleteAccountRow';
+import { LanguageToggle } from '../../components/profile/LanguageToggle';
 import { ControlledFormField } from '../../components/form/ControlledFormField';
 import {
   updateMyProfile,
@@ -44,7 +44,9 @@ const BIO_MAX = 1000;
 /**
  * Edit-profile screen: loads the current profile, lets the user change
  * photo / display name / bio / language / privacy, validates locally and
- * PATCHes only the fields that changed.
+ * PATCHes only the fields that changed. Log out and delete account moved to
+ * Settings (Sprint 10, B2); log out stays on the load-error state below as the
+ * way out when the profile cannot be read.
  */
 export default function EditProfile() {
   const { t } = useTranslation();
@@ -133,6 +135,14 @@ export default function EditProfile() {
       setSaving(false);
     }
   });
+
+  const handleLanguageChange = (code: SupportedLanguage) => {
+    setLanguage(code);
+    i18n.changeLanguage(code);
+    storage.setItem(PREFERRED_LANGUAGE_KEY, code).catch((error) => {
+      logError('EditProfile.language', error);
+    });
+  };
 
   const handleChangePhoto = async () => {
     if (uploadingPhoto) return;
@@ -249,52 +259,7 @@ export default function EditProfile() {
         <Stack gap="lg">
           <View style={{ gap: spacing.xs }}>
             <Text variant="subheader">{t('profileEdit.language')}</Text>
-            {/* Fixed 2026-08-29: was a `Dropdown` (components/ui/dropdown.tsx)
-                — that component turns out to be used NOWHERE ELSE in the
-                whole app (checked), so there was no "other working dropdown"
-                to compare against when it kept not working across three
-                separate fix attempts (a real `maxSelections` bug was found
-                and fixed in it along the way, but the toggle stayed broken
-                even after that). Replaced entirely with a plain two-option
-                segmented toggle, the exact same proven structure
-                `RoutineModeToggle` (components/routine/builder/routineModeToggle.tsx)
-                already uses successfully elsewhere — single string value,
-                one Pressable per option, no array-based multi-select
-                machinery at all. */}
-            <View style={styles.languageToggle}>
-              {(['en', 'es'] as const).map((code) => {
-                const active = language === code;
-                return (
-                  <Pressable
-                    key={code}
-                    onPress={() => {
-                      if (active) return;
-                      setLanguage(code);
-                      i18n.changeLanguage(code as SupportedLanguage);
-                      storage.setItem(PREFERRED_LANGUAGE_KEY, code).catch((error) => {
-                        logError('EditProfile.language', error);
-                      });
-                    }}
-                    style={({ pressed }) => [
-                      styles.languageOption,
-                      active && styles.languageOptionActive,
-                      pressed && styles.languageOptionPressed,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                  >
-                    <Text
-                      variant="label"
-                      weight={active ? 'bold' : 'medium'}
-                      inverse={active}
-                      tone={active ? 'primary' : 'secondary'}
-                    >
-                      {code === 'en' ? t('profileEdit.languageEn') : t('profileEdit.languageEs')}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <LanguageToggle value={language} onChange={handleLanguageChange} />
           </View>
 
           <Pressable
@@ -338,11 +303,6 @@ export default function EditProfile() {
             {t('profileEdit.save')}
           </Button>
         </Stack>
-
-        <Divider variant="section" marginVertical="sm" />
-
-        <LogoutButton />
-        <DeleteAccountRow />
       </KeyboardAwareScroll>
     </ScreenBackground>
   );
@@ -362,28 +322,6 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
-  },
-  // Same chrome as RoutineModeToggle's proven segmented-toggle pattern:
-  // `surface` track, `big` radius, `xs` internal padding/gap.
-  languageToggle: {
-    flexDirection: 'row',
-    borderRadius: radius.big,
-    backgroundColor: colors.surface,
-    padding: spacing.xs,
-    gap: spacing.xs,
-  },
-  languageOption: {
-    flex: 1,
-    height: 48,
-    borderRadius: radius.big,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  languageOptionActive: {
-    backgroundColor: colors.primary,
-  },
-  languageOptionPressed: {
-    opacity: 0.85,
   },
   photoSection: {
     alignItems: 'center',
