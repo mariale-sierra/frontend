@@ -23,11 +23,13 @@ declare module 'axios' {
 }
 
 // Base URL comes from app config (`extra.apiUrl` in app.config.js), which itself reads the
-// EXPO_PUBLIC_API_URL env var — falls back to the known dev IP if config resolution fails.
-// NOTE: intentionally HTTP, not HTTPS. The backend has no TLS certificate yet; forcing HTTPS
-// here would break every request. Switch the fallback once that infra work lands.
-const FALLBACK_API_URL = 'http://20.63.84.1:3000';
-const baseURL = (Constants.expoConfig?.extra?.apiUrl as string | undefined) ?? FALLBACK_API_URL;
+// EXPO_PUBLIC_API_URL env var and refuses to resolve a non-https URL for release builds (B3).
+// The plain-HTTP fallback below is for development only: a release build never silently
+// falls back to clear text (and its APK blocks cleartext traffic anyway).
+const DEV_FALLBACK_API_URL = 'http://20.63.84.1:3000';
+const baseURL =
+  (Constants.expoConfig?.extra?.apiUrl as string | undefined) ??
+  (__DEV__ ? DEV_FALLBACK_API_URL : undefined);
 
 // Without a timeout a request on a dead connection never settles, leaving its
 // screen on a spinner for ever. Generous enough for the heaviest list reads.
@@ -41,7 +43,7 @@ const api = axios.create({
   // header is present — without it, API calls get back an HTML warning page
   // instead of JSON. Harmless to send against the real backend, which just
   // ignores unknown headers.
-  headers: baseURL.includes('ngrok-free')
+  headers: baseURL?.includes('ngrok-free')
     ? { 'ngrok-skip-browser-warning': 'true' }
     : undefined,
 });

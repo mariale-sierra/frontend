@@ -85,7 +85,7 @@ Avoid a fully custom `tabBar`: on iOS with Fabric enabled, it has historically m
 
 ## 7. API and Backend Integration
 - API client: `services/api.ts`.
-- Base URL: currently hardcoded as `http://20.63.84.1:3000` in `services/api.ts`.
+- Base URL: `extra.apiUrl`, resolved in `app.config.js` from `EXPO_PUBLIC_API_URL`. Development builds may use plain HTTP (LAN backend via `npm run start:local`; the `http://20.63.84.1:3000` fallback is dev-only). `preview`/`production` builds (B3, sprint 10) must use an `https://` URL — resolving the config fails otherwise — and ship with `usesCleartextTraffic=false`. See `docs/sprint-10/B3-https-transporte.md`.
 - Token injection: `services/api.ts` has an Axios request interceptor that calls `getAccessToken()` and sets `Authorization: Bearer <token>`.
 - Timezone header: native clients send `X-Timezone`; web omits it so browser requests remain compatible with older API deployments whose CORS allow-list does not include that custom header. The backend falls back to UTC when it is absent.
 - Timeout: every request has a 30s `timeout`, so a dead connection fails (with the timeout toast) instead of leaving a spinner forever.
