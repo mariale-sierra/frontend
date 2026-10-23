@@ -11,7 +11,8 @@
     "ios": "node scripts/dev-server.js && expo start --ios",
     "web": "node scripts/dev-server.js && expo start --web",
     "test": "jest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "i18n:check": "node scripts/check-i18n-keys.js"
   },
   "dependencies": {
     "@expo-google-fonts/dm-sans": "^0.4.2",
