@@ -56,6 +56,33 @@ describe('validation schemas', () => {
       expect(passwordIssues(password)).toEqual(['common.errors.known.passwordContainsIdentity']);
     });
 
+    // Post-audit B4-03-F01: same cases as the backend.
+    it.each([
+      '12345678901',
+      '1234512345',
+      '11223344556',
+      '123456789a',
+      '987654321a',
+      'q1w2e3r4t5y6',
+      'abcdabcdab',
+      'aaaaaaaaaaaa',
+    ])('rejects the trivial sequence or repetition %s', (password) => {
+      expect(passwordIssues(password)).toEqual(['common.errors.known.passwordTooCommon']);
+    });
+
+    it.each(['Montaña-Lenta-Azul', 'Kx9!vQ2#mPz7', 'qwertyMangoPeludo', 'Lluvia_en_Xela_2026'])(
+      'accepts a strong password: %s',
+      (password) => {
+        expect(passwordIssues(password)).toEqual([]);
+      },
+    );
+
+    // Post-audit B4-03-F02.
+    it('counts characters, not UTF-16 code units', () => {
+      expect(passwordIssues('🔥🍕🎉🚀🌙')).toEqual(['common.validation.passwordMin']);
+      expect(passwordIssues('🔥🍕🎉🚀🌙 luna roja')).toEqual([]);
+    });
+
     it('leaves the common-password list to the server', () => {
       // The backend answers "Password is too common", mapped to the password step.
       expect(passwordIssues('password123')).toEqual([]);
