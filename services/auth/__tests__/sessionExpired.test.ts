@@ -7,6 +7,7 @@ jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { 
 jest.mock('../token.service', () => ({
   getAccessToken: jest.fn(() => Promise.resolve(null)),
   getRefreshToken: jest.fn(() => Promise.resolve(null)),
+  getSessionEpoch: jest.fn(() => 0),
 }));
 jest.mock('../../../i18n', () => ({ __esModule: true, default: { t: (key: string) => key } }));
 

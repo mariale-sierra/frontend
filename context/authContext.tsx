@@ -13,6 +13,7 @@ import { resetSessionStores } from '../store/resetSessionStores';
 import { clearQueryCache, setQueryScope } from '../services/cache/queryCache';
 import { forgetPushToken, unregisterPushToken } from '../services/notifications/pushNotifications';
 import { setSessionExpiredHandler } from '../services/auth/sessionEvents';
+import { getSessionEpoch } from '../services/auth/token.service';
 import type { LegalConsent } from '../types/auth';
 
 interface AuthContextValue {
@@ -83,9 +84,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // before, just after the first paint instead of before it. Network
       // errors, 5xx, etc. keep the session, as they always did.
       // B4: an expired access token is renewed by the API client first; a
-      // 401 here means the session itself is over.
+      // 401 here means the session itself is over. A refresh that failed for
+      // a transient reason (offline, timeout, 429, 5xx) comes back as THAT
+      // error, not a 401, so a recoverable session is kept and renewed on
+      // the next request (post-audit B4-01-F02). And if the session changed
+      // meanwhile (signed out, or another account signed in), this answer is
+      // about the old one: leave the current one alone.
+      const epoch = getSessionEpoch();
       fetchAuthMe().catch(async (error: any) => {
-        if (error?.response?.status !== 401) return;
+        if (error?.response?.status !== 401 || epoch !== getSessionEpoch()) return;
         await logoutService({ revokeOnServer: false });
         invalidateChallengeProgressCache();
         resetSessionStores();

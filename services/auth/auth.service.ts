@@ -1,10 +1,12 @@
 import api from '../api';
 import {
+  beginSession,
   clearAccessToken,
   clearRefreshToken,
+  endSessionEpoch,
   getAccessToken,
   getRefreshToken,
-  setSessionTokens,
+  getSessionEpoch,
 } from './token.service';
 import { storage } from '../../utils/storage';
 import type {
@@ -19,10 +21,14 @@ export async function login(email: string, password: string) {
     const payload: LoginRequest = { email, password };
     // The login screen shows its own message for every failure (wrong credentials
     // is a 401 that is not a session expiry), so no global toast on top of it.
-    const response = await api.post<AuthSessionResponse>('/auth/login', payload, { suppressErrorToast: true });
+    // authRefresh: never sent with a previous session's bearer token.
+    const response = await api.post<AuthSessionResponse>('/auth/login', payload, {
+      suppressErrorToast: true,
+      authRefresh: true,
+    });
     const { accessToken, refreshToken, user } = response.data;
 
-    await setSessionTokens(accessToken, refreshToken);
+    await beginSession(accessToken, refreshToken);
     if (user?.id) {
       await storage.setItem('userId', String(user.id));
     }
@@ -44,9 +50,12 @@ export async function register(
   consent: LegalConsent,
 ) {
   const payload: RegisterRequest = { email, username, password, ...consent };
-  const response = await api.post<AuthSessionResponse>('/auth/register', payload, { suppressErrorToast: true });
+  const response = await api.post<AuthSessionResponse>('/auth/register', payload, {
+    suppressErrorToast: true,
+    authRefresh: true,
+  });
   const { accessToken, refreshToken, user } = response.data;
-  await setSessionTokens(accessToken, refreshToken);
+  await beginSession(accessToken, refreshToken);
   if (user?.id) {
     await storage.setItem('userId', String(user.id));
   }
@@ -74,6 +83,11 @@ const LOGOUT_REQUEST_TIMEOUT_MS = 5000;
  * Skipped when the session already ended server-side (expired / revoked).
  */
 export async function logout({ revokeOnServer = true }: { revokeOnServer?: boolean } = {}) {
+  // First of all: a refresh still in flight for this session can no longer
+  // store its answer (post-audit B4-01-F01). The backend revokes the whole
+  // family whichever token of the chain we send, so a rotation racing this
+  // logout doesn't keep the session alive server-side either.
+  const epoch = endSessionEpoch();
   const refreshToken = revokeOnServer ? await getRefreshToken().catch(() => null) : null;
   if (refreshToken) {
     await api
@@ -84,6 +98,9 @@ export async function logout({ revokeOnServer = true }: { revokeOnServer?: boole
       )
       .catch(() => undefined);
   }
+  // Someone signed in while the logout request was out: theirs is the
+  // session on the device now, don't wipe it.
+  if (epoch !== getSessionEpoch()) return;
   await clearAccessToken();
   await clearRefreshToken();
   await storage.removeItem('userId');

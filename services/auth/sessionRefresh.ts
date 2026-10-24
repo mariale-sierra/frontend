@@ -1,5 +1,10 @@
 import type { AxiosInstance } from 'axios';
-import { clearRefreshToken, getRefreshToken, setSessionTokens } from './token.service';
+import {
+  clearRefreshToken,
+  getRefreshToken,
+  getSessionEpoch,
+  setSessionTokens,
+} from './token.service';
 import type { AuthSessionResponse } from '../../types/auth';
 
 /**
@@ -13,39 +18,68 @@ import type { AuthSessionResponse } from '../../types/auth';
  * every use and treats a second use of the old one as theft (it revokes the
  * whole session).
  */
-let inFlight: Promise<string | null> | null = null;
+let inFlight: { epoch: number; promise: Promise<string | null> } | null = null;
+
+/**
+ * The session this refresh was started for was replaced (logout, or another
+ * account signed in) before it finished. Its result was discarded — nothing
+ * was stored or cleared — and the request that triggered it must just fail
+ * quietly: it belonged to a session that no longer exists on this device.
+ */
+export class SessionChangedError extends Error {
+  constructor() {
+    super('The session changed while it was being renewed');
+    this.name = 'SessionChangedError';
+  }
+}
+
+export function isSessionChangedError(error: unknown): error is SessionChangedError {
+  return error instanceof SessionChangedError;
+}
 
 /**
  * Resolves the new access token, or null when the session is over (no
  * refresh token stored — e.g. a 7-day token from before B4 — or the server
- * rejected it). Rejects on a network/server error: the session may still be
- * fine, so the caller must not sign the user out for that.
+ * answered 401/400: invalid, expired, revoked or reused, all the same 401).
+ * Rejects with the refresh's own error on a network error, a timeout, a 429
+ * or a 5xx: the session may still be fine, so the caller must keep it.
+ * Rejects with SessionChangedError when `epoch` is no longer the current
+ * session (post-audit B4-01-F01).
  */
-export function refreshSession(client: AxiosInstance): Promise<string | null> {
-  if (!inFlight) {
-    inFlight = runRefresh(client).finally(() => {
-      inFlight = null;
+export function refreshSession(
+  client: AxiosInstance,
+  epoch: number = getSessionEpoch(),
+): Promise<string | null> {
+  if (epoch !== getSessionEpoch()) return Promise.reject(new SessionChangedError());
+  // Shared only within one session: a refresh of an older session never
+  // answers for the current one.
+  if (!inFlight || inFlight.epoch !== epoch) {
+    const promise = runRefresh(client, epoch).finally(() => {
+      if (inFlight?.promise === promise) inFlight = null;
     });
+    inFlight = { epoch, promise };
   }
-  return inFlight;
+  return inFlight.promise;
 }
 
-async function runRefresh(client: AxiosInstance): Promise<string | null> {
+async function runRefresh(client: AxiosInstance, epoch: number): Promise<string | null> {
   const refreshToken = await getRefreshToken();
+  if (epoch !== getSessionEpoch()) throw new SessionChangedError();
   if (!refreshToken) return null;
 
+  let response;
   try {
-    const response = await client.post<AuthSessionResponse>(
+    response = await client.post<AuthSessionResponse>(
       '/auth/refresh',
       { refreshToken },
       // authRefresh: no bearer, and the response interceptor neither retries,
       // signs out nor toasts for it — this function decides.
       { authRefresh: true, suppressErrorToast: true },
     );
-    const { accessToken, refreshToken: next } = response.data;
-    await setSessionTokens(accessToken, next);
-    return accessToken;
   } catch (error: any) {
+    // Whatever the server said, it was about a session that's gone: don't
+    // touch the tokens the new one stored.
+    if (epoch !== getSessionEpoch()) throw new SessionChangedError();
     const status = error?.response?.status;
     // 401: unknown, expired, revoked or reused — this session can't be renewed.
     // 400: what we hold isn't even a refresh token.
@@ -55,4 +89,11 @@ async function runRefresh(client: AxiosInstance): Promise<string | null> {
     }
     throw error;
   }
+
+  // Signed out (or someone else signed in) while the answer was on its way:
+  // storing it would bring a closed session back, or overwrite theirs.
+  if (epoch !== getSessionEpoch()) throw new SessionChangedError();
+  const { accessToken, refreshToken: next } = response.data;
+  await setSessionTokens(accessToken, next);
+  return accessToken;
 }

@@ -6,7 +6,9 @@ jest.mock('../../api', () => ({
   default: { post: jest.fn(), get: jest.fn() },
 }));
 jest.mock('../token.service', () => ({
-  setSessionTokens: jest.fn(),
+  beginSession: jest.fn(),
+  endSessionEpoch: jest.fn(() => 1),
+  getSessionEpoch: jest.fn(() => 1),
   clearAccessToken: jest.fn(),
   clearRefreshToken: jest.fn(),
   getAccessToken: jest.fn(),
@@ -32,7 +34,7 @@ describe('auth service — legal consent', () => {
       password: 'Montaña-Lenta-Azul',
       acceptTerms: true,
       confirmAge16: true,
-    }, { suppressErrorToast: true });
+    }, { suppressErrorToast: true, authRefresh: true });
   });
 
   it('posts the consent to /auth/accept-terms for existing accounts', async () => {
