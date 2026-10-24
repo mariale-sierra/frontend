@@ -13,11 +13,12 @@ import { Text } from '../../components/ui/text';
 import { Button } from '../../components/ui/button';
 import { Icon } from '../../components/ui/icon';
 import { UserAvatar } from '../../components/ui/userAvatar';
-import { Divider } from '../../components/ui/divider';
+import { Card } from '../../components/ui/card';
 import { Row } from '../../components/layout/row';
 import { Stack } from '../../components/layout/stack';
 import { LogoutButton } from '../../components/profile/LogoutButton';
 import { LanguageToggle } from '../../components/profile/LanguageToggle';
+import { SettingsRow } from '../../components/profile/SettingsRow';
 import { ControlledFormField } from '../../components/form/ControlledFormField';
 import {
   updateMyProfile,
@@ -196,17 +197,21 @@ export default function EditProfile() {
   }
 
   return (
-    <ScreenBackground variant="default">
+    // Laid out like Settings (2026-10-23, explicit request): its compact top bar,
+    // small uppercase section labels, and the same subtle icon cards for rows.
+    <ScreenBackground variant="top">
+      <Row justify="space-between" align="center" style={styles.topBar}>
+        <BackButton style={styles.backButton} />
+        <Text variant="body" weight="bold" align="center" style={styles.headerTitle}>
+          {t('profileEdit.screenTitle')}
+        </Text>
+        <View style={styles.trailingSpacer} />
+      </Row>
+
       <KeyboardAwareScroll
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <BackButton />
-          <Text variant="title">{t('profileEdit.screenTitle')}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
         <View style={styles.photoSection}>
           <Pressable
             onPress={handleChangePhoto}
@@ -231,97 +236,128 @@ export default function EditProfile() {
           </Pressable>
         </View>
 
-        <Divider variant="section" marginVertical="sm" />
-
-        <Stack gap="lg">
-          <ControlledFormField
-            control={control}
-            name="displayName"
-            label={t('profileEdit.displayName')}
-            maxLength={DISPLAY_NAME_MAX}
-            placeholder={t('profileEdit.displayNamePlaceholder')}
-            placeholderVariant="caption"
-          />
-
-          <ControlledFormField
-            control={control}
-            name="bio"
-            label={t('profileEdit.bio')}
-            multiline
-            maxLength={BIO_MAX}
-            placeholder={t('profileEdit.bioPlaceholder')}
-            placeholderVariant="caption"
-          />
-        </Stack>
-
-        <Divider variant="section" marginVertical="sm" />
-
-        <Stack gap="lg">
-          <View style={{ gap: spacing.xs }}>
-            <Text variant="subheader">{t('profileEdit.language')}</Text>
-            <LanguageToggle value={language} onChange={handleLanguageChange} />
-          </View>
-
-          <Pressable
-            onPress={() => router.push('/onboarding/practices?mode=edit')}
-            style={({ pressed }) => [pressed && styles.pressedRow]}
-            accessibilityRole="button"
-          >
-            <Row align="center" justify="space-between">
-              <View style={styles.privacyText}>
-                <Text variant="subheader">{t('profileEdit.practices')}</Text>
-                <Text variant="caption" tone="secondary">
-                  {t('profileEdit.practicesHint')}
-                </Text>
-              </View>
-              <Icon name="chevron-forward-outline" size={20} color={colors.paper} />
-            </Row>
-          </Pressable>
-
-          <Row align="center" justify="space-between">
-            <View style={styles.privacyText}>
-              <Text variant="subheader">{t('profileEdit.privacy')}</Text>
-              <Text variant="caption" tone="secondary">
-                {t('profileEdit.privacyHint')}
-              </Text>
-            </View>
-            <Switch
-              value={isPrivate}
-              onValueChange={setIsPrivate}
-              trackColor={{ false: colors.surface, true: colors.success }}
-              thumbColor={colors.primary}
+        <Section title={t('profileEdit.sectionProfile')}>
+          <Stack gap="lg">
+            <ControlledFormField
+              control={control}
+              name="displayName"
+              label={t('profileEdit.displayName')}
+              maxLength={DISPLAY_NAME_MAX}
+              placeholder={t('profileEdit.displayNamePlaceholder')}
+              placeholderVariant="caption"
             />
-          </Row>
 
-          <Button
-            variant="primary"
-            size="md"
-            onPress={handleSave}
-            loading={saving}
-            disabled={saving || uploadingPhoto}
-          >
-            {t('profileEdit.save')}
-          </Button>
-        </Stack>
+            <ControlledFormField
+              control={control}
+              name="bio"
+              label={t('profileEdit.bio')}
+              multiline
+              maxLength={BIO_MAX}
+              placeholder={t('profileEdit.bioPlaceholder')}
+              placeholderVariant="caption"
+            />
+          </Stack>
+        </Section>
+
+        <Section title={t('settings.sections.preferences')}>
+          <Card variant="basic" radius="medium">
+            <View style={styles.cardStack}>
+              <Row gap="sm" align="center" justify="flex-start">
+                <Icon name="language-outline" size={20} color={colors.paper} />
+                <Text variant="body">{t('profileEdit.language')}</Text>
+              </Row>
+              <LanguageToggle value={language} onChange={handleLanguageChange} />
+            </View>
+          </Card>
+
+          <SettingsRow
+            icon="barbell-outline"
+            label={t('profileEdit.practices')}
+            hint={t('profileEdit.practicesHint')}
+            onPress={() => router.push('/onboarding/practices?mode=edit')}
+            testID="edit-profile-practices"
+          />
+
+          <Card variant="basic" radius="medium">
+            <Row justify="space-between" align="center" gap="sm">
+              <Row gap="sm" align="center" justify="flex-start" style={styles.rowMain}>
+                <Icon name="lock-closed-outline" size={20} color={colors.paper} />
+                <View style={styles.privacyText}>
+                  <Text variant="body">{t('profileEdit.privacy')}</Text>
+                  <Text variant="caption" tone="secondary">
+                    {t('profileEdit.privacyHint')}
+                  </Text>
+                </View>
+              </Row>
+              <Switch
+                value={isPrivate}
+                onValueChange={setIsPrivate}
+                trackColor={{ false: colors.surface, true: colors.success }}
+                thumbColor={colors.primary}
+              />
+            </Row>
+          </Card>
+        </Section>
+
+        <Button
+          variant="primary"
+          size="md"
+          onPress={handleSave}
+          loading={saving}
+          disabled={saving || uploadingPhoto}
+        >
+          {t('profileEdit.save')}
+        </Button>
       </KeyboardAwareScroll>
     </ScreenBackground>
   );
 }
 
+// Settings' section: a small uppercase label over its rows.
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.section}>
+      <Text variant="caption" tone="secondary" weight="bold" style={styles.sectionTitle}>
+        {title}
+      </Text>
+      {children}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  // Same top bar as Settings.
+  topBar: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.base,
+  },
+  backButton: {
+    marginLeft: -spacing.sm,
+  },
+  headerTitle: {
+    flex: 1,
+  },
+  trailingSpacer: {
+    width: 44,
+    height: 44,
+  },
   container: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
     paddingBottom: spacing['2xl'],
     gap: spacing.lg,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  section: {
+    gap: spacing.sm,
   },
-  headerSpacer: {
-    width: 40,
+  sectionTitle: {
+    textTransform: 'uppercase',
+  },
+  cardStack: {
+    gap: spacing.md,
+  },
+  rowMain: {
+    flex: 1,
   },
   photoSection: {
     alignItems: 'center',
@@ -362,9 +398,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
     paddingRight: spacing.md,
-  },
-  pressedRow: {
-    opacity: 0.85,
   },
   center: {
     flex: 1,

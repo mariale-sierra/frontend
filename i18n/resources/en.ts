@@ -343,6 +343,9 @@ const en = {
   },
   search: {
     screenTitle: 'Search',
+    browseByActivity: 'Browse by activity',
+    popularTitle: 'Popular right now',
+    seeAll: 'See all',
     placeholder: 'Search challenges or people',
     challengesSectionTitle: 'Challenges',
     peopleSectionTitle: 'People',
@@ -883,6 +886,7 @@ const en = {
   badges: {
     title: 'Badges',
     earnedCount: '{{earned}} of {{total}}',
+    openA11y: 'Open badges',
     tileA11yEarned: '{{name}} badge, earned. Tap for details.',
     tileA11yLocked: '{{name}} badge, not earned yet. Tap to see how.',
     earnedOwn: 'You earned it!',
@@ -955,6 +959,7 @@ const en = {
   profileEdit: {
     entry: 'Edit profile',
     screenTitle: 'Edit profile',
+    sectionProfile: 'Profile',
     displayName: 'Name',
     displayNamePlaceholder: 'Your visible name',
     displayNameRequired: 'Name cannot be empty.',

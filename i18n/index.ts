@@ -53,6 +53,13 @@ if (!i18n.isInitialized) {
     .catch((error) => {
       console.error('[i18n] initialization failed', error);
     });
+} else {
+  // Fast Refresh re-runs this file with i18n already set up: load the strings
+  // again, or keys added while the app is running show raw (e.g.
+  // "profileEdit.sectionProfile") until a full restart.
+  for (const [lng, { translation }] of Object.entries(resources)) {
+    i18n.addResourceBundle(lng, 'translation', translation, true, true);
+  }
 }
 
 export default i18n;

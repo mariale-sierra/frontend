@@ -300,6 +300,14 @@ describe('the Challenges tab — Browse activity filter', () => {
     expect(screen.getByText('Iron Will')).toBeTruthy();
   });
 
+  it("starts filtered when opened with an activity (Search's Browse by activity)", async () => {
+    mockSearchParams = { view: 'explore', activity: 'cardioLow' };
+    const screen = await renderWithProviders(<Challenges />);
+
+    await waitFor(() => expect(screen.getByText('Sunrise Run')).toBeTruthy());
+    expect(screen.queryByText('Iron Will')).toBeNull();
+  });
+
   it('is not on Mine', async () => {
     mockSearchParams = {};
     (getMyChallenges as jest.Mock).mockResolvedValue([GOING]);

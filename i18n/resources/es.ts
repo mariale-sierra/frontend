@@ -335,6 +335,9 @@ const es = {
   },
   search: {
     screenTitle: 'Buscar',
+    browseByActivity: 'Por actividad',
+    popularTitle: 'Populares ahora',
+    seeAll: 'Ver todos',
     placeholder: 'Buscar retos o personas',
     challengesSectionTitle: 'Retos',
     peopleSectionTitle: 'Personas',
@@ -871,6 +874,7 @@ const es = {
   badges: {
     title: 'Insignias',
     earnedCount: '{{earned}} de {{total}}',
+    openA11y: 'Abrir insignias',
     tileA11yEarned: 'Insignia {{name}}, conseguida. Toca para ver el detalle.',
     tileA11yLocked: 'Insignia {{name}}, por conseguir. Toca para ver cómo.',
     earnedOwn: '¡La conseguiste!',
@@ -943,6 +947,7 @@ const es = {
   profileEdit: {
     entry: 'Editar perfil',
     screenTitle: 'Editar perfil',
+    sectionProfile: 'Perfil',
     displayName: 'Nombre',
     displayNamePlaceholder: 'Tu nombre visible',
     displayNameRequired: 'El nombre no puede estar vacío.',

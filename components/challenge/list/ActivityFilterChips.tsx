@@ -22,6 +22,9 @@ interface ActivityFilterChipsProps {
   /** The picked activity, or null for "All". */
   selected: ActivityType | null;
   onSelect: (activity: ActivityType | null) => void;
+  /** The leading "All" chip — on by default; off where a chip only navigates
+   * (Search's "Browse by activity"). */
+  showAll?: boolean;
 }
 
 /**
@@ -34,7 +37,7 @@ interface ActivityFilterChipsProps {
  * with `paper`. It runs edge to edge: the row bleeds out of the list header's
  * side padding and puts it back inside the scroll.
  */
-export function ActivityFilterChips({ activities, selected, onSelect }: ActivityFilterChipsProps) {
+export function ActivityFilterChips({ activities, selected, onSelect, showAll = true }: ActivityFilterChipsProps) {
   const { t } = useTranslation();
 
   return (
@@ -45,13 +48,15 @@ export function ActivityFilterChips({ activities, selected, onSelect }: Activity
       contentContainerStyle={styles.row}
       testID="activity-filter-chips"
     >
-      <Chip
-        label={t('challenges.filterAll')}
-        selected={selected === null}
-        fill={colors.paper}
-        onPress={() => onSelect(null)}
-        testID="activity-filter-all"
-      />
+      {showAll && (
+        <Chip
+          label={t('challenges.filterAll')}
+          selected={selected === null}
+          fill={colors.paper}
+          onPress={() => onSelect(null)}
+          testID="activity-filter-all"
+        />
+      )}
       {activities.map((activity) => (
         <Chip
           key={activity}

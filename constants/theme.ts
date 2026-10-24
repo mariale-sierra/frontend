@@ -93,6 +93,23 @@ export const activityColors: Record<ActivityType, string> = {
 } as const;
 
 /**
+ * Badge tiers (2026-10-23, explicit request: badge colors must mean something —
+ * they used to borrow activity colors, which mean a kind of training). The color
+ * is how hard the badge was to earn: bronze for first steps, silver for building
+ * a habit, gold for the hardest ones. Each metal has its `base` (its flat color:
+ * progress bars), and a `light`/`dark` pair for its metallic sheen (`MetallicDisc`:
+ * highlight, metal, shadow). All three pair with `ink` icons, like activity colors.
+ * The sheen is a confirmed exception to "no gradients", as the card glows are.
+ */
+export const badgeColors = {
+  bronze: { base: '#D0905C', light: '#F3C9A2', dark: '#8F5932' },
+  silver: { base: '#C4CAD2', light: '#F5F7F9', dark: '#858C96' },
+  gold: { base: '#E8C055', light: '#FFF1BD', dark: '#AE8526' },
+} as const;
+
+export type BadgeTier = keyof typeof badgeColors;
+
+/**
  * Text opacity scale — applies to `paper` text on dark surfaces.
  * Only these three values are valid; there is no in-between.
  */

@@ -113,4 +113,18 @@ describe('BadgesSection (B12)', () => {
     await waitFor(() => expect(screen.getByText('Algo nuevo.')).toBeTruthy());
     expect(screen.queryByTestId('badge-rule')).toBeNull();
   });
+
+  it('as a grid (the Badges screen): every badge, earned first, under just the earned count', async () => {
+    mockedMine.mockResolvedValue([
+      badge({ code: 'five_workouts', name: '5 entrenamientos', target: 5 }),
+      badge({ code: 'first_workout', name: 'Primer entrenamiento', earned: true, progress: 1 }),
+    ]);
+    const screen = await renderWithTheme(<BadgesSection layout="grid" />);
+
+    await waitFor(() => expect(screen.getByTestId('badges-grid')).toBeTruthy());
+    // The screen has its own title, so the grid has none.
+    expect(screen.queryByText('badges.title')).toBeNull();
+    const names = screen.getAllByText(/entrenamiento/).map((node) => node.props.children);
+    expect(names).toEqual(['Primer entrenamiento', '5 entrenamientos']);
+  });
 });

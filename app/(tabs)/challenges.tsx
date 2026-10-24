@@ -49,7 +49,11 @@ export default function Challenges() {
   // Metrics picker's "no challenges yet" empty state, which used to push a
   // separate app/challenge/explore-all.tsx screen — now retired in favor of
   // this same tab, deep-linked straight into its Explore view).
-  const { view: requestedView } = useLocalSearchParams<{ view?: ChallengesView }>();
+  // `activity`: open Browse already filtered to one activity (Search's "Browse by activity").
+  const { view: requestedView, activity: requestedActivity } = useLocalSearchParams<{
+    view?: ChallengesView;
+    activity?: string;
+  }>();
 
   const [view, setView] = useState<ChallengesView>(requestedView === 'explore' ? 'explore' : 'mine');
 
@@ -106,10 +110,18 @@ export default function Challenges() {
       exploreChallenges.some((challenge) => challenge.dominantActivityCategory === activity)),
     [exploreChallenges],
   );
-  // A refresh can take away the last challenge of the picked activity — back to all.
+  // Arriving with `activity=` (Search's chips): start filtered to it.
   useEffect(() => {
+    const requested = ACTIVITY_FILTER_ORDER.find((activity) => activity === requestedActivity);
+    if (requested) setActivityFilter(requested);
+  }, [requestedActivity]);
+  // A refresh can take away the last challenge of the picked activity — back to
+  // all. Only once the list has loaded: an empty list mid-load isn't "no
+  // challenges of that activity", and would wipe a filter Search just set.
+  useEffect(() => {
+    if (!allQuery.data) return;
     if (activityFilter && !filterActivities.includes(activityFilter)) setActivityFilter(null);
-  }, [activityFilter, filterActivities]);
+  }, [activityFilter, filterActivities, allQuery.data]);
   const visibleExploreChallenges = useMemo(
     () => (activityFilter
       ? exploreChallenges.filter((challenge) => challenge.dominantActivityCategory === activityFilter)
