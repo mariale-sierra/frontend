@@ -112,3 +112,19 @@ export function challengePhotoToFeedPost(photo: ChallengePhoto): FeedPostViewMod
 export function toFeedPostViewModels(posts: FeedPostContract[]): FeedPostViewModel[] {
   return posts.map(toFeedPostViewModel);
 }
+
+// One view model per cached contract object: the shared feed cache replaces only
+// the posts that changed, so every other card keeps the same `post` prop and
+// `memo(FeedPostCard)` skips it.
+const viewModelByContract = new WeakMap<FeedPostContract, FeedPostViewModel>();
+
+export function toCachedFeedPostViewModels(posts: FeedPostContract[]): FeedPostViewModel[] {
+  return posts.map((post) => {
+    let viewModel = viewModelByContract.get(post);
+    if (!viewModel) {
+      viewModel = toFeedPostViewModel(post);
+      viewModelByContract.set(post, viewModel);
+    }
+    return viewModel;
+  });
+}

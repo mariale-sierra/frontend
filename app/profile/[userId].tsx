@@ -11,7 +11,7 @@ import { ConfirmationPopup } from '../../components/ui/confirmationPopup';
 import { colors, spacing } from '../../constants/theme';
 import { banUser, getPublicProfile } from '../../services/user/user.service';
 import type { PublicProfileContract } from '../../types/user';
-import { ProfileHeader, FollowButton, UserPostsGrid } from '../../components/profile';
+import { ProfileHeader, FollowButton, PhotoGridList } from '../../components/profile';
 import { openPostViewer } from '../../utils/postViewer';
 import type { ChallengePhoto } from '../../types/challenge';
 import { useAuth } from '../../hooks/useAuth';
@@ -20,6 +20,10 @@ import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { getUserPosts } from '../../services/challenge/challenge.service';
 import { BadgesSection } from '../../components/badges';
+import { useCachedQuery } from '../../hooks/useCachedQuery';
+import { useUserPosts } from '../../hooks/useUserPosts';
+import { queryKeys, staleTimes } from '../../services/cache/queries';
+import { invalidateQueries, setQueryData } from '../../services/cache/queryCache';
 
 const BAN_ICON_SIZE = 16;
 
@@ -56,9 +60,6 @@ export default function UserProfile() {
   const isAdmin = useIsAdmin();
   const { showSuccess } = useErrorNotificationStore();
 
-  const [profile, setProfile] = useState<PublicProfileContract | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [banPopupVisible, setBanPopupVisible] = useState(false);
   const [banning, setBanning] = useState(false);
 
@@ -68,32 +69,25 @@ export default function UserProfile() {
   // `replace` dropped the chat from the history and the tab has no back
   // chevron, so you were stuck there. Real, reported bug.
   const redirectToOwnTab = isOwnProfile && !postId;
+  const profileUserId = userId && !redirectToOwnTab ? userId : null;
 
+  // Cached per user: going back and forth between a profile and its posts (or
+  // opening the same person again) reuses what is loaded.
+  const profileQuery = useCachedQuery(
+    profileUserId ? queryKeys.publicProfile(profileUserId) : null,
+    () => getPublicProfile(profileUserId!),
+    { staleTime: staleTimes.social },
+  );
+  const profile = profileQuery.data;
+  const posts = useUserPosts(profileUserId);
+
+  const revalidateProfile = profileQuery.revalidate;
+  const revalidatePosts = posts.revalidate;
   useFocusEffect(
     useCallback(() => {
-      if (!userId || redirectToOwnTab) {
-        if (!userId) setLoading(false);
-        return;
-      }
-      let active = true;
-      setLoading(true);
-      getPublicProfile(userId)
-        .then((data) => {
-          if (active) {
-            setProfile(data);
-            setError(false);
-          }
-        })
-        .catch(() => {
-          if (active) setError(true);
-        })
-        .finally(() => {
-          if (active) setLoading(false);
-        });
-      return () => {
-        active = false;
-      };
-    }, [userId, redirectToOwnTab]),
+      void revalidateProfile();
+      void revalidatePosts();
+    }, [revalidateProfile, revalidatePosts]),
   );
 
   useEffect(() => {
@@ -129,22 +123,39 @@ export default function UserProfile() {
     };
   }, [userId, postId, isOwnProfile, sessionUserId]);
 
-  // UserPostsGrid fetches its own photos internally — bumping this signal is
-  // the only way this screen's pull-to-refresh can also force it to refetch,
-  // alongside this screen's own profile data.
-  const [postsRefreshSignal, setPostsRefreshSignal] = useState(0);
+  const refetchProfile = profileQuery.refetch;
+  const refetchPosts = posts.refetch;
   const refreshUserProfile = useCallback(async () => {
-    if (!userId) return;
-    try {
-      const data = await getPublicProfile(userId);
-      setProfile(data);
-      setError(false);
-    } catch {
-      setError(true);
-    }
-    setPostsRefreshSignal((n) => n + 1);
-  }, [userId]);
+    if (!profileUserId) return;
+    invalidateQueries(queryKeys.userBadges(profileUserId));
+    await Promise.all([refetchProfile(), refetchPosts()]);
+  }, [profileUserId, refetchProfile, refetchPosts]);
   const { refreshing, onRefresh } = usePullToRefresh(refreshUserProfile);
+
+  // Confirmed follow/unfollow: the counter moves at once in the cached profile
+  // (the follow hook then invalidates it, so the server's numbers follow).
+  const handleFollowChange = useCallback(
+    (isFollowing: boolean) => {
+      if (!profileUserId) return;
+      setQueryData<PublicProfileContract>(queryKeys.publicProfile(profileUserId), (previous) =>
+        previous
+          ? {
+              ...previous,
+              is_following: isFollowing,
+              followers_count: Math.max(0, previous.followers_count + (isFollowing ? 1 : -1)),
+            }
+          : previous,
+      );
+    },
+    [profileUserId],
+  );
+
+  const photos = posts.photos;
+  const handlePhotoPress = useCallback(
+    (photo: ChallengePhoto) =>
+      openPostViewer(photos ?? [], photo, { ownerId: isOwnProfile ? sessionUserId : null }),
+    [photos, isOwnProfile, sessionUserId],
+  );
 
   async function handleBan() {
     if (!userId) return;
@@ -169,86 +180,86 @@ export default function UserProfile() {
       <View style={styles.header}>
         <BackButton />
       </View>
-      <ScrollView
-        contentContainerStyle={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-      >
-        {loading ? (
+      {profileQuery.isLoading || !profile ? (
+        <ScrollView
+          contentContainerStyle={styles.container}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        >
           <View style={styles.center}>
-            <ActivityIndicator color={colors.primary} />
+            {profileQuery.isLoading ? (
+              <ActivityIndicator color={colors.primary} />
+            ) : (
+              <Text tone="secondary">{t('profile.userNotFound')}</Text>
+            )}
           </View>
-        ) : error || !profile ? (
-          <View style={styles.center}>
-            <Text tone="secondary">{t('profile.userNotFound')}</Text>
-          </View>
-        ) : (
-          <>
-            <ProfileHeader
-              displayName={profile.display_name}
-              username={profile.username}
-              bio={profile.bio}
-              imageUrl={profile.profile_image_url}
-              streakDays={profile.streak_days}
-              followersCount={profile.followers_count}
-              followingCount={profile.following_count}
-              practices={profile.practice_preferences}
-              actions={
-                isOwnProfile ? null : (
-                <View style={styles.actionsWrap}>
-                  <View style={styles.primaryActions}>
-                  <FollowButton
-                    userId={profile.id}
-                    initialIsFollowing={profile.is_following}
-                    onChange={(isFollowing) =>
-                      setProfile((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              followers_count: prev.followers_count + (isFollowing ? 1 : -1),
-                            }
-                          : prev,
-                      )
-                    }
-                  />
-                  {/* Straight to a chat with this person (same entry as "Message the author" on a
-                      post); /messaging/new resolves or creates the 1:1 conversation and opens it. */}
-                  <Button
-                    variant="outline"
-                    size="md"
-                    leftIcon={<Icon name="chatbubble-outline" size={16} color={colors.paper} />}
-                    onPress={() => router.push({ pathname: '/messaging/new', params: { recipientUserId: profile.id } })}
-                    accessibilityLabel={t('profile.messageButtonA11y')}
-                    testID="profile-message-button"
-                  >
-                    {t('profile.messageButton')}
-                  </Button>
-                  </View>
-                  {/* An admin-only action, kept quiet: the app's soft destructive button
-                      (a translucent `error` fill and rim), not a bare red link. */}
-                  {isAdmin && (
+        </ScrollView>
+      ) : (
+        <PhotoGridList
+          photos={photos ?? []}
+          loading={posts.isLoading}
+          emptyLabel={t('profile.emptyUserPhotos')}
+          onPhotoPress={handlePhotoPress}
+          hasMore={posts.hasMore}
+          loadingMore={posts.loadingMore}
+          onLoadMore={posts.loadMore}
+          loadMoreLabel={t('profile.loadMorePosts')}
+          contentContainerStyle={styles.container}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+          header={
+            <>
+              <ProfileHeader
+                displayName={profile.display_name}
+                username={profile.username}
+                bio={profile.bio}
+                imageUrl={profile.profile_image_url}
+                streakDays={profile.streak_days}
+                followersCount={profile.followers_count}
+                followingCount={profile.following_count}
+                practices={profile.practice_preferences}
+                actions={
+                  isOwnProfile ? null : (
+                  <View style={styles.actionsWrap}>
+                    <View style={styles.primaryActions}>
+                    <FollowButton
+                      userId={profile.id}
+                      initialIsFollowing={profile.is_following}
+                      onChange={handleFollowChange}
+                    />
+                    {/* Straight to a chat with this person (same entry as "Message the author" on a
+                        post); /messaging/new resolves or creates the 1:1 conversation and opens it. */}
                     <Button
-                      variant="dangerSubtle"
-                      size="sm"
-                      leftIcon={<Icon name="ban-outline" size={BAN_ICON_SIZE} color={colors.error} />}
-                      onPress={() => setBanPopupVisible(true)}
-                      accessibilityLabel={t('profile.banUserA11y')}
+                      variant="outline"
+                      size="md"
+                      leftIcon={<Icon name="chatbubble-outline" size={16} color={colors.paper} />}
+                      onPress={() => router.push({ pathname: '/messaging/new', params: { recipientUserId: profile.id } })}
+                      accessibilityLabel={t('profile.messageButtonA11y')}
+                      testID="profile-message-button"
                     >
-                      {t('profile.banUserButton')}
+                      {t('profile.messageButton')}
                     </Button>
-                  )}
-                </View>
-                )
-              }
-            />
-            <BadgesSection userId={profile.id} refreshSignal={postsRefreshSignal} />
-            <UserPostsGrid
-              userId={profile.id}
-              onPhotoPress={(photo, photos) => openPostViewer(photos, photo, { ownerId: isOwnProfile ? sessionUserId : null })}
-              refreshSignal={postsRefreshSignal}
-            />
-          </>
-        )}
-      </ScrollView>
+                    </View>
+                    {/* An admin-only action, kept quiet: the app's soft destructive button
+                        (a translucent `error` fill and rim), not a bare red link. */}
+                    {isAdmin && (
+                      <Button
+                        variant="dangerSubtle"
+                        size="sm"
+                        leftIcon={<Icon name="ban-outline" size={BAN_ICON_SIZE} color={colors.error} />}
+                        onPress={() => setBanPopupVisible(true)}
+                        accessibilityLabel={t('profile.banUserA11y')}
+                      >
+                        {t('profile.banUserButton')}
+                      </Button>
+                    )}
+                  </View>
+                  )
+                }
+              />
+              <BadgesSection userId={profile.id} />
+            </>
+          }
+        />
+      )}
       <ConfirmationPopup
         visible={banPopupVisible}
         title={t('profile.banUserTitle')}
@@ -282,7 +293,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
     paddingBottom: spacing['2xl'],
-    gap: spacing.lg,
   },
   center: {
     minHeight: 280,

@@ -11,6 +11,7 @@ import { getMusclesInRegion } from '../../../../services/exercises/exercises.ser
 import type { MuscleSummary } from '../../../../services/exercises/exercises.service';
 import { adaptMuscleSummary } from '../../../../services/adapters/exerciseAdapter';
 import { colors, spacing } from '../../../../constants/theme';
+import { logError } from '../../../../utils/apiError';
 
 export default function MuscleRegionListScreen() {
   const { t } = useTranslation();
@@ -22,7 +23,7 @@ export default function MuscleRegionListScreen() {
     if (!code) return;
     getMusclesInRegion(code)
       .then(setMuscles)
-      .catch((error: any) => console.error('[MuscleRegionList] load', error?.message))
+      .catch((error: any) => logError('MuscleRegionList', error))
       .finally(() => setLoading(false));
   }, [code]);
 

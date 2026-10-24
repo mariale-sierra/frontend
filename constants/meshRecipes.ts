@@ -252,10 +252,14 @@ interface Palette {
 // cardioIntense swapped colors on 2026-09-20, and their entries swapped with them,
 // so each color's gradient is exactly what it was.
 const PALETTES: Record<MeshRecipeKey, Palette> = {
-  // Gold: orange-red, yellow-green.
-  strength: { hues: [0, -28, 32] },
-  // Lime: gold-orange, green.
-  cardioIntense: { hues: [0, -30, 48] },
+  // Gold: a deeper orange-gold and a warm yellow — close neighbors, so it reads
+  // as one color with depth, and never as far as green (2026-10-20, explicit "I
+  // just don't like the green hues in them", then "too different from each other,
+  // they look like many colors, not one"). Was [0, -28, 32], then [0, -28, 14].
+  strength: { hues: [0, -12, 10] },
+  // Lime: a warmer yellow and a gold — both turns warm, since any turn the other
+  // way from lime is green. Was [0, -30, 48], then [0, -24, -46].
+  cardioIntense: { hues: [0, -9, -18] },
   // Aqua: blue, green.
   cardioLow: { hues: [0, 38, -38] },
   // Periwinkle: violet, cyan.

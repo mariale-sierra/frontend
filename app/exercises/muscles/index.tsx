@@ -11,6 +11,7 @@ import { getMuscleRegions } from '../../../services/exercises/exercises.service'
 import type { MuscleRegionSummary } from '../../../services/exercises/exercises.service';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
+import { logError } from '../../../utils/apiError';
 
 export default function MuscleRegionsScreen() {
   const { t } = useTranslation();
@@ -20,7 +21,7 @@ export default function MuscleRegionsScreen() {
   useEffect(() => {
     getMuscleRegions()
       .then(setRegions)
-      .catch((error: any) => console.error('[MuscleRegions] load', error?.message))
+      .catch((error: any) => logError('MuscleRegions', error))
       .finally(() => setLoading(false));
   }, []);
 

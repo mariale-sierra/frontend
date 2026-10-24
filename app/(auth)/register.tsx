@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -30,6 +30,9 @@ import { activityColors, colors, fillOpacity, radius, shadows, spacing } from '.
 import { withAlpha } from '../../utils/color';
 import { createRegisterSchema, type RegisterFormValues } from '../../validation/authSchemas';
 import { LegalConsent, type LegalConsentValue } from '../../components/legal/LegalConsent';
+import { safeBack } from '../../utils/navigation';
+import { getApiErrorMessage, knownApiMessageKey } from '../../utils/apiError';
+import { FieldError } from '../../components/ui/fieldError';
 
 const INTRO_COUNT = 3;
 // Page 1 ("Real challenges, real routines") got a second photo, per explicit
@@ -111,6 +114,24 @@ const STEP_COLORS = [
 
 type FieldStepKey = 'email' | 'username' | 'password';
 
+const FIELD_STEP_INDEX: Record<FieldStepKey, number> = { email: 3, username: 4, password: 5 };
+
+// Backend rejections (`common.errors.known.*` keys) that belong to specific
+// fields: the flow goes
+// back to the first one's step and marks all of them there. B4: the backend
+// no longer says WHICH of email/username is taken (account enumeration), so
+// both are marked; the password policy's specific messages land on the
+// password step. emailInUse/usernameInUse are a backend from before B4.
+const REGISTER_FIELD_ERRORS: Record<string, FieldStepKey[] | undefined> = {
+  emailInUse: ['email'],
+  usernameInUse: ['username'],
+  accountTaken: ['email', 'username'],
+  passwordTooShort: ['password'],
+  passwordTooLong: ['password'],
+  passwordContainsIdentity: ['password'],
+  passwordTooCommon: ['password'],
+};
+
 function fieldStepKeyFor(step: number): FieldStepKey {
   if (step === 3) return 'email';
   if (step === 4) return 'username';
@@ -190,11 +211,26 @@ export default function Register() {
   // `styles.contentLoading` below.
   const [loadedImageCount, setLoadedImageCount] = useState(0);
   const introImagesReady = loadedImageCount >= TOTAL_INTRO_IMAGES;
-  function handleIntroImageSettled() {
-    // Counts errors too (not just successful loads) — a broken image must
-    // never leave the spinner stuck forever.
-    setLoadedImageCount((c) => c + 1);
-  }
+  // Counts errors too (not just successful loads) — a broken image must
+  // never leave the spinner stuck forever. Each image counts ONCE, and each
+  // gets the same handler on every render: on web, react-native-web's
+  // <Image> fires onLoad again whenever its handler changes, so a fresh
+  // function per render made every load re-render, re-fire and re-count —
+  // "Maximum update depth exceeded" (real, reported bug).
+  const settledImagesRef = useRef(new Set<string>());
+  const settleHandlersRef = useRef(new Map<string, () => void>());
+  const handleIntroImageSettled = useCallback((key: string) => {
+    let handler = settleHandlersRef.current.get(key);
+    if (!handler) {
+      handler = () => {
+        if (settledImagesRef.current.has(key)) return;
+        settledImagesRef.current.add(key);
+        setLoadedImageCount((c) => c + 1);
+      };
+      settleHandlersRef.current.set(key, handler);
+    }
+    return handler;
+  }, []);
 
   // Both consents are mandatory (T&C + Privacy/Community docs, and 16+); the
   // account is not created until both are checked. The backend enforces it too.
@@ -205,7 +241,7 @@ export default function Register() {
   const consentGiven = consent.acceptTerms && consent.confirmAge16;
 
   const schema = useMemo(() => createRegisterSchema(t), [t]);
-  const { control, trigger, getValues } = useForm<RegisterFormValues>({
+  const { control, trigger, getValues, setError } = useForm<RegisterFormValues>({
     resolver: zodResolver(schema),
     defaultValues: { email: '', username: '', password: '' },
   });
@@ -323,7 +359,7 @@ export default function Register() {
     setSubmitting(true);
     try {
       const { email, username, password } = getValues();
-      await register(email, username, password, {
+      await register(email.trim(), username.trim(), password, {
         acceptTerms: consent.acceptTerms,
         confirmAge16: consent.confirmAge16,
       });
@@ -344,7 +380,19 @@ export default function Register() {
       // step. The app's own cross-platform error toast — already used one
       // screen later, by practices.tsx's own save-failure case — doesn't
       // have that gap.
-      show({ message: error?.response?.data?.message || t('auth.register.createAccountFailed') });
+      // The request opts out of the global toast (auth.service): this is the one message,
+      // translated (e.g. "email already in use") instead of the API's English text.
+      // A taken email/username or a rejected password belongs to its field: go
+      // back to that step and mark it there, so the user fixes it where it was
+      // typed (REGISTER_FIELD_ERRORS).
+      const fields = REGISTER_FIELD_ERRORS[knownApiMessageKey(error) ?? ''];
+      const message = getApiErrorMessage(error, t, t('auth.register.createAccountFailed'));
+      if (fields) {
+        setStep(FIELD_STEP_INDEX[fields[0]]);
+        fields.forEach((field) => setError(field, { type: 'server', message }));
+      } else {
+        show({ message });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -384,7 +432,7 @@ export default function Register() {
           // screen's own link TO register), so the button read "Register"
           // while actually doing the opposite: exiting register and
           // returning to login.
-          <Pressable onPress={() => router.back()} hitSlop={8} accessibilityRole="button">
+          <Pressable onPress={() => safeBack('/(auth)/login')} hitSlop={8} accessibilityRole="button">
             <Text variant="label" weight="bold" tone="secondary">
               {t('common.actions.login')}
             </Text>
@@ -445,14 +493,14 @@ export default function Register() {
                     <Image
                       source={p.image[1]}
                       style={[styles.fanImageBase, styles.fanImageRight]}
-                      onLoad={handleIntroImageSettled}
-                      onError={handleIntroImageSettled}
+                      onLoad={handleIntroImageSettled(`${i}-1`)}
+                      onError={handleIntroImageSettled(`${i}-1`)}
                     />
                     <Image
                       source={p.image[0]}
                       style={[styles.fanImageBase, styles.fanImageLeft, styles.fanImageShadow]}
-                      onLoad={handleIntroImageSettled}
-                      onError={handleIntroImageSettled}
+                      onLoad={handleIntroImageSettled(`${i}-0`)}
+                      onError={handleIntroImageSettled(`${i}-0`)}
                     />
                   </View>
                 ) : (
@@ -460,8 +508,8 @@ export default function Register() {
                     <Image
                       source={p.image}
                       style={styles.image}
-                      onLoad={handleIntroImageSettled}
-                      onError={handleIntroImageSettled}
+                      onLoad={handleIntroImageSettled(`${i}`)}
+                      onError={handleIntroImageSettled(`${i}`)}
                     />
                     {i === STREAK_DEMO_PAGE && (
                       <View style={styles.streakBadge}>
@@ -515,6 +563,7 @@ export default function Register() {
             control={control}
             name={fieldKey as FieldStepKey}
             render={({ field: { onChange, value, onBlur }, fieldState: { error } }) => (
+              <View style={styles.field}>
               <FloatingLabelInput
                 label={t(`common.fields.${fieldKey}`)}
                 value={value}
@@ -527,6 +576,8 @@ export default function Register() {
                 secureTextEntry={FIELD_META[fieldKey as FieldStepKey].secure}
                 textContentType={FIELD_META[fieldKey as FieldStepKey].textContentType}
               />
+              <FieldError message={error?.message} />
+              </View>
             )}
           />
 
@@ -568,6 +619,10 @@ export default function Register() {
 }
 
 const styles = StyleSheet.create({
+  // A field and its inline validation message (same `xs` gap as FormField).
+  field: {
+    gap: spacing.xs,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.ink,

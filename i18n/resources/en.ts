@@ -18,6 +18,7 @@ const en = {
     validation: {
       required: '{{field}} is required',
       emailInvalid: 'Enter a valid email address',
+      passwordMin: 'Use at least {{min}} characters',
     },
     errors: {
       genericTitle: 'Error',
@@ -36,6 +37,33 @@ const en = {
       networkErrorMessage: 'Could not connect to the server. Check your internet connection.',
       contentRejectedTitle: 'Content not allowed',
       contentRejectedMessage: 'Your content does not meet the community guidelines.',
+      unauthorizedMessage: 'The sign-in details aren\'t correct.',
+      badRequestTitle: 'Check your data',
+      badRequestMessage: 'Something in the request isn\'t valid. Review it and try again.',
+      conflictTitle: 'Already done',
+      conflictMessage: 'This already exists or was changed. Refresh and try again.',
+      tooManyRequestsTitle: 'Too many attempts',
+      tooManyRequestsMessage: 'Wait a moment before trying again.',
+      timeoutTitle: 'Taking too long',
+      timeoutMessage: 'The server took too long to answer. Check your connection and try again.',
+      known: {
+        alreadyMember: 'You\'re already a member.',
+        challengeClosed: 'This challenge is closed.',
+        alreadyLoggedToday: 'You already logged your progress today.',
+        inviteExpired: 'This invite has expired.',
+        alreadyReported: 'You already reported this content.',
+        cannotReportOwn: 'You can\'t report your own content.',
+        ownChallenge: 'You can\'t join a challenge you created.',
+        emailInUse: 'That email is already in use.',
+        usernameInUse: 'That username is already taken.',
+        accountTaken: 'That email or username is already in use.',
+        passwordTooShort: 'Use at least 10 characters.',
+        passwordTooLong: 'That password is too long.',
+        passwordContainsIdentity: 'Your password can\'t contain your username or email.',
+        passwordTooCommon: 'That password is too common. Try a phrase only you would think of.',
+        deletionAlreadyRequested: 'Your account deletion was already requested.',
+        cycleTooLong: 'The cycle can\'t be longer than the challenge.',
+      },
     },
   },
   welcome: {
@@ -113,7 +141,7 @@ const en = {
     },
     loadError: 'Could not load challenges.',
     mineTab: 'Mine',
-    exploreTab: 'Explore',
+    exploreTab: 'Browse',
     newButton: 'New',
     trainDay: 'Train day',
     restDay: 'Rest day',
@@ -128,10 +156,13 @@ const en = {
     noRestDays: 'no rest days',
     membersCount: '{{count}} members',
     view: 'View',
+    join: 'Join',
     emptyMine: "You haven't joined any challenges yet.",
     emptyExplore: 'No challenges to explore right now.',
+    emptyExploreFilter: 'No challenges in this category yet.',
+    filterAll: 'All',
     emptyMineTitle: 'Your next challenge is waiting',
-    emptyMineExplore: 'Explore challenges',
+    emptyMineExplore: 'Browse challenges',
     emptyMineCreate: 'Create a challenge',
     // The Mine list's collapsed-by-default finished-challenges disclosure —
     // see app/(tabs)/challenges.tsx.
@@ -147,6 +178,12 @@ const en = {
       descriptionWithDuration_other: 'You finished "{{name}}" in {{count}} days.',
       description: 'You finished "{{name}}".',
       cta: 'Done',
+      reward: {
+        earned: 'You earned the "{{badge}}" badge! See it on your profile.',
+        next_one: '{{count}} more challenge for the "{{badge}}" badge.',
+        next_other: '{{count}} more challenges for the "{{badge}}" badge.',
+        allEarned: 'You already have every completed-challenge badge.',
+      },
     },
     joinApprovedPopup: {
       title: "You're in!",
@@ -154,7 +191,7 @@ const en = {
       cta: 'Nice',
     },
     joinConfirm: {
-      title: 'Join?',
+      title: 'Join this challenge?',
       description: 'Will you join "{{name}}"?',
       confirm: 'Join',
       cancel: 'Cancel',
@@ -163,6 +200,12 @@ const en = {
       // approve instead of joining directly (see the "Join requests"
       // section of Manage).
       requestSent: 'Your request to join "{{name}}" was sent!',
+    },
+    // Sprint 10, B2: a private challenge files a request, so it says so before you tap.
+    requestJoinConfirm: {
+      title: 'Request to join?',
+      description: '"{{name}}" is private: its creator reviews your request and you get a notification when they answer.',
+      confirm: 'Send request',
     },
     requestPendingLabel: 'Request sent',
     leaveConfirm: {
@@ -188,7 +231,7 @@ const en = {
     leaveSuccessTitle: 'Left Challenge',
     leaveSuccessMessage: 'You have left this challenge. Your progress was saved.',
     leaveError: 'Could not leave challenge right now.',
-    joinButton: 'Join Challenge',
+    joinButton: 'Join challenge',
     joinButtonA11y: 'Join challenge',
     participantsTitle: 'Participants',
     participantA11y: 'View {{name}}\'s profile',
@@ -201,6 +244,8 @@ const en = {
     focusLabel: 'Focus',
     dailyProofLabel: 'Daily proof',
     dailyProofValue: '1 photo per training day',
+    rewardLabel: 'When you finish',
+    rewardValue: 'Counts toward your completed-challenge badges (1 and 3 challenges). It is finished when you log its last day.',
     statusLabel: 'Status',
     closedValue: 'Closed',
     restEveryCycle_one: '{{count}} rest day every {{cycleLength}}',
@@ -216,6 +261,7 @@ const en = {
     exerciseCount_other: '{{count}} exercises',
     exerciseSummary: '{{exercises}} · {{location}}',
     joinChallengeButton: 'Join challenge',
+    requestJoinButton: 'Request to join',
     joinCallout: 'Joining adds this challenge to your list and starts your progress streak.',
     shareMessage: 'Join "{{name}}" on Havit!',
     shareDays_one: '{{count}} day',
@@ -225,6 +271,7 @@ const en = {
     shareLinkLine: 'Open it in the app: {{link}}',
   },
   challengeProgress: {
+    logTodayA11y: 'Log today',
     gallery: {
       // "Progress Feed" is the header title when browsing every photo (grid
       // tap); a specific day's title reuses the plain challenges.dayLabel
@@ -301,16 +348,17 @@ const en = {
   },
   search: {
     screenTitle: 'Search',
+    browseByActivity: 'Browse by activity',
+    popularTitle: 'Popular right now',
+    seeAll: 'See all',
     placeholder: 'Search challenges or people',
     challengesSectionTitle: 'Challenges',
     peopleSectionTitle: 'People',
     resultsCount_one: '{{count}} result',
     resultsCount_other: '{{count}} results',
-    emptyPrompt: 'Search for challenges or people to get started.',
     emptyResults: 'No results for "{{query}}".',
     emptyPromptTitle: 'Find your people and your challenge',
-    emptyResultsHint: 'Check the spelling or explore the available challenges.',
-    exploreChallenges: 'Explore challenges',
+    emptyResultsHint: 'Check the spelling or try another search.',
     streakA11y: '{{count}} day streak',
     seeMoreChallenges: 'See more',
     seeLessChallenges: 'See less',
@@ -320,6 +368,7 @@ const en = {
     alerts: {
       submitErrorTitle: 'Could not log workout',
       submitErrorFallback: 'Network error. Please try again.',
+      routineLoadError: 'Couldn\'t load today\'s routine. Try again.',
     },
   },
   logMetrics: {
@@ -366,16 +415,24 @@ const en = {
       nothingSetYet: 'Nothing set yet',
       add: 'Add',
       addDay: 'Add day',
-      bannerIncomplete: 'Tap Add on any day to pick a routine or set it as rest. Use Add day or × to change how long the cycle runs.',
-      bannerComplete_one: '{{trainingDays}} training days, {{restDays}} rest day. Tap × to remove a day, or Add day for more.',
-      bannerComplete_other: '{{trainingDays}} training days, {{restDays}} rest days. Tap × to remove a day, or Add day for more.',
-      setAllDaysHint_one: 'Set all {{count}} day to continue',
-      setAllDaysHint_other: 'Set all {{count}} days to continue',
+      fillDayHint: 'Fill day {{day}} to continue',
     },
-    duration: {
-      repeats: 'Repeats',
-      cycles: 'Cycles',
-      callout: '{{cycleLengthDays}} × {{cyclesCount}} = {{totalDays}}, ending {{endDate}}',
+    cycleLength: {
+      cycleLabel: 'Cycle',
+      cycleHint: 'Days before it starts again',
+      lengthLabel: 'Challenge length',
+      lengthHint: 'Total days',
+      daysUnit_one: 'day',
+      daysUnit_other: 'days',
+      decreaseA11y: 'One day less for {{label}}',
+      increaseA11y: 'One day more for {{label}}',
+    },
+    calendar: {
+      fullCycles_one: '{{count}} full cycle',
+      fullCycles_other: '{{count}} full cycles',
+      leftoverDays_one: '{{count}} day',
+      leftoverDays_other: '{{count}} days',
+      cyclesAndDays: '{{cycles}} + {{days}}',
     },
     visibility: {
       publicLabel: 'Public',
@@ -390,6 +447,20 @@ const en = {
     submit: {
       startChallenge: 'Start challenge',
     },
+    rules: {
+      dailyPhoto: {
+        title: 'A photo every training day',
+        body: 'Log each training day with a quick photo of your workout. That photo is your check-in.',
+      },
+      consistency: {
+        title: 'Consistency is the point',
+        body: 'Show up for every training day of the challenge. Rest days take care of themselves: nothing to do but rest.',
+      },
+      together: {
+        title: 'You do it together',
+        body: "Everyone in the challenge sees each day's photos, so you keep each other going.",
+      },
+    },
     review: {
       daysUnit: 'days',
       untitledChallenge: 'Untitled challenge',
@@ -403,7 +474,7 @@ const en = {
       locationLabel: 'Location',
       noneSelected: 'None selected',
       cycleLabel: 'Cycle',
-      cycleValue: '{{cycleLengthDays}} days, repeating {{cyclesCount}} times',
+      cycleValue: '{{cycleLength}} cycle · {{breakdown}}',
       cycleSectionLabel: 'The cycle',
       dayLabel: 'Day {{day}}',
       notSelectedYet: 'Not selected yet',
@@ -418,17 +489,25 @@ const en = {
         title: 'What kind of training?',
         description: 'These two choices decide which exercises you can add to routines later, so pick everything that applies.',
       },
-      cycle: {
-        title: 'Build the cycle',
-        description: 'Give each day a routine, or mark it as rest. Add a day or remove one anytime — most cycles run 3 to 7 days.',
+      cycleLength: {
+        title: 'Cycle & length',
+        description: "Plan a few days once. We'll repeat them until the challenge ends.",
       },
-      durationVisibility: {
-        title: 'How long and who sees it?',
-        description: 'The cycle repeats until the challenge ends. Longer is harder — 30 days is the sweet spot for a first challenge.',
+      cycleFill: {
+        title: 'Fill in your cycle',
+        description: 'Give each day a routine, or mark it as rest. Add or remove days any time.',
+      },
+      visibility: {
+        title: 'Who can see it?',
+        description: 'Choose whether anyone can find and join it, or only the people you approve.',
       },
       review: {
         title: 'Ready when you are',
         description: 'Day 1 starts today. You can edit the name and description later, but the cycle is locked once people join.',
+      },
+      rules: {
+        title: 'How it works',
+        description: 'Every challenge runs on the same simple rules.',
       },
     },
     validation: {
@@ -543,13 +622,16 @@ const en = {
     restDayTitle: 'Rest day',
     restDayMessage: 'No exercises today — recovery day.',
     location: {
-      sectionLabel: 'Location',
-      changeCta: 'Change location',
-      changeA11y: 'Change the location you train at',
-      availableAt: 'Can be done at',
+      sectionLabel: 'Training place',
+      changeCta: 'Change where I train',
+      changeA11y: 'Change where you are training today',
+      availableAt: 'This routine works at',
+      dayHint: 'Training somewhere else today? Change the place and the exercises that do not work there get swapped, just for you.',
       needsSwapsShort_one: '{{count}} swap needed',
       needsSwapsShort_other: '{{count}} swaps needed',
-      sheetTitle: 'Where are you training?',
+      sheetTitle: 'Where are you training today?',
+      sheetHint: 'Pick a place. If an exercise cannot be done there, you choose a similar one that tracks the same things. Only your workout changes: the challenge routine stays the same for everyone else.',
+      substitutionsHint: 'Choose what replaces each exercise that cannot be done here.',
       trainingAt: 'Training at {{location}}',
       substitutionsTitle: 'Training at {{location}}',
       needsSwaps_one: '{{count}} exercise needs a swap',
@@ -561,13 +643,13 @@ const en = {
       alternativesFailed: 'Could not load alternatives. Try again.',
       keptAsWritten_one: '{{count}} exercise has no compatible alternative and stays as written.',
       keptAsWritten_other: '{{count}} exercises have no compatible alternative and stay as written.',
-      apply: 'Use this location',
+      apply: 'Train here',
       reset: 'Back to the original routine',
-      loadError: 'Could not load locations. Try again later.',
+      loadError: 'Could not load the training places. Try again later.',
       swappedFrom: 'Instead of {{name}}',
       usedFor: 'Already replacing {{name}}',
       yourVersion: 'Your version for {{location}} — only you see these swaps.',
-      invalidSwaps: 'Your location swaps are no longer valid, so the routine is shown as written.',
+      invalidSwaps: 'Your swaps for this place are no longer valid, so the routine is shown as written.',
     },
   },
   routineExercises: {
@@ -743,10 +825,17 @@ const en = {
     grantPermission: 'Grant Permission',
     goBack: '← Go Back',
     uploadSuccessTitle: 'Logged!',
-    uploadSuccessMessage: "Nice work! Today's progress is saved.",
+    uploadSuccessMessage: "Nice work! Today's progress is logged.",
     uploadSuccessMessageWithChallenge: 'Day {{currentDay}} of {{totalDays}} logged for "{{name}}".',
     uploadSuccessCta: 'Done',
     captionPlaceholder: 'Say something about your workout… use #hashtags',
+    // Sprint 10, B2: the day is logged at once; the photo is reviewed afterwards.
+    photoStatus: {
+      pending: 'Your photo is in review. Until it is approved only you can see it.',
+      approved: 'Your photo is published.',
+      approvedPrivate: 'Your photo was saved as private: only you can see it.',
+      rejected: 'Your photo did not pass the review and will not be published. Your day is still logged.',
+    },
   },
   invites: {
     screenTitle: 'Invitations',
@@ -762,6 +851,8 @@ const en = {
     unknownChallenge: 'Challenge',
     challengeWithDuration: '{{name}} · {{duration}}',
     viewChallengeA11y: 'View {{name}} details',
+    invitedYou: '@{{username}} invited you to this challenge',
+    invitedYouAnonymous: 'You were invited to this challenge',
     from: 'From @{{username}}',
     to: 'To @{{username}}',
     status: {
@@ -800,12 +891,19 @@ const en = {
   badges: {
     title: 'Badges',
     earnedCount: '{{earned}} of {{total}}',
+    openA11y: 'Open badges',
     tileA11yEarned: '{{name}} badge, earned. Tap for details.',
     tileA11yLocked: '{{name}} badge, not earned yet. Tap to see how.',
     earnedOwn: 'You earned it!',
     earnedOther: 'Earned',
     progressOwn: '{{progress}} of {{target}} · keep going',
     progressOther: '{{progress}} of {{target}}',
+    // Sprint 10, B2: how each kind of badge is counted (backend BADGE_CATALOG metrics).
+    rules: {
+      workouts: 'Every day you log counts, with a photo or as a rest day.',
+      streak: 'Counts your current streak of consecutive logged days (rest days included). Break it and it starts over.',
+      challenges: 'Counts every challenge you finish. A challenge is finished when you log its last day.',
+    },
     items: {
       first_workout: { name: 'First workout', description: 'Log your first completed workout.' },
       five_workouts: { name: '5 workouts', description: 'Complete 5 workouts.' },
@@ -818,6 +916,12 @@ const en = {
   profile: {
     postsScreenTitle: 'Posts',
     editButtonA11y: 'Edit profile',
+    editButton: 'Edit profile',
+    // Sprint 10, B2: own photos show their review state on the grid.
+    photoStatus: {
+      pending: 'In review',
+      rejected: 'Not published',
+    },
     invitationsButtonA11y: 'Invitations',
     logoutButton: 'Log out',
     logoutButtonA11y: 'Log out',
@@ -860,6 +964,7 @@ const en = {
   profileEdit: {
     entry: 'Edit profile',
     screenTitle: 'Edit profile',
+    sectionProfile: 'Profile',
     displayName: 'Name',
     displayNamePlaceholder: 'Your visible name',
     displayNameRequired: 'Name cannot be empty.',
@@ -1022,7 +1127,7 @@ const en = {
     // The preview screen's own sticky CTA once a request is already sent
     // (49B) — distinct copy from the shared `pendingCta` above, which stays
     // the compact "Pending" label SpaceCard's small pill (Chats-46A) uses.
-    requestPendingCta: 'Request pending',
+    requestPendingCta: 'Request sent',
     joinedLabel: "You're a member",
     ownerLabel: 'Owner',
     joinError: 'Could not join this space.',
@@ -1247,6 +1352,21 @@ const en = {
       gastrocnemius: 'Gastrocnemius',
       soleus: 'Soleus',
     },
+  },
+  // Sprint 10, B2: one place for account, preferences, legal and session.
+  settings: {
+    title: 'Settings',
+    openA11y: 'Open settings',
+    sections: {
+      account: 'Account',
+      preferences: 'Preferences',
+      legal: 'Legal and information',
+      session: 'Session',
+    },
+    editProfileHint: 'Photo, name, bio, language and privacy',
+    notifications: 'Notifications',
+    notificationsHint: 'What you get notified about, in the app and on your phone',
+    aboutHint: 'Credits for exercise data and illustrations',
   },
   about: {
     title: 'About & Credits',

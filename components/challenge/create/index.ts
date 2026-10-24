@@ -8,16 +8,19 @@ export * from './ChallengeNameFields';
 // OptionPillGrid: Flex-wrap icon+label pill multi-select (Step 2 — activity/location).
 export * from './OptionPillGrid';
 
-// CycleDayList: Numbered-badge day rows with Add/Edit/Remove (Step 3 — Build the Cycle).
+// CycleLengthCard: "Cycle" + "Challenge length" steppers in one card (Step 3 — 53A, Cycle & length).
+export * from './CycleLengthCard';
+
+// CycleCalendarPreview: Mon–Sun calendar of the whole challenge, cycle day per cell (Steps 3 and 4).
+export * from './CycleCalendarPreview';
+
+// CycleDayList: Numbered-badge day rows with Add/Edit/Remove (Step 4 — 53B, Fill in your cycle).
 export * from './CycleDayList';
 
-// RepeatsStepper: "Repeats" cycles counter + duration/end-date callout (Step 4).
-export * from './RepeatsStepper';
-
-// VisibilityCardGroup: Public/Private selectable cards (Step 4).
+// VisibilityCardGroup: Public/Private selectable cards (Step 5).
 export * from './VisibilityCardGroup';
 
-// ChallengeReviewSummary: Hero card + Setup/Cycle summary cards (Step 5 — Review).
+// ChallengeReviewSummary: Hero card + Setup/Cycle summary cards (Step 6 — Review).
 export * from './ChallengeReviewSummary';
 
 // CreateChallengePrimaryActionButton, CreateFlowFixedBottomBar: deleted —
@@ -29,3 +32,4 @@ export * from './ChallengeReviewSummary';
 // CreateFlowPrimaryButton: Full-width 52px primary CTA, retokenized — used by
 // every step of the create-challenge flow.
 export * from './CreateFlowPrimaryButton';
+export { ChallengeRulesStep } from './ChallengeRulesStep';

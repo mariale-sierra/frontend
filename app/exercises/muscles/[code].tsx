@@ -13,6 +13,7 @@ import { getMuscleDetail } from '../../../services/exercises/exercises.service';
 import type { MuscleDetail } from '../../../services/exercises/exercises.service';
 import { adaptMuscleExerciseRow, buildSingleMuscleHighlights } from '../../../services/adapters/exerciseAdapter';
 import { colors, radius, spacing } from '../../../constants/theme';
+import { logError } from '../../../utils/apiError';
 
 export default function MuscleDetailScreen() {
   const { t } = useTranslation();
@@ -25,7 +26,7 @@ export default function MuscleDetailScreen() {
     if (!code) return;
     getMuscleDetail(code)
       .then(setMuscle)
-      .catch((error: any) => console.error('[MuscleDetail] load', error?.message))
+      .catch((error: any) => logError('MuscleDetail', error))
       .finally(() => setLoading(false));
   }, [code]);
 

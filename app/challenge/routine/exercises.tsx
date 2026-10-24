@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '../../../utils/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -23,98 +22,30 @@ import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
 import { colors, spacing, activityColors, textOpacity } from '../../../constants/theme';
 import { USE_VIVID_CREATE_FLOW_BACKGROUND } from '../../../constants/screenBackground';
 import { withAlpha } from '../../../utils/color';
-import type { ExerciseCandidate } from '../../../hooks/useFilteredExercises';
 import {
   getExerciseList,
   getExerciseFull,
   getExerciseCategories,
 } from '../../../services/exercises/exercises.service';
-import type {
-  ExerciseMetricConfig,
-  ExerciseListRow,
-  ExerciseCategory,
-} from '../../../services/exercises/exercises.service';
-import type { ActivityType } from '../../../types/activity';
-import { CATEGORY_TO_ACTIVITY, activityTypeForCategoryCode } from '../../../constants/challengeFilters';
-import { LOCATION_OPTIONS } from '../../../constants/challengeCreateOptions';
+import type { ExerciseCategory } from '../../../services/exercises/exercises.service';
+import { activityTypeForCategoryCode } from '../../../constants/challengeFilters';
+import {
+  LOCATION_NAME_TO_CODE,
+  buildMetricTemplateFromExerciseMetrics,
+  toCandidate,
+  type ExerciseRowCandidate,
+} from '../../../services/adapters/exercisePickerAdapter';
 import { buildActivityMetricTemplate } from '../../../services/adapters/routineAdapter';
+import { logError } from '../../../utils/apiError';
 
 const PAGE_SIZE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
 const ALL_LOCATION_CODES: LocationType[] = ['gym', 'home', 'outdoor', 'studio', 'anywhere'];
 const INACTIVE_ICON_COLOR = withAlpha(colors.paper, textOpacity.secondary);
 
-// Real backend location codes for the challenge builder's own selected display names
-// (e.g. "Gym" -> "gym") — LOCATION_OPTIONS is the same constant the Activity & Location
-// step itself renders its pills from, so there's no separate source of truth to drift.
-const LOCATION_NAME_TO_CODE: Record<string, string> = Object.fromEntries(
-  LOCATION_OPTIONS.map((option) => [option.value, option.type]),
-);
-
-interface ExerciseRowCandidate extends ExerciseCandidate {
-  imageUrl: string | null;
-  meta: string;
-}
-
-function toCandidate(row: ExerciseListRow, defaultLocationLabel: string): ExerciseRowCandidate {
-  const categoryName = row.category?.name;
-  const activityType: ActivityType = (categoryName && CATEGORY_TO_ACTIVITY[categoryName]) || 'strength';
-  const metricType: ExerciseCandidate['metricType'] = row.trackingMode === 'sets' ? 'strength' : 'schema';
-  const locationLabel = row.locations.length ? row.locations.map((l) => l.name).join(' / ') : defaultLocationLabel;
-
-  return {
-    id: String(row.id),
-    name: row.name,
-    location: locationLabel,
-    metricType,
-    activityType,
-    muscleGroups: [],
-    imageUrl: row.imageUrl,
-    meta: `${categoryName ?? ''} · ${locationLabel}`,
-  };
-}
-
-/** Converts GET /exercises/:id/full's real per-exercise `metrics[]` into the
- * raw shape `routineBuilderStore`'s `applyBackendMetricTemplate` already
- * validates and consumes — the first-choice source, when an exercise
- * actually has real `exercise_metrics` rows (curated/manually-added
- * exercises can; the RepDB-imported catalog never does, see
- * `buildActivityMetricTemplate`'s doc comment in routineAdapter.ts for that
- * whole story). Only 'int'/'decimal' (-> a `number` field) and 'seconds'
- * (-> a `duration` field) map to anything the schema template UI can render
- * today; 'text'/'boolean' metrics are skipped rather than guessed. Returns
- * null when no metric maps to a renderable field, so the caller falls back
- * to `buildActivityMetricTemplate`'s category-aware template instead of
- * applying an empty one. */
-function buildMetricTemplateFromExerciseMetrics(exerciseId: number, metrics: ExerciseMetricConfig[]): unknown | null {
-  const fields = metrics
-    .map((metric) => {
-      if (metric.valueType === 'seconds') {
-        return { key: metric.code, label: metric.name, type: 'duration' as const, defaultMinutes: 10, defaultSeconds: 0 };
-      }
-      if (metric.valueType === 'int' || metric.valueType === 'decimal') {
-        return {
-          key: metric.code,
-          label: metric.name,
-          type: 'number' as const,
-          defaultValue: 10,
-          unit: metric.defaultUnit ?? undefined,
-          min: 0,
-        };
-      }
-      return null;
-    })
-    .filter((field): field is NonNullable<typeof field> => field !== null);
-
-  if (fields.length === 0) return null;
-
-  return { id: `exercise-${exerciseId}-metrics`, title: 'Exercise metrics', fields };
-}
-
 export default function ExercisesScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { day } = useLocalSearchParams<{ day: string }>();
   const addExercise = useRoutineBuilder((state) => state.addExercise);
   const applyBackendMetricTemplate = useRoutineBuilder((state) => state.applyBackendMetricTemplate);
   const selectedCategories = useChallengeBuilder((state) => state.selectedCategories);
@@ -136,8 +67,6 @@ export default function ExercisesScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const dayNumber = Number(day ?? '1');
-
   useEffect(() => {
     const handle = setTimeout(() => setDebouncedQuery(query.trim()), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(handle);
@@ -146,7 +75,7 @@ export default function ExercisesScreen() {
   useEffect(() => {
     getExerciseCategories()
       .then(setCategories)
-      .catch((error: any) => console.error('[Exercises] categories', error?.message));
+      .catch((error: unknown) => logError('Exercises.categories', error));
   }, []);
 
   // Real exercise_categories.code, keyed by the same display name this screen already
@@ -258,9 +187,9 @@ export default function ExercisesScreen() {
           });
           return next;
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (requestId !== requestIdRef.current) return;
-        console.error('[Exercises] Failed to load:', error?.response?.data ?? error?.message);
+        logError('Exercises.load', error);
       } finally {
         if (requestId === requestIdRef.current) {
           setIsLoading(false);
@@ -321,12 +250,12 @@ export default function ExercisesScreen() {
         if (template) {
           applyBackendMetricTemplate(exercise.id, template);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // The workout was already added with the generic mock — replace it
         // with the category-aware fallback rather than leaving a
         // one-size-fits-all distance+duration template in place over one
         // exercise's metric lookup failing.
-        console.error('[Exercises] Failed to load real metric config for', exercise.name, error?.response?.data ?? error?.message);
+        logError('Exercises.metricConfig', error);
         if (activityFallback) {
           applyBackendMetricTemplate(exercise.id, activityFallback);
         }

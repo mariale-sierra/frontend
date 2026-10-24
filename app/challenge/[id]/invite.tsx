@@ -14,12 +14,12 @@ import { Row } from '../../../components/layout/row';
 import { ChallengeAccentGlow } from '../../../components/challenge/challengeAccentGlow';
 import { searchUsers } from '../../../services/user/user.service';
 import { createInvite } from '../../../services/invites/invite.service';
-import { getChallenge } from '../../../services/challenge/challenge.service';
 import { getChallengeAccentColor, parseActivityType, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
 import { useErrorNotificationStore } from '../../../store/errorNotificationStore';
 import { colors, radius, spacing } from '../../../constants/theme';
 import type { PublicProfileContract } from '../../../types/user';
 import type { ChallengeContract } from '../../../types/challenge';
+import { loadChallenge } from '../../../services/cache/challengeLoaders';
 
 /**
  * Invite-users flow, reached from the members screen's invite icon. Search
@@ -56,7 +56,7 @@ export default function InviteUsers() {
 
   useEffect(() => {
     if (!challengeId) return;
-    getChallenge(challengeId)
+    loadChallenge(challengeId)
       .then(setChallenge)
       .catch(() => setChallenge(null));
   }, [challengeId]);

@@ -24,15 +24,28 @@ import {
 } from '../../services/workout-posts/workout-posts.service';
 import { useAuth } from '../../hooks/useAuth';
 import type { FeedPostViewModel } from '../../services/adapters/feedAdapter';
+import {
+  invalidateAfterOwnPostDeleted,
+  patchFeedPost,
+  removePostFromCaches,
+} from '../../services/cache/queries';
 
 // Slightly longer than BottomSheetModal's 260ms close animation.
 const SHEET_SWAP_DELAY_MS = 320;
 
 interface FeedPostCardProps {
   post: FeedPostViewModel;
-  /** Called after the viewer deleted their own post (B4), so the list can
-   * drop it. Must be a stable callback to keep `memo` effective. */
+  /** Called after the viewer deleted their own post (B4). Must be a stable
+   * callback to keep `memo` effective. */
   onDeleted?: (postId: string) => void;
+  /** Called when the post leaves the viewer's screen — deleted, or reported
+   * by them — so a list that is not backed by the shared cache can drop it. */
+  onHidden?: (postId: string) => void;
+  /** Home's Instagram-style layout: the photo runs edge to edge (square
+   * corners) and everything else — author row, actions, metrics, caption —
+   * keeps this side inset. Omitted, the card fills whatever padded column it
+   * is in (profile post viewer). */
+  edgeToEdgeInset?: number;
 }
 
 // `memo`: its only prop is `post`, which keeps a stable reference in
@@ -40,7 +53,7 @@ interface FeedPostCardProps {
 // actually changes — so a re-render triggered by an unrelated section of
 // the Home screen (friend streaks resolving, the header re-rendering) no
 // longer has to re-render every already-visible feed card too.
-export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: FeedPostCardProps) {
+export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted, onHidden, edgeToEdgeInset }: FeedPostCardProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const { userId } = useAuth();
@@ -88,6 +101,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
   // `useRef` updates are visible immediately, synchronously, so the second
   // tap's check always sees the first tap's write.
   const reactingRef = useRef(false);
+  const openedRef = useRef(new Set<string>());
 
   // The report sheet opens only after the options sheet has finished
   // sliding out. Both are native <Modal>s, and iOS drops a modal presented
@@ -108,7 +122,11 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
     try {
       await deleteWorkoutPost(post.id);
       setDeleteConfirmVisible(false);
+      // Gone from every cached list at once (feed, profile grids), no refetch.
+      removePostFromCaches(post.id);
+      invalidateAfterOwnPostDeleted();
       onDeleted?.(post.id);
+      onHidden?.(post.id);
     } catch {
       // Global axios interceptor already shows the error toast.
     } finally {
@@ -147,6 +165,11 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
       } else {
         await reactToPost(post.id);
       }
+      // Keep the confirmed state in the cached feed, so it survives the screen being shown again.
+      patchFeedPost(post.id, {
+        liked_by_me: !wasLiked,
+        likes_count: Math.max(0, likesCount + (wasLiked ? -1 : 1)),
+      });
     } catch {
       setLiked(wasLiked);
       setLikesCount((count) => count + (wasLiked ? 1 : -1));
@@ -155,11 +178,32 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
     }
   }
 
+  function handleCommentsCountChange(count: number) {
+    setCommentsCount(count);
+    patchFeedPost(post.id, { comments_count: count });
+  }
+
+  // Each sheet/popup mounts the first time it opens and then stays mounted (so
+  // its close animation still runs). A feed card nobody interacts with no
+  // longer mounts six closed modals, their hooks and listeners.
+  const opened = openedRef.current;
+  if (commentsVisible) opened.add('comments');
+  if (reactorsVisible) opened.add('reactors');
+  if (shareVisible) opened.add('share');
+  if (optionsVisible) opened.add('options');
+  if (reportVisible) opened.add('report');
+  if (deleteConfirmVisible) opened.add('delete');
+
   if (reported) return null;
+
+  const fullBleed = edgeToEdgeInset != null;
+  const inset = fullBleed ? { paddingHorizontal: edgeToEdgeInset } : null;
+  // Icons drawn over the photo line up with the text column around it.
+  const overlayInset = fullBleed ? edgeToEdgeInset : spacing.md;
 
   return (
     <View style={styles.card}>
-      <Row justify="space-between" align="center">
+      <Row justify="space-between" align="center" style={inset}>
         <Row
           pressable
           onPress={handleOpenAuthorProfile}
@@ -188,14 +232,14 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
         />
       </Row>
 
-      <View style={styles.photo}>
+      <View style={[styles.photo, fullBleed && styles.photoFullBleed]}>
         {post.imageUrl ? (
-          <Image source={{ uri: post.imageUrl }} style={styles.image} resizeMode="cover" />
+          <Image source={{ uri: post.imageUrl }} style={styles.image} resizeMode="cover" resizeMethod="resize" />
         ) : (
           <Icon name="image-outline" size={42} color={withAlpha(colors.paper, textOpacity.tertiary)} />
         )}
         {post.visibility ? (
-          <View style={styles.visibilityOverlay} pointerEvents="none" testID="post-visibility">
+          <View style={[styles.visibilityOverlay, { right: overlayInset }]} pointerEvents="none" testID="post-visibility">
             <Icon
               name={post.visibility === 'public' ? 'eye-outline' : 'eye-off-outline'}
               size={20}
@@ -206,7 +250,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
         ) : null}
         {/* Who reacted sits on the photo's bottom-left corner (shadowed text
             so it reads over any picture), not as its own row below. */}
-        <View style={styles.reactorsOverlay} pointerEvents="box-none">
+        <View style={[styles.reactorsOverlay, { left: overlayInset, right: overlayInset }]} pointerEvents="box-none">
           <ReactorsSummary
             reactors={post.recentReactors}
             likedByMe={liked}
@@ -218,7 +262,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
       </View>
 
 
-      <Row justify="space-between" align="center" style={styles.actions}>
+      <Row justify="space-between" align="center" style={[styles.actions, inset]}>
         <Row gap="lg" justify="flex-start">
           <Row
             pressable
@@ -291,7 +335,7 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
       </Row>
 
       {metricsOpen && post.metrics.length > 0 ? (
-        <View style={styles.metrics} testID="post-metrics">
+        <View style={[styles.metrics, fullBleed && { marginHorizontal: edgeToEdgeInset }]} testID="post-metrics">
           {post.metrics.map((metric, index) => (
             <Row
               key={`${metric.label}-${index}`}
@@ -314,26 +358,35 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
       {/* Caption under the like / comment / share row, at the author name's
           size (14). */}
       {post.caption ? (
-        <HashtagText variant="body" size="sm" numberOfLines={2}>
-          {post.caption}
-        </HashtagText>
+        <View style={inset}>
+          <HashtagText variant="body" size="sm" numberOfLines={2}>
+            {post.caption}
+          </HashtagText>
+        </View>
       ) : null}
 
+      {opened.has('comments') ? (
       <CommentsSheet
         visible={commentsVisible}
         postId={post.id}
         onClose={() => setCommentsVisible(false)}
-        onCommentsCountChange={setCommentsCount}
+        onCommentsCountChange={handleCommentsCountChange}
       />
+      ) : null}
 
-      <ReactorsSheet visible={reactorsVisible} postId={post.id} onClose={() => setReactorsVisible(false)} />
+      {opened.has('reactors') ? (
+        <ReactorsSheet visible={reactorsVisible} postId={post.id} onClose={() => setReactorsVisible(false)} />
+      ) : null}
 
-      <ShareToChatSheet
-        visible={shareVisible}
-        onClose={() => setShareVisible(false)}
-        content={{ workoutPostId: post.id }}
-      />
+      {opened.has('share') ? (
+        <ShareToChatSheet
+          visible={shareVisible}
+          onClose={() => setShareVisible(false)}
+          content={{ workoutPostId: post.id }}
+        />
+      ) : null}
 
+      {opened.has('options') ? (
       <PostOptionsSheet
         visible={optionsVisible}
         onClose={() => setOptionsVisible(false)}
@@ -341,7 +394,9 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
         onReport={isOwnPost ? undefined : handleReportFromOptions}
         onDelete={isOwnPost ? handleDeleteFromOptions : undefined}
       />
+      ) : null}
 
+      {opened.has('delete') ? (
       <ConfirmationPopup
         visible={deleteConfirmVisible}
         title={t('home.postOptions.deleteConfirmTitle')}
@@ -362,17 +417,22 @@ export const FeedPostCard = memo(function FeedPostCard({ post, onDeleted }: Feed
         }}
         onDismiss={() => !deleting && setDeleteConfirmVisible(false)}
       />
+      ) : null}
 
+      {opened.has('report') ? (
       <ReportReasonSheet
         visible={reportVisible}
         targetType="post"
         targetId={post.id}
         onClose={() => setReportVisible(false)}
         onReported={() => {
+          // Not a deletion: the report sheet already confirmed with its own toast.
           setReported(true);
-          onDeleted?.(post.id);
+          removePostFromCaches(post.id);
+          onHidden?.(post.id);
         }}
       />
+      ) : null}
     </View>
   );
 });
@@ -444,6 +504,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  photoFullBleed: {
+    borderRadius: radius.none,
   },
   image: {
     width: '100%',

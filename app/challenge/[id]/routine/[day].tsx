@@ -17,7 +17,7 @@ import { withAlpha } from '../../../../utils/color';
 import { toTitleCase } from '../../../../utils/format';
 import { toChallengeDetailViewModel } from '../../../../services/adapters/index';
 import { getUpcomingDays } from '../../../../services/adapters/challengeDetailAdapter';
-import { getChallenge, joinChallenge } from '../../../../services/challenge/challenge.service';
+import { joinChallenge } from '../../../../services/challenge/challenge.service';
 import { getMyMembership } from '../../../../services/challenge/myMembership';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../../services/adapters/challengeState';
 import {
@@ -36,6 +36,8 @@ import { LocationSwitchSheet } from '../../../../components/challenge/detail/Loc
 import { getLocationAvailability, type LocationAvailability } from '../../../../services/exercises/exercises.service';
 import { adaptationForRoutine, useWorkoutAdaptationStore } from '../../../../store/workoutAdaptationStore';
 import type { WorkoutAdaptation } from '../../../../store/workoutAdaptationStore';
+import { invalidateAfterMembershipChanged } from '../../../../services/cache/queries';
+import { loadChallenge } from '../../../../services/cache/challengeLoaders';
 
 type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
 
@@ -155,14 +157,17 @@ export default function RoutineDayDetail() {
   const [membershipLoading, setMembershipLoading] = useState(true);
   const { showSuccess } = useErrorNotificationStore();
 
+  // B2: a private challenge files a request — the button and the confirmation say so.
+  const isPrivateChallenge = challenge?.visibility === 'private';
   const joinPopup = useConfirmationPopup({
-    type: 'join',
+    type: isPrivateChallenge ? 'requestJoin' : 'join',
     challengeName: challenge?.name ?? t('challenges.fallbackName'),
     onConfirm: async () => {
       const challengeId = typeof id === 'string' ? id : '';
       if (!challengeId) return;
       try {
         const response = await joinChallenge(challengeId);
+        invalidateAfterMembershipChanged();
         // Same as app/challenge/[id]/index.tsx: a private challenge only files a
         // request — not a member yet, so no "joined" toast and no redirect.
         if (response?.status === 'requested') {
@@ -192,7 +197,7 @@ export default function RoutineDayDetail() {
       return;
     }
     let cancelled = false;
-    getChallenge(String(id))
+    loadChallenge(String(id))
       .then((data) => {
         if (!cancelled) setChallenge(data);
       })
@@ -381,11 +386,13 @@ export default function RoutineDayDetail() {
                 </View>
               ))}
             </Row>
-            {adaptation && (
+            {adaptation ? (
               <Text variant="caption" tone="secondary">
                 {t('challengeRoutineDay.location.yourVersion', { location: adaptation.locationName })}
               </Text>
-            )}
+            ) : canChangeLocation ? (
+              <Text variant="caption" tone="secondary">{t('challengeRoutineDay.location.dayHint')}</Text>
+            ) : null}
             {canChangeLocation && (
               <Pressable
                 onPress={() => setLocationSheetVisible(true)}
@@ -494,10 +501,10 @@ export default function RoutineDayDetail() {
             onPress={joinPopup.show}
             style={({ pressed }) => [styles.joinButton, { backgroundColor: accentColor }, pressed && styles.pressed]}
             accessibilityRole="button"
-            accessibilityLabel={t('challenges.joinButtonA11y')}
+            accessibilityLabel={isPrivateChallenge ? t('challengeInfo.requestJoinButton') : t('challenges.joinButtonA11y')}
           >
             <Text variant="body" weight="bold" style={styles.joinButtonText}>
-              {t('challengeInfo.joinChallengeButton')}
+              {isPrivateChallenge ? t('challengeInfo.requestJoinButton') : t('challengeInfo.joinChallengeButton')}
             </Text>
           </Pressable>
         </View>

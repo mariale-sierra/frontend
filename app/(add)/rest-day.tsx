@@ -14,7 +14,9 @@ import { getChallengeProgress } from '../../services/challenge/challenge.service
 import { submitWorkoutProgress } from '../../services/workout-log/workout-log.service';
 import { useMetricsEntryStore } from '../../store/metricsEntryStore';
 import { invalidateChallengeProgressCache } from '../../hooks/useChallengeProgress';
+import { invalidateAfterWorkoutLogged } from '../../services/cache/queries';
 import { showProgressLoggedFeedback } from '../../utils/progressLoggedFeedback';
+import { getApiErrorMessage, logError } from '../../utils/apiError';
 
 export default function RestDay() {
   const router = useRouter();
@@ -29,8 +31,8 @@ export default function RestDay() {
   // `submitting` re-render that disables the button) would both read the
   // same stale `false` and both call submitWorkoutProgress — `useRef`
   // updates are visible synchronously, so the second tap's check always
-  // sees the first tap's write. Same pattern as camera.tsx's
-  // `confirmingRef` / FeedPostCard's `reactingRef`.
+  // sees the first tap's write. Same pattern as usePhotoProgressSubmit's
+  // `busyRef` (camera) / FeedPostCard's `reactingRef`.
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -63,23 +65,24 @@ export default function RestDay() {
         isRestDay: true,
         visibility: 'private',
       });
-    } catch (e: any) {
-      setError(e?.response?.data?.message ?? t('restDay.saveFailedMessage'));
+    } catch (e: unknown) {
+      setError(getApiErrorMessage(e, t, t('restDay.saveFailedMessage')));
       setSubmitting(false);
       submittingRef.current = false;
       return;
     }
 
     // Saved server-side at this point — nothing below is allowed to
-    // surface as a save failure (same fix as camera.tsx's handleConfirm,
+    // surface as a save failure (same fix as the camera's usePhotoProgressSubmit,
     // applied here 2026-08-29 for the same latent bug: a post-save nav
     // hiccup used to be caught by the same try/catch as the actual submit
     // and misreported as a failed save).
     invalidateChallengeProgressCache();
+    invalidateAfterWorkoutLogged();
     setSubmitting(false);
     submittingRef.current = false;
     try {
-      // NOT router.dismissAll() — see camera.tsx's handleConfirm for the
+      // NOT router.dismissAll() — see hooks/usePhotoProgressSubmit.ts for the
       // full explanation (fixed 2026-08-29, same bug: dismissAll()'s
       // POP_TO_TOP only clears (add)'s own nested stack, landing back on
       // metrics.tsx instead of actually closing the modal). metrics.tsx
@@ -88,10 +91,11 @@ export default function RestDay() {
       // metrics, and the second bubbles up to close the (add) modal itself.
       safeBackTimes(2);
     } catch (navError) {
-      console.error('[RestDay] closing the (add) modal failed after a successful save:', navError);
+      logError('RestDay.closeModal', navError);
     }
     // The popup itself is global (mounted at app root): "Challenge complete" if
     // that was the challenge's last day (it is marked completed first), else "logged!".
+    // A rest day has no photo, so no photo state (B2).
     void showProgressLoggedFeedback(selectedChallengeId);
   }
 

@@ -12,6 +12,28 @@ export const PUSH_PROMPT_DISMISSED_KEY = 'pushPromptDismissed';
 
 const ANDROID_CHANNEL_ID = 'default';
 const UNREGISTER_TIMEOUT_MS = 3000;
+/** After a 429 (the backend's rate limit), how long registering stays paused. */
+const RATE_LIMIT_BACKOFF_MS = 60_000;
+
+// Registration guards (2026-10-20, after a run of 429s in a dev build — the
+// first build where tokens really register): one registration at a time, the
+// same token is never re-sent within a session, and a 429 pauses registering
+// for a minute instead of every caller (sign-in, the token listener, the app
+// returning to the foreground) firing another request into the limit.
+let syncInFlight: Promise<string | null> | null = null;
+let registeredToken: string | null = null;
+let pausedUntil = 0;
+
+/** Forgets the guards — logout (the next account registers its own) and tests. */
+export function resetPushTokenSyncState(): void {
+  syncInFlight = null;
+  registeredToken = null;
+  pausedUntil = 0;
+}
+
+function isRateLimited(error: unknown): boolean {
+  return (error as { response?: { status?: number } })?.response?.status === 429;
+}
 
 /**
  * - granted: pushes can be delivered.
@@ -111,7 +133,17 @@ function getProjectId(): string | undefined {
  * Returns null when push isn't available here: web, simulator, Expo Go on
  * Android (no remote push since SDK 53) or a build without an EAS projectId.
  */
-export async function syncPushToken(): Promise<string | null> {
+export function syncPushToken(): Promise<string | null> {
+  if (!syncInFlight) {
+    syncInFlight = doSyncPushToken().finally(() => {
+      syncInFlight = null;
+    });
+  }
+  return syncInFlight;
+}
+
+async function doSyncPushToken(): Promise<string | null> {
+  if (Date.now() < pausedUntil) return null;
   if ((await getPushPermissionState()) !== 'granted') return null;
   const projectId = getProjectId();
   if (!projectId) {
@@ -123,10 +155,18 @@ export async function syncPushToken(): Promise<string | null> {
   try {
     await ensureAndroidChannel();
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+    // Already registered for this session: nothing to send.
+    if (token === registeredToken) return token;
     await registerPushToken(token, Platform.OS === 'ios' ? 'ios' : 'android');
+    registeredToken = token;
     await storage.setItem(PUSH_TOKEN_KEY, token);
     return token;
   } catch (error) {
+    if (isRateLimited(error)) {
+      pausedUntil = Date.now() + RATE_LIMIT_BACKOFF_MS;
+      if (__DEV__) console.warn('[push] rate limited (429) — not registering the push token for a minute');
+      return null;
+    }
     if (__DEV__) console.warn('[push] could not register the push token', error);
     return null;
   }
@@ -140,6 +180,7 @@ export async function syncPushToken(): Promise<string | null> {
  * and never pushes to inactive or pending-deletion accounts.
  */
 export async function unregisterPushToken(): Promise<void> {
+  resetPushTokenSyncState();
   const token = await storage.getItem(PUSH_TOKEN_KEY);
   if (!token) return;
   await storage.removeItem(PUSH_TOKEN_KEY);
@@ -160,6 +201,7 @@ export async function unregisterPushToken(): Promise<void> {
  * token to whoever registers it next on this device.
  */
 export async function forgetPushToken(): Promise<void> {
+  resetPushTokenSyncState();
   await storage.removeItem(PUSH_TOKEN_KEY).catch(() => undefined);
 }
 

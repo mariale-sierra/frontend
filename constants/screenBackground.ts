@@ -93,6 +93,29 @@ export const TINTED_GRADIENT = {
 } as const;
 
 /**
+ * Log Metrics' light (2026-10-20): `TINTED_GRADIENT` reshaped into a band along
+ * the whole bottom edge — "fade it more, more blended, less harsh", then "still
+ * bright, more of a bottom gradient, not concentrated in the middle". So: the
+ * half-moon runs well off both sides (a flat, wide band rather than a dome), the
+ * wash stays near Home's brightness, the bloom (the bright focal point in the
+ * middle) is mostly gone, and it fades out over a long, soft tail into `ink`.
+ * Home keeps `TINTED_GRADIENT`.
+ */
+export const SOFT_TINTED_GRADIENT = {
+  domeHalfWidth: 1.1,
+  // Reaches further in, so the long soft fade (below) has room to play out.
+  domeDepth: 0.68,
+  washPeak: 0.36,
+  bloomPeak: 0.06,
+  // The gentle, long-tailed fade instead of the default decisive drop ("the fade
+  // into the middle should be softer, not so cutting edge"). It replaced a
+  // `falloffSharpness` of 0.7, which kept the light strong right up to its edge.
+  softEdge: true,
+  /** The bloom's blur as a share of the screen's width (the default is 0.04). */
+  bloomBlurShare: 0.12,
+} as const;
+
+/**
  * The create-challenge flow (details, routine, exercise picker) has the animated
  * rainbow (`RainbowGradientBackground`: the original vivid mesh, freshened, with all
  * six activity colors and moving) behind it — added 2026-09-20 ("add it to the

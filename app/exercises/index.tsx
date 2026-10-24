@@ -21,6 +21,7 @@ import type { LocationType } from '../../components/icons/locationIcon';
 import { getExerciseList, getExerciseCategories, type ExerciseCategory } from '../../services/exercises/exercises.service';
 import { adaptExerciseListRow } from '../../services/adapters/exerciseAdapter';
 import { activityTypeForCategoryCode } from '../../constants/challengeFilters';
+import { logError } from '../../utils/apiError';
 
 const INACTIVE_ICON_COLOR = withAlpha(colors.paper, textOpacity.secondary);
 
@@ -54,7 +55,7 @@ export default function ExerciseCatalogScreen() {
   useEffect(() => {
     getExerciseCategories()
       .then(setCategories)
-      .catch((error: any) => console.error('[ExerciseCatalog] categories', error?.message));
+      .catch((error: any) => logError('ExerciseCatalog', error));
   }, []);
 
   // Guards against the classic FlatList `onEndReached`-fires-twice race: RN
@@ -89,7 +90,7 @@ export default function ExerciseCatalogScreen() {
         setPage(pageToLoad);
       } catch (error: any) {
         if (requestId !== requestIdRef.current) return;
-        console.error('[ExerciseCatalog] load', error?.response?.data ?? error?.message);
+        logError('ExerciseCatalog', error);
       } finally {
         if (requestId === requestIdRef.current) {
           setLoading(false);

@@ -17,8 +17,11 @@ import { ShareToChatSheet } from '../../../components/social/ShareToChatSheet';
 import type { ChallengeInfoRow } from '../../../components/challenge/detail';
 import { colors, radius, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
-import { closeChallenge, getChallenge, isChallengeOwner, joinChallenge, reopenChallenge } from '../../../services/challenge/challenge.service';
+import { closeChallenge, isChallengeOwner, joinChallenge, reopenChallenge } from '../../../services/challenge/challenge.service';
 import { getMyMembership } from '../../../services/challenge/myMembership';
+import { acceptInvite, declineInvite, getReceivedInvites } from '../../../services/invites/invite.service';
+import { invalidateChallengeProgressCache } from '../../../hooks/useChallengeProgress';
+import type { ChallengeInviteContract } from '../../../types/invite';
 import { toChallengeDetailViewModel } from '../../../services/adapters/index';
 import { getChallengeAccentColor, pickDominantActivityCategory } from '../../../services/adapters/challengeState';
 import { useConfirmationPopup } from '../../../hooks/useConfirmationPopup';
@@ -30,6 +33,8 @@ import { hasSeenChallengeJoinCallout, markChallengeJoinCalloutSeen } from '../..
 import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../../constants/onboardingDebug';
 import { shareChallengeExternally } from '../../../utils/shareChallenge';
 import type { ChallengeContract } from '../../../types/challenge';
+import { invalidateAfterMembershipChanged, invalidateChallenge } from '../../../services/cache/queries';
+import { loadChallenge } from '../../../services/cache/challengeLoaders';
 
 type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
 
@@ -45,13 +50,19 @@ export default function ChallengeDetail() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `inviteId`: opened from a challenge-invite notification (notificationRoutes.ts).
+  const { id, inviteId } = useLocalSearchParams<{ id: string; inviteId?: string }>();
   const [challenge, setChallenge] = useState<ChallengeContract | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('none');
   const [membershipLoading, setMembershipLoading] = useState(true);
-  const { showSuccess } = useErrorNotificationStore();
+  const { show, showSuccess } = useErrorNotificationStore();
+  // A pending invite to this challenge for the current user: the bottom bar then
+  // offers Accept / Decline instead of Join (2026-10-20 — tapping an invite
+  // notification lands here, so the user sees what they're invited to first).
+  const [pendingInvite, setPendingInvite] = useState<ChallengeInviteContract | null>(null);
+  const [inviteAction, setInviteAction] = useState<'accept' | 'decline' | null>(null);
   const [shareVisible, setShareVisible] = useState(false);
 
   // Onboarding Stage 4's join callout — teaches the general concept of
@@ -86,6 +97,7 @@ export default function ChallengeDetail() {
       if (!challengeId) return;
       try {
         await closeChallenge(challengeId);
+        invalidateChallenge(challengeId);
         setChallenge((prev) => (prev ? { ...prev, status: 'closed' } : prev));
         showSuccess({ message: t('challengeProgress.closeChallengeSuccess') });
       } catch {
@@ -103,6 +115,7 @@ export default function ChallengeDetail() {
       if (!challengeId) return;
       try {
         await reopenChallenge(challengeId);
+        invalidateChallenge(challengeId);
         setChallenge((prev) => (prev ? { ...prev, status: 'open' } : prev));
         showSuccess({ message: t('challengeProgress.reopenChallengeSuccess') });
       } catch {
@@ -111,14 +124,17 @@ export default function ChallengeDetail() {
     },
   });
 
+  // B2: a private challenge files a request — the button and the confirmation say so.
+  const isPrivateChallenge = challenge?.visibility === 'private';
   const joinPopup = useConfirmationPopup({
-    type: 'join',
+    type: isPrivateChallenge ? 'requestJoin' : 'join',
     challengeName: challenge?.name ?? t('challenges.fallbackName'),
     onConfirm: async () => {
       const challengeId = typeof id === 'string' ? id : '';
       if (!challengeId) return;
       try {
         const response = await joinChallenge(challengeId);
+        invalidateAfterMembershipChanged();
         const name = challenge?.name ?? t('challenges.fallbackName');
 
         // Private challenge: files a pending request instead of joining
@@ -158,7 +174,7 @@ export default function ChallengeDetail() {
 
   useEffect(() => {
     if (!id) return;
-    getChallenge(id)
+    loadChallenge(id)
       .then(setChallenge)
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -177,6 +193,53 @@ export default function ChallengeDetail() {
       .catch(() => setMembershipStatus('none'))
       .finally(() => setMembershipLoading(false));
   }, [challenge]);
+
+  useEffect(() => {
+    if (!challenge) return;
+    let active = true;
+    getReceivedInvites()
+      .then((invites) => {
+        if (!active) return;
+        const forThisChallenge = invites.filter(
+          (invite) => invite.status === 'pending' && String(invite.challenge?.id) === String(challenge.id),
+        );
+        // The one the notification pointed at, else any pending one for this challenge.
+        setPendingInvite(forThisChallenge.find((invite) => invite.id === inviteId) ?? forThisChallenge[0] ?? null);
+      })
+      .catch(() => {
+        // No invites to show — the regular Join button stays.
+      });
+    return () => {
+      active = false;
+    };
+  }, [challenge, inviteId]);
+
+  async function handleInvite(action: 'accept' | 'decline') {
+    if (!pendingInvite || inviteAction) return;
+    const name = challenge?.name ?? t('challenges.fallbackName');
+    setInviteAction(action);
+    try {
+      if (action === 'accept') {
+        await acceptInvite(pendingInvite.id);
+        // Membership changed — the challenge tabs refetch (both caches, like
+        // useInvites' accept); and this is its own explicit confirmation, so the
+        // Challenges tab's "You're in!" never fires too.
+        invalidateChallengeProgressCache();
+        invalidateAfterMembershipChanged();
+        void markChallengeMembershipSeen(String(challenge?.id ?? id));
+        showSuccess({ message: t('invites.successAccepted', { challenge: name }) });
+        router.replace('/(tabs)/challenges?view=mine');
+        return;
+      }
+      await declineInvite(pendingInvite.id);
+      setPendingInvite(null);
+      showSuccess({ message: t('invites.successDeclined', { challenge: name }) });
+    } catch {
+      show({ message: t('invites.errorAction') });
+    } finally {
+      setInviteAction(null);
+    }
+  }
 
   // Sprint 9, B5: the share button opens "Send to…" — a chat inside Havit,
   // or "Other apps" for the native share sheet (WhatsApp, Instagram…).
@@ -241,6 +304,8 @@ export default function ChallengeDetail() {
     { icon: 'location-outline', label: t('challengeInfo.doItAtLabel'), value: view.locationsLabel },
     { icon: 'flash-outline', label: t('challengeInfo.focusLabel'), value: view.categoriesLabel },
     { icon: 'camera-outline', label: t('challengeInfo.dailyProofLabel'), value: t('challengeInfo.dailyProofValue') },
+    // B2: what finishing it gives you (the challenge badges of BADGE_CATALOG) and when it counts as finished.
+    { icon: 'ribbon-outline', label: t('challengeInfo.rewardLabel'), value: t('challengeInfo.rewardValue') },
     // A closed challenge says so, in the same rows as the rest of what there is to know
     // about it, so it is not a silent state.
     ...(isClosed
@@ -363,7 +428,43 @@ export default function ChallengeDetail() {
         </View>
       )}
 
-      {showsBottomBar && membershipStatus === 'none' && (
+      {showsBottomBar && membershipStatus === 'none' && pendingInvite && (
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]} testID="challenge-invite-bar">
+          <Text variant="caption" tone="secondary" align="center" style={styles.inviteCaption}>
+            {pendingInvite.sender?.username
+              ? t('invites.invitedYou', { username: pendingInvite.sender.username })
+              : t('invites.invitedYouAnonymous')}
+          </Text>
+          <Row gap="sm">
+            <Button
+              variant="subtle"
+              size="md"
+              textWeight="bold"
+              style={styles.inviteButton}
+              onPress={() => handleInvite('decline')}
+              loading={inviteAction === 'decline'}
+              disabled={inviteAction !== null}
+              testID="challenge-invite-decline"
+            >
+              {t('invites.actions.decline')}
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              textWeight="bold"
+              style={styles.inviteButton}
+              onPress={() => handleInvite('accept')}
+              loading={inviteAction === 'accept'}
+              disabled={inviteAction !== null}
+              testID="challenge-invite-accept"
+            >
+              {t('invites.actions.accept')}
+            </Button>
+          </Row>
+        </View>
+      )}
+
+      {showsBottomBar && membershipStatus === 'none' && !pendingInvite && (
         <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
           {showJoinCallout && (
             <CoachMark
@@ -377,10 +478,10 @@ export default function ChallengeDetail() {
             onPress={joinPopup.show}
             style={({ pressed }) => [styles.joinButton, pressed && styles.pressed]}
             accessibilityRole="button"
-            accessibilityLabel={t('challenges.joinButtonA11y')}
+            accessibilityLabel={isPrivateChallenge ? t('challengeInfo.requestJoinButton') : t('challenges.joinButtonA11y')}
           >
             <Text variant="body" weight="bold" style={styles.joinButtonText}>
-              {t('challengeInfo.joinChallengeButton')}
+              {isPrivateChallenge ? t('challengeInfo.requestJoinButton') : t('challengeInfo.joinChallengeButton')}
             </Text>
           </Pressable>
         </View>
@@ -465,6 +566,12 @@ const styles = StyleSheet.create({
   // adds the gap before the Join button below it.
   joinCallout: {
     marginBottom: spacing.sm,
+  },
+  inviteCaption: {
+    marginBottom: spacing.sm,
+  },
+  inviteButton: {
+    flex: 1,
   },
   joinButton: {
     height: 52,

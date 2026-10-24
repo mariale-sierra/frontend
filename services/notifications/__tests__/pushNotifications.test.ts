@@ -8,6 +8,7 @@ import {
   openNotificationSettings,
   PUSH_TOKEN_KEY,
   requestPushPermission,
+  resetPushTokenSyncState,
   syncPushToken,
   unregisterPushToken,
 } from '../pushNotifications';
@@ -46,6 +47,7 @@ const permission = (status: string, canAskAgain = true, granted = status === 'gr
 describe('push notifications', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    resetPushTokenSyncState();
     (Device as { isDevice: boolean }).isDevice = true;
     Platform.OS = 'ios';
     (Notifications.getExpoPushTokenAsync as jest.Mock).mockResolvedValue({
@@ -137,6 +139,42 @@ describe('push notifications', () => {
       (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue(permission('granted'));
       (Notifications.getExpoPushTokenAsync as jest.Mock).mockRejectedValue(new Error('no'));
       await expect(syncPushToken()).resolves.toBeNull();
+    });
+
+    it('sends a token only once per session, and calls made at the same time share one request', async () => {
+      (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue(permission('granted'));
+
+      await Promise.all([syncPushToken(), syncPushToken(), syncPushToken()]);
+      await syncPushToken();
+
+      expect(registerPushToken).toHaveBeenCalledTimes(1);
+    });
+
+    it('registers again after logout (the next account gets its own)', async () => {
+      (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue(permission('granted'));
+      (storage.getItem as jest.Mock).mockResolvedValue(null);
+
+      await syncPushToken();
+      await unregisterPushToken();
+      await syncPushToken();
+
+      expect(registerPushToken).toHaveBeenCalledTimes(2);
+    });
+
+    it('pauses for a minute after a 429 instead of retrying into the rate limit', async () => {
+      jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const now = jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
+      (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue(permission('granted'));
+      (registerPushToken as jest.Mock).mockRejectedValueOnce({ response: { status: 429 } });
+
+      expect(await syncPushToken()).toBeNull();
+      expect(await syncPushToken()).toBeNull();
+      expect(registerPushToken).toHaveBeenCalledTimes(1);
+
+      now.mockReturnValue(1_000_000 + 61_000);
+      expect(await syncPushToken()).toBe('ExponentPushToken[abc]');
+      expect(registerPushToken).toHaveBeenCalledTimes(2);
+      now.mockRestore();
     });
 
     it('removes the stored token from the account on logout', async () => {

@@ -1,4 +1,5 @@
 import api from '../api';
+import { logWarn } from '../../utils/apiError';
 
 type SignResponse = { signedUrl: string; publicUrl: string };
 
@@ -20,7 +21,7 @@ function extractSignedUrls(data: unknown): SignResponse {
     }
   }
 
-  console.error('[uploadImageAsync] unexpected /uploads/sign shape:', data);
+  logWarn('uploadImageAsync', 'unexpected /uploads/sign response shape');
   throw new Error('Invalid signed upload URL received.');
 }
 
@@ -30,16 +31,7 @@ export async function uploadImageAsync(
 ): Promise<string> {
   // Step 1: request a signed upload URL from the backend
   const signRes = await api.post<unknown>('/uploads/sign', { fileType });
-
-  console.log('[uploadImageAsync] /uploads/sign status:', signRes.status);
-  console.log('[uploadImageAsync] /uploads/sign response.data:', signRes.data);
-
   const { signedUrl, publicUrl } = extractSignedUrls(signRes.data);
-
-  console.log('[uploadImageAsync] signedUrl (first 120):', signedUrl?.slice(0, 120));
-  console.log('[uploadImageAsync] publicUrl:', publicUrl);
-  console.log('[uploadImageAsync] localUri:', localUri);
-  console.log('[uploadImageAsync] fileType used to sign:', fileType);
 
   if (!signedUrl || signedUrl === publicUrl) {
     throw new Error('Invalid signed upload URL received.');
@@ -48,28 +40,22 @@ export async function uploadImageAsync(
   // Step 2: convert the local file URI to a blob
   const fileResponse = await fetch(localUri);
   const blob = await fileResponse.blob();
-  console.log('[uploadImageAsync] blob size:', blob.size, '| blob type:', blob.type);
 
   // Step 3: PUT the blob directly to the signed URL
   // Must use native fetch — api would inject Authorization + baseURL, both break pre-signed URLs.
   // No Content-Type header: R2 signed URLs encode the expected headers in the signature,
   // sending extra headers invalidates it and causes a 401.
-  console.log('[uploadImageAsync] PUT to signedUrl domain:', signedUrl.split('/').slice(0, 3).join('/'));
-
   const putRes = await fetch(signedUrl, {
     method: 'PUT',
     body: blob,
   });
 
-  console.log('[uploadImageAsync] PUT status:', putRes.status);
-
   if (!putRes.ok) {
-    const putBody = await putRes.text().catch(() => '(could not read body)');
-    console.error('[uploadImageAsync] PUT failed — status:', putRes.status);
-    console.error('[uploadImageAsync] PUT failed — response body:', putBody);
+    // Only the status: the signed URL is a credential, and the storage
+    // provider's error body can echo it back.
+    logWarn('uploadImageAsync', `PUT to storage failed with status ${putRes.status}`);
     throw new Error(`Image PUT failed with status ${putRes.status}`);
   }
 
-  console.log('[uploadImageAsync] upload success — publicUrl:', publicUrl);
   return publicUrl;
 }

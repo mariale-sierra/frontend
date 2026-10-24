@@ -84,13 +84,30 @@ export const activityColors: Record<ActivityType, string> = {
   // warmer (hue 44 -> 38 degrees, gold toward amber). A first try at about 1.16x
   // was "way too much" and was cut back to this. Each entry's last "was" is the
   // value before that bump.
-  strength: '#FFC460', // amber-gold (power/alertness) — was #F7CF64 (golden-orange, swapped from cardioIntense) → #E9EB54 (lime, before the swap)
+  strength: '#FFBE51', // amber-gold (power/alertness) — HSV saturation 62% -> 68% (2026-10-20, "a bit more saturation, it's too taupe"), hue kept at 38 — was #FFC460 → #F7CF64 (golden-orange, swapped from cardioIntense) → #E9EB54 (lime, before the swap)
   cardioIntense: '#E9EB4D', // lime (fast/electric energy) — was #E9EB54 (lime, swapped from strength) → #F7CF64 (golden-orange, before the swap)
   cardioLow: '#3BEED6', // aqua-turquoise (steady/calm endurance) — was #43EDD7 → #5CD97A → #9ADB4F → #1BDCC4 → #43EDD7 → #1BDCC4 → #40B7A8 → #33C4B2 → #43EDD7
   flexibility: '#85ADFB', // electric blue (open/breath) — was #88ADF6 → #3DDBEE → #588AEE → #88ADF6 → #588AEE → #7493D2 → #6B90DB → #88ADF6
   mindBody: '#FA85E7', // magenta-pink (calm/balance) — was #F688E4 → #F17FE0 → #EE58D5 → #F688E4 → #EE58D5 → #D274C2 → #DB6BC8 → #F688E4
   functional: '#5DCFF6', // sky blue (versatile/utility) — was #63CFF3 → #D8EE3C → #33BDEB → #63CFF3 → #33BDEB → #56ACC8 → #4AB2D4 → #63CFF3
 } as const;
+
+/**
+ * Badge tiers (2026-10-23, explicit request: badge colors must mean something —
+ * they used to borrow activity colors, which mean a kind of training). The color
+ * is how hard the badge was to earn: bronze for first steps, silver for building
+ * a habit, gold for the hardest ones. Each metal has its `base` (its flat color:
+ * progress bars), and a `light`/`dark` pair for its metallic sheen (`MetallicDisc`:
+ * highlight, metal, shadow). All three pair with `ink` icons, like activity colors.
+ * The sheen is a confirmed exception to "no gradients", as the card glows are.
+ */
+export const badgeColors = {
+  bronze: { base: '#D0905C', light: '#F3C9A2', dark: '#8F5932' },
+  silver: { base: '#C4CAD2', light: '#F5F7F9', dark: '#858C96' },
+  gold: { base: '#E8C055', light: '#FFF1BD', dark: '#AE8526' },
+} as const;
+
+export type BadgeTier = keyof typeof badgeColors;
 
 /**
  * Text opacity scale — applies to `paper` text on dark surfaces.

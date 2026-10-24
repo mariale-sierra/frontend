@@ -6,7 +6,7 @@ interface FollowButtonProps {
   userId: string;
   initialIsFollowing: boolean;
   size?: 'sm' | 'md';
-  /** Called after every successful (server-confirmed) follow/unfollow toggle. */
+  /** Called after every successful (server-confirmed) follow/unfollow toggle — never after a rolled-back one. */
   onChange?: (isFollowing: boolean) => void;
 }
 
@@ -24,8 +24,10 @@ export function FollowButton({ userId, initialIsFollowing, size = 'md', onChange
       size={size}
       loading={pending}
       onPress={async () => {
+        const before = isFollowing;
         const confirmed = await toggle();
-        onChange?.(confirmed);
+        // A failed request rolls back to `before`: nothing changed to report.
+        if (confirmed !== before) onChange?.(confirmed);
       }}
       accessibilityRole="button"
       accessibilityLabel={

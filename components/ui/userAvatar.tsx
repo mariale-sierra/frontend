@@ -57,6 +57,8 @@ export function UserAvatar({ username, size = 40, imageUrl, circle = false }: Us
       <Image
         source={{ uri: imageUrl }}
         style={{ width: size, height: size, borderRadius: cornerRadius }}
+        // Android decodes the full uploaded photo otherwise, for a 32-88px circle.
+        resizeMethod="resize"
         accessibilityLabel={username}
       />
     );

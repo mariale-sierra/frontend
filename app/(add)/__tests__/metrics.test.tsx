@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react-native';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import Metrics from '../metrics';
 import { useMetricsScreen } from '../../../hooks/useMetricsScreen';
-import { colors } from '../../../constants/theme';
+import { activityColors, colors } from '../../../constants/theme';
 import type { ChallengeOption } from '../../../types/metrics';
 
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
@@ -19,6 +19,23 @@ jest.mock('react-i18next', () => ({
       values?.routine ? `${key}:${values.day}:${values.routine}` : key,
   }),
 }));
+// What the background is told is what matters here; the gradient itself is tested on its own.
+jest.mock('../../../components/layout/screenBackground', () => ({
+  __esModule: true,
+  default: ({ children, gradientPages, gradientEdge }: {
+    children: React.ReactNode;
+    gradientPages?: { colors: string[] };
+    gradientEdge?: string;
+  }) => {
+    const { Text, View } = require('react-native');
+    return (
+      <View>
+        <Text testID="background-light">{`${gradientEdge}:${gradientPages?.colors.join(',')}`}</Text>
+        {children}
+      </View>
+    );
+  },
+}));
 jest.mock('../../../hooks/useMetricsScreen', () => ({ useMetricsScreen: jest.fn() }));
 // The location sheet has its own tests; here it is just a marker.
 jest.mock('../../../components/challenge/detail/LocationSwitchSheet', () => ({ LocationSwitchSheet: () => null }));
@@ -27,13 +44,6 @@ jest.mock('../../../components/challenge/detail/LocationSwitchSheet', () => ({ L
 jest.mock('../../../utils/logScreenCoachMark', () => ({
   hasSeenLogScreenCoachMark: jest.fn().mockResolvedValue(true),
   markLogScreenCoachMarkSeen: jest.fn(),
-}));
-// What the backdrop is told is what matters here; the mesh itself is tested on its own.
-jest.mock('../../../components/challenge/challengeMeshBackdrop', () => ({
-  ChallengeMeshBackdrop: ({ category }: { category: string | null | undefined }) => {
-    const { Text } = require('react-native');
-    return <Text testID="mesh-backdrop">{String(category ?? 'none')}</Text>;
-  },
 }));
 
 const option = (id: string, label: string, dominantActivityCategory: ChallengeOption['dominantActivityCategory']): ChallengeOption => ({
@@ -87,32 +97,32 @@ function textOf(node: Node | string): string {
 }
 
 describe('the Log Metrics screen', () => {
-  it("hangs its header on the challenge's own activity mesh gradient", async () => {
+  it("has Home's background upside down: the light from the bottom, in the challenge's own color", async () => {
     mockScreen();
     await renderWithTheme(<Metrics />);
 
-    expect(screen.getByTestId('mesh-backdrop')).toHaveTextContent('strength');
+    expect(screen.getByTestId('background-light')).toHaveTextContent(`bottom:${activityColors.strength}`);
   });
 
   it('follows the challenge that was picked, not the first one', async () => {
     mockScreen({ selectedChallengeId: '2' });
     await renderWithTheme(<Metrics />);
 
-    expect(screen.getByTestId('mesh-backdrop')).toHaveTextContent('cardioLow');
+    expect(screen.getByTestId('background-light')).toHaveTextContent(`bottom:${activityColors.cardioLow}`);
   });
 
-  it('has the neutral gradient for a challenge with no dominant activity yet', async () => {
+  it('uses the neutral `primary` light for a challenge with no dominant activity yet', async () => {
     mockScreen({ challenges: [option('1', 'Fresh start', null)] });
     await renderWithTheme(<Metrics />);
 
-    expect(screen.getByTestId('mesh-backdrop')).toHaveTextContent('none');
+    expect(screen.getByTestId('background-light')).toHaveTextContent(`bottom:${colors.primary}`);
   });
 
-  it('falls back to the first challenge when the picked one is not there', async () => {
-    mockScreen({ selectedChallengeId: '99' });
+  it('keeps the challenge name in `primary`', async () => {
+    mockScreen();
     await renderWithTheme(<Metrics />);
 
-    expect(screen.getByTestId('mesh-backdrop')).toHaveTextContent('strength');
+    expect(flattenStyle(screen.getByText('Morning Strength').props.style).color).toBe(colors.primary);
   });
 
   it('shows the challenge and the day over the gradient', async () => {
@@ -134,15 +144,6 @@ describe('the Log Metrics screen', () => {
     expect(textOf(onSurface[0])).not.toContain('Morning Strength');
   });
 
-  it('draws the gradient first, behind the header', async () => {
-    mockScreen();
-    await renderWithTheme(<Metrics />);
-
-    const json = JSON.stringify(screen.toJSON());
-
-    expect(json.indexOf('mesh-backdrop')).toBeGreaterThan(-1);
-    expect(json.indexOf('mesh-backdrop')).toBeLessThan(json.indexOf('Morning Strength'));
-  });
   describe('where you train (B7 on the register screen)', () => {
     it('offers the location question when the routine has exercises', async () => {
       mockScreen({ routineId: 7, baseExercises: [{ exerciseId: 9, name: 'Squat' }] });

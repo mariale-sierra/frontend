@@ -8,6 +8,8 @@ export interface GradientPages {
   scrollX: Animated.Value;
   /** How far the carousel scrolls from one page to the next, in px. */
   pageWidth: number;
+  /** A softer light than the default tinted one (Log Metrics). */
+  soft?: boolean;
 }
 
 interface PagedGradientBackgroundProps extends GradientPages {
@@ -29,6 +31,7 @@ export function PagedGradientBackground({
   scrollX,
   pageWidth,
   edge,
+  soft = false,
   unmountOnBlur = false,
 }: PagedGradientBackgroundProps) {
   const lightColors = [...new Set(pageColors)];
@@ -54,7 +57,7 @@ export function PagedGradientBackground({
             },
           ]}
         >
-          <PaperGradientBackground edge={edge} tint={color} unmountOnBlur={unmountOnBlur} />
+          <PaperGradientBackground edge={edge} tint={color} soft={soft} unmountOnBlur={unmountOnBlur} />
         </Animated.View>
       ))}
     </View>

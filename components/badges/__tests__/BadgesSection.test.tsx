@@ -86,4 +86,45 @@ describe('BadgesSection (B12)', () => {
     await waitFor(() => expect(screen.getByText('Completa 5 entrenamientos.')).toBeTruthy());
     expect(screen.getByText('badges.progressOwn')).toBeTruthy();
   });
+
+  // Sprint 10, B2: each badge also says how it is counted (BADGE_CATALOG metric).
+  it.each([
+    ['five_workouts', 'badges.rules.workouts'],
+    ['streak_7_days', 'badges.rules.streak'],
+    ['three_challenges_completed', 'badges.rules.challenges'],
+  ])('the %s sheet explains its rule (%s)', async (code, rule) => {
+    mockedMine.mockResolvedValue([badge({ code, name: code, target: 5 })]);
+    const screen = await renderWithTheme(<BadgesSection />);
+
+    await waitFor(() => expect(screen.getByTestId(`badge-${code}`)).toBeTruthy());
+    fireEvent.press(screen.getByTestId(`badge-${code}`));
+
+    await waitFor(() => expect(screen.getByTestId('badge-rule')).toBeTruthy());
+    expect(screen.getByText(rule)).toBeTruthy();
+  });
+
+  it('adds no rule for a badge code this app does not know', async () => {
+    mockedMine.mockResolvedValue([badge({ code: 'brand_new', name: 'Nueva', description: 'Algo nuevo.' })]);
+    const screen = await renderWithTheme(<BadgesSection />);
+
+    await waitFor(() => expect(screen.getByTestId('badge-brand_new')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('badge-brand_new'));
+
+    await waitFor(() => expect(screen.getByText('Algo nuevo.')).toBeTruthy());
+    expect(screen.queryByTestId('badge-rule')).toBeNull();
+  });
+
+  it('as a grid (the Badges screen): every badge, earned first, under just the earned count', async () => {
+    mockedMine.mockResolvedValue([
+      badge({ code: 'five_workouts', name: '5 entrenamientos', target: 5 }),
+      badge({ code: 'first_workout', name: 'Primer entrenamiento', earned: true, progress: 1 }),
+    ]);
+    const screen = await renderWithTheme(<BadgesSection layout="grid" />);
+
+    await waitFor(() => expect(screen.getByTestId('badges-grid')).toBeTruthy());
+    // The screen has its own title, so the grid has none.
+    expect(screen.queryByText('badges.title')).toBeNull();
+    const names = screen.getAllByText(/entrenamiento/).map((node) => node.props.children);
+    expect(names).toEqual(['Primer entrenamiento', '5 entrenamientos']);
+  });
 });

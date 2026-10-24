@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { ConfirmationPopup } from './confirmationPopup';
 import { ConfettiBurst } from '../challenge/progress/ConfettiBurst';
 import { useUploadSuccessStore } from '../../store/uploadSuccessStore';
+import { photoReviewMessageKey } from '../../utils/photoModeration';
 
 /**
  * Mounted once at the app root (app/_layout.tsx), as a sibling of the
@@ -37,7 +38,7 @@ export function UploadSuccessPopup() {
   const data = useUploadSuccessStore((state) => state.data);
   const hide = useUploadSuccessStore((state) => state.hide);
 
-  const description =
+  const logged =
     data?.challengeName && data.currentDay != null && data.totalDays != null
       ? t('camera.uploadSuccessMessageWithChallenge', {
           name: data.challengeName,
@@ -45,6 +46,10 @@ export function UploadSuccessPopup() {
           totalDays: data.totalDays,
         })
       : t('camera.uploadSuccessMessage');
+  // Sprint 10, B2: the day is logged; the photo has its own state (in review,
+  // published, private, rejected) from the server's answer — a separate line,
+  // and none at all for a rest day or when the API did not say.
+  const description = data?.photo ? `${logged}\n\n${t(photoReviewMessageKey(data.photo))}` : logged;
 
   return (
     <ConfirmationPopup

@@ -25,6 +25,9 @@ export * from './iconButton';
 // multiline support, and a character counter shown when maxLength is set.
 export * from './input';
 
+// FieldError: the inline validation message under a form field (caption, `error` color, announced to screen readers).
+export * from './fieldError';
+
 // Loader: Conditional activity indicator overlay rendered on top of screen content.
 // Only mounts when the `visible` prop is true.
 export * from './loader';

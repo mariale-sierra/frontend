@@ -16,7 +16,9 @@ interface BuildChallengePayloadParams {
   description: string;
   visibility: ChallengeVisibility;
   cycleLengthDays: number;
-  cyclesCount: number;
+  /** The challenge's total length — any number of days, not necessarily a
+   * multiple of the cycle (53A: "N full cycles + R days"). */
+  durationDays: number;
   selectedCategories: string[];
   selectedLocations: string[];
   routinesByDay: Record<number, RoutineSummary>;
@@ -88,7 +90,7 @@ export function buildCreateChallengePayload(
     name: params.title.trim(),
     description: params.description.trim() || undefined,
     visibility: params.visibility.toLowerCase() as Lowercase<ChallengeVisibility>,
-    duration_days: params.cycleLengthDays * params.cyclesCount,
+    duration_days: params.durationDays,
     cycle_length_days: params.cycleLengthDays,
     categories: params.selectedCategories,
     locations: params.selectedLocations,

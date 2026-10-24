@@ -47,7 +47,8 @@ jest.mock('../../../components/profile', () => {
   return {
     ProfileHeader: ({ actions }: { actions?: React.ReactNode }) => <View>{actions}</View>,
     FollowButton: () => <Text>follow-button</Text>,
-    UserPostsGrid: () => null,
+    // The list renders the profile header above the (empty here) photo grid.
+    PhotoGridList: ({ header }: { header?: React.ReactNode }) => <View>{header}</View>,
 
   };
 });
@@ -121,8 +122,8 @@ describe("Another user's profile — the admin's ban action", () => {
 
     expect(screen.getByText('profile.banUserTitle')).toBeTruthy();
     expect(screen.getByText('profile.banUserDescription')).toBeTruthy();
-    // One ban icon on the button, one on the popup, in the destructive color.
-    expect(stringify(screen.toJSON())).toContain(`"icon":"ban-outline","iconColor":"${colors.error}"`);
+    // One ban icon on the button, one on the popup (popup icons are always `paper`).
+    expect(stringify(screen.toJSON()).match(/"name":"ban-outline"/g)).toHaveLength(2);
     expect(banUser).not.toHaveBeenCalled();
   });
 

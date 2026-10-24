@@ -10,8 +10,10 @@ import { Text } from '../../components/ui/text';
 import { SearchBar } from '../../components/ui/searchBar';
 import { ExploreCard } from '../../components/challenge/list/challengeCards';
 import { SearchUserRow } from '../../components/search';
-import { getChallenges } from '../../services/challenge/challenge.service';
-import { getMyChallenges, searchUsers } from '../../services/user/user.service';
+import { ACTIVITY_FILTER_ORDER, ActivityFilterChips } from '../../components/challenge/list/ActivityFilterChips';
+import { searchUsers } from '../../services/user/user.service';
+import { loadMyChallenges } from '../../services/cache/loaders';
+import { loadAllChallenges } from '../../services/cache/challengeLoaders';
 import { toExploreChallengeViewModels } from '../../services/adapters/challengeListAdapter';
 import type { ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import type { PublicProfileContract } from '../../types/user';
@@ -24,6 +26,8 @@ const SEARCH_DEBOUNCE_MS = 300;
 // "preview + See more/See less" pattern the old Invitations screen
 // established for its own capped request list (`REQUESTS_PREVIEW_COUNT`).
 const CHALLENGE_RESULTS_PREVIEW_COUNT = 3;
+// Before typing: how many of the most joined challenges to suggest.
+const POPULAR_COUNT = 3;
 
 export default function Search() {
   const router = useRouter();
@@ -53,7 +57,7 @@ export default function Search() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([getChallenges(), getMyChallenges()])
+    Promise.all([loadAllChallenges(), loadMyChallenges()])
       .then(([all, mine]) => {
         if (!active) return;
         const joinedIds = new Set(mine.map((c) => String(c.id)));
@@ -107,6 +111,17 @@ export default function Search() {
     ? matchedChallenges
     : matchedChallenges.slice(0, CHALLENGE_RESULTS_PREVIEW_COUNT);
 
+  // Before typing: what's worth a look (2026-10-23, in place of a lone icon
+  // and label) — the activities there are challenges for, and the most joined
+  // challenges (the catalog already comes sorted by members).
+  const browseActivities = useMemo(
+    () => ACTIVITY_FILTER_ORDER.filter((activity) =>
+      availableChallenges.some((challenge) => challenge.dominantActivityCategory === activity)),
+    [availableChallenges],
+  );
+  const popularChallenges = availableChallenges.slice(0, POPULAR_COUNT);
+  const hasSuggestions = browseActivities.length > 0 || popularChallenges.length > 0;
+
   const hasQuery = debouncedQuery.length > 0;
   const isSearching = catalogLoading || peopleLoading;
   const hasNoResults = hasQuery && !isSearching && matchedChallenges.length === 0 && people.length === 0;
@@ -122,12 +137,59 @@ export default function Search() {
           <SearchBar value={query} onChangeText={setQuery} placeholder={t('search.placeholder')} />
         </View>
 
-        {!hasQuery ? (
+        {!hasQuery && hasSuggestions ? (
+          <>
+            {browseActivities.length > 0 && (
+              <View style={styles.section} testID="search-browse-activities">
+                <View style={styles.sectionHeader}>
+                  <Text variant="subheader">{t('search.browseByActivity')}</Text>
+                </View>
+                <View style={styles.chipsWrap}>
+                  <ActivityFilterChips
+                    activities={browseActivities}
+                    selected={null}
+                    showAll={false}
+                    onSelect={(activity) =>
+                      activity && router.push(`/(tabs)/challenges?view=explore&activity=${activity}`)}
+                  />
+                </View>
+              </View>
+            )}
+
+            {popularChallenges.length > 0 && (
+              <View style={styles.section} testID="search-popular">
+                <Row justify="space-between" align="center" style={styles.sectionHeader}>
+                  <Text variant="subheader">{t('search.popularTitle')}</Text>
+                  <Pressable
+                    onPress={() => router.push('/(tabs)/challenges?view=explore')}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    testID="search-popular-see-all"
+                  >
+                    <Text variant="label" weight="bold" style={styles.seeAll}>
+                      {t('search.seeAll')}
+                    </Text>
+                  </Pressable>
+                </Row>
+                <View style={styles.challengeList}>
+                  {popularChallenges.map((challenge) => (
+                    <ExploreCard
+                      key={challenge.challengeId}
+                      challenge={challenge}
+                      onPress={() => router.push(`/challenge/${challenge.challengeId}`)}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+          </>
+        ) : !hasQuery ? (
+          // Nothing to suggest (still loading, or no challenges at all).
           <EmptyState
             icon="search-outline"
             title={t('search.emptyPromptTitle')}
-            message={t('search.emptyPrompt')}
-            actions={[{ label: t('search.exploreChallenges'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'search-explore' }]}
+            // The title in the search icon's own muted tone (2026-10-20).
+            muted
           />
         ) : catalogLoading ? (
           <View style={styles.center}>
@@ -138,7 +200,6 @@ export default function Search() {
             icon="sad-outline"
             title={t('search.emptyResults', { query: debouncedQuery })}
             message={t('search.emptyResultsHint')}
-            actions={[{ label: t('search.exploreChallenges'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'search-explore' }]}
           />
         ) : (
           <>
@@ -234,6 +295,14 @@ const styles = StyleSheet.create({
   challengeList: {
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
+  },
+  // The chips scroll out to the screen's edges: they bleed out of this padding.
+  chipsWrap: {
+    paddingHorizontal: spacing.lg,
+  },
+  seeAll: {
+    color: colors.primary,
+    opacity: 1,
   },
   seeMore: {
     alignSelf: 'center',

@@ -23,7 +23,10 @@ export interface RegisterRequest extends LegalConsent {
 }
 
 export interface AuthSessionResponse {
+  /** B4: JWT that lasts 15 minutes. */
   accessToken: string;
+  /** B4: opaque, single use (each refresh returns a new one). Absent from a backend older than B4. */
+  refreshToken?: string;
   user: AuthUserContract;
   [key: string]: unknown;
 }

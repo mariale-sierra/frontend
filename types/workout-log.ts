@@ -1,3 +1,5 @@
+import type { PhotoModerationStatus } from './challenge';
+
 /** A real workout_log_exercise_sets row (createWorkout() copies these over
  * from the routine's own sets when the routine exercise had any) — `id` is
  * what POST /metrics/workout-log-exercise-sets/:id keys its per-set actual
@@ -19,9 +21,20 @@ export interface WorkoutLogExerciseContract {
   [key: string]: unknown;
 }
 
+/** The evidence post saved with the workout (POST /workout-logs/progress
+ * returns the full workout_posts entity in `posts`). A rest day has none. */
+export interface WorkoutLogPostContract {
+  id: string;
+  visibility?: 'private' | 'followers' | 'public';
+  /** Absent on a database without the moderation columns. */
+  moderationStatus?: PhotoModerationStatus;
+  [key: string]: unknown;
+}
+
 export interface WorkoutLogContract {
   id: number;
   exercises?: WorkoutLogExerciseContract[];
+  posts?: WorkoutLogPostContract[];
   [key: string]: unknown;
 }
 

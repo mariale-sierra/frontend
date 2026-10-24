@@ -10,6 +10,7 @@ import { colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { getMuscleRegions, getMusclesInRegion } from '../../services/exercises/exercises.service';
 import type { MuscleRegionSummary, MuscleSummary } from '../../services/exercises/exercises.service';
+import { logError } from '../../utils/apiError';
 
 export interface MuscleFilterSelection {
   /** 'region' filters by every muscle in that region; 'muscle' filters by
@@ -50,7 +51,7 @@ export function MuscleFilterSheet({ visible, selected, onSelect, onClose }: Musc
     }
     getMuscleRegions()
       .then(setRegions)
-      .catch((error: any) => console.error('[MuscleFilterSheet] regions', error?.message));
+      .catch((error: any) => logError('MuscleFilterSheet', error));
   }, [visible]);
 
   useEffect(() => {
@@ -58,7 +59,7 @@ export function MuscleFilterSheet({ visible, selected, onSelect, onClose }: Musc
     setLoading(true);
     getMusclesInRegion(activeRegion.code)
       .then(setMuscles)
-      .catch((error: any) => console.error('[MuscleFilterSheet] muscles', error?.message))
+      .catch((error: any) => logError('MuscleFilterSheet', error))
       .finally(() => setLoading(false));
   }, [activeRegion]);
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Switch, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { safeBack } from '../../utils/navigation';
 import { useTranslation } from 'react-i18next';
@@ -13,17 +13,20 @@ import { Text } from '../../components/ui/text';
 import { Button } from '../../components/ui/button';
 import { Icon } from '../../components/ui/icon';
 import { UserAvatar } from '../../components/ui/userAvatar';
-import { Divider } from '../../components/ui/divider';
+import { Card } from '../../components/ui/card';
 import { Row } from '../../components/layout/row';
 import { Stack } from '../../components/layout/stack';
 import { LogoutButton } from '../../components/profile/LogoutButton';
-import { DeleteAccountRow } from '../../components/profile/DeleteAccountRow';
+import { LanguageToggle } from '../../components/profile/LanguageToggle';
+import { SettingsRow } from '../../components/profile/SettingsRow';
 import { ControlledFormField } from '../../components/form/ControlledFormField';
 import {
-  getMyProfile,
   updateMyProfile,
   updateMyProfilePhoto,
 } from '../../services/user/user.service';
+import { loadMyProfile } from '../../services/cache/loaders';
+import { queryKeys } from '../../services/cache/queries';
+import { setQueryData } from '../../services/cache/queryCache';
 import { uploadImageAsync } from '../../services/uploads/upload.service';
 import { isContentRejectedError } from '../../utils/contentModeration';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
@@ -34,6 +37,7 @@ import i18n, { PREFERRED_LANGUAGE_KEY } from '../../i18n';
 import type { SupportedLanguage } from '../../i18n';
 import { storage } from '../../utils/storage';
 import { createProfileEditSchema, type ProfileEditFormValues } from '../../validation/profileSchemas';
+import { logError } from '../../utils/apiError';
 
 const DISPLAY_NAME_MAX = 150;
 const BIO_MAX = 1000;
@@ -41,7 +45,9 @@ const BIO_MAX = 1000;
 /**
  * Edit-profile screen: loads the current profile, lets the user change
  * photo / display name / bio / language / privacy, validates locally and
- * PATCHes only the fields that changed.
+ * PATCHes only the fields that changed. Log out and delete account moved to
+ * Settings (Sprint 10, B2); log out stays on the load-error state below as the
+ * way out when the profile cannot be read.
  */
 export default function EditProfile() {
   const { t } = useTranslation();
@@ -78,7 +84,7 @@ export default function EditProfile() {
   const loadProfile = () => {
     setLoading(true);
     setLoadError(false);
-    getMyProfile()
+    loadMyProfile()
       .then((data) => {
         setProfile(data);
         reset({ displayName: data.display_name, bio: data.bio ?? '' });
@@ -112,6 +118,8 @@ export default function EditProfile() {
     try {
       const updated = await updateMyProfile(payload);
       setProfile(updated);
+      // The server's answer is the new cached profile: the tab shows it without refetching.
+      setQueryData(queryKeys.myProfile, updated);
       if (payload.is_private !== undefined) {
         showSuccess({ message: t('profileEdit.privacyUpdated') });
       } else {
@@ -129,6 +137,14 @@ export default function EditProfile() {
     }
   });
 
+  const handleLanguageChange = (code: SupportedLanguage) => {
+    setLanguage(code);
+    i18n.changeLanguage(code);
+    storage.setItem(PREFERRED_LANGUAGE_KEY, code).catch((error) => {
+      logError('EditProfile.language', error);
+    });
+  };
+
   const handleChangePhoto = async () => {
     if (uploadingPhoto) return;
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -145,6 +161,7 @@ export default function EditProfile() {
       const publicUrl = await uploadImageAsync(result.assets[0].uri, 'image/jpeg');
       const updated = await updateMyProfilePhoto(publicUrl);
       setProfile(updated);
+      setQueryData(queryKeys.myProfile, updated);
       showSuccess({ message: t('profileEdit.photoUpdated') });
     } catch {
       show({ message: t('profileEdit.photoError') });
@@ -180,17 +197,21 @@ export default function EditProfile() {
   }
 
   return (
-    <ScreenBackground variant="default">
+    // Laid out like Settings (2026-10-23, explicit request): its compact top bar,
+    // small uppercase section labels, and the same subtle icon cards for rows.
+    <ScreenBackground variant="top">
+      <Row justify="space-between" align="center" style={styles.topBar}>
+        <BackButton style={styles.backButton} />
+        <Text variant="body" weight="bold" align="center" style={styles.headerTitle}>
+          {t('profileEdit.screenTitle')}
+        </Text>
+        <View style={styles.trailingSpacer} />
+      </Row>
+
       <KeyboardAwareScroll
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <BackButton />
-          <Text variant="title">{t('profileEdit.screenTitle')}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
         <View style={styles.photoSection}>
           <Pressable
             onPress={handleChangePhoto}
@@ -215,169 +236,128 @@ export default function EditProfile() {
           </Pressable>
         </View>
 
-        <Divider variant="section" marginVertical="sm" />
-
-        <Stack gap="lg">
-          <ControlledFormField
-            control={control}
-            name="displayName"
-            label={t('profileEdit.displayName')}
-            maxLength={DISPLAY_NAME_MAX}
-            placeholder={t('profileEdit.displayNamePlaceholder')}
-            placeholderVariant="caption"
-          />
-
-          <ControlledFormField
-            control={control}
-            name="bio"
-            label={t('profileEdit.bio')}
-            multiline
-            maxLength={BIO_MAX}
-            placeholder={t('profileEdit.bioPlaceholder')}
-            placeholderVariant="caption"
-          />
-        </Stack>
-
-        <Divider variant="section" marginVertical="sm" />
-
-        <Stack gap="lg">
-          <View style={{ gap: spacing.xs }}>
-            <Text variant="subheader">{t('profileEdit.language')}</Text>
-            {/* Fixed 2026-08-29: was a `Dropdown` (components/ui/dropdown.tsx)
-                — that component turns out to be used NOWHERE ELSE in the
-                whole app (checked), so there was no "other working dropdown"
-                to compare against when it kept not working across three
-                separate fix attempts (a real `maxSelections` bug was found
-                and fixed in it along the way, but the toggle stayed broken
-                even after that). Replaced entirely with a plain two-option
-                segmented toggle, the exact same proven structure
-                `RoutineModeToggle` (components/routine/builder/routineModeToggle.tsx)
-                already uses successfully elsewhere — single string value,
-                one Pressable per option, no array-based multi-select
-                machinery at all. */}
-            <View style={styles.languageToggle}>
-              {(['en', 'es'] as const).map((code) => {
-                const active = language === code;
-                return (
-                  <Pressable
-                    key={code}
-                    onPress={() => {
-                      if (active) return;
-                      setLanguage(code);
-                      i18n.changeLanguage(code as SupportedLanguage);
-                      storage.setItem(PREFERRED_LANGUAGE_KEY, code).catch((error) => {
-                        console.error('[EditProfile] failed to persist language choice', error);
-                      });
-                    }}
-                    style={({ pressed }) => [
-                      styles.languageOption,
-                      active && styles.languageOptionActive,
-                      pressed && styles.languageOptionPressed,
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active }}
-                  >
-                    <Text
-                      variant="label"
-                      weight={active ? 'bold' : 'medium'}
-                      inverse={active}
-                      tone={active ? 'primary' : 'secondary'}
-                    >
-                      {code === 'en' ? t('profileEdit.languageEn') : t('profileEdit.languageEs')}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-
-          <Pressable
-            onPress={() => router.push('/onboarding/practices?mode=edit')}
-            style={({ pressed }) => [pressed && styles.pressedRow]}
-            accessibilityRole="button"
-          >
-            <Row align="center" justify="space-between">
-              <View style={styles.privacyText}>
-                <Text variant="subheader">{t('profileEdit.practices')}</Text>
-                <Text variant="caption" tone="secondary">
-                  {t('profileEdit.practicesHint')}
-                </Text>
-              </View>
-              <Icon name="chevron-forward-outline" size={20} color={colors.paper} />
-            </Row>
-          </Pressable>
-
-          <Row align="center" justify="space-between">
-            <View style={styles.privacyText}>
-              <Text variant="subheader">{t('profileEdit.privacy')}</Text>
-              <Text variant="caption" tone="secondary">
-                {t('profileEdit.privacyHint')}
-              </Text>
-            </View>
-            <Switch
-              value={isPrivate}
-              onValueChange={setIsPrivate}
-              trackColor={{ false: colors.surface, true: colors.success }}
-              thumbColor={colors.primary}
+        <Section title={t('profileEdit.sectionProfile')}>
+          <Stack gap="lg">
+            <ControlledFormField
+              control={control}
+              name="displayName"
+              label={t('profileEdit.displayName')}
+              maxLength={DISPLAY_NAME_MAX}
+              placeholder={t('profileEdit.displayNamePlaceholder')}
+              placeholderVariant="caption"
             />
-          </Row>
 
-          <Button
-            variant="primary"
-            size="md"
-            onPress={handleSave}
-            loading={saving}
-            disabled={saving || uploadingPhoto}
-          >
-            {t('profileEdit.save')}
-          </Button>
-        </Stack>
+            <ControlledFormField
+              control={control}
+              name="bio"
+              label={t('profileEdit.bio')}
+              multiline
+              maxLength={BIO_MAX}
+              placeholder={t('profileEdit.bioPlaceholder')}
+              placeholderVariant="caption"
+            />
+          </Stack>
+        </Section>
 
-        <Divider variant="section" marginVertical="sm" />
+        <Section title={t('settings.sections.preferences')}>
+          <Card variant="basic" radius="medium">
+            <View style={styles.cardStack}>
+              <Row gap="sm" align="center" justify="flex-start">
+                <Icon name="language-outline" size={20} color={colors.paper} />
+                <Text variant="body">{t('profileEdit.language')}</Text>
+              </Row>
+              <LanguageToggle value={language} onChange={handleLanguageChange} />
+            </View>
+          </Card>
 
-        <LogoutButton />
-        <DeleteAccountRow />
+          <SettingsRow
+            icon="barbell-outline"
+            label={t('profileEdit.practices')}
+            hint={t('profileEdit.practicesHint')}
+            onPress={() => router.push('/onboarding/practices?mode=edit')}
+            testID="edit-profile-practices"
+          />
+
+          <Card variant="basic" radius="medium">
+            <Row justify="space-between" align="center" gap="sm">
+              <Row gap="sm" align="center" justify="flex-start" style={styles.rowMain}>
+                <Icon name="lock-closed-outline" size={20} color={colors.paper} />
+                <View style={styles.privacyText}>
+                  <Text variant="body">{t('profileEdit.privacy')}</Text>
+                  <Text variant="caption" tone="secondary">
+                    {t('profileEdit.privacyHint')}
+                  </Text>
+                </View>
+              </Row>
+              <Switch
+                value={isPrivate}
+                onValueChange={setIsPrivate}
+                trackColor={{ false: colors.surface, true: colors.success }}
+                thumbColor={colors.primary}
+              />
+            </Row>
+          </Card>
+        </Section>
+
+        <Button
+          variant="primary"
+          size="md"
+          onPress={handleSave}
+          loading={saving}
+          disabled={saving || uploadingPhoto}
+        >
+          {t('profileEdit.save')}
+        </Button>
       </KeyboardAwareScroll>
     </ScreenBackground>
   );
 }
 
+// Settings' section: a small uppercase label over its rows.
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.section}>
+      <Text variant="caption" tone="secondary" weight="bold" style={styles.sectionTitle}>
+        {title}
+      </Text>
+      {children}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  // Same top bar as Settings.
+  topBar: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.base,
+  },
+  backButton: {
+    marginLeft: -spacing.sm,
+  },
+  headerTitle: {
+    flex: 1,
+  },
+  trailingSpacer: {
+    width: 44,
+    height: 44,
+  },
   container: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
     paddingBottom: spacing['2xl'],
     gap: spacing.lg,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  section: {
+    gap: spacing.sm,
   },
-  headerSpacer: {
-    width: 40,
+  sectionTitle: {
+    textTransform: 'uppercase',
   },
-  // Same chrome as RoutineModeToggle's proven segmented-toggle pattern:
-  // `surface` track, `big` radius, `xs` internal padding/gap.
-  languageToggle: {
-    flexDirection: 'row',
-    borderRadius: radius.big,
-    backgroundColor: colors.surface,
-    padding: spacing.xs,
-    gap: spacing.xs,
+  cardStack: {
+    gap: spacing.md,
   },
-  languageOption: {
+  rowMain: {
     flex: 1,
-    height: 48,
-    borderRadius: radius.big,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  languageOptionActive: {
-    backgroundColor: colors.primary,
-  },
-  languageOptionPressed: {
-    opacity: 0.85,
   },
   photoSection: {
     alignItems: 'center',
@@ -418,9 +398,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
     paddingRight: spacing.md,
-  },
-  pressedRow: {
-    opacity: 0.85,
   },
   center: {
     flex: 1,

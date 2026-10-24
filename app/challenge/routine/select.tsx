@@ -14,12 +14,13 @@ import { useRoutineBuilder } from '../../../store/routineBuilderStore';
 import { useChallengeBuilder } from '../../../store/challengeBuilderStore';
 import { CATEGORY_TO_ACTIVITY } from '../../../constants/challengeFilters';
 import type { ActivityType } from '../../../types/activity';
-import { colors, radius, spacing, textOpacity, typography } from '../../../constants/theme';
+import { colors, fillOpacity, radius, spacing, textOpacity, typography } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { useTranslation } from 'react-i18next';
 import { deleteRoutine, getRoutines } from '../../../services/routine/routine.service';
 import { ConfirmationPopup } from '../../../components/ui/confirmationPopup';
 import type { RoutineSummary } from '../../../types/routine';
+import { logError } from '../../../utils/apiError';
 
 const TRANSITION_DURATION = 380;
 const AnimatedText = Animated.createAnimatedComponent(RNText);
@@ -56,7 +57,7 @@ export default function SelectRoutineScreen() {
       .catch((error: any) => {
         // Keep the local demo/current-session routines usable if the account
         // request is temporarily unavailable. A later selector mount retries.
-        console.error('[RoutineSelect] Failed to load saved routines:', error?.response?.data ?? error?.message);
+        logError('RoutineSelect', error);
       });
 
     return () => {
@@ -247,17 +248,34 @@ export default function SelectRoutineScreen() {
 
             {mode === 'workout' ? (
               <Stack gap="md">
-                <Row justify="space-between" align="center">
-                  <Text variant="header" tone="secondary" size="xs">{t('routineSelect.yourRoutines')}</Text>
-                  <Text
-                    variant="label"
-                    weight="bold"
-                    onPress={handleCreateNew}
-                    style={styles.newWorkoutLink}
-                  >
+                <Text variant="header" tone="secondary" size="xs">{t('routineSelect.yourRoutines')}</Text>
+
+                {/* "New workout" is the list's first row, not a header link: a
+                    full-width tile with a solid outline and a `primary` + disc.
+                    It always sits
+                    right under the toggle, never scrolls away behind a long
+                    list, and stays one step below the hierarchy around it —
+                    the toggle picks the mode, the solid `primary` Confirm
+                    button closes the screen, this only opens the builder. */}
+                <Pressable
+                  onPress={handleCreateNew}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('routineSelect.newWorkout')}
+                  testID="routine-select-new-workout"
+                  style={({ pressed }) => [styles.newWorkoutTile, pressed && styles.confirmPressed]}
+                >
+                  <View style={styles.newWorkoutIcon}>
+                    <Ionicons name="add" size={22} color={colors.ink} />
+                  </View>
+                  <Text variant="body" weight="bold" style={styles.newWorkoutLabel}>
                     {t('routineSelect.newWorkout')}
                   </Text>
-                </Row>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={withAlpha(colors.paper, textOpacity.tertiary)}
+                  />
+                </Pressable>
 
                 {workoutRoutines.length > 0 ? (
                   <Stack gap="sm">
@@ -400,9 +418,29 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['2xl'] + 132,
     flexGrow: 1,
   },
-  newWorkoutLink: {
-    color: colors.primary,
-    opacity: 1,
+  // A solid outline, with the same radius and padding as the
+  // RoutinePickerCards it sits above.
+  newWorkoutTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderRadius: radius.medium,
+    borderWidth: 1.5,
+    borderColor: withAlpha(colors.paper, textOpacity.tertiary),
+    backgroundColor: withAlpha(colors.paper, fillOpacity.subtle),
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+  },
+  newWorkoutIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.big,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newWorkoutLabel: {
+    flex: 1,
   },
   restModeContent: {
     minHeight: 400,

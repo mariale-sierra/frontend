@@ -3,7 +3,8 @@ import { fireEvent } from '@testing-library/react-native';
 import { renderWithProviders } from '../../../../test-utils/renderWithProviders';
 import { ExploreChallengeCard } from '../ExploreChallengeCard';
 import { ExploreChallengeCardV2 } from '../ExploreChallengeCardV2';
-import { activityColors, colors, fontSize } from '../../../../constants/theme';
+import { activityColors, borderWidth, colors, radius, textOpacity } from '../../../../constants/theme';
+import { withAlpha } from '../../../../utils/color';
 import type { ExploreChallengeViewModel } from '../challengeListSections';
 
 function buildChallenge(overrides: Partial<ExploreChallengeViewModel> = {}): ExploreChallengeViewModel {
@@ -85,75 +86,68 @@ describe('Explore card (classic design) specifics', () => {
   });
 });
 
-describe('Explore card (glow design) specifics', () => {
-  it('shows the duration as a number with its unit, in the tick ring', async () => {
+describe('Explore card (glow design, 18A) specifics', () => {
+  const styleOf = (node: { props: { style?: unknown } }) => StyleSheet.flatten(node.props.style as never) as Record<string, unknown>;
+
+  it('shows how many days it lasts in a badge outlined in the activity color (no fill, softly rounded, not in capitals)', async () => {
     const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ durationDays: 21 })} />);
+    const badge = styleOf(screen.getByTestId('explore-card-days'));
 
-    expect(screen.getByText('21')).toBeTruthy();
-    expect(screen.getByText('days')).toBeTruthy();
-  });
-
-  it('sets the days label in plain paper, fully opaque', async () => {
-    const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ durationDays: 21 })} />);
-
-    expect(StyleSheet.flatten(screen.getByText('days').props.style)).toMatchObject({
-      color: colors.paper,
-      opacity: 1,
+    expect(badge).toMatchObject({
+      borderColor: activityColors.strength,
+      borderWidth: borderWidth.thin,
+      borderRadius: (radius.small + radius.medium) / 2,
     });
+    expect(badge.backgroundColor).toBeUndefined();
+    expect(styleOf(screen.getByText('21 days'))).toMatchObject({ color: activityColors.strength, opacity: 1 });
+    expect(styleOf(screen.getByText('21 days')).textTransform).toBeUndefined();
+    expect(JSON.stringify(screen.toJSON())).toContain(`"name":"calendar-outline","size":16,"color":"${activityColors.strength}"`);
   });
 
-  it('does not set the days label in capitals — it reads "days", as the text has it', async () => {
-    const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ durationDays: 21 })} />);
-
-    expect(StyleSheet.flatten(screen.getByText('days').props.style).textTransform).toBeUndefined();
-  });
-
-  it('tightens the number so the days label sits closer under it', async () => {
-    const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ durationDays: 21 })} />);
-
-    expect(StyleSheet.flatten(screen.getByText('21').props.style).lineHeight).toBe(fontSize['3xl']);
-  });
-
-  // Layout reworked 2026-09-22, per explicit request: the footer's old "N
-  // members" text moved to a compact corner badge (just the icon and the raw
-  // number, no word) — the footer now shows who made the challenge instead.
-  it('shows the member count as a compact icon+number badge in the top-right corner, not "N members" text', async () => {
-    const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ membersCount: 1200 })} />);
-
-    expect(JSON.stringify(screen.toJSON())).toContain('people-outline');
-    expect(screen.getByText('1.2k')).toBeTruthy();
-    expect(screen.queryByText(/members/)).toBeNull();
-    // Still accessible to a screen reader, just not shown as visible text.
-    expect(screen.getByLabelText('1200 members')).toBeTruthy();
-  });
-
-  it("puts the author, not the member count, in the footer", async () => {
+  it("follows the challenge's activity color on the days badge", async () => {
     const screen = await renderWithProviders(
-      <ExploreChallengeCardV2
-        challenge={buildChallenge({ author: { username: 'ana', displayName: null, profileImageUrl: null } })}
-      />,
+      <ExploreChallengeCardV2 challenge={buildChallenge({ dominantActivityCategory: 'cardioLow' })} />,
     );
 
-    expect(screen.getByText('By @ana')).toBeTruthy();
+    expect(styleOf(screen.getByTestId('explore-card-days')).borderColor).toBe(activityColors.cardioLow);
   });
 
   it('uses the singular unit for a one-day challenge', async () => {
     const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ durationDays: 1 })} />);
 
-    expect(screen.getByText('day')).toBeTruthy();
+    expect(screen.getByText('1 day')).toBeTruthy();
   });
 
-  it('shows the category as a plain label in the activity color, not a badge', async () => {
+  it('shows "N members" in paper, and a "Join" pill filled with the activity color, ink text on it', async () => {
+    const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ membersCount: 1200 })} />);
+
+    expect(styleOf(screen.getByText('1.2k members'))).toMatchObject({ color: colors.paper, opacity: 1 });
+    expect(JSON.stringify(screen.toJSON())).toContain(`"name":"people-outline","size":18,"color":"${colors.paper}"`);
+    expect(styleOf(screen.getByTestId('explore-card-join')).backgroundColor).toBe(activityColors.strength);
+    expect(styleOf(screen.getByText('Join'))).toMatchObject({ color: colors.ink, opacity: 1 });
+    expect(screen.queryByText('View')).toBeNull();
+    expect(JSON.stringify(screen.toJSON())).toContain(`"name":"chevron-forward","size":16,"color":"${colors.ink}"`);
+  });
+
+  it('lists where it happens and what kind of training, each with its icon', async () => {
     const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge()} />);
-    const label = StyleSheet.flatten(screen.getByText('Strength').props.style);
+    const json = JSON.stringify(screen.toJSON());
 
-    expect(label).toMatchObject({ color: activityColors.strength, opacity: 1, textTransform: 'uppercase' });
-    // A badge would fill its background with the accent color.
-    expect(label.backgroundColor).toBeUndefined();
-    expect(JSON.stringify(screen.toJSON())).not.toContain('flash-outline');
+    expect(screen.getByText('Gym')).toBeTruthy();
+    expect(screen.getByText('Strength')).toBeTruthy();
+    expect(json).toContain('location-outline');
+    expect(json).toContain('flash-outline');
   });
 
-  it('leaves out the category label and the subtitle when there is nothing to show in them', async () => {
+  it("follows the challenge's own activity color", async () => {
+    const screen = await renderWithProviders(
+      <ExploreChallengeCardV2 challenge={buildChallenge({ dominantActivityCategory: 'cardioLow' })} />,
+    );
+
+    expect(styleOf(screen.getByTestId('explore-card-join')).backgroundColor).toBe(activityColors.cardioLow);
+  });
+
+  it('leaves out the location and category items when there is nothing to show in them', async () => {
     const screen = await renderWithProviders(
       <ExploreChallengeCardV2 challenge={buildChallenge({ categoriesLabel: '', locationsLabel: '' })} />,
     );
@@ -161,5 +155,17 @@ describe('Explore card (glow design) specifics', () => {
     expect(screen.getByText('Iron Will')).toBeTruthy();
     expect(screen.queryByText('Gym')).toBeNull();
     expect(screen.queryByText('Strength')).toBeNull();
+    expect(JSON.stringify(screen.toJSON())).not.toContain('location-outline');
+  });
+
+  it("sets 'By @name' in the title's own color", async () => {
+    const screen = await renderWithProviders(
+      <ExploreChallengeCardV2
+        challenge={buildChallenge({ author: { username: 'ana', displayName: null, profileImageUrl: null } })}
+      />,
+    );
+
+    expect(styleOf(screen.getByText('By @ana'))).toMatchObject({ color: colors.primary, opacity: 1 });
+    expect(styleOf(screen.getByText('Iron Will')).color).toBe(colors.primary);
   });
 });

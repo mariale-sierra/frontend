@@ -18,6 +18,7 @@ import i18n, { PREFERRED_LANGUAGE_KEY } from '../i18n';
 import type { SupportedLanguage } from '../i18n';
 import { storage } from '../utils/storage';
 import { colors, fontFamily } from '../constants/theme';
+import { logError } from '../utils/apiError';
 
 const navigationTheme: NavigationTheme = {
   dark: true,
@@ -144,6 +145,8 @@ function RootNavigator() {
         <Stack.Screen name="profile/[userId]" options={{ headerShown: false }} />
         <Stack.Screen name="profile/posts" options={{ headerShown: false }} />
         <Stack.Screen name="profile/about" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/settings" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/badges" options={{ headerShown: false }} />
         <Stack.Screen name="profile/moderation" options={{ headerShown: false }} />
         <Stack.Screen name="profile/delete-account" options={{ headerShown: false }} />
         <Stack.Screen name="accept-terms" options={{ headerShown: false, gestureEnabled: false }} />
@@ -203,7 +206,7 @@ export default function RootLayout() {
         }
       })
       .catch((error) => {
-        console.error('[i18n] failed to apply persisted language', error);
+        logError('i18n.applyPersistedLanguage', error);
       });
   }, []);
 

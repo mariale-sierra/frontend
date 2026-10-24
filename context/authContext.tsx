@@ -10,8 +10,10 @@ import {
 } from '../services/auth/auth.service';
 import { invalidateChallengeProgressCache } from '../hooks/useChallengeProgress';
 import { resetSessionStores } from '../store/resetSessionStores';
+import { clearQueryCache, setQueryScope } from '../services/cache/queryCache';
 import { forgetPushToken, unregisterPushToken } from '../services/notifications/pushNotifications';
 import { setSessionExpiredHandler } from '../services/auth/sessionEvents';
+import { getSessionEpoch } from '../services/auth/token.service';
 import type { LegalConsent } from '../types/auth';
 
 interface AuthContextValue {
@@ -68,30 +70,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
 
-      try {
-        await fetchAuthMe();
-      } catch (error: any) {
-        const status = error?.response?.status;
-
-        if (status === 401) {
-          // Token genuinamente rechazado por el servidor — limpiar sesión
-          await logoutService();
-          invalidateChallengeProgressCache();
-    resetSessionStores();
-          setToken(null);
-          setUserId(null);
-          setUsername(null);
-          return;
-        }
-
-        // Error de red, 5xx, CORS, timeout, etc. — preservar sesión
-        // El token sigue en SecureStore y el interceptor lo adjuntará en siguientes llamadas
-      }
-
+      // Cached server data for this user (services/cache) is readable from now on.
+      setQueryScope(storedUserId);
       setToken(storedToken);
       setUserId(storedUserId);
       setUsername(storedUsername);
 
+      // Validated in the background, not before the first screen: the app
+      // used to show nothing until /auth/me answered (up to the request
+      // timeout on a bad connection), even though the stored session and
+      // the cached Home/Profile data were already on the device. A token the
+      // server rejects (401) still ends the session — the same cleanup as
+      // before, just after the first paint instead of before it. Network
+      // errors, 5xx, etc. keep the session, as they always did.
+      // B4: an expired access token is renewed by the API client first; a
+      // 401 here means the session itself is over. A refresh that failed for
+      // a transient reason (offline, timeout, 429, 5xx) comes back as THAT
+      // error, not a 401, so a recoverable session is kept and renewed on
+      // the next request (post-audit B4-01-F02). And if the session changed
+      // meanwhile (signed out, or another account signed in), this answer is
+      // about the old one: leave the current one alone.
+      const epoch = getSessionEpoch();
+      fetchAuthMe().catch(async (error: any) => {
+        if (error?.response?.status !== 401 || epoch !== getSessionEpoch()) return;
+        await logoutService({ revokeOnServer: false });
+        invalidateChallengeProgressCache();
+        resetSessionStores();
+        await clearQueryCache();
+        setQueryScope(null);
+        setToken(null);
+        setUserId(null);
+        setUsername(null);
+      });
     } finally {
       setIsRestoring(false);
     }
@@ -101,15 +111,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     restoreSession();
   }, [restoreSession]);
 
-  // Any authenticated request answered 401 (token expired, account banned,
-  // purged or gone) signs the user out here, and RootNavigator takes them to
+  // Any authenticated request answered 401 that a refresh couldn't fix
+  // (session expired or revoked, account banned, purged or gone) signs the
+  // user out here, and RootNavigator takes them to
   // the login screen. See services/api.ts.
   useEffect(() => {
     setSessionExpiredHandler(async () => {
       await forgetPushToken();
-      await logoutService();
+      // Already over server-side (the refresh was rejected): nothing to revoke.
+      await logoutService({ revokeOnServer: false });
       invalidateChallengeProgressCache();
-    resetSessionStores();
+      resetSessionStores();
+      await clearQueryCache();
+      setQueryScope(null);
       setToken(null);
       setUserId(null);
       setUsername(null);
@@ -122,6 +136,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     invalidateChallengeProgressCache();
     resetSessionStores();
     const result = await loginService(email, password);
+    setQueryScope(result?.user?.id ?? (await getStoredUserId()));
     setToken(result?.accessToken ?? (await getStoredToken()));
     setUserId(result?.user?.id ?? (await getStoredUserId()));
     setUsername(result?.user?.username ?? (await getStoredUsername()));
@@ -133,6 +148,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     invalidateChallengeProgressCache();
     resetSessionStores();
     const result = await registerService(email, username, password, consent);
+    setQueryScope(result?.user?.id ?? (await getStoredUserId()));
     setToken(result?.accessToken ?? (await getStoredToken()));
     setUserId(result?.user?.id ?? (await getStoredUserId()));
     setUsername(result?.user?.username ?? (await getStoredUsername()));
@@ -148,6 +164,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await logoutService();
     invalidateChallengeProgressCache();
     resetSessionStores();
+    await clearQueryCache();
+    setQueryScope(null);
     setToken(null);
     setUserId(null);
     setUsername(null);

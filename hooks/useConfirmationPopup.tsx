@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { ConfirmationPopup, ConfirmationButtonConfig } from '../components/ui/confirmationPopup';
 import { colors } from '../constants/theme';
 
-export type ConfirmationPopupType = 'join' | 'leave' | 'closeChallenge' | 'reopenChallenge';
+// 'requestJoin' (Sprint 10, B2): a private challenge, where confirming files a request.
+export type ConfirmationPopupType = 'join' | 'requestJoin' | 'leave' | 'closeChallenge' | 'reopenChallenge';
 
 interface UseConfirmationPopupOptions {
   type: ConfirmationPopupType;
@@ -42,12 +43,16 @@ export function useConfirmationPopup({
   const getConfig = () => {
     switch (type) {
       case 'join':
+      case 'requestJoin': {
+        const isRequest = type === 'requestJoin';
         return {
-          title: t('challenges.joinConfirm.title'),
-          description: t('challenges.joinConfirm.description', { name: challengeName }),
+          title: isRequest ? t('challenges.requestJoinConfirm.title') : t('challenges.joinConfirm.title'),
+          description: isRequest
+            ? t('challenges.requestJoinConfirm.description', { name: challengeName })
+            : t('challenges.joinConfirm.description', { name: challengeName }),
           icon: 'person-add-outline' as const,
           primaryButton: {
-            label: t('challenges.joinConfirm.confirm'),
+            label: isRequest ? t('challenges.requestJoinConfirm.confirm') : t('challenges.joinConfirm.confirm'),
             onPress: handleConfirm,
             variant: 'primary' as const,
             loading,
@@ -59,6 +64,7 @@ export function useConfirmationPopup({
             disabled: loading,
           } as ConfirmationButtonConfig,
         };
+      }
 
       case 'leave':
         return {

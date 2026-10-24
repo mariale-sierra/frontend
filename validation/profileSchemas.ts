@@ -3,12 +3,13 @@ import type { TFunction } from 'i18next';
 
 /**
  * Mirrors app/profile/edit.tsx's previous hand-written `validate()`: display
- * name required, bio always optional (its own maxLength is enforced natively
+ * name required (not only spaces), bio always optional (its own maxLength is enforced natively
  * by the Input's `maxLength` prop, not re-validated here).
  */
 export function createProfileEditSchema(t: TFunction) {
   return z.object({
-    displayName: z.string().min(1, t('profileEdit.displayNameRequired')),
+    // Trimmed: only spaces is empty (the backend rejects an empty display_name).
+    displayName: z.string().trim().min(1, t('profileEdit.displayNameRequired')),
     bio: z.string(),
   });
 }

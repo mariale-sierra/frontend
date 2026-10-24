@@ -7,11 +7,11 @@ import { Text } from '../../ui/text';
 import { colors, radius, spacing } from '../../../constants/theme';
 import type { ChallengeVisibility } from '../../../types/challenge';
 import type { CycleDayStatus } from './CycleDayList';
+import { getCycleBreakdown } from '../../../utils/challengeCycle';
 
 interface ChallengeReviewSummaryProps {
   title: string;
   cycleLengthDays: number;
-  cyclesCount: number;
   durationDays: number;
   visibility: ChallengeVisibility | null;
   selectedCategories: string[];
@@ -40,7 +40,6 @@ function SummaryRow({ label, value, isLast }: { label: string; value: string; is
 export function ChallengeReviewSummary({
   title,
   cycleLengthDays,
-  cyclesCount,
   durationDays,
   visibility,
   selectedCategories,
@@ -53,6 +52,16 @@ export function ChallengeReviewSummary({
   const { t } = useTranslation();
   const days = useMemo(() => Array.from({ length: cycleLengthDays }, (_, index) => index + 1), [cycleLengthDays]);
   const restDaysCount = useMemo(() => days.filter((day) => getDayStatus(day) === 'rest').length, [days, getDayStatus]);
+
+  // Same "N full cycles (+ R days)" wording as the cycle step's calendar.
+  const { fullCycles, remainderDays } = getCycleBreakdown(durationDays, cycleLengthDays);
+  const cycleBreakdownLabel =
+    remainderDays > 0
+      ? t('challengeCreate.calendar.cyclesAndDays', {
+          cycles: t('challengeCreate.calendar.fullCycles', { count: fullCycles }),
+          days: t('challengeCreate.calendar.leftoverDays', { count: remainderDays }),
+        })
+      : t('challengeCreate.calendar.fullCycles', { count: fullCycles });
 
   const visibilityLabel = visibility
     ? t(`challengeCreate.visibility.${visibility.toLowerCase()}Label`)
@@ -81,13 +90,13 @@ export function ChallengeReviewSummary({
         </Text>
       </View>
 
-      <View style={styles.card}>
-        {/* No "Edit" link here (unlike the Cycle card below) — Categories/
+      <View style={styles.section}>
+        {/* No "Edit" link here (unlike the Cycle section below) — Categories/
             Location are read-only, derived from whichever exercises ended
             up in the routines, not a separately editable manual choice
             anymore (the old "What kind of training?" step is deprecated,
             per explicit 2026-09-04 request). To change them, change the
-            exercises via the Cycle card's own edit instead. */}
+            exercises via the Cycle section's own edit instead. */}
         <View style={styles.cardHeader}>
           <Text variant="header" tone="secondary">{t('challengeCreate.review.setupLabel')}</Text>
         </View>
@@ -102,12 +111,15 @@ export function ChallengeReviewSummary({
         />
         <SummaryRow
           label={t('challengeCreate.review.cycleLabel')}
-          value={t('challengeCreate.review.cycleValue', { cycleLengthDays, cyclesCount })}
+          value={t('challengeCreate.review.cycleValue', {
+            cycleLength: t('challenges.durationDaysLabel', { count: cycleLengthDays }),
+            breakdown: cycleBreakdownLabel,
+          })}
           isLast
         />
       </View>
 
-      <View style={styles.card}>
+      <View style={styles.section}>
         <Row justify="space-between" align="center" style={styles.cardHeader}>
           <Text variant="header" tone="secondary">{t('challengeCreate.review.cycleSectionLabel')}</Text>
           <Pressable onPress={onEditCycle} hitSlop={8}>
@@ -138,7 +150,7 @@ export function ChallengeReviewSummary({
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.lg,
+    gap: spacing.xl,
   },
   hero: {
     // backgroundColor set inline — this challenge's own accent color, see accentColor prop.
@@ -155,10 +167,9 @@ const styles = StyleSheet.create({
   heroCaption: {
     opacity: 0.7,
   },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.big,
-    padding: spacing.base,
+  // Setup and Cycle sit straight on the screen — no `surface` card (2026-10-20,
+  // explicit request) — just their header and rows.
+  section: {
     gap: spacing.xs,
   },
   cardHeader: {

@@ -11,10 +11,14 @@ import { Button } from '../../components/ui/button';
 import { OptionPillGrid } from '../../components/challenge/create';
 import { ActivityIcon } from '../../components/icons/activityIcon';
 import { WelcomeGlowBackground } from '../../components/onboarding/WelcomeGlowBackground';
-import { getMyProfile, updateMyProfile } from '../../services/user/user.service';
+import { updateMyProfile } from '../../services/user/user.service';
+import { loadMyProfile } from '../../services/cache/loaders';
+import { queryKeys } from '../../services/cache/queries';
+import { setQueryData } from '../../services/cache/queryCache';
 import { colors, spacing, activityColors } from '../../constants/theme';
 import { MAX_PRACTICE_PREFERENCES, PRACTICE_OPTIONS } from '../../constants/practiceOptions';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
+import { safeBack } from '../../utils/navigation';
 
 /**
  * Two entry points into the same picker:
@@ -54,7 +58,7 @@ export default function OnboardingPractices() {
   useEffect(() => {
     if (!isEditMode) return;
     let active = true;
-    getMyProfile()
+    loadMyProfile()
       .then((profile) => {
         if (active) setSelected(profile.practice_preferences ?? []);
       })
@@ -83,7 +87,7 @@ export default function OnboardingPractices() {
 
   function finish() {
     if (isEditMode) {
-      router.back();
+      safeBack('/(tabs)/profile');
     } else {
       router.replace('/(tabs)');
     }
@@ -100,7 +104,8 @@ export default function OnboardingPractices() {
     }
     setSaving(true);
     try {
-      await updateMyProfile({ practice_preferences: selected });
+      const updated = await updateMyProfile({ practice_preferences: selected });
+      setQueryData(queryKeys.myProfile, updated);
       finish();
     } catch {
       show({ message: t('onboardingPractices.saveError') });

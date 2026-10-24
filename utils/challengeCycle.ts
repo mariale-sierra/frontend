@@ -13,6 +13,22 @@ export function dayInCycle(challengeDay: number, cycleLengthDays: number): numbe
   return ((challengeDay - 1) % cycleLengthDays) + 1;
 }
 
+/**
+ * How a challenge's length splits into its cycle: how many FULL cycles fit,
+ * and how many days are left over at the end (the last cycle, cut short).
+ * 30 days on a 4-day cycle = 7 full cycles + 2 days.
+ */
+export function getCycleBreakdown(
+  durationDays: number,
+  cycleLengthDays: number,
+): { fullCycles: number; remainderDays: number } {
+  if (!cycleLengthDays || cycleLengthDays <= 0) return { fullCycles: 0, remainderDays: durationDays };
+  return {
+    fullCycles: Math.floor(durationDays / cycleLengthDays),
+    remainderDays: durationDays % cycleLengthDays,
+  };
+}
+
 /** The cycle-day entry (routine name, rest flag, exercises) covering a given absolute challenge day. */
 export function findCycleDayFor(
   challengeDay: number,
