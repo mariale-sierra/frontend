@@ -116,10 +116,20 @@ type FieldStepKey = 'email' | 'username' | 'password';
 
 const FIELD_STEP_INDEX: Record<FieldStepKey, number> = { email: 3, username: 4, password: 5 };
 
-// Backend conflicts (`common.errors.known.*` keys) that point at one field.
-const REGISTER_CONFLICT_FIELD: Record<string, FieldStepKey | undefined> = {
-  emailInUse: 'email',
-  usernameInUse: 'username',
+// Backend rejections (`common.errors.known.*` keys) that belong to specific
+// fields: the flow goes
+// back to the first one's step and marks all of them there. B4: the backend
+// no longer says WHICH of email/username is taken (account enumeration), so
+// both are marked; the password policy's specific messages land on the
+// password step. emailInUse/usernameInUse are a backend from before B4.
+const REGISTER_FIELD_ERRORS: Record<string, FieldStepKey[] | undefined> = {
+  emailInUse: ['email'],
+  usernameInUse: ['username'],
+  accountTaken: ['email', 'username'],
+  passwordTooShort: ['password'],
+  passwordTooLong: ['password'],
+  passwordContainsIdentity: ['password'],
+  passwordTooCommon: ['password'],
 };
 
 function fieldStepKeyFor(step: number): FieldStepKey {
@@ -372,13 +382,14 @@ export default function Register() {
       // have that gap.
       // The request opts out of the global toast (auth.service): this is the one message,
       // translated (e.g. "email already in use") instead of the API's English text.
-      // A taken email/username belongs to its own field: go back to that step
-      // and mark it there, so the user fixes it where it was typed.
-      const takenField = REGISTER_CONFLICT_FIELD[knownApiMessageKey(error) ?? ''];
+      // A taken email/username or a rejected password belongs to its field: go
+      // back to that step and mark it there, so the user fixes it where it was
+      // typed (REGISTER_FIELD_ERRORS).
+      const fields = REGISTER_FIELD_ERRORS[knownApiMessageKey(error) ?? ''];
       const message = getApiErrorMessage(error, t, t('auth.register.createAccountFailed'));
-      if (takenField) {
-        setStep(FIELD_STEP_INDEX[takenField]);
-        setError(takenField, { type: 'server', message });
+      if (fields) {
+        setStep(FIELD_STEP_INDEX[fields[0]]);
+        fields.forEach((field) => setError(field, { type: 'server', message }));
       } else {
         show({ message });
       }

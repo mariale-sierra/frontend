@@ -41,15 +41,32 @@ const KNOWN_BACKEND_MESSAGES: Record<string, string> = {
   'You cannot report your own content': 'cannotReportOwn',
   'You cannot join a challenge you created': 'ownChallenge',
   'User is the creator of this challenge': 'ownChallenge',
+  // Before B4 the API told the two apart; kept for a backend not yet updated.
   'Email already in use': 'emailInUse',
   'Username already in use': 'usernameInUse',
+  // B4: one answer for either (no account enumeration).
+  'Email or username already in use': 'accountTaken',
+  // B4 password policy (backend src/auth/password-policy.ts).
+  'Password must be at least 10 characters': 'passwordTooShort',
+  'Password must be at most 72 bytes': 'passwordTooLong',
+  'Password must not contain your username or email': 'passwordContainsIdentity',
+  'Password is too common': 'passwordTooCommon',
   'Account deletion already requested': 'deletionAlreadyRequested',
   'Cycle length cannot exceed duration': 'cycleTooLong',
 };
 
 export function knownApiMessageKey(error: unknown): string | undefined {
   const message = (error as ApiErrorLike | undefined)?.response?.data?.message;
-  return typeof message === 'string' ? KNOWN_BACKEND_MESSAGES[message.trim()] : undefined;
+  if (typeof message === 'string') return KNOWN_BACKEND_MESSAGES[message.trim()];
+  // A 400 from the ValidationPipe carries a list (e.g. the password policy's
+  // message): the first one the app knows.
+  if (Array.isArray(message)) {
+    for (const item of message) {
+      const key = typeof item === 'string' ? KNOWN_BACKEND_MESSAGES[item.trim()] : undefined;
+      if (key) return key;
+    }
+  }
+  return undefined;
 }
 
 function isTimeout(error: unknown) {

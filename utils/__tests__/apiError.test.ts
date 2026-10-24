@@ -1,4 +1,10 @@
-import { describeError, getApiErrorMessage, logError, wasErrorToastShown } from '../apiError';
+import {
+  describeError,
+  getApiErrorMessage,
+  knownApiMessageKey,
+  logError,
+  wasErrorToastShown,
+} from '../apiError';
 
 const t = (key: string) => `t(${key})`;
 
@@ -50,6 +56,31 @@ describe('register conflicts', () => {
     expect(getApiErrorMessage(axiosError(409, { message: 'Username already in use' }), t, 'fallback')).toBe(
       't(common.errors.known.usernameInUse)',
     );
+  });
+
+  it('B4: translates the single answer for a taken email or username', () => {
+    expect(
+      getApiErrorMessage(axiosError(409, { message: 'Email or username already in use' }), t, 'fallback'),
+    ).toBe('t(common.errors.known.accountTaken)');
+  });
+});
+
+describe('B4 password policy messages', () => {
+  it.each([
+    ['Password must be at least 10 characters', 'passwordTooShort'],
+    ['Password must be at most 72 bytes', 'passwordTooLong'],
+    ['Password must not contain your username or email', 'passwordContainsIdentity'],
+    ['Password is too common', 'passwordTooCommon'],
+  ])('maps the ValidationPipe list entry "%s"', (message, key) => {
+    const error = axiosError(400, { message: [message] });
+    expect(knownApiMessageKey(error)).toBe(key);
+    expect(getApiErrorMessage(error, t, 'fallback')).toBe(`t(common.errors.known.${key})`);
+  });
+
+  it('picks the first known entry of a list and ignores the rest', () => {
+    expect(
+      knownApiMessageKey(axiosError(400, { message: ['email must be an email', 'Password is too common'] })),
+    ).toBe('passwordTooCommon');
   });
 });
 
