@@ -82,9 +82,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // server rejects (401) still ends the session — the same cleanup as
       // before, just after the first paint instead of before it. Network
       // errors, 5xx, etc. keep the session, as they always did.
+      // B4: an expired access token is renewed by the API client first; a
+      // 401 here means the session itself is over.
       fetchAuthMe().catch(async (error: any) => {
         if (error?.response?.status !== 401) return;
-        await logoutService();
+        await logoutService({ revokeOnServer: false });
         invalidateChallengeProgressCache();
         resetSessionStores();
         await clearQueryCache();
@@ -102,13 +104,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     restoreSession();
   }, [restoreSession]);
 
-  // Any authenticated request answered 401 (token expired, account banned,
-  // purged or gone) signs the user out here, and RootNavigator takes them to
+  // Any authenticated request answered 401 that a refresh couldn't fix
+  // (session expired or revoked, account banned, purged or gone) signs the
+  // user out here, and RootNavigator takes them to
   // the login screen. See services/api.ts.
   useEffect(() => {
     setSessionExpiredHandler(async () => {
       await forgetPushToken();
-      await logoutService();
+      // Already over server-side (the refresh was rejected): nothing to revoke.
+      await logoutService({ revokeOnServer: false });
       invalidateChallengeProgressCache();
       resetSessionStores();
       await clearQueryCache();

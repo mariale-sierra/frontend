@@ -1,5 +1,11 @@
 import api from '../api';
-import { clearAccessToken, getAccessToken, setAccessToken } from './token.service';
+import {
+  clearAccessToken,
+  clearRefreshToken,
+  getAccessToken,
+  getRefreshToken,
+  setSessionTokens,
+} from './token.service';
 import { storage } from '../../utils/storage';
 import type {
   AuthSessionResponse,
@@ -14,9 +20,9 @@ export async function login(email: string, password: string) {
     // The login screen shows its own message for every failure (wrong credentials
     // is a 401 that is not a session expiry), so no global toast on top of it.
     const response = await api.post<AuthSessionResponse>('/auth/login', payload, { suppressErrorToast: true });
-    const { accessToken, user } = response.data;
+    const { accessToken, refreshToken, user } = response.data;
 
-    await setAccessToken(accessToken);
+    await setSessionTokens(accessToken, refreshToken);
     if (user?.id) {
       await storage.setItem('userId', String(user.id));
     }
@@ -39,8 +45,8 @@ export async function register(
 ) {
   const payload: RegisterRequest = { email, username, password, ...consent };
   const response = await api.post<AuthSessionResponse>('/auth/register', payload, { suppressErrorToast: true });
-  const { accessToken, user } = response.data;
-  await setAccessToken(accessToken);
+  const { accessToken, refreshToken, user } = response.data;
+  await setSessionTokens(accessToken, refreshToken);
   if (user?.id) {
     await storage.setItem('userId', String(user.id));
   }
@@ -56,8 +62,30 @@ export async function acceptTerms(consent: LegalConsent) {
   return response.data;
 }
 
-export async function logout() {
+/** Bounded so signing out never hangs on a bad connection. */
+const LOGOUT_REQUEST_TIMEOUT_MS = 5000;
+
+/**
+ * Clears the session on this device. With `revokeOnServer` (an explicit
+ * logout) it first asks the backend to revoke it (B4: POST /auth/logout), so
+ * the refresh token — and within seconds its access token — stop working
+ * even if they were copied off the device. Best effort: offline, the local
+ * sign-out still happens and the server session just expires (30 days).
+ * Skipped when the session already ended server-side (expired / revoked).
+ */
+export async function logout({ revokeOnServer = true }: { revokeOnServer?: boolean } = {}) {
+  const refreshToken = revokeOnServer ? await getRefreshToken().catch(() => null) : null;
+  if (refreshToken) {
+    await api
+      .post(
+        '/auth/logout',
+        { refreshToken },
+        { authRefresh: true, suppressErrorToast: true, timeout: LOGOUT_REQUEST_TIMEOUT_MS },
+      )
+      .catch(() => undefined);
+  }
   await clearAccessToken();
+  await clearRefreshToken();
   await storage.removeItem('userId');
   await storage.removeItem('username');
 }

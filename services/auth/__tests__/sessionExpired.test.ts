@@ -2,7 +2,12 @@ import api from '../../api';
 import { notifySessionExpired, setSessionExpiredHandler } from '../sessionEvents';
 
 jest.mock('expo-constants', () => ({ __esModule: true, default: { expoConfig: { extra: {} } } }));
-jest.mock('../token.service', () => ({ getAccessToken: jest.fn(() => Promise.resolve(null)) }));
+// No refresh token stored: a 401 can't be renewed (B4), so it signs out.
+// The refresh itself is covered in sessionRefresh.test.ts.
+jest.mock('../token.service', () => ({
+  getAccessToken: jest.fn(() => Promise.resolve(null)),
+  getRefreshToken: jest.fn(() => Promise.resolve(null)),
+}));
 jest.mock('../../../i18n', () => ({ __esModule: true, default: { t: (key: string) => key } }));
 
 type Rejected = (error: unknown) => Promise<unknown>;

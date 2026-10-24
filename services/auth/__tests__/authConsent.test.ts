@@ -6,9 +6,11 @@ jest.mock('../../api', () => ({
   default: { post: jest.fn(), get: jest.fn() },
 }));
 jest.mock('../token.service', () => ({
-  setAccessToken: jest.fn(),
+  setSessionTokens: jest.fn(),
   clearAccessToken: jest.fn(),
+  clearRefreshToken: jest.fn(),
   getAccessToken: jest.fn(),
+  getRefreshToken: jest.fn(),
 }));
 jest.mock('../../../utils/storage', () => ({
   storage: { setItem: jest.fn(), getItem: jest.fn(), removeItem: jest.fn() },
@@ -22,12 +24,12 @@ describe('auth service — legal consent', () => {
   it('sends acceptTerms and confirmAge16 with the registration', async () => {
     post.mockResolvedValue({ data: { accessToken: 't', user: { id: '1', username: 'u' } } });
 
-    await register('a@b.com', 'user', 'password123', { acceptTerms: true, confirmAge16: true });
+    await register('a@b.com', 'user', 'Montaña-Lenta-Azul', { acceptTerms: true, confirmAge16: true });
 
     expect(post).toHaveBeenCalledWith('/auth/register', {
       email: 'a@b.com',
       username: 'user',
-      password: 'password123',
+      password: 'Montaña-Lenta-Azul',
       acceptTerms: true,
       confirmAge16: true,
     }, { suppressErrorToast: true });
