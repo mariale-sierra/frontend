@@ -798,6 +798,60 @@ No hay ninguna cuenta Apple configurada en Xcode, así que la firma está **ente
 pendiente** y es el siguiente paso que requiere a la persona usuaria. El `aps-environment`
 sigue ahí: es lo que una cuenta gratuita rechazará (§8).
 
+### 9.2.6 Firma con cuenta Apple gratuita: lo que costó y lo que cuesta
+
+Se firmó con un **Personal Team** (cuenta Apple gratuita). Dos ajustes fueron necesarios,
+los dos **exclusivamente locales** y en archivos que `.gitignore` excluye (`/ios`), sin
+tocar nada versionado ni crear ningún commit:
+
+**1. El entitlement de push hubo que retirarlo.** Un Personal Team no puede firmar la
+capacidad *Push Notifications*. Se eliminó `aps-environment` de
+`ios/frontend/frontend.entitlements`, que queda como `<dict/>`, con copia del original
+guardada fuera del repositorio para restaurarlo. `services/notifications/
+pushNotifications.ts` **no se tocó**: la funcionalidad push sigue intacta en el código del
+producto.
+
+**2. El bundle identifier oficial no se pudo usar.** Al intentar firmar con
+`com.havit.app`, Xcode lo rechazó:
+
+```
+error: Failed Registering Bundle Identifier: The app identifier "com.havit.app" cannot be
+registered to your development team because it is not available.
+error: No profiles for 'com.havit.app' were found
+```
+
+Ese identificador pertenece a otro equipo de desarrollo. Se compiló con
+`com.havit.app.b8local`, pasado **como variable a `xcodebuild`**
+(`PRODUCT_BUNDLE_IDENTIFIER=...`), de modo que ni el `pbxproj` ni `app.json` cambiaron: el
+identificador oficial del proyecto sigue siendo `com.havit.app`.
+
+Con esos dos ajustes la firma salió adelante: Xcode creó el certificado de desarrollo
+(`1 valid identities found`) y el perfil
+`iOS Team Provisioning Profile: com.havit.app.b8local`, sin un solo error de
+aprovisionamiento.
+
+> **Consecuencia que conviene tener presente al leer los resultados.** La app instalada en
+> el iPhone tiene un bundle identifier distinto del de producción. Para los 13 flujos que
+> se van a probar eso es indiferente, pero **no** lo sería para nada que dependa del
+> identificador: notificaciones push, deep links asociados a dominios o compras.
+
+**Limitaciones de la cuenta gratuita, registradas y no negociables:**
+
+| Límite | Efecto en B8 |
+| --- | --- |
+| No firma *Push Notifications* | **F13 (notificaciones push) NO SE PUEDE PROBAR.** Queda como **NO COMPLETADO**, nunca como aprobado |
+| El perfil caduca a los **7 días** | **Medido**, no citado: el perfil creado el **25-10-2026 15:30** caduca el **01-11-2026 15:30**. Pasado el plazo la app deja de abrirse y hay que reinstalar |
+| Bundle identifier distinto | Lo descrito arriba |
+
+A esto se suman, por el entorno de pruebas aislado y no por la cuenta: **F11 (subir
+fotografía)** y **F12 (estados de moderación)** tampoco son verificables, porque las
+credenciales de Cloudflare R2 y OpenAI se anularon a propósito para no usar servicios
+reales (§9.4.2). **F10 (capturar la fotografía)** sí, porque la captura ocurre en el
+dispositivo.
+
+Es decir: de los 14 flujos de §10.2, **11 son verificables** en este montaje, y 3 quedan
+fuera por límites documentados, no por falta de ejecución.
+
 ### 9.3 Paso 3 — generar el proyecto, firmar y ejecutar
 
 ```bash
