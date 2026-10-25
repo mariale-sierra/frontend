@@ -1223,6 +1223,91 @@ B8**, y no se ha hecho.
 Para los flujos que **solo leen** (F6, F8, F14) basta un backend de pruebas, sin tocar
 datos.
 
+## 9.5 Incidencia B8-I1: `POST /challenges` devuelve 500 en el entorno de pruebas
+
+Detectada durante la prueba física en el iPhone, al crear un reto desde la app.
+
+### Evidencia del backend
+
+```
+9:44:07 PM  LOG [ChallengesService] Creating challenge with name: Holy fuck
+9:44:07 PM  LOG [HTTP] POST /challenges 500 +3ms
+9:44:47 PM  LOG [ChallengesService] Creating challenge with name: Holy fuck
+9:44:47 PM  LOG [HTTP] POST /challenges 500 +5ms
+```
+
+El dato que orienta el diagnóstico: **3 y 5 ms**. Demasiado rápido para un fallo de base de
+datos o un tiempo de espera de red; es una excepción lanzada de inmediato.
+
+### Excepción real y cadena de llamada
+
+```
+src/challenges/challenges.service.ts:107  async create(dto, userId)
+                                   :108    logger.log('Creating challenge with name: ...')  ← última línea que se ve
+                                   :120    await this.moderationService.assertTextAllowed([dto.name, ...])
+src/openai/moderation.service.ts   :236  assertTextAllowed -> validateText -> getClient()
+                                   :77     const apiKey = process.env.OPENAI_API_KEY;
+                                   :79     if (!apiKey) throw new InternalServerErrorException(
+                                              'OPENAI_API_KEY is not configured');
+```
+
+La creación de un reto **modera sincrónicamente** los textos públicos antes de persistir
+nada. Es trabajo de B3, según el comentario del propio código
+(*"B3: moderate the public text fields synchronously"*), y el diseño es **fail-closed** a
+propósito: *"if OpenAI can't be reached, validateText()'s 503 propagates and nothing is
+saved."*
+
+### Causa
+
+`OPENAI_API_KEY` está **vacía**, porque B8 la anuló deliberadamente al montar el entorno
+aislado, para cumplir la condición de no usar servicios externos reales (§9.4.2). Con la
+clave vacía, `getClient()` lanza antes de hacer ninguna llamada de red.
+
+### Clasificación
+
+| Pregunta | Respuesta |
+| --- | --- |
+| ¿Es un defecto del código? | **No.** Es comportamiento intencionado, especificado y **cubierto por un test**: `src/openai/moderation.service.spec.ts:107`, *"should throw 500 when OPENAI_API_KEY is missing"* |
+| ¿Lo introdujo B8? | **No en el código.** B8 no ha tocado el backend. Lo provoca la **configuración del entorno de pruebas** que B8 montó, al vaciar la clave a propósito |
+| ¿Es preexistente? | **No** en un entorno con la clave configurada. En producción, con clave real, este camino no falla |
+| ¿Específico del entorno? | **Sí.** Es la consecuencia esperada de aislar los servicios externos |
+| ¿Relacionado con `havit_b8_test`, migraciones o datos de referencia? | **No.** Ni la base ni los seeds intervienen: la excepción ocurre antes de abrir transacción |
+
+### Qué bloquea, y qué no
+
+**Crear un reto no es ninguno de los 14 flujos** exigidos por el criterio de B8. Pero sí
+bloquea indirectamente a dos que sí lo son, porque `havit_b8_test` tiene **0 retos** y no
+hay forma de crear uno desde la app:
+
+- **F7 (unirse a retos)** — necesita que exista al menos un reto.
+- **F9 (registrar entrenamientos)** — el progreso se registra contra un reto.
+
+### Solución mínima recomendada
+
+No hay salida por configuración: `OPENAI_API_KEY` es la **única** variable de entorno en
+toda esa ruta (comprobado sobre `src/openai/` y `src/challenges/`), y **no existe ningún
+flag para desactivar la moderación**.
+
+| Opción | Valoración |
+| --- | --- |
+| **Insertar un reto de prueba directamente en `havit_b8_test`** | **Recomendada.** No toca código, ni migraciones versionadas, ni servicios externos; son datos en una base local aislada creada para esto. Desbloquea F7 y F9. **Requiere autorización** |
+| Configurar una `OPENAI_API_KEY` real | Descartada: contradice la condición de no usar servicios externos reales |
+| Añadir un flag de bypass de moderación en el backend | Descartada: modifica el backend, queda fuera del alcance de B8 y debilitaría una comprobación de seguridad de B3 |
+
+Mientras no se decida, F7 y F9 quedan **NO EJECUTADOS**, no fallidos.
+
+### Hallazgo secundario: el 500 no deja rastro en el log
+
+`grep -c "ExceptionsHandler"` sobre el log del backend devuelve **0**. El filtro
+`src/common/filters/http-exception.filter.ts` registra `warn` para los 4xx y `error` con
+stack para las excepciones no controladas, pero una `HttpException` **con estado 500**
+—como esta `InternalServerErrorException`— entra por la primera rama, que extrae el mensaje
+**sin registrar nada**. Es decir: un 500 lanzado deliberadamente es invisible en el log del
+servidor.
+
+Diagnosticarlo requirió leer el código, no el log. Es una laguna de observabilidad real,
+**fuera del alcance de B8** y sin corregir: queda anotada para quien corresponda.
+
 ## 10. Matriz de validación en dispositivos
 
 Ningún dispositivo físico se ha probado. Toda la columna de resultado está **pendiente**.
@@ -1248,22 +1333,38 @@ se presentará como tal.
 Rellenar con fecha, versión, identificador de build, tipo de conexión y evidencia
 (captura o vídeo) en el momento de ejecutar.
 
-| # | Flujo | D1 iPhone | D2 Android | Notas |
+Resultados reales de la sesión del **25-10-2026** en **D1 (iPhone 16 Pro Max, iOS 26.6.2)**,
+con build de desarrollo firmada localmente (`com.havit.app.b8local`) contra el backend local
+`192.168.5.94:3100` y la base `havit_b8_test`. La evidencia es el log HTTP del backend más
+los contadores de la base.
+
+| # | Flujo | D1 iPhone | D2 Android | Evidencia / motivo |
 | --- | --- | --- | --- | --- |
-| F1 | Registro | pendiente | pendiente | **crea datos** — no contra producción |
-| F2 | Login | pendiente | pendiente | |
-| F3 | Restauración de sesión (cerrar y reabrir) | pendiente | pendiente | B4 |
-| F4 | Refresh de token | pendiente | pendiente | B4 |
-| F5 | Logout | pendiente | pendiente | B4 |
-| F6 | Explorar retos | pendiente | pendiente | solo lectura |
-| F7 | Unirse a un reto | pendiente | pendiente | **crea datos** |
-| F8 | Consultar rutinas | pendiente | pendiente | solo lectura |
-| F9 | Registrar entrenamiento | pendiente | pendiente | **crea datos** |
-| F10 | Capturar foto con la cámara | pendiente | pendiente | valida §4.2 / §4.3 |
-| F11 | Subir foto de evidencia | pendiente | pendiente | **crea datos** |
-| F12 | Estado de moderación | pendiente | pendiente | |
-| F13 | Notificaciones push | **bloqueado** sin cuenta de pago (§8) | pendiente | Android necesita credenciales FCM |
-| F14 | Navegación principal | pendiente | pendiente | |
+| F1 | Registro | **APROBADO** | pendiente | `POST /auth/register 200` y el usuario aparece en `havit_b8_test` (`9b31664d-…`, `pruebitaxd`). Contador **0 → 1 usuarios** |
+| F2 | Login | **NO EJECUTADO** | pendiente | Los 5 `POST /auth/login 401` del log son intentos **previos** al registro, con una cuenta que no existía. Falta un login con credenciales válidas |
+| F3 | Restauración de sesión | **NO EJECUTADO** | pendiente | Requiere cerrar y reabrir la app |
+| F4 | Refresh de token (B4) | **NO EJECUTADO** | pendiente | Hay 1 fila en `refresh_tokens`, creada por el registro, pero **ninguna llamada a `/auth/refresh`** en el log |
+| F5 | Logout | **NO EJECUTADO** | pendiente | Ninguna llamada a `/auth/logout` |
+| F6 | Explorar retos | **PARCIAL** | pendiente | `GET /challenges?limit=50 200`: el endpoint responde, pero la base tiene **0 retos**, así que la lista venía vacía. **No se ha visto la UI con datos** |
+| F7 | Unirse a un reto | **NO EJECUTADO** | pendiente | Bloqueado por la incidencia **B8-I1** (§9.5): no hay ningún reto y no se puede crear |
+| F8 | Consultar rutinas | **PARCIAL** | pendiente | `GET /routine 200` y `GET /exercises/count` ×3 responden. Sin rutina propia creada, tampoco se vio la UI con datos |
+| F9 | Registrar entrenamiento | **NO EJECUTADO** | pendiente | Bloqueado por B8-I1: el progreso se registra contra un reto |
+| F10 | Capturar foto con la cámara | **NO EJECUTADO** | pendiente | Pendiente. Validará los textos de permiso en español de §9.2.3 |
+| F11 | Subir foto de evidencia | **NO COMPLETADO** | pendiente | Fuera de alcance en este entorno: credenciales de Cloudflare R2 anuladas a propósito |
+| F12 | Estado de moderación | **NO COMPLETADO** | pendiente | Fuera de alcance: `OPENAI_API_KEY` anulada a propósito. Es la misma causa que B8-I1 |
+| F13 | Notificaciones push | **NO COMPLETADO** | pendiente | Un Personal Team gratuito no puede firmar la capacidad (§9.2.6). **No se marcará como aprobado** |
+| F14 | Navegación principal y perfil | **APROBADO** | pendiente | Recorrido real con respuestas 200: `GET /users/me`, `/feed`, `/users/me/challenges`, `/workout-posts/mine`, `/follows/following/streaks`, `/notifications/unread-count`, `PATCH /users/me/profile`, `GET /workout-posts/user/9b31664d-…` |
+
+**Recuento honesto: 2 aprobados, 2 parciales, 6 no ejecutados y 3 no completables** en este
+entorno. El onboarding completo y la navegación funcionaron en el dispositivo físico, que no
+es poco: demuestra que la build firmada arranca, carga el bundle, autentica y navega contra
+un backend local.
+
+> **Lo que esta sesión demostró sobre el aislamiento.** Los contadores pasaron de
+> `0 usuarios / 0 tokens` a `1 usuario / 1 token` **en `havit_b8_test`**, mientras
+> `havit_b4_test` sigue con sus 360 usuarios sin tocar. La capa 3 de §9.4.7 funcionó: la app
+> del teléfono escribió en la base local y en ninguna otra. Ninguna petición salió hacia
+> `20.63.84.1`.
 
 ### 10.3 Hardware y red
 
