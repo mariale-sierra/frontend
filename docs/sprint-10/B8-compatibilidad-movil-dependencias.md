@@ -969,9 +969,9 @@ falta tocarla):
 
 ```bash
 cd backend
-env DB_HOST=127.0.0.1 DB_PORT=5432 DB_USERNAME=ale DB_PASSWORD=local \
+env DB_HOST=127.0.0.1 DB_PORT=5432 DB_USERNAME=ale DB_PASSWORD=<local> \
     DB_DATABASE=havit_b4_test DB_SSL=false DB_POOL_HOST= DB_POOL_PORT= \
-    JWT_SECRET=b8-local-test-only-not-a-production-secret \
+    JWT_SECRET=<secreto-local-de-pruebas> \
     CLOUDFLARE_R2_ACCESS_KEY_ID= CLOUDFLARE_R2_SECRET_ACCESS_KEY= \
     CLOUDFLARE_R2_ACCOUNT_ID= CLOUDFLARE_R2_BUCKET_NAME= CLOUDFLARE_R2_PUBLIC_URL= \
     OPENAI_API_KEY= REDIS_URL= PORT=3100 \
@@ -984,6 +984,10 @@ está en el entorno. Las obligatorias son solo `DB_HOST`, `DB_USERNAME`, `DB_PAS
 `DB_DATABASE` y `JWT_SECRET` (`src/config/env.validation.ts`); `DB_PASSWORD` tiene que ir
 no vacía aunque la PostgreSQL local use autenticación *trust*, porque la validación
 rechaza una cadena vacía.
+
+Los valores entre `<>` son marcadores: este documento **no** registra ninguna credencial, ni
+real ni de pruebas. El `JWT_SECRET` del entorno local es de usar y tirar y muere con el
+backend de pruebas.
 
 Resultado (**medido**): `Nest application successfully started`, y
 
