@@ -756,6 +756,48 @@ Observación para la prueba de orientación: el `Info.plist` declara también
 teléfono si la app gira 180°, porque "orientación vertical" en la matriz debería significar
 vertical a secas.
 
+### 9.2.4 El iPhone, reconocido y compilable (B-9 resuelto)
+
+Con el teléfono conectado por cable, confiado y con el Modo de desarrollador activo:
+
+```
+$ xcrun devicectl list devices
+Name                 State       Model
+iPhone de Alejandro  connected   iPhone 16 Pro Max (iPhone17,2)
+
+$ xcrun devicectl device info details --device <uuid>
+marketingName:       iPhone 16 Pro Max
+productType:         iPhone17,2
+osVersionNumber:     26.6.2
+developerModeStatus: enabled
+```
+
+Y la comprobación que llevaba pendiente desde §7.2, la única que zanja B-9:
+
+```
+$ xcodebuild -showdestinations -workspace frontend.xcworkspace -scheme frontend
+  Available destinations for the "frontend" scheme:
+    { platform:iOS, arch:arm64, id:00008140-000668DC1E11801C, name:iPhone de Alejandro }
+```
+
+El dispositivo aparece entre los **disponibles**, no entre los *Ineligible*. Es decir:
+**Xcode 26.4.1 acepta un iPhone con iOS 26.6.2 como destino de compilación**, pese a que su
+SDK sea el 26.4. **No hace falta actualizar Xcode**, que era el riesgo anotado en B-9.
+
+### 9.2.5 Estado de la firma antes de configurarla
+
+| Comprobación | Valor |
+| --- | --- |
+| `PRODUCT_BUNDLE_IDENTIFIER` | `com.havit.app` |
+| `CODE_SIGN_ENTITLEMENTS` | `frontend/frontend.entitlements`, con `aps-environment = development` |
+| `DEVELOPMENT_TEAM` | **sin definir** |
+| Perfiles de aprovisionamiento | **0** |
+| Identidades de firma en el llavero | **0 valid identities found** |
+
+No hay ninguna cuenta Apple configurada en Xcode, así que la firma está **enteramente
+pendiente** y es el siguiente paso que requiere a la persona usuaria. El `aps-environment`
+sigue ahí: es lo que una cuenta gratuita rechazará (§8).
+
 ### 9.3 Paso 3 — generar el proyecto, firmar y ejecutar
 
 ```bash
@@ -1136,7 +1178,7 @@ Ninguna fila debe marcarse sin ejecutar el flujo en el teléfono.
 
 | # | Dispositivo | Modelo | SO | Tipo | Build | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| D1 | iPhone (de Alejandro) | iPhone 16 Pro Max | iOS 26.6.2 | **físico** | development firmada localmente | **PENDIENTE DE VALIDACIÓN** — proyecto listo, falta firma y dispositivo |
+| D1 | iPhone de Alejandro | iPhone 16 Pro Max (`iPhone17,2`) | **iOS 26.6.2** (confirmado por `devicectl`) | **físico** | development firmada localmente | **PENDIENTE DE VALIDACIÓN** — conectado y reconocido como destino compilable; falta **solo** la firma |
 | D2 | Android (sin asignar) | — | — | **físico** | `app-release.apk` local (§7.1.2) | **PENDIENTE** — **el APK ya existe**; falta un teléfono donde instalarlo |
 | D3 | Emulador `Pixel_9a` | AVD | API 36 | emulador | `app-release.apk` local | **PENDIENTE** — el APK es instalable; no se ha ejecutado |
 
@@ -1197,11 +1239,11 @@ configuración (§4.1), no de un dispositivo.
 | B-3 | ~~CocoaPods no instalado~~ | — | **RESUELTO** (§9.2): 1.17.0 por Homebrew, `pod install` correcto |
 | B-4 | ~~`xcode-select` apunta a CLT~~ | — | **RESUELTO** sin `sudo` usando `DEVELOPER_DIR` |
 | B-5 | Sin cuenta Apple Developer de pago | **solo** las notificaciones push en iOS (F13) | 99 USD/año, o aceptar el camino A |
-| B-6 | iPhone no conectado | toda la validación física de iOS | conectar y confiar en el Mac |
+| B-6 | ~~iPhone no conectado~~ | — | **RESUELTO**: conectado, confiado y con Modo de desarrollador `enabled` (§9.2.4) |
 | B-7 | B3 sin mergear + API en HTTP | que iOS llegue al backend (§4.4, §9.4) | merge de B3 o backend en red local |
 | B-8 | Toolchain Android local incompleto | la build local y el emulador | plataforma `android-35` + `cmdline-tools` |
 | B-11 | ~~Componente de plataforma iOS no instalado en Xcode~~ | — | **RESUELTO**: runtime `iOS 26.4.1 (23E254a)` instalado (7,9 GB, *Ready*) y `-showdestinations` ya ofrece `Any iOS Device` |
-| B-9 | Soporte de iOS 26.6.2 en Xcode 26.4.1 sin confirmar | posiblemente nada; se sabe al conectar | no evaluable hasta resolver B-11; actualizar Xcode si lo rechaza |
+| B-9 | ~~Soporte de iOS 26.6.2 en Xcode 26.4.1 sin confirmar~~ | — | **RESUELTO**: el iPhone aparece como destino disponible en `-showdestinations` (§9.2.4). No hace falta actualizar Xcode |
 | B-10 | Sin credenciales FCM/APNs | push en ambas plataformas | configurar en EAS |
 
 ## 12. Coordinación con otras tareas
