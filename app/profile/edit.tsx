@@ -27,7 +27,10 @@ import {
 import { loadMyProfile } from '../../services/cache/loaders';
 import { queryKeys } from '../../services/cache/queries';
 import { setQueryData } from '../../services/cache/queryCache';
-import { uploadImageAsync } from '../../services/uploads/upload.service';
+import {
+  normalizeUploadMimeType,
+  uploadImageAsync,
+} from '../../services/uploads/upload.service';
 import { isContentRejectedError } from '../../utils/contentModeration';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
@@ -158,7 +161,10 @@ export default function EditProfile() {
     setUploadingPhoto(true);
     try {
       // Reuses the shared R2 flow: sign → PUT → persist the public URL.
-      const publicUrl = await uploadImageAsync(result.assets[0].uri, 'image/jpeg');
+      // B5/CP6: the gallery can return PNG/WebP, not just JPEG — declare
+      // whatever it actually reports instead of always claiming JPEG.
+      const fileType = normalizeUploadMimeType(result.assets[0].mimeType);
+      const publicUrl = await uploadImageAsync(result.assets[0].uri, fileType);
       const updated = await updateMyProfilePhoto(publicUrl);
       setProfile(updated);
       setQueryData(queryKeys.myProfile, updated);
