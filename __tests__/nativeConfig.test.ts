@@ -78,44 +78,29 @@ describe('B8 — minimum supported OS versions', () => {
 });
 
 describe('B8 — iOS permission prompts', () => {
-  // iOS shows these strings in the system prompt. Without them the app crashes the
-  // first time it touches the camera; with Expo's English defaults it would prompt in
-  // English inside a Spanish-first app (i18n/index.ts falls back to 'es').
-  const locales = expoConfig.locales as Record<string, string>;
+  // iOS shows these strings in the system prompt, and without them the app crashes the
+  // first time it touches the camera. They come from the expo-camera / expo-image-picker
+  // plugin props, which is what writes them into the generated Info.plist.
+  //
+  // They are deliberately NOT localised through app.json's `locales` key. That key is for
+  // the app name: Expo applies it to Android too, writing every key into
+  // res/values-b+<lang>/strings.xml with no counterpart in the default locale, and
+  // `:app:lintVitalRelease` then fails a release build with ExtraTranslation. The app's
+  // fallback language is Spanish (i18n/index.ts), so Spanish is the right single text.
+  const descriptions = [
+    ['expo-camera', 'cameraPermission'],
+    ['expo-image-picker', 'photosPermission'],
+  ] as const;
 
-  it('registers a locale file per supported language', () => {
-    expect(Object.keys(locales).sort()).toEqual(['en', 'es']);
+  it.each(descriptions)('%s describes why HAVIT needs the permission', (name, prop) => {
+    const value = plugin(name)[prop];
+    expect(typeof value).toBe('string');
+    expect((value as string).trim().length).toBeGreaterThan(20);
+    expect(value).toMatch(/HAVIT/);
   });
 
-  it.each(Object.entries(locales))('%s describes every permission it prompts for', (_lang, file) => {
-    const strings = JSON.parse(readFileSync(join(__dirname, '..', file), 'utf8')) as Record<
-      string,
-      string
-    >;
-    expect(Object.keys(strings).sort()).toEqual([
-      'NSCameraUsageDescription',
-      'NSPhotoLibraryAddUsageDescription',
-      'NSPhotoLibraryUsageDescription',
-    ]);
-    for (const value of Object.values(strings)) expect(value.trim()).not.toBe('');
-  });
-
-  it('keeps the same keys in both languages', () => {
-    const keysFor = (file: string) =>
-      Object.keys(
-        JSON.parse(readFileSync(join(__dirname, '..', file), 'utf8')) as Record<string, string>,
-      ).sort();
-    expect(keysFor(locales.es)).toEqual(keysFor(locales.en));
-  });
-
-  it('does not declare a microphone description it no longer needs', () => {
-    for (const file of Object.values(locales)) {
-      const strings = JSON.parse(readFileSync(join(__dirname, '..', file), 'utf8')) as Record<
-        string,
-        string
-      >;
-      expect(strings.NSMicrophoneUsageDescription).toBeUndefined();
-    }
+  it('does not reintroduce the locales key, which breaks the Android release build', () => {
+    expect('locales' in expoConfig).toBe(false);
   });
 });
 

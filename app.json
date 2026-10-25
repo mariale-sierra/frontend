@@ -7,10 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "havit",
-    "locales": {
-      "es": "./locales/ios-es.json",
-      "en": "./locales/ios-en.json"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.havit.app"
