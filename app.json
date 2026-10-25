@@ -7,6 +7,10 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "havit",
+    "locales": {
+      "es": "./locales/ios-es.json",
+      "en": "./locales/ios-en.json"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.havit.app"
@@ -17,7 +21,18 @@
         "backgroundColor": "#ffffff"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.havit.app"
+      "package": "com.havit.app",
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.VIBRATE"
+      ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -29,6 +44,21 @@
       "expo-secure-store",
       "expo-font",
       "expo-status-bar",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "HAVIT usa la cámara para que tomes la foto que comprueba tu entrenamiento del día.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "HAVIT accede a tus fotos para que elijas la imagen de tu perfil o la evidencia de un entrenamiento.",
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -49,7 +79,13 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": true,
+            "minSdkVersion": 24,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35
+          },
+          "ios": {
+            "deploymentTarget": "16.4"
           }
         }
       ]
