@@ -250,6 +250,15 @@ Full record: `docs/sprint-10/B2-navegacion-comprension.md`.
 - Rewards: `constants/badges.ts` mirrors each badge's `metric` (`getBadgeMetric`) for the rule line in `BadgeDetailSheet`; after a completion `utils/progressLoggedFeedback.ts` reads `GET /badges/me` and `utils/challengeReward.ts` says what it earned (or how many are left). Finishing a challenge is not always a new badge.
 - i18n parity: `npm run i18n:check` (`scripts/check-i18n-keys.js`) compares nested keys of `en.ts`/`es.ts`; `i18n/__tests__/parity.test.ts` enforces the same in Jest.
 
+## 12g. Native compatibility and dependencies (Sprint 10, B8)
+Full record: `docs/sprint-10/B8-compatibilidad-movil-dependencias.md`.
+- Minimum supported OS versions are **Android API 24** (7.0) and **iOS 16.4**. They were measured from `expo prebuild` under Expo SDK 57 and are now pinned in `app.json`'s `expo-build-properties` (with `compileSdkVersion`/`targetSdkVersion` 35), so a patch bump that moves the floor fails a test instead of narrowing the device list in silence.
+- `android.permissions` is declared explicitly, and `blockedPermissions` drops `SYSTEM_ALERT_WINDOW`, `WRITE_EXTERNAL_STORAGE` and `RECORD_AUDIO` — Expo's base manifest ships them as "optional" defaults and HAVIT uses none of them (it photographs evidence and picks a profile image; it never records video or audio and never writes to the gallery). Adding a permission means adding it here, not relying on a library's manifest.
+- iOS permission prompts come from `locales/ios-es.json` / `locales/ios-en.json` via `app.json`'s `locales` key, which generates `es.lproj`/`en.lproj` `InfoPlist.strings`. Keep both files key-for-key identical, like `en.ts`/`es.ts`.
+- `__tests__/nativeConfig.test.ts` pins all of the above. It is config assertions only — green Jest is not a working native build.
+- iOS App Transport Security already refuses cleartext (`NSAllowsArbitraryLoads: false`, local networking excepted), so an iOS build cannot reach an `http://` API on a public IP at all. Switching the API to HTTPS is B3's work and a prerequisite for testing on an iPhone, not just a hardening step.
+- `npm audit --omit=dev` is **not** "what ships in the app": `expo` and `expo-router` are `dependencies` whose code only runs on the build machine. Classify by runtime reach before acting on an advisory.
+
 ## 13. Do and Don't Rules
 Do:
 - Read this guide and inspect the target route before editing.
