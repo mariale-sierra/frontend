@@ -903,6 +903,140 @@ prueba. Si el teléfono está hablando con la API local, sus peticiones aparecen
 aparece ninguna, no está usando la API local. Combinado con ATS en iOS, eso cubre los dos
 casos: o se ve el tráfico en local, o no hay tráfico en ningún sitio.
 
+### 9.4.5 `havit_b8_test`: base exclusiva de B8, creada y verificada
+
+Resuelve la decisión de §9.4.4: en vez de reutilizar `havit_b4_test` con sus 360 usuarios
+de B4, se creó una base nueva y limpia para B8. Comprobaciones hechas **antes** de crear
+nada:
+
+| Comprobación | Resultado |
+| --- | --- |
+| El servidor es local | `listen_addresses = localhost`, `inet_server_addr()` vacío (socket unix). **No se expone fuera de la máquina** |
+| Autenticación TCP local | `host all all 127.0.0.1 trust` — por eso el valor de `DB_PASSWORD` lo ignora Postgres y **no es un secreto real** |
+| `havit_b8_test` ya existía | **no** (`COUNT(*) = 0` en `pg_database`) |
+| Bases existentes intactas tras la operación | `havit_b4_test` sigue con 62 tablas, `havit_perf` con 53 |
+
+Creación, con rol de desarrollo **independiente** (no se reutiliza `ale`):
+
+```sql
+CREATE ROLE havit_b8 LOGIN PASSWORD '<valor local, trust lo ignora>';
+CREATE DATABASE havit_b8_test OWNER havit_b8;
+```
+
+Migraciones aplicadas con el runner del propio proyecto, apuntado explícitamente a esa
+base y solo a ella:
+
+```bash
+cd backend
+env DB_HOST=127.0.0.1 DB_PORT=5432 DB_USERNAME=havit_b8 DB_PASSWORD=<local> \
+    DB_DATABASE=havit_b8_test DB_SSL=false DB_POOL_HOST= DB_POOL_PORT= \
+    npm run db:migrate
+# -> [db] applied 66 file(s)
+```
+
+El runner acepta `DB_SSL=false` para una Postgres local (`database/scripts/lib.js`,
+`resolveDbSsl`), así que **no hizo falta modificar código**.
+
+Estado resultante (**medido**):
+
+| Comprobación | Resultado |
+| --- | --- |
+| Estructura | **62 tablas** en el schema `havit` (igual que `havit_b4_test`) |
+| Migraciones | **66 registradas** = los 66 ficheros del repositorio |
+| Datos de referencia | 27 ejercicios, 6 tipos de métrica, 16 tipos de notificación |
+| Datos de usuario | **0 usuarios, 0 retos, 0 registros** — borrón y cuenta nueva |
+
+### 9.4.6 Backend apuntado a `havit_b8_test`
+
+Mismas variables temporales que §9.4.2, cambiando la base y el rol. Verificado:
+
+| Comprobación | Resultado |
+| --- | --- |
+| `GET /health` | `{"status":"ok"}` |
+| `GET /health/ready` | `{"status":"ok","checks":{"database":"up","redis":"disabled"}}` |
+| Accesible desde la red local | `http://192.168.5.94:3100/health` responde |
+| Sesión vista por Postgres | **`havit_b8 | 127.0.0.1/32`** — el rol propio, por TCP local |
+| Conexiones de red del proceso | **una sola**: `*:3100 (LISTEN)`. Ninguna remota, ninguna a Azure |
+| Servicios externos | Redis deshabilitado; `CLOUDFLARE_R2_*` y `OPENAI_API_KEY` vacíos |
+
+El puerto sigue siendo **3100**, no 3000, por el conflicto con la otra aplicación del
+usuario descrito en §9.4.2.
+
+### 9.4.7 Protección verificable contra conexiones a producción
+
+ATS por sí solo no basta como garantía: bloquea el fallback en iOS, pero no en Android, y
+razonar solo sobre él es frágil. Esta es una protección en tres capas, **todas
+verificables**, y ninguna modifica código de B3.
+
+**El proyecto ya traía el mecanismo correcto**, y conviene conocerlo porque incluye una
+trampa:
+
+- `scripts/dev-local.js` detecta la IP LAN y escribe `.env.local` con
+  `EXPO_PUBLIC_API_URL`. `.env.local` está en `.gitignore` (`.env*.local`), así que es
+  per-máquina y no ensucia el repositorio.
+- `scripts/dev-server.js` **borra** `.env.local` para volver a la URL pública del `.env`.
+
+> **Trampa operativa, y es la más peligrosa de todo B8.** `dev-server.js` se ejecuta
+> automáticamente antes de `npm start`, `npm run start:server`, `npm run android`,
+> `npm run ios` y `npm run web`. Cualquiera de esos comandos **borra `.env.local` y
+> devuelve la app a la URL pública de producción**, en silencio. Durante las pruebas hay
+> que arrancar con **`npx expo start --dev-client`**, nunca con `npm start`.
+>
+> Además `dev-local.js` fija `BACKEND_PORT = 3000`, así que `npm run start:local` generaría
+> `http://192.168.5.94:3000` — que en esta máquina es **la otra aplicación del usuario**,
+> no Havit (§9.4.2). Por eso `.env.local` se escribió a mano con el puerto 3100.
+
+**Capa 1 — configuración (verificable antes de compilar).**
+
+```bash
+cat .env.local
+# EXPO_PUBLIC_API_URL=http://192.168.5.94:3100
+
+npx expo config --json | python3 -c "import sys,json; print(json.load(sys.stdin)['extra']['apiUrl'])"
+# http://192.168.5.94:3100        <- si imprime 20.63.84.1, PARAR
+```
+
+**Capa 2 — lo que Metro sirve en ejecución (verificable con la app ya instalada).** En una
+development build el JS y la configuración vienen del servidor de Metro, así que esta es la
+verdad operativa, no la teoría:
+
+```bash
+curl -s -H "expo-platform: ios" http://127.0.0.1:8081/ | grep -o '"apiUrl":"[^"]*"'
+# "apiUrl":"http://192.168.5.94:3100"
+```
+
+Verificado: el manifiesto servido contiene la URL local, y el log de Metro confirma
+`env: load .env.local .env`.
+
+**Capa 3 — prueba observable, la que no se puede falsear.** `havit_b8_test` arranca con
+**0 usuarios, 0 retos y 0 registros** (§9.4.5). Por tanto:
+
+```bash
+# antes de cada flujo que cree datos
+psql -d havit_b8_test -t -A -c "SELECT COUNT(*) FROM havit.users;"
+```
+
+Si tras registrarse en el teléfono ese contador **sube**, la app escribió en la base local:
+queda demostrado, no supuesto. Si **no sube**, la app no está hablando con el backend local
+y hay que parar antes de seguir. El log del backend local da la misma señal en tiempo real.
+
+**Cómo se comporta el fallback si falta la configuración** (condición 4.4). Hay dos capas
+de respaldo y **las dos apuntan a producción**:
+
+1. `app.config.js`: `process.env.EXPO_PUBLIC_API_URL ?? 'http://20.63.84.1:3000'`. Sin la
+   variable, `extra.apiUrl` **es** la URL pública. Medido en §9.4.1.
+2. `services/api.ts`: `extra.apiUrl ?? FALLBACK_API_URL`. Solo actúa si la resolución de
+   configuración falla por completo.
+
+Con `.env.local` presente, la capa 1 nunca cae al respaldo, y como `extra.apiUrl` queda
+definido, la capa 2 tampoco. Eso es determinista, no probabilístico: es lo que verifican las
+capas 1 y 2 de arriba.
+
+**ATS queda como red de seguridad, no como garantía.** En iOS rechaza texto en claro contra
+la IP pública, así que un fallback accidental fallaría de forma visible en lugar de escribir
+en producción. En **Android no protege**: el APK lleva `usesCleartextTraffic=true`
+(§7.1.2), de modo que allí la garantía son exclusivamente las capas 1 a 3.
+
 ### 9.4.4 La decisión que falta sobre la base de datos
 
 `havit_b4_test` **es local y de pruebas**, comprobado: servidor por socket unix
