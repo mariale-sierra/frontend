@@ -1308,6 +1308,100 @@ servidor.
 Diagnosticarlo requirió leer el código, no el log. Es una laguna de observabilidad real,
 **fuera del alcance de B8** y sin corregir: queda anotada para quien corresponda.
 
+## 9.6 Datos de prueba B8: el reto `[B8-TEST]`
+
+Creados para desbloquear F6, F7, F8 y F9, que quedaban bloqueados por la incidencia B8-I1
+(§9.5). **Solo datos**: ni código, ni migraciones, ni seeds versionados, ni configuración de
+seguridad. La moderación del backend **no** se ha desactivado ni evadido.
+
+### Verificación de destino antes de escribir
+
+```
+base: havit_b8_test | usuario: havit_b8 | host: 127.0.0.1/32 | puerto: 5432
+listen_addresses: localhost
+```
+
+`havit_b4_test`, `havit_perf` y `havit_b4_audit_…` no se tocaron: 0 conexiones y sus
+conteos intactos.
+
+### Por qué no basta una fila en `challenges`
+
+La estructura coherente se tomó de `ChallengesService.create()`
+(`src/challenges/challenges.service.ts:107`), que es la definición autorizada de lo que es
+un reto válido: fila en `challenges`, fila de **propietario** en `challenge_user_map`, y
+por cada día del ciclo una `routines` + `routine_exercises` + `routine_exercise_sets` +
+`routine_exercise_set_targets`, más la fila en `challenge_cycle_days`.
+
+**El propietario es un usuario de prueba aparte, no el del iPhone.** Si el reto fuese suyo,
+ya sería miembro y **no podría unirse**, que es justo lo que F7 valida.
+
+### Qué se insertó
+
+| Tabla | Filas | Contenido |
+| --- | --- | --- |
+| `users` | 1 | `b8_test_owner` / `b8-test-owner@b8.local`. `password_hash` **no es un bcrypt válido**: iniciar sesión con esa cuenta es imposible |
+| `challenges` | 1 | `[B8-TEST] Reto de prueba fisica` — `public`, `open`, activo, 7 días, ciclo de 3 |
+| `challenge_user_map` | 1 | solo el propietario (`owner`/`active`) |
+| `routines` | 2 | `[B8-TEST] Dia 1 - Fuerza`, `[B8-TEST] Dia 3 - Circuito` |
+| `routine_exercises` | 3 | ejercicios 9, 23 y 27 del catálogo sembrado, modo `sets` |
+| `routine_exercise_sets` | 9 | 3 series por ejercicio |
+| `routine_exercise_set_targets` | 9 | objetivo de `reps` (12 y 10) |
+| `challenge_cycle_days` | 3 | día 1 entrenamiento, día 2 **descanso** sin rutina, día 3 entrenamiento |
+| `workout_logs` | **0** | ninguno: F9 debe ejecutarse desde el iPhone |
+
+Todo en **una transacción** con 9 aserciones de integridad **antes** del `COMMIT`: número de
+días, que ningún día de entrenamiento quede sin rutina, que el de descanso no tenga rutina,
+conteos de ejercicios y series, que ninguna serie quede sin objetivo, que todos los
+ejercicios existan y estén activos, que no haya participaciones ajenas al propietario, y que
+no se haya creado ningún registro de entrenamiento.
+
+Hubo un primer intento que **abortó** por suponer mal un tipo de columna
+(`routines`/`routine_exercises` usan `bigint`, no `uuid`). La transacción hizo su trabajo:
+`retos: 0 | rutinas: 0` tras el fallo, sin datos a medias.
+
+### Confirmado en la API local
+
+```
+GET /challenges?limit=50   -> 1 reto: [B8-TEST] Reto de prueba fisica | public | open
+GET /challenges/{id}       -> duracion 7, ciclo 3, 3 dias de ciclo con sus rutinas
+```
+
+Los endpoints que usarán las pruebas existen: `POST /challenges/:id/join` (F7) y
+`POST /challenges/progress` (F9).
+
+### Cómo eliminar estos datos después
+
+Las claves ajenas hacen casi todo el trabajo. `challenges` cascadea a `challenge_cycle_days`,
+`challenge_user_map`, `challenge_category_map`, `challenge_location_map`,
+`challenge_invites` y `challenge_join_requests`; `routines` cascadea a `routine_exercises` →
+`routine_exercise_sets` → `routine_exercise_set_targets`.
+
+```sql
+-- En havit_b8_test, como havit_b8. En este orden.
+BEGIN;
+DELETE FROM havit.challenges WHERE name LIKE '[B8-TEST]%';
+DELETE FROM havit.routines   WHERE name LIKE '[B8-TEST]%';
+DELETE FROM havit.users      WHERE username = 'b8_test_owner';
+COMMIT;
+```
+
+> **Antes de borrar, dos advertencias.** `workout_logs.challenge_id` y
+> `workout_logs.routine_id` son `ON DELETE SET NULL`: si el iPhone llegó a registrar
+> entrenamientos (F9), esas filas **no se borran**, se quedan huérfanas con las referencias a
+> `NULL`. Y no se puede borrar al propietario antes del reto, porque `challenges` lo
+> referencia. Nada de esto afecta al usuario creado desde el iPhone ni a sus datos, que se
+> identifican por su propio `id`.
+
+Todo lo insertado lleva el prefijo `[B8-TEST]` en el nombre, o el dominio `b8.local` en el
+caso del usuario, precisamente para que el borrado sea inequívoco.
+
+### Lo que sigue bloqueado, y no se marca como aprobado
+
+**Crear un reto desde la aplicación continúa fallando con HTTP 500** en este entorno, por la
+ausencia de `OPENAI_API_KEY` (§9.5). Estos datos **no arreglan** esa incidencia: la rodean
+para poder validar F6 a F9. El flujo de creación de retos **no se marca como aprobado** y la
+causa queda registrada.
+
 ## 10. Matriz de validación en dispositivos
 
 Ningún dispositivo físico se ha probado. Toda la columna de resultado está **pendiente**.
