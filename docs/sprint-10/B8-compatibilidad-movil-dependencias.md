@@ -713,6 +713,49 @@ arriba, y el bloqueo B-9 (si Xcode 26.4.1 acepta un dispositivo con iOS 26.6.2) 
 puede ni evaluar**: al instalar el componente puede además ofrecer una versión de Xcode más
 reciente, que sería lo deseable para un iPhone con iOS 26.6.2.
 
+### 9.2.3 El proyecto iOS compila: verificado sobre el binario
+
+Con el componente de plataforma ya instalado (§9.2.2 resuelto), se compiló de verdad, sin
+firma, contra un simulador iOS 26.4.1:
+
+```bash
+cd frontend/ios
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer LANG=en_US.UTF-8
+xcodebuild -workspace frontend.xcworkspace -scheme frontend -configuration Debug \
+           -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
+           CODE_SIGNING_ALLOWED=NO build
+# ** BUILD SUCCEEDED **   (salida 0, 55.518 líneas de log, cero errores)
+```
+
+Y lo que importa: los cambios de configuración nativa de B8 se comprobaron **en el
+`Info.plist` de la app construida**, no en la configuración de partida — el equivalente
+iOS de lo que §7.1.3 hizo con el APK.
+
+| Comprobación | Valor en el binario |
+| --- | --- |
+| `NSCameraUsageDescription` | *"HAVIT usa la cámara para que tomes la foto que comprueba tu entrenamiento del día."* |
+| `NSPhotoLibraryUsageDescription` | *"HAVIT accede a tus fotos para que elijas la imagen de tu perfil o la evidencia de un entrenamiento."* |
+| `NSMicrophoneUsageDescription` | **no existe** — confirmado eliminado |
+| `NSAppTransportSecurity` | `NSAllowsArbitraryLoads = false`, `NSAllowsLocalNetworking = true` |
+| `MinimumOSVersion` | **16.4** — coincide con el pin de §4.1 |
+| `UISupportedInterfaceOrientations` | `Portrait`, `PortraitUpsideDown` |
+| `CFBundleIdentifier` | `com.havit.app` |
+| Tamaño de `frontend.app` | 159 MB |
+
+Dos salvedades sobre esa tabla:
+
+- **Los 159 MB no dicen nada del tamaño en el iPhone.** Es una build *Debug* para
+  *simulador*, con arquitectura de simulador y sin optimizar. El tamaño instalado real
+  sigue **sin medir** y solo saldrá del dispositivo.
+- **Un simulador no es un dispositivo físico.** Esto demuestra que el proyecto nativo
+  compila y que la configuración llega al binario; **no** demuestra que la app funcione en
+  un iPhone. Las 14 filas de §10.2 siguen pendientes.
+
+Observación para la prueba de orientación: el `Info.plist` declara también
+`UIInterfaceOrientationPortraitUpsideDown`, no solo `Portrait`. Conviene comprobar en el
+teléfono si la app gira 180°, porque "orientación vertical" en la matriz debería significar
+vertical a secas.
+
 ### 9.3 Paso 3 — generar el proyecto, firmar y ejecutar
 
 ```bash
@@ -1157,7 +1200,7 @@ configuración (§4.1), no de un dispositivo.
 | B-6 | iPhone no conectado | toda la validación física de iOS | conectar y confiar en el Mac |
 | B-7 | B3 sin mergear + API en HTTP | que iOS llegue al backend (§4.4, §9.4) | merge de B3 o backend en red local |
 | B-8 | Toolchain Android local incompleto | la build local y el emulador | plataforma `android-35` + `cmdline-tools` |
-| **B-11** | **Componente de plataforma iOS no instalado en Xcode** (`simctl runtime list` → 0 imágenes) | **toda** compilación de iOS, de dispositivo y de simulador | descargarlo en Xcode → Settings → Components (~7–10 GB), acción del usuario (§9.2.2) |
+| B-11 | ~~Componente de plataforma iOS no instalado en Xcode~~ | — | **RESUELTO**: runtime `iOS 26.4.1 (23E254a)` instalado (7,9 GB, *Ready*) y `-showdestinations` ya ofrece `Any iOS Device` |
 | B-9 | Soporte de iOS 26.6.2 en Xcode 26.4.1 sin confirmar | posiblemente nada; se sabe al conectar | no evaluable hasta resolver B-11; actualizar Xcode si lo rechaza |
 | B-10 | Sin credenciales FCM/APNs | push en ambas plataformas | configurar en EAS |
 
@@ -1194,7 +1237,7 @@ no tocarlo en B8. Queda documentado: la URL usa **HTTP** y su paso a HTTPS es de
 | --- | --- | --- |
 | 1. Dependencias y vulnerabilidades | **COMPLETADO Y VERIFICADO** | 10 paquetes al día con SDK 57; crítica eliminada; 15 → 8; tests, tipos, i18n y expo-doctor en verde. Las 8 restantes son 3 causas raíz documentadas, 2 de ellas solo de build |
 | 2. APK de Android | **IMPLEMENTADO, PENDIENTE DE PRUEBA FÍSICA** | **APK release construido y verificado** (§7.1.2): existe, está firmado y es instalable. Falta ejecutarlo en un teléfono (B-2). La build de EAS `preview`, con firma real y distribuible, sigue bloqueada por credenciales (B-1) |
-| 3. iOS | **BLOQUEADO POR DEPENDENCIA EXTERNA** | Xcode 26.4.1 usable sin `sudo`, CocoaPods 1.17.0 instalado, `pod install` correcto (312 pods) y el workspace abre. Pero **falta el componente de plataforma iOS en Xcode** (B-11), sin el cual no compila nada; después, conectar el teléfono (B-6), la firma, y —solo para push— cuenta de pago (B-5) |
+| 3. iOS | **IMPLEMENTADO, PENDIENTE DE FIRMA Y DISPOSITIVO** | **El proyecto compila**: `BUILD SUCCEEDED` contra simulador iOS 26.4.1, y los cambios de B8 verificados en el `Info.plist` del binario (§9.2.3). B-11 resuelto. Falta conectar el teléfono (B-6), la firma con cuenta Apple, y —solo para push— cuenta de pago (B-5). El soporte de Xcode 26.4.1 para iOS 26.6.2 sigue sin confirmar (B-9) |
 | 4. Hardware y mínimos | **PARCIAL** | mínimos reales **medidos y confirmados en el APK** (API 24 / target 36 / iOS 16.4). Tamaño del APK universal medido (173 MB, con el desglose por ABI). Memoria, tamaño instalado, arranque, Wi-Fi y datos móviles: **pendientes**, requieren la app corriendo |
 | 5. Configuración nativa (permisos, plugins) | **COMPLETADO Y VERIFICADO** en Android; **pendiente de prueba física** en iOS | los tres permisos sobrantes **se comprobaron ausentes del APK construido** (§7.1.3), no solo del manifest de partida. En iOS los textos están en el `Info.plist` generado, pero el diálogo real no se ha visto |
 | 6. Documentación y matriz | **COMPLETADO** | este documento; la matriz está creada con todas sus filas en pendiente, como corresponde |
