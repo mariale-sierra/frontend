@@ -55,17 +55,20 @@ describe('B8 — Android permissions', () => {
 });
 
 describe('B8 — minimum supported OS versions', () => {
-  // Pinned to what Expo SDK 57 resolves to on its own (minSdk 24 / target 35 /
-  // compile 35, iOS 16.4). Pinning does not change the build; it makes a future
-  // patch bump that moves the floor show up as a failing test rather than as a
-  // silently narrower device list.
+  // Pinned to what Expo SDK 57 resolves to on its own, read from Gradle's own
+  // `[ExpoRootProject] Using the following versions` line with the pins removed
+  // (minSdk 24 / compile 36 / target 36) and from the generated pbxproj (iOS 16.4).
+  // Do NOT lower compileSdk: expo-camera pulls androidx.camera 1.6.0, which refuses
+  // to be compiled against anything below 36 — `:app:checkReleaseAarMetadata` fails.
+  // Pinning does not change the build; it makes a future patch bump that moves the
+  // floor show up as a failing test rather than as a silently narrower device list.
   const buildProperties = plugin('expo-build-properties');
 
   it('pins the Android SDK levels measured from prebuild', () => {
     expect(buildProperties.android).toMatchObject({
       minSdkVersion: 24,
-      compileSdkVersion: 35,
-      targetSdkVersion: 35,
+      compileSdkVersion: 36,
+      targetSdkVersion: 36,
     });
   });
 
