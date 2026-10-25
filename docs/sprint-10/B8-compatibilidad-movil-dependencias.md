@@ -1492,11 +1492,13 @@ Comprobado en el dispositivo: **la app muestra el día 1 del reto como completad
 el registro funcionó de extremo a extremo —backend, base de datos y interfaz coinciden— y
 lo único que falló fue la subida de la fotografía (B8-I2).
 
-Con eso, **F9 pasa a APROBADO**, con una salvedad que se mantiene: en esta ejecución no se
-registró el detalle por ejercicio (0 filas en `workout_log_exercises`, 0 métricas por
-serie). El día se marcó como completado, que es lo que la regla de negocio exige y lo que
-F9 pide; el registro serie a serie es un camino distinto de la interfaz que no se
-ejercitó.
+Con eso, **F9 queda PARCIALMENTE APROBADO**, con el alcance delimitado de forma explícita:
+
+- **Verificado:** el registro del progreso y su visualización. El día se marcó como
+  completado, que es lo que exige la regla de negocio, y la interfaz lo refleja.
+- **Sin verificar:** el detalle por ejercicio y las métricas por serie — 0 filas en
+  `workout_log_exercises` y 0 en las tablas de métricas. El registro serie a serie es un
+  camino distinto de la interfaz que no se ejercitó.
 
 > **Observación de usabilidad surgida de la prueba física, no de la lectura del código.**
 > Durante la prueba se concluyó que el registro de entrenamiento había fallado, cuando en
@@ -1507,6 +1509,29 @@ ejercitó.
 >
 > Queda como observación para el equipo de la app (territorio de B5/B9, no de B8). **No se
 > ha corregido**: B8 no toca ese código.
+
+## 9.9 F4 (refresh de B4) se validó por sí solo
+
+No hubo que provocarlo. El token de acceso dura 15 minutos
+(`docs/ARCHITECTURE-GUIDE.md` §7); entre el registro, a las 21:42:49, y la vuelta a la app,
+a las 21:59:57, caducó, y el interceptor lo renovó en silencio:
+
+```
+9:42:49 PM  POST /auth/register 200
+9:59:57 PM  POST /auth/refresh  200   <- renovacion automatica, sin intervencion
+10:00:09 PM GET  /users/me      200   <- la sesion sigue viva
+```
+
+La base confirma que la rotación de B4 funcionó como está especificada:
+
+| Fila | Familia | Creada | `replaced_by` | Revocada |
+| --- | --- | --- | --- | --- |
+| 1 | `de2c9867` | 21:42:49 (registro) | **`c9fa8eaf`** | no |
+| 2 | `de2c9867` | 21:59:57 (refresh) | — | no |
+
+Es decir: **una sola familia**, el token viejo marcado como reemplazado por el nuevo, y
+ninguna revocación. Exactamente el comportamiento de token rotativo que B4 implementó, y
+verificado sobre un dispositivo físico contra la base local, no en un test.
 
 ## 10. Matriz de validación en dispositivos
 
@@ -1543,27 +1568,26 @@ los contadores de la base.
 | F1 | Registro | **APROBADO** | pendiente | `POST /auth/register 200` y el usuario aparece en `havit_b8_test` (`9b31664d-…`, `pruebitaxd`). Contador **0 → 1 usuarios** |
 | F2 | Login | **NO EJECUTADO** | pendiente | Los 5 `POST /auth/login 401` del log son intentos **previos** al registro, con una cuenta que no existía. Falta un login con credenciales válidas |
 | F3 | Restauración de sesión | **NO EJECUTADO** | pendiente | Requiere cerrar y reabrir la app |
-| F4 | Refresh de token (B4) | **NO EJECUTADO** | pendiente | Hay 1 fila en `refresh_tokens`, creada por el registro, pero **ninguna llamada a `/auth/refresh`** en el log |
+| F4 | Refresh de token (B4) | **APROBADO** | pendiente | Ocurrió **solo**, sin forzarlo: `POST /auth/refresh 200` a las 21:59:57, tras caducar el token de acceso de 15 minutos. La base confirma la **rotación** de B4: la fila original de la familia `de2c9867` quedó con `replaced_by` apuntando al nuevo token, y hay una segunda fila en la misma familia (§9.9) |
 | F5 | Logout | **NO EJECUTADO** | pendiente | Ninguna llamada a `/auth/logout` |
 | F6 | Explorar retos | **APROBADO** | pendiente | Observado en el dispositivo: el reto `[B8-TEST]` aparece en la lista. `GET /challenges?limit=50 200` con 1 reto devuelto |
 | F7 | Unirse a un reto | **APROBADO** | pendiente | `POST /challenges/{id}/join 201` y la fila existe en la base: `pruebitaxd | participant | active | 16:00:16`. **No la insertó B8**: solo se había insertado el propietario |
 | F8 | Consultar rutinas | **APROBADO** | pendiente | Observado con datos reales. `GET /routine/today/{id} 200`, `GET /routine/2 200`, y además se ejercitó la sustitución de ejercicios: `/exercises/location-availability?exerciseIds=9,23`, `/exercises/9/alternatives?location=home`, `/routine/today/{id}?location=home&substitutions=9:26` |
-| F9 | Registrar entrenamiento | **APROBADO** | pendiente | `POST /workout-logs/progress 201`, **1 fila `completed`** en la base y **la app muestra el día 1 como completado**: backend, base e interfaz coinciden. Sin fotografía, que es camino legítimo (`imageUrl` es `@IsOptional()`). Salvedad: no se registró el detalle por ejercicio (§9.8) |
+| F9 | Registrar entrenamiento | **PARCIALMENTE APROBADO** | pendiente | **Verificado:** registro y visualización del progreso. `POST /workout-logs/progress 201`, **1 fila `completed`** en la base y la app muestra el día 1 como completado: backend, base e interfaz coinciden. Sin fotografía, camino legítimo (`imageUrl` es `@IsOptional()`). **Sin verificar:** el detalle por ejercicio y las métricas por serie (0 filas, §9.8) |
 | F10 | Capturar foto con la cámara | **APROBADO** | pendiente | Observado en el dispositivo: la app solicita el permiso de cámara y permite capturar. Valida los textos en español de §9.2.3 |
 | F11 | Subir foto de evidencia | **NO COMPLETADO** | pendiente | Ejecutado y **fallido**: `POST /uploads/sign 500`, con `ERROR [UploadsService] external_call service=r2 operation=presign outcome=failure`. Causa: credenciales de R2 vacías a propósito (§9.7). Problema de **configuración local**, no defecto funcional |
 | F12 | Estado de moderación | **NO COMPLETADO** | pendiente | Fuera de alcance: `OPENAI_API_KEY` anulada a propósito. Es la misma causa que B8-I1 |
 | F13 | Notificaciones push | **NO COMPLETADO** | pendiente | Un Personal Team gratuito no puede firmar la capacidad (§9.2.6). **No se marcará como aprobado** |
 | F14 | Navegación principal y perfil | **APROBADO** | pendiente | Recorrido real con respuestas 200: `GET /users/me`, `/feed`, `/users/me/challenges`, `/workout-posts/mine`, `/follows/following/streaks`, `/notifications/unread-count`, `PATCH /users/me/profile`, `GET /workout-posts/user/9b31664d-…` |
 
-**Recuento tras la segunda sesión: 7 aprobados, 4 no ejecutados y 3 no completables.**
-Aprobados: **F1** registro, **F6** explorar retos, **F7** unirse, **F8** consultar rutinas,
-**F9** registrar entrenamiento, **F10** cámara y **F14** navegación y perfil. Eso cubre el
-camino principal de la app, de principio a fin, en un dispositivo físico real y contra un
-backend local aislado.
+**Recuento tras la segunda sesión: 7 aprobados, 1 parcialmente aprobado, 3 no ejecutados y
+3 no completables.** Aprobados: **F1** registro, **F4** refresh de token, **F6** explorar
+retos, **F7** unirse, **F8** consultar rutinas, **F10** cámara y **F14** navegación y
+perfil. Parcialmente aprobado: **F9**, con el alcance delimitado en §9.8.
 
-Sin ejecutar siguen F2 (login con credenciales válidas), F3 (restauración de sesión), F4
-(refresh) y F5 (logout) — los cuatro de B4, que **no dependen de ningún bloqueo** y pueden
-hacerse en cualquier momento.
+Sin ejecutar siguen tres, todos de B4 y **sin ningún bloqueo**: F2 (login con credenciales
+válidas), F3 (restauración de sesión) y F5 (logout). El orden correcto es **F3 → F5 → F2**,
+porque F3 necesita la sesión viva y F2 necesita haberla cerrado antes.
 
 No completables por límites documentados: F11 (R2 vacío), F12 (OpenAI vacío) y F13 (cuenta
 Apple gratuita).
