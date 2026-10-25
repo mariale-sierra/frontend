@@ -1402,6 +1402,97 @@ ausencia de `OPENAI_API_KEY` (§9.5). Estos datos **no arreglan** esa incidencia
 para poder validar F6 a F9. El flujo de creación de retos **no se marca como aprobado** y la
 causa queda registrada.
 
+## 9.7 Incidencia B8-I2: `POST /uploads/sign` devuelve 500
+
+Detectada al intentar subir la fotografía de evidencia desde el iPhone.
+
+### Evidencia del backend
+
+Aquí el backend **sí** registró el error, y con detalle estructurado:
+
+```
+10:00:54 PM ERROR [UploadsService] external_call service=r2 operation=presign
+                   outcome=failure attempts=1 durationMs=15 error=Error
+10:00:54 PM   LOG [HTTP] POST /uploads/sign 500 +18ms
+```
+
+### Endpoint y causa
+
+**Endpoint exacto: `POST /uploads/sign`** — la firma previa (*presign*) de la URL de subida.
+
+```
+src/uploads/uploads.service.ts:203  private s3 = new S3Client({
+                             :205    endpoint: `https://${process.env['CLOUDFLARE_R2_ACCOUNT_ID']}.r2.cloudflarestorage.com`,
+                             :207    accessKeyId:     process.env['CLOUDFLARE_R2_ACCESS_KEY_ID'],
+                             :208    secretAccessKey: process.env['CLOUDFLARE_R2_SECRET_ACCESS_KEY'],
+```
+
+Comprobado sobre el entorno del **proceso en ejecución**, no sobre un archivo:
+
+```
+CLOUDFLARE_R2_ACCOUNT_ID=(vacia)        CLOUDFLARE_R2_BUCKET_NAME=(vacia)
+CLOUDFLARE_R2_ACCESS_KEY_ID=(vacia)     CLOUDFLARE_R2_PUBLIC_URL=(vacia)
+CLOUDFLARE_R2_SECRET_ACCESS_KEY=(vacia) OPENAI_API_KEY=(vacia)
+```
+
+Con el id de cuenta vacío el *endpoint* queda como `https://.r2.cloudflarestorage.com`, y sin
+credenciales la firma no puede generarse.
+
+**No es OpenAI.** Era razonable sospecharlo, pero el log nombra `service=r2
+operation=presign`, y la moderación actúa **después**, sobre la publicación. Al fallar la
+subida, nunca se llegó a ella. En este 500 OpenAI no interviene.
+
+### Clasificación
+
+**Problema de configuración del entorno local**, no defecto funcional. Fundamento: la propia
+instrumentación del servicio identifica el servicio y la operación que fallan, las seis
+variables de R2 están demostrablemente vacías en el proceso, y se vaciaron a propósito al
+montar el entorno aislado (§9.4.2). En un entorno con credenciales de R2 este camino no
+falla.
+
+## 9.8 F9 sí se registró: lo que dice la base frente a lo que se vio
+
+Durante la prueba se percibió que el registro de entrenamiento **no llegó a completarse**,
+porque el flujo se interrumpió al subir la fotografía. **La evidencia dice otra cosa.**
+
+Secuencia real del log, siete segundos después del fallo de subida:
+
+```
+10:00:54 PM  POST /uploads/sign          500   <- falla la firma de subida (B8-I2)
+10:01:01 PM  GET  /challenges/progress   200
+10:01:03 PM  POST /workout-logs/progress 201   <- el progreso SI se registro
+```
+
+Y en la base local:
+
+| Comprobación | Valor |
+| --- | --- |
+| `workout_logs` | **1 fila** (antes 0) |
+| estado | **`completed`** |
+| usuario | `pruebitaxd` (el del iPhone) |
+| reto | `[B8-TEST] Reto de prueba fisica` |
+| `local_day` | `2026-10-25` |
+| `routine_id` / `challenge_cycle_day_id` | `NULL` |
+| `workout_log_exercises` / métricas por serie | **0** |
+| `workout_posts` | **0** (coherente: no hubo foto) |
+
+**Y registrar un entrenamiento sin fotografía es un camino legítimo**, no un apaño: en
+`src/workout-log/dto/create-workout-progress.dto.ts:60`, `imageUrl?: string` lleva
+`@IsOptional()`. La app hizo exactamente eso — reintentó sin imagen — y el backend respondió
+`201`. No se ha saltado ninguna regla de negocio.
+
+Lo que **no** quedó registrado es el detalle por ejercicio: cero filas en
+`workout_log_exercises` y cero métricas por serie. Ese detalle lo escribe la app por
+separado (`services/metrics/applyExerciseMetrics.ts`) y en el log no hay ninguna llamada
+correspondiente.
+
+> **Discrepancia a resolver en el dispositivo, no sobre el papel.** El backend y la base
+> dicen que el día quedó completado; la impresión durante la prueba fue la contraria. Eso
+> apunta a un problema de **información al usuario** —probablemente el aviso de error de la
+> subida tapando el éxito del registro— más que a un fallo del registro. Por eso F9 **no se
+> marca como aprobado**: queda como **PARCIAL** hasta comprobar en la app si el día aparece
+> como completado.
+
 ## 10. Matriz de validación en dispositivos
 
 Ningún dispositivo físico se ha probado. Toda la columna de resultado está **pendiente**.
@@ -1439,20 +1530,24 @@ los contadores de la base.
 | F3 | Restauración de sesión | **NO EJECUTADO** | pendiente | Requiere cerrar y reabrir la app |
 | F4 | Refresh de token (B4) | **NO EJECUTADO** | pendiente | Hay 1 fila en `refresh_tokens`, creada por el registro, pero **ninguna llamada a `/auth/refresh`** en el log |
 | F5 | Logout | **NO EJECUTADO** | pendiente | Ninguna llamada a `/auth/logout` |
-| F6 | Explorar retos | **PARCIAL** | pendiente | `GET /challenges?limit=50 200`: el endpoint responde, pero la base tiene **0 retos**, así que la lista venía vacía. **No se ha visto la UI con datos** |
-| F7 | Unirse a un reto | **NO EJECUTADO** | pendiente | Bloqueado por la incidencia **B8-I1** (§9.5): no hay ningún reto y no se puede crear |
-| F8 | Consultar rutinas | **PARCIAL** | pendiente | `GET /routine 200` y `GET /exercises/count` ×3 responden. Sin rutina propia creada, tampoco se vio la UI con datos |
-| F9 | Registrar entrenamiento | **NO EJECUTADO** | pendiente | Bloqueado por B8-I1: el progreso se registra contra un reto |
-| F10 | Capturar foto con la cámara | **NO EJECUTADO** | pendiente | Pendiente. Validará los textos de permiso en español de §9.2.3 |
-| F11 | Subir foto de evidencia | **NO COMPLETADO** | pendiente | Fuera de alcance en este entorno: credenciales de Cloudflare R2 anuladas a propósito |
+| F6 | Explorar retos | **APROBADO** | pendiente | Observado en el dispositivo: el reto `[B8-TEST]` aparece en la lista. `GET /challenges?limit=50 200` con 1 reto devuelto |
+| F7 | Unirse a un reto | **APROBADO** | pendiente | `POST /challenges/{id}/join 201` y la fila existe en la base: `pruebitaxd | participant | active | 16:00:16`. **No la insertó B8**: solo se había insertado el propietario |
+| F8 | Consultar rutinas | **APROBADO** | pendiente | Observado con datos reales. `GET /routine/today/{id} 200`, `GET /routine/2 200`, y además se ejercitó la sustitución de ejercicios: `/exercises/location-availability?exerciseIds=9,23`, `/exercises/9/alternatives?location=home`, `/routine/today/{id}?location=home&substitutions=9:26` |
+| F9 | Registrar entrenamiento | **PARCIAL** | pendiente | `POST /workout-logs/progress 201` y **1 fila `completed`** en la base, sin fotografía (camino legítimo: `imageUrl` es opcional). Pero **0 métricas por ejercicio**, y durante la prueba se percibió que no se había completado: discrepancia abierta (§9.8). **No se marca como aprobado** |
+| F10 | Capturar foto con la cámara | **APROBADO** | pendiente | Observado en el dispositivo: la app solicita el permiso de cámara y permite capturar. Valida los textos en español de §9.2.3 |
+| F11 | Subir foto de evidencia | **NO COMPLETADO** | pendiente | Ejecutado y **fallido**: `POST /uploads/sign 500`, con `ERROR [UploadsService] external_call service=r2 operation=presign outcome=failure`. Causa: credenciales de R2 vacías a propósito (§9.7). Problema de **configuración local**, no defecto funcional |
 | F12 | Estado de moderación | **NO COMPLETADO** | pendiente | Fuera de alcance: `OPENAI_API_KEY` anulada a propósito. Es la misma causa que B8-I1 |
 | F13 | Notificaciones push | **NO COMPLETADO** | pendiente | Un Personal Team gratuito no puede firmar la capacidad (§9.2.6). **No se marcará como aprobado** |
 | F14 | Navegación principal y perfil | **APROBADO** | pendiente | Recorrido real con respuestas 200: `GET /users/me`, `/feed`, `/users/me/challenges`, `/workout-posts/mine`, `/follows/following/streaks`, `/notifications/unread-count`, `PATCH /users/me/profile`, `GET /workout-posts/user/9b31664d-…` |
 
-**Recuento honesto: 2 aprobados, 2 parciales, 6 no ejecutados y 3 no completables** en este
-entorno. El onboarding completo y la navegación funcionaron en el dispositivo físico, que no
-es poco: demuestra que la build firmada arranca, carga el bundle, autentica y navega contra
-un backend local.
+**Recuento honesto tras la segunda sesión: 6 aprobados, 1 parcial, 4 no ejecutados y 3 no
+completables.** Aprobados: F1 registro, F6 explorar, F7 unirse, F8 rutinas, F10 cámara y F14
+navegación y perfil. Eso cubre el camino principal de la app en un dispositivo físico real,
+contra un backend local aislado.
+
+Sin ejecutar siguen F2 (login con credenciales válidas), F3 (restauración de sesión), F4
+(refresh) y F5 (logout) — los cuatro de B4, que no dependen de ningún bloqueo y pueden
+hacerse en cualquier momento.
 
 > **Lo que esta sesión demostró sobre el aislamiento.** Los contadores pasaron de
 > `0 usuarios / 0 tokens` a `1 usuario / 1 token` **en `havit_b8_test`**, mientras
