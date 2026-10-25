@@ -153,19 +153,41 @@ vez de estrechar en silencio la lista de dispositivos compatibles.
 
 | Plataforma | Medido | Significa | Dónde se leyó |
 | --- | --- | --- | --- |
-| Android `minSdkVersion` | **24** | Android 7.0 Nougat | `android/gradle.properties` |
-| Android `compileSdkVersion` | **35** | Android 15 | `android/gradle.properties` |
-| Android `targetSdkVersion` | **35** | Android 15 | `android/gradle.properties` |
+| Android `minSdkVersion` | **24** | Android 7.0 Nougat | Gradle, `[ExpoRootProject]` |
+| Android `compileSdkVersion` | **36** | Android 16 | Gradle, `[ExpoRootProject]` |
+| Android `targetSdkVersion` | **36** | Android 16 | Gradle, `[ExpoRootProject]` |
 | iOS `IPHONEOS_DEPLOYMENT_TARGET` | **16.4** | iOS 16.4 | `ios/frontend.xcodeproj/project.pbxproj` |
 
-El valor 24 no es arbitrario: `expo-modules-core` usa
-`safeExtGet("minSdkVersion", 24)` y `ExpoRootProjectPlugin.kt` resuelve
-`minSdk=24 / compileSdk=35 / targetSdk=35` cuando no hay *version catalog* — y en este
-proyecto no hay ninguno (comprobado).
+Estos valores se obtuvieron preguntando a Gradle con los pines **retirados**, que es la
+única forma de leer el valor por defecto real:
 
-> **Riesgo pendiente, fuera del alcance de B8.** `targetSdk 35` es lo que resuelve SDK 57.
-> Quien publique en Google Play debe confirmar el nivel de API que Play exige en ese
-> momento; B8 no publica en Play y no verificó ese requisito.
+```
+$ ./gradlew :app:tasks --dry-run        # sin minSdkVersion/compileSdkVersion/targetSdkVersion en app.json
+[ExpoRootProject] Using the following versions:
+  - buildTools:  36.0.0
+  - minSdk:      24
+  - compileSdk:  36
+  - targetSdk:   36
+  - ndk:         27.1.12297006
+  - kotlin:      2.1.20
+```
+
+> **Cómo se corrigió un error de medición, porque la lección importa más que el dato.**
+> La primera versión de este documento fijó `compileSdk`/`targetSdk` en **35**, leído del
+> fallback `getVersionOrDefault("compileSdk", "35")` de `ExpoRootProjectPlugin.kt`. Ese
+> fallback no es el valor operativo. La build local lo demostró fallando (§7.1.1) y, peor,
+> un log anterior de Gradle que decía `compileSdk: 35` se tomó por confirmación cuando en
+> realidad **estaba devolviendo el pin recién puesto**: una entrada propia leída como
+> evidencia independiente. El valor real solo se obtiene retirando los pines antes de
+> preguntar.
+
+`compileSdk` **no se puede bajar**: `expo-camera` arrastra `androidx.camera:*` 1.6.0, que
+exige compilar contra la API 36 o superior. Bajarlo rompe la build en
+`:app:checkReleaseAarMetadata` con 13 errores de metadatos de AAR. El test de §5 lo fija
+para que ese error no pueda reaparecer en silencio.
+
+> **Fuera del alcance de B8.** Quien publique en Google Play debe confirmar el nivel de API
+> que Play exige en ese momento; B8 no publica en Play y no verificó ese requisito.
 
 ### 4.2 Permisos de Android: se quitaron tres que no se usan
 
@@ -210,17 +232,30 @@ construido (`aapt dump permissions`). Requiere una build, que hoy está bloquead
 
 Antes, los textos del diálogo de permiso eran los genéricos de Expo en inglés
 (`Allow $(PRODUCT_NAME) to access your camera`), dentro de una app cuyo idioma por
-defecto es el español (`i18n/index.ts`, `fallbackLng: 'es'`). Ahora describen para qué
-los usa HAVIT y están traducidos con el mecanismo oficial `locales` de Expo, que genera
-`es.lproj/InfoPlist.strings` y `en.lproj/InfoPlist.strings`.
+defecto es el español (`i18n/index.ts`, `fallbackLng: 'es'`). Ahora describen para qué los
+usa HAVIT, en español, a través de los *props* de los plugins `expo-camera` y
+`expo-image-picker`, que es lo que los escribe en el `Info.plist` generado.
+
+> **Se intentó traducirlos y hubo que revertirlo.** Una versión anterior usaba la clave
+> `locales` de `app.json` para dar los textos en español e inglés, generando
+> `es.lproj`/`en.lproj` con `InfoPlist.strings`. Funcionaba en iOS, pero **rompía la build
+> de release de Android**: Expo aplica `locales` también a Android y escribe *todas* las
+> claves en `res/values-b+<lang>/strings.xml` sin equivalente en el locale por defecto, y
+> `:app:lintVitalRelease` falla con 6 errores `ExtraTranslation`
+> (`"NSCameraUsageDescription" is translated here but not found in default locale`). Esa
+> clave está pensada para el nombre de la app, no para claves del `Info.plist`: usarla así
+> fue un error. Como el idioma de respaldo de la app es el español, un único texto en
+> español es la opción correcta, y un test impide que `locales` vuelva a aparecer. Si en el
+> futuro se quieren prompts traducidos, hará falta un config plugin propio que escriba solo
+> el lado de iOS.
 
 **Derivado de configuración** · verificado en el `Info.plist` generado:
 
 | Clave | Estado |
 | --- | --- |
-| `NSCameraUsageDescription` | texto de HAVIT, ES + EN |
-| `NSPhotoLibraryUsageDescription` | texto de HAVIT, ES + EN |
-| `NSPhotoLibraryAddUsageDescription` | texto de HAVIT, ES + EN |
+| `NSCameraUsageDescription` | texto de HAVIT en español |
+| `NSPhotoLibraryUsageDescription` | texto de HAVIT en español |
+| `NSPhotoLibraryAddUsageDescription` | no se declara: la app no guarda en la galería (sin uso de `MediaLibrary`) |
 | `NSMicrophoneUsageDescription` | **eliminado** (ya no se pide el permiso) |
 | `NSFaceIDUsageDescription` | lo añade `expo-secure-store`; la app no usa biometría. Inocuo, documentado |
 
@@ -300,10 +335,10 @@ transporte de B3. `.env` no se tocó (decisión explícita de la persona respons
 
 ### 7.1 Android
 
-| Vía | Estado | Qué falta exactamente |
+| Vía | Estado | Detalle |
 | --- | --- | --- |
 | EAS `preview` (APK) | **BLOQUEADO** | `npx eas-cli whoami` → `Not logged in`. Requiere credenciales de Expo |
-| Gradle local | **ver 7.1.1** | se intentó de verdad; resultado medido abajo |
+| **Gradle local (release)** | **FUNCIONA** | APK de 173 MB generado y verificado; firmado con el keystore de depuración, instalable pero no distribuible (§7.1.2) |
 
 #### 7.1.1 Intento real de build local
 
@@ -321,9 +356,119 @@ Estado del entorno antes de lanzarla (**medido**): Gradle 9.3.1, AGP 8.12.0, JDK
 (se fijó `compileSdk 35`), `cmdline-tools` **vacío** — sin `sdkmanager` no hay forma
 automática de instalar la plataforma que falta — y `ANDROID_HOME` sin definir en el perfil.
 
-**Resultado:** pendiente de registrar al cierre de este documento. La descarga de Gradle y
-la compilación de sus plugins con JDK 22 sí progresaron, de modo que la JDK no era el
-obstáculo que se suponía.
+**Resultado del primer intento: `BUILD FAILED in 34m 25s`** (895 tareas ejecutadas), sin
+APK. Y el fallo fue útil, porque destapó un error introducido por B8:
+
+```
+Execution failed for task ':app:checkReleaseAarMetadata'.
+> 13 issues were found when checking AAR metadata:
+    1. Dependency 'androidx.camera:camera-camera2-pipe:1.6.0' requires libraries and
+       applications that depend on it to compile against version 36 or later of the
+       Android APIs.
+       :app is currently compiled against android-35.
+```
+
+Causa: B8 había fijado `compileSdkVersion`/`targetSdkVersion` en **35**, leyéndolo del
+fallback del plugin en lugar de preguntárselo a Gradle. El valor real por defecto de SDK 57
+es **36**, así que el pin no documentaba la realidad: la **bajaba**, y `expo-camera`
+(`androidx.camera` 1.6.0) exige 36 o superior. Corregido a `24 / 36 / 36` (§4.1).
+
+Dos conclusiones que invalidan suposiciones previas de este documento:
+
+1. **La vía local nunca estuvo bloqueada por el toolchain.** Se había dado por bloqueada
+   porque faltaba la plataforma `android-35` y no había `cmdline-tools` para instalarla.
+   Falso: AGP descarga por su cuenta lo que falta, licencia incluida — instaló el **NDK
+   27.1.12297006 (2,4 GB)** sin intervención.
+2. **JDK 22 no es un obstáculo.** Gradle 9.3.1 y AGP 8.12.0 compilaron con ella sin
+   incidencias, hasta llegar al fallo de metadatos, que no tiene relación con la JDK.
+
+**Segundo intento, con `compileSdk 36`: `BUILD FAILED in 3m 42s`** (918 tareas). La
+corrección de SDK funcionó —superó `checkReleaseAarMetadata` y bajó de 34 min a 3— pero
+apareció un segundo error, también introducido por B8:
+
+```
+Execution failed for task ':app:lintVitalRelease'.
+> Lint found 6 errors. First failure:
+  res/values-b+en/strings.xml:2: Error: "NSCameraUsageDescription" is translated here
+  but not found in default locale [ExtraTranslation]
+```
+
+Causa: la clave `locales` de `app.json`, que B8 había añadido para traducir los textos de
+permiso de iOS. Expo la aplica **también a Android**. Corregido quitándola (§4.3).
+
+**Tercer intento: `BUILD SUCCESSFUL in 3m 36s`, código de salida 0, 921 tareas.**
+
+### 7.1.2 El APK: qué es exactamente
+
+```
+android/app/build/outputs/apk/release/app-release.apk
+```
+
+| Propiedad | Valor **medido** |
+| --- | --- |
+| Existe | **sí**, 2026-10-25 13:14 |
+| Tamaño | **173 MB** (APK universal, con las 4 ABIs) |
+| `package` | `com.havit.app`, `versionCode` 1, `versionName` 1.0.0 |
+| `compileSdkVersion` | **36** (`platformBuildVersionName='16'`, Android 16) |
+| `targetSdkVersion` | **36** |
+| ABIs | `arm64-v8a` 36,4 MB · `armeabi-v7a` 24,9 MB · `x86` 39,3 MB · `x86_64` 38,3 MB |
+| `usesCleartextTraffic` | **`true`** — sigue activo, porque B3 no está mergeado |
+| `debuggable` | no declarado (es una build de release) |
+| Firma | **keystore de depuración de Android** (`CN=Android Debug`), SHA-256 `fac61745…33b9c` |
+
+**¿Es instalable?** **Sí.** Está firmado, así que se puede instalar por `adb install` en un
+teléfono real o en un emulador.
+
+**¿Qué perfil usa?** **Ninguno de EAS.** Esto es importante no confundirlo: es el
+`buildType release` de Gradle **en local**, no el perfil `preview` de `eas.json`. Y está
+firmado con el keystore de depuración porque la plantilla de React Native lo deja así a
+propósito, con su advertencia incluida en `android/app/build.gradle`:
+
+```gradle
+release {
+    // Caution! In production, you need to generate your own keystore file.
+    signingConfig signingConfigs.debug
+}
+```
+
+Consecuencias prácticas:
+
+- **Sirve para probar en un dispositivo físico**, que es lo que B8 necesita.
+- **No sirve para distribuir.** Un APK firmado con el keystore de depuración no debe
+  llegar a Google Play ni a nadie fuera del equipo, y no equivale a la build de `preview`
+  de EAS, que usaría credenciales reales.
+- **Los 173 MB no son el tamaño de instalación.** Es un APK universal que lleva las cuatro
+  ABIs; un teléfono solo usa una. Descontando las otras tres, para un dispositivo arm64 la
+  parte que le corresponde ronda los 70 MB. El tamaño descargado e instalado reales siguen
+  **sin medir**: hacen falta un App Bundle o `--split-per-abi`, y el propio dispositivo.
+
+### 7.1.3 Verificación de los permisos sobre el APK construido
+
+Esto era lo que §4.2 dejaba pendiente: comprobar el manifest **fusionado**, no el de
+partida. `aapt2 dump permissions` sobre el APK confirma que los tres `tools:node="remove"`
+surtieron efecto:
+
+| Permiso | En el APK |
+| --- | --- |
+| `android.permission.CAMERA` | sí |
+| `android.permission.INTERNET` | sí |
+| `android.permission.READ_EXTERNAL_STORAGE` (`maxSdkVersion=32`) | sí |
+| `android.permission.VIBRATE` | sí |
+| **`android.permission.SYSTEM_ALERT_WINDOW`** | **NO — eliminado** |
+| **`android.permission.WRITE_EXTERNAL_STORAGE`** | **NO — eliminado** |
+| **`android.permission.RECORD_AUDIO`** | **NO — eliminado** |
+
+El APK incluye además permisos que añaden las propias librerías, no la configuración de la
+app: `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`, `WAKE_LOCK`,
+`com.google.android.c2dm.permission.RECEIVE` y `ACCESS_NETWORK_STATE` (de
+`expo-notifications`), `USE_BIOMETRIC`/`USE_FINGERPRINT` (de `expo-secure-store`, aunque la
+app no usa biometría) y una cola larga de permisos de *badge* de lanzadores de Samsung,
+HTC, Sony, Huawei, Oppo y otros, que entran con la librería de contadores de notificación.
+Son estándar, pero conviene saber que están ahí antes de una revisión de tienda.
+
+**Nota operativa:** `expo prebuild --clean` regenera `android/` e `ios/` desde cero, así
+que borra también `ios/Pods` y `ios/frontend.xcworkspace`. Después de cada `--clean` hay
+que volver a ejecutar `pod install` (la caché de CocoaPods lo hace rápido).
 
 Lo que **sí** está listo: `eas.json` ya define `development` (dev client, APK),
 `preview` (interna, APK) y `production`; `extra.eas.projectId` ya está en `app.json`
@@ -405,6 +550,11 @@ Dispositivo objetivo: iPhone 16 Pro Max, iOS 26.6.2, Mac Apple Silicon con macOS
 Los pasos 1 a 3 necesitan tu intervención: contraseña de administrador, tu Apple ID y el
 teléfono conectado. **Ninguno se ha ejecutado.**
 
+> **Estado al cierre de este documento:** los pasos 1 y 2 ya están resueltos sin tocar el
+> sistema: Xcode se usa vía `DEVELOPER_DIR` (sin `sudo`, sin cambiar `xcode-select`) y
+> CocoaPods 1.17.0 está instalado y ya generó el espacio de trabajo (§9.2.1). Queda la
+> firma y el dispositivo.
+
 ### 9.1 Paso 1 — apuntar las herramientas a Xcode (pide tu contraseña)
 
 `xcode-select` apunta a Command Line Tools, no a Xcode. Dos opciones:
@@ -421,12 +571,102 @@ Abre Xcode una vez a mano para que acepte su licencia e instale sus componentes.
 
 ### 9.2 Paso 2 — instalar CocoaPods (no está)
 
-Hace falta para `pod install`. Elige una:
+Hace falta para `pod install`. Esta máquina tiene una particularidad que descarta la vía
+más obvia, así que conviene leer antes de ejecutar.
+
+**Entorno medido:** el único Ruby es el del sistema, **2.6.10** (`/usr/bin/ruby`). No hay
+rbenv, rvm ni asdf. Sí hay **Homebrew 7.0.6** en `/opt/homebrew`.
+
+**`sudo gem install cocoapods` — descartado.** Escribe en `/Library/Ruby/Gems/2.6.0`,
+exige contraseña de administrador y modifica el estado del sistema.
+
+**`gem install --user-install cocoapods` — intentado, y falla.** Instala en `~/.gem` sin
+`sudo` y sin tocar nada global, pero las dependencias transitivas de CocoaPods 1.17.0 ya
+dejaron atrás Ruby 2.6, en cascada:
+
+```
+ffi (>= 1.15.0)        -> requiere ruby >= 3.0   (1.17.2 aún admite >= 2.5; se fijó y pasó)
+securerandom (>= 0.3)  -> requiere ruby >= 3.1   (sin salida dentro del rango)
+```
+
+El gemspec de CocoaPods declara `ruby >= 2.6` en **todas** sus versiones (1.14.3 a 1.17.0),
+así que bajar de versión no resuelve el problema por sí solo: lo que se movió son las
+dependencias. El intento dejó 30 gems en `~/.gem` (55 MB) **sin** el binario `pod`;
+se eliminan con `rm -rf ~/.gem` y no afectan a nada del sistema. El Ruby del sistema
+quedó intacto (`ruby -v` → 2.6.10, `which ruby` → `/usr/bin/ruby`).
+
+**`brew install cocoapods` — la vía que funciona, con una advertencia.** Instala CocoaPods
+1.17.0 precompilado en `/opt/homebrew`, sin `sudo`, con sus gems en un `libexec` privado
+que no contamina los del usuario. La advertencia: la fórmula declara `depends_on "ruby"`
+sin `:build`, y la fórmula `ruby` de Homebrew **no es keg-only**, así que enlaza
+`/opt/homebrew/bin/ruby` (Ruby 4.0.9). Como `/opt/homebrew/bin` precede a `/usr/bin` en el
+PATH, `ruby` pasaría de 2.6.10 a 4.0.9 en todas las shells.
+
+Si eso no es aceptable, se desenlaza después y `pod` sigue funcionando. **Ejecutado y
+verificado**, no supuesto:
 
 ```bash
-brew install cocoapods          # si usas Homebrew
-sudo gem install cocoapods      # alternativa, pide contraseña
+brew install cocoapods    # CocoaPods 1.17.0_1 + ruby 4.0.9 + openssl@4 + libyaml, sin sudo
+brew unlink ruby          # 5155 symlinks retirados de /opt/homebrew/bin
 ```
+
+Estado medido en cada punto:
+
+| Comprobación | Antes de instalar | Tras instalar | Tras `brew unlink ruby` |
+| --- | --- | --- | --- |
+| `pod --version` | `pod not found` | **1.17.0** | **1.17.0** |
+| `which pod` | — | `/opt/homebrew/bin/pod` | `/opt/homebrew/bin/pod` |
+| `ruby -v` | 2.6.10 | **4.0.9** | **2.6.10** |
+| `which ruby` | `/usr/bin/ruby` | `/opt/homebrew/bin/ruby` | `/usr/bin/ruby` |
+
+Desenlazar es seguro, y se comprobó antes de hacerlo en vez de darlo por hecho:
+`brew uses --installed ruby` devuelve **solo `cocoapods`**, y el `pod` real lleva el
+shebang `#!/opt/homebrew/opt/ruby/bin/ruby`, una ruta absoluta que no pasa por
+`/opt/homebrew/bin`. Reversible con `brew link ruby`; `brew uninstall cocoapods ruby` lo
+retira del todo.
+
+**Efecto secundario que conviene conocer.** Instalar CocoaPods arrastra `openssl@4`, y
+Homebrew desenlazó `openssl@3` en el proceso (6570 symlinks). De `openssl@3` dependen
+`composer`, `elixir`, `erlang`, `ffmpeg`, `curl`, `krb5`, `black` y otros. Comprobado que
+**no rompió nada**: `openssl@3` es *keg-only*, sigue en el Cellar, su enlace
+`/opt/homebrew/opt/openssl@3` está intacto, `brew info` confirma
+`Recursive Runtime (1): all installed`, y se verificaron los binarios uno a uno —
+`composer` 2.9.7, `ffmpeg` 8.1.2, `black` 26.3.1 y `elixir`/OTP 27 responden con
+normalidad.
+
+**Limitación menor:** CocoaPods avisa de que el terminal no usa UTF-8 y sugiere añadir
+`export LANG=en_US.UTF-8` a `~/.profile`. No se modificó ningún perfil del usuario; basta
+con pasar `LANG=en_US.UTF-8` en la invocación.
+
+### 9.2.1 `pod install` — ejecutado y correcto
+
+Una vez instalado CocoaPods, el espacio de trabajo de iOS se generó sin errores
+(**medido**):
+
+```bash
+cd frontend/ios
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer LANG=en_US.UTF-8
+pod install          # exit 0
+```
+
+| Resultado | Valor |
+| --- | --- |
+| Pods instalados | **312** |
+| Tamaño de `ios/Pods` | **1,2 GB** |
+| CocoaPods que lo generó | **1.17.0** |
+| Espacio de trabajo | `ios/frontend.xcworkspace` |
+| `xcodebuild -list -workspace` | responde; el scheme **`frontend`** existe |
+
+Dato favorable para los tiempos de compilación: el proyecto resuelve React Native por
+**binarios precompilados**, no desde fuentes (`RCT_USE_RN_DEP`, visible en el Podfile).
+`pod install` descargó `reactnative-core-0.86.3` (94 MB) y los `.xcframework` de los
+módulos de Expo, en lugar de compilar React Native entero.
+
+Los avisos `[!] … has added N script phases` de `ExpoCamera`, `ExpoModulesCore`,
+`hermes-engine` y otros son informativos de CocoaPods, no errores.
+
+Con esto, el proyecto iOS está **listo para compilar**. Lo que falta es exclusivamente la
+firma y el dispositivo, que son los pasos 1, 3 y 4 de abajo.
 
 ### 9.3 Paso 3 — generar el proyecto, firmar y ejecutar
 
@@ -472,17 +712,92 @@ distintos:
 2. **Ese host es el backend real.** Los flujos de registro, unirse a retos, registrar
    entrenamientos y subir fotos **crean datos**. No deben ejecutarse contra producción.
 
+Lo que ya está disponible en esta máquina (**medido**):
+
+| Pieza | Estado |
+| --- | --- |
+| PostgreSQL local | **`postgresql@18` corriendo**, `pg_isready` → `/tmp:5432 - aceptando conexiones` |
+| **Base de datos de pruebas aislada** | **`havit_b4_test` ya existe y está al día**: 62 tablas en el schema `havit` y **66 migraciones aplicadas**, exactamente los 66 ficheros SQL que tiene `backend` en `development` (1 init + 58 migrations + 7 seeds). También están `havit_perf` y `havit_b4_audit_1792820163` |
+| HTTPS local | `raiz/docker-compose.yml` ya trae **Caddy 2.10.2** con TLS automático sobre `API_DOMAIN`, y `caddy/Caddyfile` es trabajo de B3 |
+| Nombre Bonjour del Mac | `MacBook-Pro-de-Alejandro-2.local` |
+| IP LAN del Mac | `192.168.5.94` |
+
+O sea que **el entorno aislado no hay que construirlo, ya está**: tareas anteriores (B4,
+rendimiento) dejaron bases locales con el esquema completo y al día. No hace falta
+`db:migrate` ni tocar la instancia de Azure.
+
+### 9.4.1 Verificación de seguridad: a qué backend se conectaría la app
+
+Hecha antes de instalar nada, porque es el riesgo con más consecuencias de todo B8.
+
+**Por defecto, a producción.** El `.env` versionado define
+`EXPO_PUBLIC_API_URL=http://20.63.84.1:3000`, así que **cualquier** build lo toma si no se
+sobreescribe (**medido**, `npx expo config --json`):
+
+```
+extra.apiUrl = http://20.63.84.1:3000
+```
+
+**Una variable de entorno sí lo sobreescribe** (**medido**), que es lo que permite una
+build de pruebas segura:
+
+```
+$ EXPO_PUBLIC_API_URL="http://MacBook-Pro-de-Alejandro-2.local:3000" npx expo config --json
+extra.apiUrl = http://MacBook-Pro-de-Alejandro-2.local:3000
+```
+
+> **Riesgo residual que hay que conocer antes de instalar.** `services/api.ts` en
+> `development` lleva la URL de producción **codificada como respaldo**:
+>
+> ```ts
+> const FALLBACK_API_URL = 'http://20.63.84.1:3000';
+> const baseURL = (Constants.expoConfig?.extra?.apiUrl as string | undefined) ?? FALLBACK_API_URL;
+> ```
+>
+> Si `extra.apiUrl` llegase vacío en tiempo de ejecución, la app hablaría con **producción
+> en silencio**, incluso en una build hecha para pruebas. La rama de B3 ya lo corrige
+> (deja el respaldo solo para desarrollo). B8 **no** lo ha tocado por ser territorio de B3.
+> Antes de ejecutar un flujo que cree datos, conviene comprobar la URL efectiva en el
+> propio dispositivo, no solo en la configuración.
+
+**Lo que falta, y necesita autorización:** apuntar el backend a `havit_b4_test` es un
+cambio en `backend/.env`, otro repositorio. **No se ha hecho.**
+
 Opciones, en orden de preferencia:
 
-- **Esperar a B3** y construir contra la URL HTTPS. Resuelve 1 y, si apunta a un entorno
-  de pruebas, también 2.
-- **Levantar el backend en la red local** (`raiz/docker-compose.yml`) y construir con
-  `EXPO_PUBLIC_API_URL=http://<ip-lan>:3000`. ATS lo permite por
-  `NSAllowsLocalNetworking`, y los datos quedan fuera de producción. Es la vía más rápida
-  hoy, pero el backend local habla con la misma base de datos de Azure: hay que apuntarlo
-  a otra antes de crear datos.
-- Para los flujos que **solo leen** (explorar retos, consultar rutinas, navegación), un
-  backend de pruebas con HTTPS basta.
+1. **Backend local por nombre `.local` sobre HTTP.** Construir con
+   `EXPO_PUBLIC_API_URL=http://MacBook-Pro-de-Alejandro-2.local:3000`. Es la vía más
+   barata y la que mejor encaja con `NSAllowsLocalNetworking`, que según las fuentes
+   consultadas cubre con claridad los dominios `.local`.
+2. **Caddy con su CA interna.** `raiz` ya lo tiene montado; con `API_DOMAIN` sin definir
+   sirve `https://localhost` con certificado de la **CA interna de Caddy**, y el
+   `Caddyfile` lleva `skip_install_trust`. Para que el iPhone lo acepte hay que exportar
+   esa CA raíz del volumen `caddy_data`
+   (`/data/caddy/pki/authorities/local/root.crt`), instalarla como perfil en el teléfono
+   y **activarla en Ajustes → General → Información → Ajustes de confianza de
+   certificados**. Además `API_DOMAIN` tendría que ser el nombre por el que el teléfono
+   llega al Mac, no `localhost`. Funciona con independencia de ATS, pero son varios pasos
+   en el dispositivo.
+3. **Esperar a B3** con dominio real y certificado de Let's Encrypt. Es el camino de
+   producción y resuelve el transporte de forma definitiva.
+
+> **Incertidumbre que hay que resolver en el dispositivo, no sobre el papel.** Si
+> `NSAllowsLocalNetworking` exime además a las IP privadas en crudo (`192.168.5.94`) no
+> está claro: las fuentes se contradicen y hay un informe en el foro de Apple de una
+> dirección `192.168` que siguió fallando con esa clave activa. Por eso la opción 1 usa el
+> nombre `.local` y no la IP, y por eso la opción 2 queda preparada como alternativa. **No
+> se dará por buena ninguna de las dos hasta verla funcionar en el iPhone.**
+
+**La base de datos es el punto delicado.** `raiz/docker-compose.yml` advierte de forma
+explícita que no se añada un servicio `db` local que tape el configurado, y toma
+`DB_HOST`/`DB_DATABASE` del `.env`, que hoy apunta a la instancia de Azure. Antes de
+ejecutar cualquier flujo que **cree** datos (F1, F7, F9, F11) hay que apuntar el backend a
+la PostgreSQL local que ya está corriendo y aplicar el esquema con su propio runner
+(`npm run db:migrate`). Ese cambio es del repositorio `backend`, **fuera del alcance de
+B8**, y no se ha hecho.
+
+Para los flujos que **solo leen** (F6, F8, F14) basta un backend de pruebas, sin tocar
+datos.
 
 ## 10. Matriz de validación en dispositivos
 
@@ -493,9 +808,13 @@ Ninguna fila debe marcarse sin ejecutar el flujo en el teléfono.
 
 | # | Dispositivo | Modelo | SO | Tipo | Build | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| D1 | iPhone (tuyo) | iPhone 16 Pro Max | iOS 26.6.2 | **físico** | development firmada localmente | **PENDIENTE DE VALIDACIÓN** |
-| D2 | Android (sin asignar) | — | — | **físico** | EAS `preview` (APK) | **PENDIENTE** — no hay dispositivo ni build |
-| D3 | Emulador `Pixel_9a` | AVD | API 36 | emulador | dev build local | **PENDIENTE** — build local bloqueada (§7.1) |
+| D1 | iPhone (de Alejandro) | iPhone 16 Pro Max | iOS 26.6.2 | **físico** | development firmada localmente | **PENDIENTE DE VALIDACIÓN** — proyecto listo, falta firma y dispositivo |
+| D2 | Android (sin asignar) | — | — | **físico** | `app-release.apk` local (§7.1.2) | **PENDIENTE** — **el APK ya existe**; falta un teléfono donde instalarlo |
+| D3 | Emulador `Pixel_9a` | AVD | API 36 | emulador | `app-release.apk` local | **PENDIENTE** — el APK es instalable; no se ha ejecutado |
+
+Nota sobre D2: el bloqueo ya **no** es la build. Hay un APK release instalable
+(`adb install`), lo que falta es el dispositivo físico. La build de EAS `preview` sigue
+bloqueada por credenciales, pero ya no es la única vía para probar en Android.
 
 D3 es *verificación adicional*. **Un emulador no es evidencia de dispositivo físico** y no
 se presentará como tal.
@@ -545,10 +864,10 @@ configuración (§4.1), no de un dispositivo.
 
 | # | Bloqueo | Impide | Quién lo desbloquea |
 | --- | --- | --- | --- |
-| B-1 | Sin sesión en EAS (`Not logged in`) | el APK de `preview` | credenciales de Expo |
-| B-2 | Sin dispositivo Android físico | la columna D2 de la matriz | aportar un teléfono |
-| B-3 | CocoaPods no instalado | `pod install`, y con él la build de iOS | autorizar la instalación (§9.2) |
-| B-4 | `xcode-select` apunta a CLT | usar Xcode por defecto (hay alternativa sin `sudo`) | contraseña de administrador (§9.1) |
+| B-1 | Sin sesión en EAS (`Not logged in`) | el APK de `preview` **firmado con credenciales reales** y distribuible | credenciales de Expo |
+| B-2 | Sin dispositivo Android físico | la columna D2 de la matriz | aportar un teléfono (el APK ya está) |
+| B-3 | ~~CocoaPods no instalado~~ | — | **RESUELTO** (§9.2): 1.17.0 por Homebrew, `pod install` correcto |
+| B-4 | ~~`xcode-select` apunta a CLT~~ | — | **RESUELTO** sin `sudo` usando `DEVELOPER_DIR` |
 | B-5 | Sin cuenta Apple Developer de pago | **solo** las notificaciones push en iOS (F13) | 99 USD/año, o aceptar el camino A |
 | B-6 | iPhone no conectado | toda la validación física de iOS | conectar y confiar en el Mac |
 | B-7 | B3 sin mergear + API en HTTP | que iOS llegue al backend (§4.4, §9.4) | merge de B3 o backend en red local |
@@ -588,12 +907,14 @@ no tocarlo en B8. Queda documentado: la URL usa **HTTP** y su paso a HTTPS es de
 | Tarea | Veredicto | Fundamento |
 | --- | --- | --- |
 | 1. Dependencias y vulnerabilidades | **COMPLETADO Y VERIFICADO** | 10 paquetes al día con SDK 57; crítica eliminada; 15 → 8; tests, tipos, i18n y expo-doctor en verde. Las 8 restantes son 3 causas raíz documentadas, 2 de ellas solo de build |
-| 2. APK de Android | **BLOQUEADO POR DEPENDENCIA EXTERNA** | `eas.json` y `projectId` listos; falta sesión en EAS (B-1) y un dispositivo (B-2) |
-| 3. iOS | **BLOQUEADO POR DEPENDENCIA EXTERNA** | Xcode 26.4.1 presente y usable; faltan CocoaPods (B-3), el teléfono conectado (B-6) y, solo para push, cuenta de pago (B-5) |
-| 4. Hardware y mínimos | **PARCIAL** | mínimos reales **medidos** (API 24 / iOS 16.4) y fijados. Memoria, tamaño, arranque, Wi-Fi y datos móviles: **pendientes**, requieren la app corriendo |
-| 5. Configuración nativa (permisos, plugins) | **IMPLEMENTADO, PENDIENTE DE PRUEBA FÍSICA** | permisos y textos verificados en el proyecto generado y cubiertos por 13 tests; el diálogo real y el manifest fusionado del APK no se han visto |
+| 2. APK de Android | **IMPLEMENTADO, PENDIENTE DE PRUEBA FÍSICA** | **APK release construido y verificado** (§7.1.2): existe, está firmado y es instalable. Falta ejecutarlo en un teléfono (B-2). La build de EAS `preview`, con firma real y distribuible, sigue bloqueada por credenciales (B-1) |
+| 3. iOS | **IMPLEMENTADO, PENDIENTE DE FIRMA Y DISPOSITIVO** | Xcode 26.4.1 usable sin `sudo`, CocoaPods 1.17.0 instalado, `pod install` correcto (312 pods) y el workspace abre. Falta conectar el teléfono (B-6), elegir y configurar la firma, y —solo para push— cuenta de pago (B-5) |
+| 4. Hardware y mínimos | **PARCIAL** | mínimos reales **medidos y confirmados en el APK** (API 24 / target 36 / iOS 16.4). Tamaño del APK universal medido (173 MB, con el desglose por ABI). Memoria, tamaño instalado, arranque, Wi-Fi y datos móviles: **pendientes**, requieren la app corriendo |
+| 5. Configuración nativa (permisos, plugins) | **COMPLETADO Y VERIFICADO** en Android; **pendiente de prueba física** en iOS | los tres permisos sobrantes **se comprobaron ausentes del APK construido** (§7.1.3), no solo del manifest de partida. En iOS los textos están en el `Info.plist` generado, pero el diálogo real no se ha visto |
 | 6. Documentación y matriz | **COMPLETADO** | este documento; la matriz está creada con todas sus filas en pendiente, como corresponde |
 
-**B8 no está terminado.** Lo que depende de dependencias y configuración está hecho y
-verificado; lo que depende de un dispositivo, de una cuenta o de B3 no lo está, y no
-se presenta como si lo estuviera.
+**B8 no está terminado.** Lo que depende de dependencias, configuración y herramientas
+está hecho y verificado, y en Android la verificación llega hasta un APK real construido y
+analizado. Lo que depende de un dispositivo físico, de una cuenta de Apple o de B3 no está
+hecho, y no se presenta como si lo estuviera: las 14 filas de flujos de §10.2 siguen todas
+en pendiente para los dos dispositivos.
