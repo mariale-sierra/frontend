@@ -665,15 +665,74 @@ módulos de Expo, en lugar de compilar React Native entero.
 Los avisos `[!] … has added N script phases` de `ExpoCamera`, `ExpoModulesCore`,
 `hermes-engine` y otros son informativos de CocoaPods, no errores.
 
-Con esto, el proyecto iOS está **listo para compilar**. Lo que falta es exclusivamente la
-firma y el dispositivo, que son los pasos 1, 3 y 4 de abajo.
+Con esto el proyecto iOS está **configurado y resuelto**, pero **todavía no puede
+compilar**: falta un componente de Xcode, descrito en §9.2.2.
+
+### 9.2.2 Falta el componente de plataforma iOS en Xcode (bloqueo real)
+
+Se intentó compilar para simulador —sin firma, para comprobar que el proyecto nativo
+compila— y **no fue posible**. No por el proyecto, sino por Xcode:
+
+```bash
+$ xcodebuild -workspace frontend.xcworkspace -scheme frontend \
+             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+             CODE_SIGNING_ALLOWED=NO build
+xcodebuild: error: Unable to find a destination matching the provided destination specifier
+  Ineligible destinations for the "frontend" scheme:
+    { platform:iOS, ..., error:iOS 26.4 is not installed.
+      Please download and install the platform from Xcode > Settings > Components. }
+```
+
+`xcodebuild -showdestinations` **no devuelve ningún destino elegible**, y las otras dos
+comprobaciones lo confirman:
+
+```
+$ xcrun simctl runtime list
+Total Disk Images: 0 (0.0G)
+
+$ ls /Library/Developer/CoreSimulator/Profiles/Runtimes/
+(vacío)
+```
+
+Las carpetas `iPhoneOS.platform` e `iPhoneSimulator.platform` existen y `xcodebuild
+-showsdks` lista el SDK de iOS 26.4, lo que induce a error: desde Xcode 15 **la plataforma
+es un componente descargable aparte**, y aquí no está instalada. Sin ella no se puede
+compilar para iOS **ni para dispositivo ni para simulador**.
+
+> **Corrección a una afirmación anterior de este documento.** Tras instalar CocoaPods y
+> ejecutar `pod install` con éxito se dijo que el proyecto iOS quedaba "listo para
+> compilar". Era demasiado: está configurado, con sus 312 pods resueltos y un workspace que
+> `xcodebuild -list` abre correctamente, pero **compilar era imposible** y eso no se había
+> comprobado. Lo correcto es lo que dice ahora §13: implementado, pendiente de un componente
+> de Xcode, de la firma y del dispositivo.
+
+**Qué hace falta:** abrir Xcode → **Settings → Components** y descargar la plataforma
+**iOS**. Son del orden de 7–10 GB y es una acción del usuario; puede pedir contraseña de
+administrador. Hasta entonces, cualquier intento de build de iOS falla con el error de
+arriba, y el bloqueo B-9 (si Xcode 26.4.1 acepta un dispositivo con iOS 26.6.2) **no se
+puede ni evaluar**: al instalar el componente puede además ofrecer una versión de Xcode más
+reciente, que sería lo deseable para un iPhone con iOS 26.6.2.
 
 ### 9.3 Paso 3 — generar el proyecto, firmar y ejecutar
 
 ```bash
 cd frontend
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+export LANG=en_US.UTF-8
+
+# La URL de la API se incrusta AQUI, en el prebuild. Apuntarla al backend local
+# es lo que impide que la build de pruebas hable con produccion (§9.4.1).
+export EXPO_PUBLIC_API_URL=http://192.168.5.94:3100
+
 npx expo prebuild --platform ios --clean
+cd ios && pod install && cd ..   # obligatorio tras cada --clean (§7.1.1)
+```
+
+Comprobar **antes de compilar** que la URL incrustada es la local:
+
+```bash
+npx expo config --json | python3 -c "import sys,json; print(json.load(sys.stdin)['extra']['apiUrl'])"
+# debe imprimir http://192.168.5.94:3100 — si imprime 20.63.84.1, PARAR
 ```
 
 **Si vas por el camino A (cuenta gratuita)**, quita el *entitlement* de push de esa build.
@@ -762,6 +821,98 @@ extra.apiUrl = http://MacBook-Pro-de-Alejandro-2.local:3000
 
 **Lo que falta, y necesita autorización:** apuntar el backend a `havit_b4_test` es un
 cambio en `backend/.env`, otro repositorio. **No se ha hecho.**
+### 9.4.2 Backend de pruebas local: arrancado y verificado
+
+Arrancado **sin modificar ni un archivo**, solo con variables de entorno temporales en la
+invocación, y con `start:dev` en lugar de `dev` para no disparar el hook `predev` que
+ejecuta `db:migrate` (la base ya está al día, así que habría sido un no-op, pero no hacía
+falta tocarla):
+
+```bash
+cd backend
+env DB_HOST=127.0.0.1 DB_PORT=5432 DB_USERNAME=ale DB_PASSWORD=local \
+    DB_DATABASE=havit_b4_test DB_SSL=false DB_POOL_HOST= DB_POOL_PORT= \
+    JWT_SECRET=b8-local-test-only-not-a-production-secret \
+    CLOUDFLARE_R2_ACCESS_KEY_ID= CLOUDFLARE_R2_SECRET_ACCESS_KEY= \
+    CLOUDFLARE_R2_ACCOUNT_ID= CLOUDFLARE_R2_BUCKET_NAME= CLOUDFLARE_R2_PUBLIC_URL= \
+    OPENAI_API_KEY= REDIS_URL= PORT=3100 \
+    npm run start:dev
+```
+
+Las variables del proceso ganan sobre el `.env` versionado porque `app.module.ts` lee
+`process.env` directamente, y `ConfigModule` carga el `.env` sin sobreescribir lo que ya
+está en el entorno. Las obligatorias son solo `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`,
+`DB_DATABASE` y `JWT_SECRET` (`src/config/env.validation.ts`); `DB_PASSWORD` tiene que ir
+no vacía aunque la PostgreSQL local use autenticación *trust*, porque la validación
+rechaza una cadena vacía.
+
+Resultado (**medido**): `Nest application successfully started`, y
+
+```
+GET /health        -> {"status":"ok","uptimeSeconds":32}
+GET /health/ready  -> {"status":"ok","checks":{"database":"up","redis":"disabled"}}
+```
+
+`database: up` confirma que habla con la PostgreSQL local, y `redis: disabled` que el
+limitador cayó a memoria en vez de buscar un Redis externo.
+
+**Conflicto de puerto encontrado, y es importante.** En el primer arranque (puerto 3000)
+había **otra aplicación del usuario** escuchando en `[::1]:3000` — otra app web, con una
+CSP que apunta a `localhost:3001` y una redirección `307` a `/es/login`. El nombre
+`MacBook-Pro-de-Alejandro-2.local` resuelve primero a `::1`, así que una petición a ese
+nombre llegaba a **esa** app y no al backend de Havit, que había quedado en `*:3000` sobre
+IPv4. Un "funciona" por ahí habría sido un falso positivo contra la app equivocada. El
+backend de pruebas se movió a **3100**, libre, sin tocar la otra aplicación.
+
+| Ruta | Resultado |
+| --- | --- |
+| `http://127.0.0.1:3100` | responde |
+| `http://192.168.5.94:3100` (IP LAN, la que alcanza el iPhone) | **responde** |
+| `http://MacBook-Pro-de-Alejandro-2.local:3100` | desde el propio Mac resuelve a *loopback*, no a la IP LAN; desde el iPhone mDNS debería dar la IP LAN, pero **está sin verificar** |
+
+**Servicios externos desactivados a propósito** (condición: no usar servicios reales). Con
+`CLOUDFLARE_R2_*` y `OPENAI_API_KEY` vacíos, el backend arranca igual porque no están entre
+las obligatorias, pero eso tiene una consecuencia que hay que aceptar de antemano: **los
+flujos F11 (subir foto) y F12 (estado de moderación) no se podrán validar** contra este
+entorno, porque dependen de Cloudflare R2 y de OpenAI. F10 (capturar la foto con la cámara)
+sí se puede probar, porque la captura es local al dispositivo.
+
+### 9.4.3 Impedir que una build de pruebas caiga en el fallback de producción
+
+El riesgo es el `FALLBACK_API_URL` codificado en `services/api.ts` (§9.4.1). La buena
+noticia es que **en iOS la protección ya existe y no hay que programar nada**: el fallback
+es `http://20.63.84.1:3000`, texto en claro contra una **IP pública**, y eso es exactamente
+lo que ATS rechaza con `NSAllowsArbitraryLoads: false`. Es decir:
+
+- si la configuración resuelve bien, la app habla con el backend local;
+- si fallara y cayese al fallback, **ATS corta la petición** y el fallo se ve, en lugar de
+  que la app escriba en producción en silencio.
+
+Así que la medida correcta aquí es **no debilitar ATS**, que es justo lo que se pedía: la
+misma regla que obliga a usar un backend local es la que bloquea el fallback. No se toca
+`services/api.ts`, que además es territorio de B3.
+
+En **Android la situación es la contraria**: el APK lleva `usesCleartextTraffic=true`
+(§7.1.2), así que el fallback de producción **sí sería alcanzable**. Para el APK local
+conviene no ejecutar flujos que creen datos hasta que B3 cierre el transporte, o
+verificarlo antes como se indica abajo.
+
+**Verificación efectiva, sin modificar la app** (y la que responde a la condición de
+comprobar la configuración antes de instalar): el propio log del backend local es la
+prueba. Si el teléfono está hablando con la API local, sus peticiones aparecen ahí; si no
+aparece ninguna, no está usando la API local. Combinado con ATS en iOS, eso cubre los dos
+casos: o se ve el tráfico en local, o no hay tráfico en ningún sitio.
+
+### 9.4.4 La decisión que falta sobre la base de datos
+
+`havit_b4_test` **es local y de pruebas**, comprobado: servidor por socket unix
+(`inet_server_addr()` vacío), propietario `ale`, 13 MB, y 66 migraciones al día.
+
+Pero **contiene datos**: 360 usuarios, 52 retos y 26 registros de entrenamiento, de las
+pruebas de B4. Por eso B8 la ha usado **solo en lectura** para verificar conectividad, y no
+ha ejecutado ningún flujo que escriba. Decidir si esos datos son prescindibles no le
+corresponde a B8: hace falta confirmación antes de ejecutar F1, F7, F9 o F11 contra ella, o
+bien crear una base nueva para B8.
 
 Opciones, en orden de preferencia:
 
@@ -872,7 +1023,8 @@ configuración (§4.1), no de un dispositivo.
 | B-6 | iPhone no conectado | toda la validación física de iOS | conectar y confiar en el Mac |
 | B-7 | B3 sin mergear + API en HTTP | que iOS llegue al backend (§4.4, §9.4) | merge de B3 o backend en red local |
 | B-8 | Toolchain Android local incompleto | la build local y el emulador | plataforma `android-35` + `cmdline-tools` |
-| B-9 | Soporte de iOS 26.6.2 en Xcode 26.4.1 sin confirmar | posiblemente nada; se sabe al conectar | actualizar Xcode si lo rechaza |
+| **B-11** | **Componente de plataforma iOS no instalado en Xcode** (`simctl runtime list` → 0 imágenes) | **toda** compilación de iOS, de dispositivo y de simulador | descargarlo en Xcode → Settings → Components (~7–10 GB), acción del usuario (§9.2.2) |
+| B-9 | Soporte de iOS 26.6.2 en Xcode 26.4.1 sin confirmar | posiblemente nada; se sabe al conectar | no evaluable hasta resolver B-11; actualizar Xcode si lo rechaza |
 | B-10 | Sin credenciales FCM/APNs | push en ambas plataformas | configurar en EAS |
 
 ## 12. Coordinación con otras tareas
@@ -908,7 +1060,7 @@ no tocarlo en B8. Queda documentado: la URL usa **HTTP** y su paso a HTTPS es de
 | --- | --- | --- |
 | 1. Dependencias y vulnerabilidades | **COMPLETADO Y VERIFICADO** | 10 paquetes al día con SDK 57; crítica eliminada; 15 → 8; tests, tipos, i18n y expo-doctor en verde. Las 8 restantes son 3 causas raíz documentadas, 2 de ellas solo de build |
 | 2. APK de Android | **IMPLEMENTADO, PENDIENTE DE PRUEBA FÍSICA** | **APK release construido y verificado** (§7.1.2): existe, está firmado y es instalable. Falta ejecutarlo en un teléfono (B-2). La build de EAS `preview`, con firma real y distribuible, sigue bloqueada por credenciales (B-1) |
-| 3. iOS | **IMPLEMENTADO, PENDIENTE DE FIRMA Y DISPOSITIVO** | Xcode 26.4.1 usable sin `sudo`, CocoaPods 1.17.0 instalado, `pod install` correcto (312 pods) y el workspace abre. Falta conectar el teléfono (B-6), elegir y configurar la firma, y —solo para push— cuenta de pago (B-5) |
+| 3. iOS | **BLOQUEADO POR DEPENDENCIA EXTERNA** | Xcode 26.4.1 usable sin `sudo`, CocoaPods 1.17.0 instalado, `pod install` correcto (312 pods) y el workspace abre. Pero **falta el componente de plataforma iOS en Xcode** (B-11), sin el cual no compila nada; después, conectar el teléfono (B-6), la firma, y —solo para push— cuenta de pago (B-5) |
 | 4. Hardware y mínimos | **PARCIAL** | mínimos reales **medidos y confirmados en el APK** (API 24 / target 36 / iOS 16.4). Tamaño del APK universal medido (173 MB, con el desglose por ABI). Memoria, tamaño instalado, arranque, Wi-Fi y datos móviles: **pendientes**, requieren la app corriendo |
 | 5. Configuración nativa (permisos, plugins) | **COMPLETADO Y VERIFICADO** en Android; **pendiente de prueba física** en iOS | los tres permisos sobrantes **se comprobaron ausentes del APK construido** (§7.1.3), no solo del manifest de partida. En iOS los textos están en el `Info.plist` generado, pero el diálogo real no se ha visto |
 | 6. Documentación y matriz | **COMPLETADO** | este documento; la matriz está creada con todas sus filas en pendiente, como corresponde |
