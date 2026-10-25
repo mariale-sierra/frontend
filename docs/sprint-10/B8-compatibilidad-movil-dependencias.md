@@ -1533,6 +1533,49 @@ Es decir: **una sola familia**, el token viejo marcado como reemplazado por el n
 ninguna revocación. Exactamente el comportamiento de token rotativo que B4 implementó, y
 verificado sobre un dispositivo físico contra la base local, no en un test.
 
+## 9.10 El ciclo de vida de sesión de B4, verificado de extremo a extremo
+
+Las tres pruebas se ejecutaron en el orden que imponían sus dependencias —**F3 → F5 → F2**,
+porque F3 necesita la sesión viva y F2 necesita haberla cerrado— y el log las confirma en
+ese mismo orden:
+
+```
+10:10:24 PM  GET  /auth/me      200   <- F3: sesion restaurada, SIN login previo
+10:10:24 PM  GET  /users/me     200
+10:10:24 PM  GET  /feed         200
+10:10:43 PM  POST /auth/logout  204   <- F5
+10:11:24 PM  POST /auth/login   200   <- F2
+10:11:24 PM  GET  /users/me     200
+```
+
+Lo relevante de F3 no es que haya peticiones, sino **que no haya un `POST /auth/login`
+delante**. La app recuperó la sesión del almacenamiento seguro del dispositivo y siguió
+operando autenticada. Si hubiese aparecido un login, no habría sido restauración.
+
+### Lo que dice la base sobre el logout y el nuevo login
+
+| Familia | Creada | Revocada | Motivo | Estado |
+| --- | --- | --- | --- | --- |
+| `de2c9867` (token 1, del registro) | 21:42:49 | **22:10:44** | **`logout`** | revocado |
+| `de2c9867` (token 2, del refresh) | 21:59:57 | **22:10:44** | **`logout`** | revocado |
+| `c554fec4` (del nuevo login) | 22:11:24 | no | — | **activo** |
+
+Dos cosas que conviene leer con atención:
+
+1. **El logout revocó la familia completa**, no solo el token vigente. Los **dos** tokens de
+   `de2c9867` —el original y el rotado— quedaron revocados en el mismo instante, con el
+   motivo `logout` registrado. Esa familia tiene **0 tokens activos**. Un refresh token
+   robado de antes del logout ya no sirve para nada.
+2. **El nuevo login abrió una familia distinta**, `c554fec4`, sin ninguna relación con la
+   revocada. No reutilizó la familia anterior, que es precisamente lo que haría vulnerable
+   el mecanismo.
+
+Es el comportamiento que B4 especificó, observado sobre un dispositivo físico contra la base
+local. Y hay una confirmación incidental más: durante la verificación de los datos de prueba
+(§9.6), un token firmado a mano con un `sid` inventado fue rechazado con *"Session is no
+longer valid"*, lo que demuestra que el guard valida la sesión contra la familia real y no
+solo la firma del JWT.
+
 ## 10. Matriz de validación en dispositivos
 
 Ningún dispositivo físico se ha probado. Toda la columna de resultado está **pendiente**.
@@ -1566,10 +1609,10 @@ los contadores de la base.
 | # | Flujo | D1 iPhone | D2 Android | Evidencia / motivo |
 | --- | --- | --- | --- | --- |
 | F1 | Registro | **APROBADO** | pendiente | `POST /auth/register 200` y el usuario aparece en `havit_b8_test` (`9b31664d-…`, `pruebitaxd`). Contador **0 → 1 usuarios** |
-| F2 | Login | **NO EJECUTADO** | pendiente | Los 5 `POST /auth/login 401` del log son intentos **previos** al registro, con una cuenta que no existía. Falta un login con credenciales válidas |
-| F3 | Restauración de sesión | **NO EJECUTADO** | pendiente | Requiere cerrar y reabrir la app |
+| F2 | Login | **APROBADO** | pendiente | `POST /auth/login 200` a las 22:11:24, seguido de la carga autenticada de la app. Creó una **familia de sesión nueva e independiente**, `c554fec4` (§9.10) |
+| F3 | Restauración de sesión | **APROBADO** | pendiente | App cerrada del todo y reabierta: a las 22:10:24 llega una ráfaga de peticiones **autenticadas** (`GET /auth/me 200`, `/users/me 200`, `/feed 200`…) **sin ningún `POST /auth/login` previo**. La sesión se restauró desde el almacenamiento del dispositivo |
 | F4 | Refresh de token (B4) | **APROBADO** | pendiente | Ocurrió **solo**, sin forzarlo: `POST /auth/refresh 200` a las 21:59:57, tras caducar el token de acceso de 15 minutos. La base confirma la **rotación** de B4: la fila original de la familia `de2c9867` quedó con `replaced_by` apuntando al nuevo token, y hay una segunda fila en la misma familia (§9.9) |
-| F5 | Logout | **NO EJECUTADO** | pendiente | Ninguna llamada a `/auth/logout` |
+| F5 | Logout | **APROBADO** | pendiente | `POST /auth/logout 204` a las 22:10:43, y la base confirma la revocación: **los dos tokens** de la familia `de2c9867` quedan con `revoked_at` y `revoke_reason = 'logout'`, **0 activos** (§9.10) |
 | F6 | Explorar retos | **APROBADO** | pendiente | Observado en el dispositivo: el reto `[B8-TEST]` aparece en la lista. `GET /challenges?limit=50 200` con 1 reto devuelto |
 | F7 | Unirse a un reto | **APROBADO** | pendiente | `POST /challenges/{id}/join 201` y la fila existe en la base: `pruebitaxd | participant | active | 16:00:16`. **No la insertó B8**: solo se había insertado el propietario |
 | F8 | Consultar rutinas | **APROBADO** | pendiente | Observado con datos reales. `GET /routine/today/{id} 200`, `GET /routine/2 200`, y además se ejercitó la sustitución de ejercicios: `/exercises/location-availability?exerciseIds=9,23`, `/exercises/9/alternatives?location=home`, `/routine/today/{id}?location=home&substitutions=9:26` |
@@ -1580,14 +1623,24 @@ los contadores de la base.
 | F13 | Notificaciones push | **NO COMPLETADO** | pendiente | Un Personal Team gratuito no puede firmar la capacidad (§9.2.6). **No se marcará como aprobado** |
 | F14 | Navegación principal y perfil | **APROBADO** | pendiente | Recorrido real con respuestas 200: `GET /users/me`, `/feed`, `/users/me/challenges`, `/workout-posts/mine`, `/follows/following/streaks`, `/notifications/unread-count`, `PATCH /users/me/profile`, `GET /workout-posts/user/9b31664d-…` |
 
-**Recuento tras la segunda sesión: 7 aprobados, 1 parcialmente aprobado, 3 no ejecutados y
-3 no completables.** Aprobados: **F1** registro, **F4** refresh de token, **F6** explorar
-retos, **F7** unirse, **F8** consultar rutinas, **F10** cámara y **F14** navegación y
-perfil. Parcialmente aprobado: **F9**, con el alcance delimitado en §9.8.
+**Recuento final en D1 (iPhone 16 Pro Max): 10 aprobados, 1 parcialmente aprobado y 3 no
+completables.** No queda ningún flujo sin ejecutar en este dispositivo.
 
-Sin ejecutar siguen tres, todos de B4 y **sin ningún bloqueo**: F2 (login con credenciales
-válidas), F3 (restauración de sesión) y F5 (logout). El orden correcto es **F3 → F5 → F2**,
-porque F3 necesita la sesión viva y F2 necesita haberla cerrado antes.
+- **Aprobados (10):** F1 registro, F2 login, F3 restauración de sesión, F4 refresh de token,
+  F5 logout, F6 explorar retos, F7 unirse a reto, F8 consultar rutinas, F10 cámara, F14
+  navegación y perfil.
+- **Parcialmente aprobado (1):** F9 registrar entrenamiento — registro y visualización
+  verificados, detalle por ejercicio sin verificar (§9.8).
+- **No completables (3):** F11 (R2 sin credenciales), F12 (OpenAI sin credenciales), F13
+  (cuenta Apple gratuita no puede firmar push). Los tres por límites documentados del
+  entorno y de la cuenta, **no por falta de ejecución**.
+
+El camino completo de la app —registro, el ciclo entero de sesión de B4, descubrir y unirse
+a un reto, consultar su rutina, registrar el entrenamiento y navegar el perfil— quedó
+validado en un dispositivo físico real contra un backend local aislado.
+
+**La columna D2 (Android físico) sigue entera pendiente**, y es lo que impide dar B8 por
+terminado.
 
 No completables por límites documentados: F11 (R2 vacío), F12 (OpenAI vacío) y F13 (cuenta
 Apple gratuita).
