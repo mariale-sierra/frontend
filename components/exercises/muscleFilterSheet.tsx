@@ -75,7 +75,13 @@ export function MuscleFilterSheet({ visible, selected, onSelect, onClose }: Musc
     <BottomSheetModal visible={visible} onClose={onClose} maxHeight="75%">
       <View style={styles.header}>
         {activeRegion ? (
-          <Pressable onPress={() => setActiveRegion(null)} hitSlop={8} style={styles.backIcon}>
+          <Pressable
+            onPress={() => setActiveRegion(null)}
+            hitSlop={8}
+            style={styles.backIcon}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.actions.back')}
+          >
             <Icon name="chevron-back-outline" size={20} />
           </Pressable>
         ) : (

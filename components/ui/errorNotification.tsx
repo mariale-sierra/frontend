@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Animated, View, StyleSheet, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, radius, spacing, textOpacity } from '../../constants/theme';
@@ -53,6 +54,7 @@ export function ErrorNotification({
   config,
   onDismiss,
 }: ErrorNotificationProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const slideAnim = new Animated.Value(visible ? 0 : HIDDEN_OFFSET_Y);
   const status = STATUS[config.variant ?? 'error'];
@@ -122,6 +124,8 @@ export function ErrorNotification({
             <Pressable
               onPress={onDismiss}
               hitSlop={spacing.sm}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.actions.dismiss')}
             >
               <Icon
                 name="close-outline"

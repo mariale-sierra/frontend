@@ -178,7 +178,7 @@ function CategoryRow({
         />
       </Row>
       {!preference.inAppConfigurable ? (
-        <Text variant="caption" tone="tertiary">
+        <Text variant="caption" tone="secondary">
           {t('notifications.preferences.lockedHint')}
         </Text>
       ) : null}

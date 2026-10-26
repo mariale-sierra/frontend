@@ -224,7 +224,12 @@ export default function Home() {
         </View>
 
         <Row gap="sm">
-          <Pressable style={styles.iconButton} onPress={() => router.push('/messaging')}>
+          <Pressable
+            style={styles.iconButton}
+            onPress={() => router.push('/messaging')}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.a11y.openMessages')}
+          >
             <Icon name="chatbubble-ellipses-outline" size={22} />
           </Pressable>
           {/* B3: the dot is the real unread count (store/notificationsStore). */}

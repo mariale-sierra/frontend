@@ -189,6 +189,7 @@ export function CommentsSheet({
             <IconButton
               testID="comment-send"
               name="send-outline"
+              accessibilityLabel={t('common.a11y.send')}
               size={SEND_BUTTON_SIZE}
               iconSize={18}
               iconColor={colors.ink}

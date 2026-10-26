@@ -24,7 +24,8 @@ interface SegmentedIconToggleProps<T extends string> {
 }
 
 const SEGMENT_SIZE = { width: 64, height: 36 };
-const INACTIVE_ICON_COLOR = withAlpha(colors.paper, textOpacity.tertiary);
+// Still a tappable option, so it needs 3:1 (Sprint 10 accessibility pass) — `tertiary` was 2.5:1.
+const INACTIVE_ICON_COLOR = withAlpha(colors.paper, textOpacity.secondary);
 
 /**
  * Generic 2-option icon segmented control — Components → Segmented control:

@@ -217,7 +217,13 @@ export default function SelectRoutineScreen() {
 
       <View style={[styles.content, { paddingTop: insets.top }]}>
         <Row justify="space-between" align="center" style={styles.topBar}>
-          <Pressable onPress={() => safeBack()} style={styles.backButton} hitSlop={8}>
+          <Pressable
+            onPress={() => safeBack()}
+            style={styles.backButton}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.actions.back')}
+          >
             {/* Crossfading two statically-colored icons instead of animating
                 Ionicons' own color directly — react-native-vector-icons'
                 Icon class implements its own `setNativeProps` that forwards

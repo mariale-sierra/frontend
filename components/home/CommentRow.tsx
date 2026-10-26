@@ -37,6 +37,7 @@ export function CommentRow({ comment, isMine, onDelete, onReport }: CommentRowPr
         <IconButton
           testID="comment-delete"
           name="trash-outline"
+          accessibilityLabel={t('common.a11y.deleteComment')}
           size={28}
           iconSize={16}
           iconColor={withAlpha(colors.paper, textOpacity.secondary)}
@@ -49,7 +50,7 @@ export function CommentRow({ comment, isMine, onDelete, onReport }: CommentRowPr
           name="flag-outline"
           size={28}
           iconSize={16}
-          iconColor={withAlpha(colors.paper, textOpacity.tertiary)}
+          iconColor={withAlpha(colors.paper, textOpacity.secondary)}
           onPress={onReport}
           accessibilityLabel={t('reports.reportCommentA11y')}
         />

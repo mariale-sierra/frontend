@@ -25,7 +25,8 @@ interface CycleDayListProps {
   onAddDay: () => void;
 }
 
-const REMOVE_ICON_COLOR = withAlpha(colors.paper, textOpacity.tertiary);
+// A control, so it needs 3:1 (Sprint 10 accessibility pass) — `tertiary` was 2.5:1.
+const REMOVE_ICON_COLOR = withAlpha(colors.paper, textOpacity.secondary);
 
 /** "Fill in your cycle" (Create challenge, 53B) day list — a numbered-badge row per day, adapted from the
  * same badge/card tokens as Challenge-Info's `ChallengeRoutineDayCard` (30×30
@@ -109,6 +110,7 @@ export function CycleDayList({
 
               <IconButton
                 name="close-outline"
+                accessibilityLabel={t('common.a11y.removeDay', { day })}
                 size={28}
                 iconSize={14}
                 iconColor={canRemove ? REMOVE_ICON_COLOR : withAlpha(colors.paper, 0.12)}

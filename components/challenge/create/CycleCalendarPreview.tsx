@@ -82,7 +82,7 @@ export function CycleCalendarPreview({
     <View style={styles.container} testID="cycle-calendar">
       <View style={styles.week}>
         {weekdayLabels.map((label, i) => (
-          <Text key={`weekday-${i}`} variant="caption" tone="tertiary" align="center" style={styles.cellSlot}>
+          <Text key={`weekday-${i}`} variant="caption" tone="secondary" align="center" style={styles.cellSlot}>
             {label}
           </Text>
         ))}
