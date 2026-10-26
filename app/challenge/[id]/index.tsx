@@ -40,7 +40,6 @@ import { pickChallengeImageUrl } from '../../../services/adapters/challengeListA
 
 /** The header photo: full width, about 3:5 as tall as wide (Sprint 10 wireframe). */
 const HERO_ASPECT_RATIO = 5 / 3;
-const HERO_ICON_SIZE = 56;
 
 type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
 
@@ -296,8 +295,14 @@ export default function ChallengeDetail() {
   // toggle, and each workout day's numbered badge below (not the title).
   const dominantActivityCategory = challenge ? pickDominantActivityCategory(challenge) : null;
   const accentColor = getChallengeAccentColor(dominantActivityCategory);
-  // Sprint 10: the photo is the screen's header; with no approved photo (none,
-  // in review, rejected) it is the gray placeholder, and its creator is told why.
+  // Sprint 10: an approved photo is the screen's header, with the top bar on it.
+  // Without one (none, in review, rejected) the screen looks as it always did,
+  // with no header space; a photo still in review or rejected is explained to
+  // its creator.
+  const heroPhotoUrl = challenge ? pickChallengeImageUrl(challenge) : null;
+  const hasHero = !!heroPhotoUrl;
+  // The top bar's dark shadow, only needed on the photo.
+  const overPhoto = hasHero ? styles.overPhoto : undefined;
   const imageStatus = challenge?.imageStatus;
   const coverNotice =
     isOwner && imageStatus === 'pending'
@@ -337,37 +342,48 @@ export default function ChallengeDetail() {
   ];
 
   return (
-    // No top inset: the header photo runs under the status bar; the icons on it
-    // take the inset themselves.
-    <ScreenBackground variant="default" applyTopInset={false}>
-      {/* The backdrop's own `ink`, fixed; its glow scrolls with the content below. */}
-      <View style={styles.inkBase} pointerEvents="none" />
+    // With a header photo there is no top inset: the photo runs under the status
+    // bar and the icons on it take the inset themselves.
+    <ScreenBackground
+      variant="default"
+      applyTopInset={false}
+      contentStyle={hasHero ? undefined : { paddingTop: Math.max(insets.top, 0) }}
+    >
+      {hasHero ? (
+        // The backdrop's own `ink`, fixed; its glow scrolls with the content below.
+        <View style={styles.inkBase} pointerEvents="none" />
+      ) : (
+        <ChallengeAccentBackdrop color={accentColor} />
+      )}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: showsBottomBar ? spacing['2xl'] : insets.bottom + spacing.xl }}
       >
-        {/* Sprint 10: the glow hangs from the bottom of the header photo (not
-            behind it) and moves with it when scrolling. */}
-        <View
-          pointerEvents="none"
-          style={[styles.glowUnderHero, { top: windowWidth / HERO_ASPECT_RATIO, height: windowHeight }]}
-        >
-          <ChallengeAccentBackdrop color={accentColor} />
-        </View>
-        <View style={styles.hero}>
-          <ChallengeCoverTile
-            imageUrl={challenge ? pickChallengeImageUrl(challenge) : null}
-            iconSize={HERO_ICON_SIZE}
-            style={styles.heroImage}
-            testID="challenge-info-cover"
-          />
+        {hasHero ? (
+          // Sprint 10: the glow hangs from the bottom of the header photo (not
+          // behind it) and moves with it when scrolling.
+          <View
+            pointerEvents="none"
+            style={[styles.glowUnderHero, { top: windowWidth / HERO_ASPECT_RATIO, height: windowHeight }]}
+          >
+            <ChallengeAccentBackdrop color={accentColor} />
+          </View>
+        ) : null}
+        <View style={hasHero ? styles.hero : undefined}>
+          {hasHero ? (
+            <ChallengeCoverTile imageUrl={heroPhotoUrl} style={styles.heroImage} testID="challenge-info-cover" />
+          ) : null}
           <Row
             justify="space-between"
             align="center"
-            style={[styles.topBar, styles.topBarOverHero, { paddingTop: insets.top + spacing.md }]}
+            style={[
+              styles.topBar,
+              hasHero && styles.topBarOverHero,
+              hasHero && { paddingTop: insets.top + spacing.md },
+            ]}
           >
-            <BackButton style={styles.backButton} iconStyle={styles.overPhoto} />
+            <BackButton style={styles.backButton} iconStyle={overPhoto} />
             <Row gap="xs" align="center">
               <Pressable
                 // `dominantActivityCategory` passed through as a route param
@@ -389,8 +405,8 @@ export default function ChallengeDetail() {
                 accessibilityRole="button"
                 accessibilityLabel={t('challengeInfo.membersA11y')}
               >
-                <Icon name="people-outline" size={18} color={colors.paper} style={styles.overPhoto} />
-                <Text variant="label" weight="bold" style={styles.overPhoto}>
+                <Icon name="people-outline" size={18} color={colors.paper} style={overPhoto} />
+                <Text variant="label" weight="bold" style={overPhoto}>
                   {view.membersJoined}
                 </Text>
               </Pressable>
@@ -400,7 +416,7 @@ export default function ChallengeDetail() {
                 accessibilityRole="button"
                 accessibilityLabel={t('challengeInfo.shareA11y')}
               >
-                <Icon name="share-outline" size={22} color={colors.paper} style={styles.overPhoto} />
+                <Icon name="share-outline" size={22} color={colors.paper} style={overPhoto} />
               </Pressable>
               {isOwner && (
                 <Pressable
@@ -409,7 +425,7 @@ export default function ChallengeDetail() {
                   accessibilityRole="button"
                   accessibilityLabel={t('challengeProgress.manageA11y')}
                 >
-                  <Icon name="settings-outline" size={22} color={colors.paper} style={styles.overPhoto} />
+                  <Icon name="settings-outline" size={22} color={colors.paper} style={overPhoto} />
                 </Pressable>
               )}
               {isAdmin && challenge?.status !== 'closed' && (
@@ -419,7 +435,7 @@ export default function ChallengeDetail() {
                   accessibilityRole="button"
                   accessibilityLabel={t('challengeProgress.closeChallengeA11y')}
                 >
-                  <Icon name="lock-closed-outline" size={22} color={colors.error} style={styles.overPhoto} />
+                  <Icon name="lock-closed-outline" size={22} color={colors.error} style={overPhoto} />
                 </Pressable>
               )}
               {isAdmin && isClosed && (
@@ -429,7 +445,7 @@ export default function ChallengeDetail() {
                   accessibilityRole="button"
                   accessibilityLabel={t('challengeProgress.reopenChallengeA11y')}
                 >
-                  <Icon name="lock-open-outline" size={22} color={colors.paper} style={styles.overPhoto} />
+                  <Icon name="lock-open-outline" size={22} color={colors.paper} style={overPhoto} />
                 </Pressable>
               )}
             </Row>

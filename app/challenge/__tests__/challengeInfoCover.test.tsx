@@ -63,17 +63,10 @@ async function renderInfo(overrides: Record<string, unknown>) {
 describe('Challenge info — the challenge photo (Sprint 10)', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('shows an approved photo', async () => {
+  it('shows an approved photo as the header', async () => {
     const screen = await renderInfo({ imageUrl: PHOTO, imageStatus: 'approved' });
 
     expect(screen.getByTestId('challenge-info-cover-image').props.source).toEqual({ uri: PHOTO });
-    expect(screen.queryByTestId('challenge-info-cover-notice')).toBeNull();
-  });
-
-  it('keeps the header with the placeholder for a challenge without a photo (or from before photos existed)', async () => {
-    const screen = await renderInfo({ imageStatus: 'none', imageUrl: null });
-
-    expect(screen.getByTestId('challenge-info-cover-placeholder')).toBeTruthy();
     expect(screen.queryByTestId('challenge-info-cover-notice')).toBeNull();
   });
 
@@ -84,11 +77,18 @@ describe('Challenge info — the challenge photo (Sprint 10)', () => {
     expect(JSON.stringify(screen.toJSON())).toContain('"textShadowColor":"#050604"');
   });
 
-  it.each(['pending', 'rejected'])('shows the placeholder to everyone while the photo is %s', async (status) => {
-    const screen = await renderInfo({ imageStatus: status, imageUrl: null });
+  it.each([
+    ['without a photo', 'none'],
+    ['from before photos existed', undefined],
+    ['with the photo in review', 'pending'],
+    ['with the photo rejected', 'rejected'],
+  ])('looks as it always did %s: no header, no placeholder, no photo shadow', async (_case, imageStatus) => {
+    const screen = await renderInfo({ imageStatus, imageUrl: null });
 
-    expect(screen.getByTestId('challenge-info-cover-placeholder')).toBeTruthy();
-    expect(screen.queryByTestId('challenge-info-cover-notice')).toBeNull();
+    expect(screen.queryByTestId('challenge-info-cover')).toBeNull();
+    expect(screen.queryByTestId('challenge-info-cover-placeholder')).toBeNull();
+    expect(screen.getByLabelText('challengeInfo.shareA11y')).toBeTruthy();
+    expect(JSON.stringify(screen.toJSON())).not.toContain('"textShadowColor":"#050604"');
   });
 
   it.each([
@@ -97,14 +97,14 @@ describe('Challenge info — the challenge photo (Sprint 10)', () => {
   ])('tells its creator why the photo is not showing (%s)', async (status, notice) => {
     const screen = await renderInfo({ imageStatus: status, imageUrl: null, created_by_user_id: 'owner-1' });
 
-    expect(screen.getByTestId('challenge-info-cover-placeholder')).toBeTruthy();
     expect(screen.getByText(notice)).toBeTruthy();
+    expect(screen.queryByTestId('challenge-info-cover')).toBeNull();
   });
 
-  it('never shows a URL for a photo that is not approved, even if one came back', async () => {
+  it('never shows a photo that is not approved, even if a URL came back', async () => {
     const screen = await renderInfo({ imageStatus: 'pending', imageUrl: PHOTO });
 
     expect(screen.queryByTestId('challenge-info-cover-image')).toBeNull();
-    expect(screen.getByTestId('challenge-info-cover-placeholder')).toBeTruthy();
+    expect(screen.queryByTestId('challenge-info-cover')).toBeNull();
   });
 });

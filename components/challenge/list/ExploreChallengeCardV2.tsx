@@ -1,37 +1,30 @@
-import { memo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { memo, useId } from 'react';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
 import { challengeCardText } from '../card/challengeCardText';
 import { ChallengeCard } from '../card/ChallengeCard';
 import { ChallengeCardAuthor } from '../card/ChallengeCardAuthor';
-import { ChallengeCoverTile } from '../card/ChallengeCoverTile';
 import type { ExploreChallengeCardProps } from './challengeListSections';
 import { colors, fillOpacity, radius, shadows, spacing } from '../../../constants/theme';
-import { EXPLORE_COVER_FULL_BLEED } from '../../../constants/challengeCards';
 import { withAlpha } from '../../../utils/color';
 import { formatCount } from '../../../utils/format';
 import { getChallengeAccentColor } from '../../../services/adapters/challengeState';
 
-/** The photo tile's side and tilt (Sprint 10 wireframe: a slightly leaning square). */
-const COVER_SIZE = 100;
-const COVER_TILT_DEG = 3;
-/** EXPLORE_COVER_FULL_BLEED: how wide the edge-to-edge photo is. */
-const BLEED_WIDTH = 140;
-
 /**
- * Challenges-Browse card, glow design, on the shared `ChallengeCard` with the
- * Mine cards' glow (the plain half-moon of the activity color from the bottom
- * edge). Layout after the Sprint 10 challenge-photo wireframe:
+ * Challenges-Browse card, glow design, on the shared `ChallengeCard` (Sprint 10
+ * mockups, one with a photo and one without):
  *
- *  - left: the title, then right under it the author ("By @name" with their
- *    avatar), then "30 days" and the member count (number + people icon) in a row;
- *  - right: the challenge photo, a rounded square leaning a few degrees — a gray
- *    placeholder with an image icon while there is no approved photo — and the
- *    "Join ›" pill filled with the activity color under it. With
- *    `EXPLORE_COVER_FULL_BLEED` (a Sprint 10 trial) the photo instead covers the
- *    card's whole right side, edge to edge, with the Join pill on top of it.
+ *  - top: the title, then the author ("By @name" with their avatar);
+ *  - bottom: "30 days" and the member count as badges, and the "Join ›" pill
+ *    filled with the activity color on the right;
+ *  - with an approved challenge photo, the photo covers the card's right side
+ *    behind the content and fades out to the left into the card itself, so the
+ *    text stays readable — that card has no activity-color glow, it is plain
+ *    `ink`, so the fade has no seam; without a photo, it is the card with the
+ *    activity color's glow.
  *
  * Same props and logic as the classic `ExploreChallengeCard` — only the visuals
  * differ.
@@ -45,29 +38,26 @@ export const ExploreChallengeCardV2 = memo(function ExploreChallengeCardV2({
   // Activity Color System v2 — falls back to colors.primary when this
   // challenge has no dominant category yet.
   const accentColor = getChallengeAccentColor(challenge.dominantActivityCategory);
+  const photoUrl = challenge.imageUrl;
 
   return (
     <Pressable onPress={onPress} onLongPress={onLongPress} style={({ pressed }) => [pressed && styles.pressed]}>
       <ChallengeCard
         accentColor={accentColor}
         // No `glowRecipe`: the Mine cards' plain glow, the half-moon of the
-        // activity color from the bottom edge.
+        // activity color from the bottom edge (covered by the photo when there is one).
         top={null}
         roomy
-        // No footer: the title, author and stats sit centered in the card's height.
-        centered
         title={challenge.title}
-        titleLines={2}
-        // The author and the member count right under the title (Sprint 10:
-        // "N members" no longer sits down by the Join pill).
-        belowSubtitle={
-          <View style={styles.meta}>
-            {challenge.author ? <ChallengeCardAuthor author={challenge.author} size="md" bold={false} /> : null}
-            {/* How long it lasts, then the member count as just the number and
-                the people icon (Sprint 10). */}
+        titleLines={1}
+        background={photoUrl ? <CardPhoto uri={photoUrl} /> : undefined}
+        belowSubtitle={challenge.author ? <ChallengeCardAuthor author={challenge.author} size="lg" bold={false} /> : null}
+        footer={
+          <View style={styles.footer}>
             <View style={styles.stats}>
               <View style={styles.statBadge} testID="explore-card-days">
-                <Text variant="caption" weight="bold" style={challengeCardText.paper}>
+                <Icon name="calendar-outline" size={STAT_ICON_SIZE} color={colors.paper} />
+                <Text variant="label" weight="bold" style={challengeCardText.paper}>
                   {t('challenges.durationDaysLabel', { count: challenge.durationDays })}
                 </Text>
               </View>
@@ -77,113 +67,103 @@ export const ExploreChallengeCardV2 = memo(function ExploreChallengeCardV2({
                 accessibilityLabel={t('challenges.membersCount', { count: formatCount(challenge.membersCount) })}
                 testID="explore-card-members"
               >
-                <Text variant="caption" weight="bold" style={challengeCardText.paper}>
+                <Icon name="people-outline" size={STAT_ICON_SIZE} color={colors.paper} />
+                <Text variant="label" weight="bold" style={challengeCardText.paper}>
                   {formatCount(challenge.membersCount)}
                 </Text>
-                <Icon name="people-outline" size={14} color={colors.paper} />
               </View>
+            </View>
+            {/* Looks like a button; the whole card is the press target, and it
+                opens the challenge, where joining happens. */}
+            <View style={[styles.joinPill, { backgroundColor: accentColor }]} testID="explore-card-join">
+              <Text variant="body" weight="bold" style={styles.joinText}>
+                {t('challenges.join')}
+              </Text>
+              <Icon name="chevron-forward" size={18} color={colors.ink} />
             </View>
           </View>
-        }
-        footer={null}
-        side={
-          EXPLORE_COVER_FULL_BLEED ? (
-            <View style={styles.bleed}>
-              <ChallengeCoverTile
-                imageUrl={challenge.imageUrl}
-                iconSize={32}
-                style={styles.bleedPhoto}
-                testID="explore-card-cover"
-              />
-              {/* On the photo; the whole card is the press target. */}
-              <View
-                style={[styles.joinPill, styles.joinOverPhoto, { backgroundColor: accentColor }]}
-                testID="explore-card-join"
-              >
-                <Text variant="label" weight="bold" style={styles.joinText}>
-                  {t('challenges.join')}
-                </Text>
-                <Icon name="chevron-forward" size={16} color={colors.ink} />
-              </View>
-            </View>
-          ) : (
-            <View style={styles.side}>
-              <ChallengeCoverTile
-                imageUrl={challenge.imageUrl}
-                size={COVER_SIZE}
-                rotateDeg={COVER_TILT_DEG}
-                style={styles.cover}
-                testID="explore-card-cover"
-              />
-              {/* Looks like a button; the whole card is the press target, and it
-                opens the challenge, where joining happens. */}
-              <View style={[styles.joinPill, { backgroundColor: accentColor }]} testID="explore-card-join">
-                <Text variant="label" weight="bold" style={styles.joinText}>
-                  {t('challenges.join')}
-                </Text>
-                <Icon name="chevron-forward" size={16} color={colors.ink} />
-              </View>
-            </View>
-          )
         }
       />
     </Pressable>
   );
 });
 
+/** The approved photo on the card's right side, fading out to the left into the
+ * card's own `ink` (where the text is) — the Sprint 10 mockup. */
+function CardPhoto({ uri }: { uri: string }) {
+  const gradientId = useId();
+  return (
+    // A plain `ink` card under the photo: it covers the activity color's glow, so
+    // the photo fades into black with no seam (the glow is for cards without one).
+    <View style={styles.photoBase} testID="explore-card-photo-base">
+      <View style={styles.photoArea} testID="explore-card-photo">
+        <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" testID="explore-card-cover-image" />
+        <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+          <Defs>
+            <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+              {/* Solid `ink` at its left edge, so it melts into the card with no seam. */}
+              <Stop offset="0" stopColor={colors.ink} stopOpacity={1} />
+              <Stop offset={SCRIM_MID_AT} stopColor={colors.ink} stopOpacity={SCRIM_MID} />
+              <Stop offset="1" stopColor={colors.ink} stopOpacity={SCRIM_RIGHT} />
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${gradientId})`} />
+        </Svg>
+      </View>
+    </View>
+  );
+}
+
+const STAT_ICON_SIZE = 16;
+// How much of the card the photo covers, from the right edge.
+const PHOTO_WIDTH = '70%';
+// The fade over the photo: fully `ink` at its left edge, half by SCRIM_MID_AT,
+// and only a light dim at the right edge.
+const SCRIM_MID_AT = 0.45;
+const SCRIM_MID = 0.45;
+const SCRIM_RIGHT = 0.15;
+
 const styles = StyleSheet.create({
   pressed: {
     opacity: 0.9,
   },
-  meta: {
+  photoBase: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: colors.ink,
+  },
+  photoArea: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: PHOTO_WIDTH,
+  },
+  // The badges on the left, Join on the right, along the bottom.
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.sm,
   },
   stats: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    flexShrink: 1,
   },
-  // A small badge: the same translucent `paper` fill as Button's `subtle`
-  // variant, `paper` text, fully rounded.
+  // A badge: the translucent `paper` fill of Button's `subtle` variant, an icon and a label.
   statBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
     backgroundColor: withAlpha(colors.paper, fillOpacity.chip),
-    borderRadius: radius.big,
+    borderRadius: radius.medium,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  // The photo on top, the Join pill pinned to the bottom right.
-  side: {
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-  },
-  // Clear of the card's top edge and right corner once tilted.
-  cover: {
-    marginTop: spacing.xs,
-    marginRight: spacing.xs,
-  },
-  // EXPLORE_COVER_FULL_BLEED: the right side of the card, edge to edge — the
-  // negative margins cancel the card's own (`roomy`) padding on the top, right
-  // and bottom; the card's rounded corners clip it.
-  bleed: {
-    width: BLEED_WIDTH,
-    marginTop: -spacing.base,
-    marginRight: -spacing.base,
-    marginBottom: -spacing.base,
-  },
-  bleedPhoto: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 0,
-  },
-  // Pinned to the photo's bottom-right, with a shadow so it lifts off any photo.
-  joinOverPhoto: {
-    position: 'absolute',
-    right: spacing.md,
-    bottom: spacing.md,
-    ...shadows.md,
+    paddingVertical: spacing.sm,
   },
   // "Join": a pill in the activity color, `ink` on it, as activity colors pair with.
   joinPill: {
@@ -192,8 +172,9 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingLeft: spacing.lg,
     paddingRight: spacing.base,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     borderRadius: radius.big,
+    ...shadows.md,
   },
   joinText: {
     color: colors.ink,

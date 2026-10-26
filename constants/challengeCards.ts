@@ -27,15 +27,3 @@ export const USE_GLOW_CHALLENGE_CARDS = true;
  * Home's hero card and Space cards always use. Flipping this is the whole revert.
  */
 export const USE_MESH_CARD_GLOW = true;
-
-/**
- * Sprint 10 trial (explicit request, "just to try, not definitively"): how the
- * challenge photo sits on the Explore glow card (`ExploreChallengeCardV2`).
- *
- * `true` — the photo covers the card's whole right side, edge to edge, with the
- * Join pill on top of it.
- *
- * `false` — the slightly tilted square tile with the Join pill under it (the
- * Sprint 10 wireframe). Flipping this is the whole revert.
- */
-export const EXPLORE_COVER_FULL_BLEED = true;

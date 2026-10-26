@@ -6,7 +6,6 @@ import { ExploreChallengeCardV2 } from '../ExploreChallengeCardV2';
 import { activityColors, colors, fillOpacity, radius } from '../../../../constants/theme';
 import { withAlpha } from '../../../../utils/color';
 import type { ExploreChallengeViewModel } from '../challengeListSections';
-import { EXPLORE_COVER_FULL_BLEED } from '../../../../constants/challengeCards';
 
 function buildChallenge(overrides: Partial<ExploreChallengeViewModel> = {}): ExploreChallengeViewModel {
   return {
@@ -92,27 +91,30 @@ describe('Explore card (classic design) specifics', () => {
   });
 });
 
-describe('Explore card (glow design, Sprint 10 photo wireframe) specifics', () => {
+describe('Explore card (glow design, Sprint 10 mockups) specifics', () => {
   const styleOf = (node: { props: { style?: unknown } }) => StyleSheet.flatten(node.props.style as never) as Record<string, unknown>;
+  const PHOTO = 'https://cdn.test/photo.jpeg';
 
-  it('shows the length and the member count (just the number and the people icon) in a row, in paper', async () => {
+  it('shows the length and the member count (just the number) as badges with their icons, in paper', async () => {
     const screen = await renderWithProviders(
       <ExploreChallengeCardV2 challenge={buildChallenge({ membersCount: 1200, durationDays: 30 })} />,
     );
+    const json = JSON.stringify(screen.toJSON());
 
     expect(styleOf(screen.getByText('30 days'))).toMatchObject({ color: colors.paper, opacity: 1 });
     expect(styleOf(screen.getByText('1.2k'))).toMatchObject({ color: colors.paper, opacity: 1 });
     expect(screen.queryByText(/members/)).toBeNull();
     expect(screen.getByLabelText('1.2k members')).toBeTruthy();
-    expect(JSON.stringify(screen.toJSON())).toContain(`"name":"people-outline","size":14,"color":"${colors.paper}"`);
+    expect(json).toContain(`"name":"calendar-outline","size":16,"color":"${colors.paper}"`);
+    expect(json).toContain(`"name":"people-outline","size":16,"color":"${colors.paper}"`);
   });
 
-  it('shows both as small badges with the translucent paper fill', async () => {
+  it('draws both badges with the translucent paper fill', async () => {
     const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge()} />);
     const badgeFill = withAlpha(colors.paper, fillOpacity.chip);
 
-    expect(styleOf(screen.getByTestId('explore-card-days'))).toMatchObject({ backgroundColor: badgeFill, borderRadius: radius.big });
-    expect(styleOf(screen.getByTestId('explore-card-members'))).toMatchObject({ backgroundColor: badgeFill, borderRadius: radius.big });
+    expect(styleOf(screen.getByTestId('explore-card-days'))).toMatchObject({ backgroundColor: badgeFill, borderRadius: radius.medium });
+    expect(styleOf(screen.getByTestId('explore-card-members'))).toMatchObject({ backgroundColor: badgeFill, borderRadius: radius.medium });
   });
 
   it('uses the singular unit for a one-day challenge', async () => {
@@ -122,11 +124,11 @@ describe('Explore card (glow design, Sprint 10 photo wireframe) specifics', () =
   });
 
   it('has a "Join" pill filled with the activity color, ink text on it', async () => {
-    const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ membersCount: 1200 })} />);
+    const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge()} />);
 
     expect(styleOf(screen.getByTestId('explore-card-join')).backgroundColor).toBe(activityColors.strength);
     expect(styleOf(screen.getByText('Join'))).toMatchObject({ color: colors.ink, opacity: 1 });
-    expect(JSON.stringify(screen.toJSON())).toContain(`"name":"chevron-forward","size":16,"color":"${colors.ink}"`);
+    expect(JSON.stringify(screen.toJSON())).toContain(`"name":"chevron-forward","size":18,"color":"${colors.ink}"`);
   });
 
   it("follows the challenge's own activity color", async () => {
@@ -137,7 +139,7 @@ describe('Explore card (glow design, Sprint 10 photo wireframe) specifics', () =
     expect(styleOf(screen.getByTestId('explore-card-join')).backgroundColor).toBe(activityColors.cardioLow);
   });
 
-  it('keeps to the wireframe: no location or category on the card', async () => {
+  it('keeps to the mockups: no location or category on the card', async () => {
     const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge()} />);
 
     expect(screen.queryByText('Gym')).toBeNull();
@@ -155,45 +157,39 @@ describe('Explore card (glow design, Sprint 10 photo wireframe) specifics', () =
     expect(styleOf(screen.getByText('By @ana')).fontFamily).not.toMatch(/Bold/i);
   });
 
-  it('shows the approved photo', async () => {
-    const screen = await renderWithProviders(
-      <ExploreChallengeCardV2 challenge={buildChallenge({ imageUrl: 'https://cdn.test/photo.jpeg' })} />,
-    );
+  it("with an approved photo, puts it behind the content on the card's right side, fading out to the left", async () => {
+    const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ imageUrl: PHOTO })} />);
 
-    expect(screen.getByTestId('explore-card-cover-image').props.source).toEqual({ uri: 'https://cdn.test/photo.jpeg' });
-    expect(screen.queryByTestId('explore-card-cover-placeholder')).toBeNull();
+    expect(screen.getByTestId('explore-card-cover-image').props.source).toEqual({ uri: PHOTO });
+    expect(styleOf(screen.getByTestId('explore-card-photo'))).toMatchObject({
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      width: '70%',
+    });
+    // A plain `ink` card under it, covering the activity glow, so the fade has no seam.
+    expect(styleOf(screen.getByTestId('explore-card-photo-base'))).toMatchObject({
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      backgroundColor: colors.ink,
+    });
+    // The content is still there, on top of it.
+    expect(screen.getByText('Iron Will')).toBeTruthy();
+    expect(screen.getByTestId('explore-card-join')).toBeTruthy();
   });
-
-  // Sprint 10 trial behind EXPLORE_COVER_FULL_BLEED: whichever layout is on.
-  if (EXPLORE_COVER_FULL_BLEED) {
-    it('covers the right side edge to edge (no tilt), with the Join pill on top of the photo', async () => {
-      const screen = await renderWithProviders(
-        <ExploreChallengeCardV2 challenge={buildChallenge({ imageUrl: 'https://cdn.test/photo.jpeg' })} />,
-      );
-      const cover = styleOf(screen.getByTestId('explore-card-cover'));
-
-      expect(cover).toMatchObject({ width: '100%', height: '100%', borderRadius: 0 });
-      expect(cover.transform).toBeUndefined();
-      expect(styleOf(screen.getByTestId('explore-card-join'))).toMatchObject({ position: 'absolute' });
-    });
-  } else {
-    it('shows the photo in a slightly tilted tile', async () => {
-      const screen = await renderWithProviders(
-        <ExploreChallengeCardV2 challenge={buildChallenge({ imageUrl: 'https://cdn.test/photo.jpeg' })} />,
-      );
-
-      expect(styleOf(screen.getByTestId('explore-card-cover')).transform).toEqual([{ rotate: '3deg' }]);
-    });
-  }
 
   it.each([
     ['no photo', undefined],
     ['a photo still in review or rejected (the API sends no URL)', null],
-  ])('shows the gray placeholder with an image icon for %s', async (_case, imageUrl) => {
+  ])('with %s, is the plain glow card — no photo, no placeholder', async (_case, imageUrl) => {
     const screen = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ imageUrl })} />);
 
-    expect(screen.getByTestId('explore-card-cover-placeholder')).toBeTruthy();
+    expect(screen.queryByTestId('explore-card-photo')).toBeNull();
     expect(screen.queryByTestId('explore-card-cover-image')).toBeNull();
-    expect(JSON.stringify(screen.toJSON())).toContain('"name":"image-outline"');
+    expect(JSON.stringify(screen.toJSON())).not.toContain('"name":"image-outline"');
   });
 });
