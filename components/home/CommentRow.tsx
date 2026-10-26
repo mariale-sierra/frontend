@@ -4,7 +4,7 @@ import { IconButton } from '../ui/iconButton';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 import { Row } from '../layout/row';
-import { colors, spacing, textOpacity } from '../../constants/theme';
+import { colors, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import type { CommentViewModel } from '../../services/adapters/workoutPostSocialAdapter';
 
