@@ -14,7 +14,8 @@ import { clearQueryCache, setQueryScope } from '../services/cache/queryCache';
 import { forgetPushToken, unregisterPushToken } from '../services/notifications/pushNotifications';
 import { setSessionExpiredHandler } from '../services/auth/sessionEvents';
 import { getSessionEpoch } from '../services/auth/token.service';
-import type { LegalConsent } from '../types/auth';
+import type { AuthSessionResponse, LegalConsent } from '../types/auth';
+import { getApiErrorStatus } from '../utils/apiError';
 
 interface AuthContextValue {
   token: string | null;
@@ -22,13 +23,13 @@ interface AuthContextValue {
   username: string | null;
   isAuthenticated: boolean;
   isRestoring: boolean;
-  login: (email: string, password: string) => Promise<any>;
+  login: (email: string, password: string) => Promise<AuthSessionResponse>;
   register: (
     email: string,
     username: string,
     password: string,
     consent: LegalConsent,
-  ) => Promise<any>;
+  ) => Promise<AuthSessionResponse>;
   logout: () => Promise<void>;
   restoreSession: () => Promise<void>;
 }
@@ -91,8 +92,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // meanwhile (signed out, or another account signed in), this answer is
       // about the old one: leave the current one alone.
       const epoch = getSessionEpoch();
-      fetchAuthMe().catch(async (error: any) => {
-        if (error?.response?.status !== 401 || epoch !== getSessionEpoch()) return;
+      fetchAuthMe().catch(async (error: unknown) => {
+        if (getApiErrorStatus(error) !== 401 || epoch !== getSessionEpoch()) return;
         await logoutService({ revokeOnServer: false });
         invalidateChallengeProgressCache();
         resetSessionStores();

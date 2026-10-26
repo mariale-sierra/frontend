@@ -6,6 +6,7 @@ import {
   setSessionTokens,
 } from './token.service';
 import type { AuthSessionResponse } from '../../types/auth';
+import { getApiErrorStatus } from '../../utils/apiError';
 
 /**
  * B4 — renews the session when an authenticated request answers 401 (the
@@ -76,11 +77,11 @@ async function runRefresh(client: AxiosInstance, epoch: number): Promise<string 
       // signs out nor toasts for it — this function decides.
       { authRefresh: true, suppressErrorToast: true },
     );
-  } catch (error: any) {
+  } catch (error) {
     // Whatever the server said, it was about a session that's gone: don't
     // touch the tokens the new one stored.
     if (epoch !== getSessionEpoch()) throw new SessionChangedError();
-    const status = error?.response?.status;
+    const status = getApiErrorStatus(error);
     // 401: unknown, expired, revoked or reused — this session can't be renewed.
     // 400: what we hold isn't even a refresh token.
     if (status === 401 || status === 400) {
