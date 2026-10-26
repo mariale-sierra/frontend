@@ -1,9 +1,19 @@
 import api from '../../api';
 import { normalizeUploadMimeType, uploadImageAsync } from '../upload.service';
 import { logWarn } from '../../../utils/apiError';
+import * as FileSystem from 'expo-file-system/legacy';
 
 jest.mock('../../api', () => ({ __esModule: true, default: { post: jest.fn() } }));
 jest.mock('../../../utils/apiError', () => ({ logWarn: jest.fn() }));
+// Sprint 10: on iOS/Android the file is PUT natively from disk; these tests
+// default to "no file info" so the JS Blob path (web, and the fallback) runs.
+jest.mock('expo-file-system/legacy', () => ({
+  getInfoAsync: jest.fn(),
+  uploadAsync: jest.fn(),
+  FileSystemUploadType: { BINARY_CONTENT: 0, MULTIPART: 1 },
+}));
+const getInfoAsync = FileSystem.getInfoAsync as jest.Mock;
+const uploadAsync = FileSystem.uploadAsync as jest.Mock;
 
 const post = api.post as jest.Mock;
 const SIGNED = 'https://r2.example.com/u/1/photo.jpg?X-Amz-Signature=secret';
@@ -39,6 +49,7 @@ describe('uploadImageAsync', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     global.fetch = fetchMock as unknown as typeof fetch;
+    getInfoAsync.mockResolvedValue({ exists: false });
     fetchMock.mockImplementation(async (url: string) =>
       url.startsWith('file://') ? { blob: async () => FAKE_BLOB } : { ok: true, status: 200 },
     );
@@ -146,6 +157,21 @@ describe('uploadImageAsync', () => {
     expect(logged).not.toContain(SIGNED);
   });
 
+  it("adds only the storage's error code from the body — never the rest, which can echo the signed request", async () => {
+    post.mockResolvedValue({ data: { signedUrl: SIGNED, publicUrl: PUBLIC } });
+    const body = `<?xml version="1.0"?><Error><Code>SignatureDoesNotMatch</Code><Message>x</Message><CanonicalRequest>${SIGNED}</CanonicalRequest></Error>`;
+    fetchMock.mockImplementation(async (url: string) =>
+      url.startsWith('file://') ? { blob: async () => FAKE_BLOB } : { ok: false, status: 403, text: async () => body },
+    );
+
+    await expect(uploadImageAsync('file:///photo.jpg')).rejects.toThrow(
+      'Image PUT failed with status 403 (SignatureDoesNotMatch)',
+    );
+    const logged = JSON.stringify((logWarn as jest.Mock).mock.calls);
+    expect(logged).toContain('SignatureDoesNotMatch');
+    expect(logged).not.toContain(SIGNED);
+  });
+
   // B5 — CP7, abuse-matrix item "reutilización de URLs PUT con
   // If-None-Match: *": this is the client side of that test. R2 itself
   // enforcing the precondition (returning 412 on a second PUT to the same
@@ -173,5 +199,57 @@ describe('uploadImageAsync', () => {
         headers: expect.objectContaining({ 'If-None-Match': '*' }),
       }),
     );
+  });
+});
+
+// Sprint 10: a fetch PUT of a JS Blob failed on iOS (Expo Go) with 403
+// SignatureDoesNotMatch; on device the file is now uploaded natively from disk.
+describe('uploadImageAsync — native upload from the file (iOS/Android)', () => {
+  const fetchMock = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    global.fetch = fetchMock as unknown as typeof fetch;
+    getInfoAsync.mockResolvedValue({ exists: true, size: 123456 });
+    uploadAsync.mockResolvedValue({ status: 200, body: '', headers: {} });
+    post.mockResolvedValue({ data: { signedUrl: SIGNED, publicUrl: PUBLIC } });
+  });
+
+  it('signs with the size on disk and PUTs that same file with the signed headers', async () => {
+    await expect(uploadImageAsync('file:///photo.png', 'image/png')).resolves.toBe(PUBLIC);
+
+    expect(post).toHaveBeenCalledWith('/uploads/sign', { fileType: 'image/png', fileSize: 123456 });
+    expect(uploadAsync).toHaveBeenCalledWith(SIGNED, 'file:///photo.png', {
+      httpMethod: 'PUT',
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+      headers: { 'Content-Type': 'image/png', 'If-None-Match': '*' },
+    });
+    // The file is never read into a JS Blob on device.
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('fails with the storage error code, never the signed URL', async () => {
+    uploadAsync.mockResolvedValue({
+      status: 403,
+      body: `<Error><Code>SignatureDoesNotMatch</Code><CanonicalRequest>${SIGNED}</CanonicalRequest></Error>`,
+      headers: {},
+    });
+
+    await expect(uploadImageAsync('file:///photo.jpg')).rejects.toThrow(
+      'Image PUT failed with status 403 (SignatureDoesNotMatch)',
+    );
+    expect(JSON.stringify((logWarn as jest.Mock).mock.calls)).not.toContain(SIGNED);
+  });
+
+  it('falls back to the Blob upload when the file system has no size for the URI', async () => {
+    getInfoAsync.mockResolvedValue({ exists: false });
+    fetchMock.mockImplementation(async (url: string) =>
+      url.startsWith('file://') ? { blob: async () => FAKE_BLOB } : { ok: true, status: 200 },
+    );
+
+    await expect(uploadImageAsync('file:///photo.jpg')).resolves.toBe(PUBLIC);
+
+    expect(uploadAsync).not.toHaveBeenCalled();
+    expect(post).toHaveBeenCalledWith('/uploads/sign', { fileType: 'image/jpeg', fileSize: FAKE_BLOB.size });
   });
 });
