@@ -1,0 +1,189 @@
+{
+  "comando": "npm run metrics -- --json (scripts/code-metrics.js)",
+  "antes_930ca59": {
+    "files": 461,
+    "console": {
+      "error": 2,
+      "warn": 4
+    },
+    "consoleTotal": 6,
+    "consoleLogError": 2,
+    "any": 28,
+    "consoleFiles": [
+      {
+        "file": "i18n/index.ts",
+        "error": 1
+      },
+      {
+        "file": "services/notifications/pushNotifications.ts",
+        "warn": 3
+      },
+      {
+        "file": "utils/apiError.ts",
+        "error": 1,
+        "warn": 1
+      }
+    ],
+    "anyFiles": [
+      {
+        "file": "app/(auth)/login.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/(auth)/register.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/accept-terms.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/challenge/create.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/challenge/routine/create.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/challenge/routine/select.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/challenge/[id]/invite.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/exercises/index.tsx",
+        "any": 2
+      },
+      {
+        "file": "app/exercises/muscles/index.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/exercises/muscles/region/[code].tsx",
+        "any": 1
+      },
+      {
+        "file": "app/exercises/muscles/[code].tsx",
+        "any": 1
+      },
+      {
+        "file": "app/exercises/[id].tsx",
+        "any": 1
+      },
+      {
+        "file": "app/profile/delete-account.tsx",
+        "any": 1
+      },
+      {
+        "file": "components/exercises/muscleFilterSheet.tsx",
+        "any": 2
+      },
+      {
+        "file": "context/authContext.tsx",
+        "any": 3
+      },
+      {
+        "file": "hooks/useMetricsScreen.ts",
+        "any": 3
+      },
+      {
+        "file": "services/api.ts",
+        "any": 4
+      },
+      {
+        "file": "services/auth/auth.service.ts",
+        "any": 1
+      },
+      {
+        "file": "services/auth/sessionRefresh.ts",
+        "any": 1
+      }
+    ]
+  },
+  "despues": {
+    "files": 461,
+    "console": {
+      "error": 2,
+      "warn": 4
+    },
+    "consoleTotal": 6,
+    "consoleLogError": 2,
+    "any": 18,
+    "consoleFiles": [
+      {
+        "file": "i18n/index.ts",
+        "error": 1
+      },
+      {
+        "file": "services/notifications/pushNotifications.ts",
+        "warn": 3
+      },
+      {
+        "file": "utils/apiError.ts",
+        "error": 1,
+        "warn": 1
+      }
+    ],
+    "anyFiles": [
+      {
+        "file": "app/(auth)/login.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/(auth)/register.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/accept-terms.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/challenge/create.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/challenge/routine/create.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/challenge/routine/select.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/challenge/[id]/invite.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/exercises/index.tsx",
+        "any": 2
+      },
+      {
+        "file": "app/exercises/muscles/index.tsx",
+        "any": 1
+      },
+      {
+        "file": "app/exercises/muscles/region/[code].tsx",
+        "any": 1
+      },
+      {
+        "file": "app/exercises/muscles/[code].tsx",
+        "any": 1
+      },
+      {
+        "file": "app/exercises/[id].tsx",
+        "any": 1
+      },
+      {
+        "file": "app/profile/delete-account.tsx",
+        "any": 1
+      },
+      {
+        "file": "services/api.ts",
+        "any": 4
+      }
+    ]
+  }
+}
