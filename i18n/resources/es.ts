@@ -10,6 +10,23 @@ const es = {
       dismiss: 'Descartar',
       gotIt: 'Entendido',
     },
+    // Sprint 10, revisión de accesibilidad: lo que lee el lector de pantalla en botones de solo ícono.
+    a11y: {
+      close: 'Cerrar',
+      send: 'Enviar',
+      increase: 'Aumentar {{label}}',
+      decrease: 'Disminuir {{label}}',
+      previousMonth: 'Mes anterior',
+      nextMonth: 'Mes siguiente',
+      flipCamera: 'Cambiar de cámara',
+      confirmPhoto: 'Usar esta foto',
+      clearSearch: 'Borrar búsqueda',
+      openMessages: 'Mensajes',
+      openRoutine: 'Abrir rutina',
+      openPhoto: 'Abrir foto',
+      deleteComment: 'Eliminar comentario',
+      removeDay: 'Quitar el día {{day}}',
+    },
     fields: {
       email: 'Correo',
       username: 'Usuario',
@@ -241,6 +258,9 @@ const es = {
     dailyProofValue: '1 foto por día de entreno',
     rewardLabel: 'Al terminarlo',
     rewardValue: 'Cuenta para tus insignias de retos completados (1 y 3 retos). Se termina al registrar su último día.',
+    // Sprint 10: solo quien lo creó ve por qué su foto todavía no aparece.
+    coverPending: 'Tu foto está en revisión. Hasta que se apruebe, todos ven el espacio vacío.',
+    coverRejected: 'Tu foto no pasó la revisión, así que no se mostrará.',
     statusLabel: 'Estado',
     closedValue: 'Cerrado',
     restEveryCycle_one: '{{count}} día de descanso cada {{cycleLength}}',
@@ -435,6 +455,16 @@ const es = {
     submit: {
       startChallenge: 'Iniciar reto',
     },
+    // Sprint 10: el paso opcional de la foto del reto.
+    cover: {
+      pick: 'Elegir foto',
+      change: 'Cambiar foto',
+      remove: 'Quitar',
+      skipHint: 'Puedes saltar este paso: en Explorar se verá un espacio vacío.',
+      reviewHint: 'Revisamos la foto antes de mostrarla a todos.',
+      uploadFailed: 'No pudimos subir la foto. Intenta de nuevo, o quítala para crear el reto sin foto.',
+      inReview: 'Reto creado. Tu foto está en revisión.',
+    },
     rules: {
       dailyPhoto: {
         title: 'Una foto cada día de entrenamiento',
@@ -488,6 +518,10 @@ const es = {
       visibility: {
         title: '¿Quién lo puede ver?',
         description: 'Elige si cualquiera puede encontrarlo y unirse, o solo las personas que tú apruebes.',
+      },
+      photo: {
+        title: 'Agrega una foto',
+        description: 'Opcional. Se muestra en la tarjeta del reto en Explorar y en su pantalla de información.',
       },
       review: {
         title: 'Listo cuando quieras',

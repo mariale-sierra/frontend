@@ -10,6 +10,23 @@ const en = {
       dismiss: 'Dismiss',
       gotIt: 'Got it',
     },
+    // Sprint 10 accessibility pass: what a screen reader says for icon-only buttons.
+    a11y: {
+      close: 'Close',
+      send: 'Send',
+      increase: 'Increase {{label}}',
+      decrease: 'Decrease {{label}}',
+      previousMonth: 'Previous month',
+      nextMonth: 'Next month',
+      flipCamera: 'Switch camera',
+      confirmPhoto: 'Use this photo',
+      clearSearch: 'Clear search',
+      openMessages: 'Messages',
+      openRoutine: 'Open routine',
+      openPhoto: 'Open photo',
+      deleteComment: 'Delete comment',
+      removeDay: 'Remove day {{day}}',
+    },
     fields: {
       email: 'Email',
       username: 'Username',
@@ -246,6 +263,9 @@ const en = {
     dailyProofValue: '1 photo per training day',
     rewardLabel: 'When you finish',
     rewardValue: 'Counts toward your completed-challenge badges (1 and 3 challenges). It is finished when you log its last day.',
+    // Sprint 10: only the creator sees why their photo isn't showing yet.
+    coverPending: 'Your photo is in review. Until it is approved, everyone sees the placeholder.',
+    coverRejected: 'Your photo didn’t pass the review, so it won’t be shown.',
     statusLabel: 'Status',
     closedValue: 'Closed',
     restEveryCycle_one: '{{count}} rest day every {{cycleLength}}',
@@ -447,6 +467,16 @@ const en = {
     submit: {
       startChallenge: 'Start challenge',
     },
+    // Sprint 10: the optional challenge photo step.
+    cover: {
+      pick: 'Choose photo',
+      change: 'Change photo',
+      remove: 'Remove',
+      skipHint: 'You can skip this step: Explore will show a placeholder.',
+      reviewHint: 'We review the photo before showing it to everyone.',
+      uploadFailed: 'We couldn’t upload the photo. Try again, or remove it to create the challenge without one.',
+      inReview: 'Challenge created. Your photo is in review.',
+    },
     rules: {
       dailyPhoto: {
         title: 'A photo every training day',
@@ -500,6 +530,10 @@ const en = {
       visibility: {
         title: 'Who can see it?',
         description: 'Choose whether anyone can find and join it, or only the people you approve.',
+      },
+      photo: {
+        title: 'Add a photo',
+        description: 'Optional. It shows on the challenge card in Explore and on its info screen.',
       },
       review: {
         title: 'Ready when you are',

@@ -1,4 +1,9 @@
-import { pickAuthor, toChallengeMineViewModels, toExploreChallengeViewModels } from '../challengeListAdapter';
+import {
+  pickAuthor,
+  pickChallengeImageUrl,
+  toChallengeMineViewModels,
+  toExploreChallengeViewModels,
+} from '../challengeListAdapter';
 import type { ChallengeAuthorContract, ChallengeContract, ChallengePhoto } from '../../../types/challenge';
 
 function buildChallenge(overrides: Partial<ChallengeContract> & { id: string }): ChallengeContract {
@@ -116,6 +121,25 @@ describe('pickAuthor', () => {
     );
 
     expect(author).toEqual({ username: 'ana', displayName: null, profileImageUrl: null });
+  });
+});
+
+// Sprint 10: the Explore card shows the challenge photo only once it is approved.
+describe('pickChallengeImageUrl', () => {
+  const PHOTO = 'https://cdn.test/photo.jpeg';
+
+  it('passes an approved photo through', () => {
+    expect(pickChallengeImageUrl(buildChallenge({ id: 'A', imageUrl: PHOTO, imageStatus: 'approved' }))).toBe(PHOTO);
+  });
+
+  it.each(['pending', 'rejected', 'none', undefined] as const)('is null (placeholder) for status %s, even with a URL', (imageStatus) => {
+    expect(pickChallengeImageUrl(buildChallenge({ id: 'A', imageUrl: PHOTO, imageStatus }))).toBeNull();
+  });
+
+  it('reaches the Explore card view model', () => {
+    const [card] = toExploreChallengeViewModels([buildChallenge({ id: 'A', imageUrl: PHOTO, imageStatus: 'approved' })]);
+
+    expect(card.imageUrl).toBe(PHOTO);
   });
 });
 

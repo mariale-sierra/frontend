@@ -18,6 +18,8 @@ interface ChallengeCardAuthorProps {
    * exactly except for color (this stays `paper`, per the separate "I want
    * the text in paper" request; `ChallengeCardMembers` uses `primary`). */
   size?: 'sm' | 'md';
+  /** Bold label; defaults to bold for `md`. Explore's card sets it off (Sprint 10). */
+  bold?: boolean;
 }
 
 /**
@@ -32,7 +34,7 @@ interface ChallengeCardAuthorProps {
  * detail screen's incomplete-data placeholder already defined but never
  * used.
  */
-export function ChallengeCardAuthor({ author, size = 'sm' }: ChallengeCardAuthorProps) {
+export function ChallengeCardAuthor({ author, size = 'sm', bold = size === 'md' }: ChallengeCardAuthorProps) {
   const { t } = useTranslation();
 
   return (
@@ -40,7 +42,7 @@ export function ChallengeCardAuthor({ author, size = 'sm' }: ChallengeCardAuthor
       <UserAvatar username={author.username} imageUrl={author.profileImageUrl} size={AVATAR_SIZE[size]} circle />
       <Text
         variant={size === 'md' ? 'label' : 'caption'}
-        weight={size === 'md' ? 'bold' : undefined}
+        weight={bold ? 'bold' : undefined}
         numberOfLines={1}
         style={[challengeCardText.paper, styles.text]}
       >

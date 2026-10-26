@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +15,7 @@ import { ChallengeAccentBackdrop } from '../../../components/challenge/challenge
 import { CoachMark } from '../../../components/onboarding/CoachMark';
 import { ShareToChatSheet } from '../../../components/social/ShareToChatSheet';
 import type { ChallengeInfoRow } from '../../../components/challenge/detail';
-import { colors, radius, spacing } from '../../../constants/theme';
+import { colors, radius, shadows, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 import { closeChallenge, isChallengeOwner, joinChallenge, reopenChallenge } from '../../../services/challenge/challenge.service';
 import { getMyMembership } from '../../../services/challenge/myMembership';
@@ -35,6 +35,12 @@ import { shareChallengeExternally } from '../../../utils/shareChallenge';
 import type { ChallengeContract } from '../../../types/challenge';
 import { invalidateAfterMembershipChanged, invalidateChallenge } from '../../../services/cache/queries';
 import { loadChallenge } from '../../../services/cache/challengeLoaders';
+import { ChallengeCoverTile } from '../../../components/challenge/card/ChallengeCoverTile';
+import { pickChallengeImageUrl } from '../../../services/adapters/challengeListAdapter';
+
+/** The header photo: full width, about 3:5 as tall as wide (Sprint 10 wireframe). */
+const HERO_ASPECT_RATIO = 5 / 3;
+const HERO_ICON_SIZE = 56;
 
 type MembershipStatus = 'creator' | 'joined' | 'requested' | 'none';
 
@@ -50,6 +56,7 @@ export default function ChallengeDetail() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   // `inviteId`: opened from a challenge-invite notification (notificationRoutes.ts).
   const { id, inviteId } = useLocalSearchParams<{ id: string; inviteId?: string }>();
   const [challenge, setChallenge] = useState<ChallengeContract | null>(null);
@@ -285,10 +292,19 @@ export default function ChallengeDetail() {
   const showsBottomBar =
     !isClosed && !membershipLoading && (membershipStatus === 'none' || membershipStatus === 'requested');
   // Activity Color System v2 — this challenge's own resolved accent color,
-  // used for the title, the "Lasts" row's calendar icon, the "Read more"
-  // toggle, and each workout day's numbered badge below.
+  // used for the glow, the "Lasts" row's calendar icon, the "Read more"
+  // toggle, and each workout day's numbered badge below (not the title).
   const dominantActivityCategory = challenge ? pickDominantActivityCategory(challenge) : null;
   const accentColor = getChallengeAccentColor(dominantActivityCategory);
+  // Sprint 10: the photo is the screen's header; with no approved photo (none,
+  // in review, rejected) it is the gray placeholder, and its creator is told why.
+  const imageStatus = challenge?.imageStatus;
+  const coverNotice =
+    isOwner && imageStatus === 'pending'
+      ? t('challengeInfo.coverPending')
+      : isOwner && imageStatus === 'rejected'
+        ? t('challengeInfo.coverRejected')
+        : null;
 
   const infoRows: ChallengeInfoRow[] = [
     {
@@ -321,82 +337,113 @@ export default function ChallengeDetail() {
   ];
 
   return (
-    <ScreenBackground variant="default" applyTopInset={false} contentStyle={{ paddingTop: Math.max(insets.top, 0) }}>
-      <ChallengeAccentBackdrop color={accentColor} />
+    // No top inset: the header photo runs under the status bar; the icons on it
+    // take the inset themselves.
+    <ScreenBackground variant="default" applyTopInset={false}>
+      {/* The backdrop's own `ink`, fixed; its glow scrolls with the content below. */}
+      <View style={styles.inkBase} pointerEvents="none" />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: showsBottomBar ? spacing['2xl'] : insets.bottom + spacing.xl }}
       >
-        <Row justify="space-between" align="center" style={styles.topBar}>
-          <BackButton style={styles.backButton} />
-          <Row gap="xs" align="center">
-            <Pressable
-              // `dominantActivityCategory` passed through as a route param
-              // (2026-08-30) — Members already resolved it here, so the
-              // destination screen can paint its own accent glow on its
-              // very first render instead of waiting out its own
-              // `getChallenge()` round trip first (was a real ~1s "no
-              // gradient, then it pops in" gap the user flagged on-device).
-              // See `services/adapters/challengeState.ts`'s `parseActivityType`
-              // for how the destination screen re-validates this untrusted
-              // string before trusting it.
-              onPress={() =>
-                router.push(
-                  `/challenge/${id}/members?dominantActivityCategory=${dominantActivityCategory ?? ''}`,
-                )
-              }
-              style={({ pressed }) => [styles.membersPill, pressed && styles.pressed]}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={t('challengeInfo.membersA11y')}
-            >
-              <Icon name="people-outline" size={18} color={colors.paper} />
-              <Text variant="label" weight="bold">{view.membersJoined}</Text>
-            </Pressable>
-            <Pressable
-              onPress={handleShare}
-              style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-              accessibilityRole="button"
-              accessibilityLabel={t('challengeInfo.shareA11y')}
-            >
-              <Icon name="share-outline" size={22} color={colors.paper} />
-            </Pressable>
-            {isOwner && (
+        {/* Sprint 10: the glow hangs from the bottom of the header photo (not
+            behind it) and moves with it when scrolling. */}
+        <View
+          pointerEvents="none"
+          style={[styles.glowUnderHero, { top: windowWidth / HERO_ASPECT_RATIO, height: windowHeight }]}
+        >
+          <ChallengeAccentBackdrop color={accentColor} />
+        </View>
+        <View style={styles.hero}>
+          <ChallengeCoverTile
+            imageUrl={challenge ? pickChallengeImageUrl(challenge) : null}
+            iconSize={HERO_ICON_SIZE}
+            style={styles.heroImage}
+            testID="challenge-info-cover"
+          />
+          <Row
+            justify="space-between"
+            align="center"
+            style={[styles.topBar, styles.topBarOverHero, { paddingTop: insets.top + spacing.md }]}
+          >
+            <BackButton style={styles.backButton} iconStyle={styles.overPhoto} />
+            <Row gap="xs" align="center">
               <Pressable
-                onPress={() => router.push(`/challenge/${id}/manage`)}
+                // `dominantActivityCategory` passed through as a route param
+                // (2026-08-30) — Members already resolved it here, so the
+                // destination screen can paint its own accent glow on its
+                // very first render instead of waiting out its own
+                // `getChallenge()` round trip first (was a real ~1s "no
+                // gradient, then it pops in" gap the user flagged on-device).
+                // See `services/adapters/challengeState.ts`'s `parseActivityType`
+                // for how the destination screen re-validates this untrusted
+                // string before trusting it.
+                onPress={() =>
+                  router.push(
+                    `/challenge/${id}/members?dominantActivityCategory=${dominantActivityCategory ?? ''}`,
+                  )
+                }
+                style={({ pressed }) => [styles.membersPill, pressed && styles.pressed]}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t('challengeInfo.membersA11y')}
+              >
+                <Icon name="people-outline" size={18} color={colors.paper} style={styles.overPhoto} />
+                <Text variant="label" weight="bold" style={styles.overPhoto}>
+                  {view.membersJoined}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleShare}
                 style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
                 accessibilityRole="button"
-                accessibilityLabel={t('challengeProgress.manageA11y')}
+                accessibilityLabel={t('challengeInfo.shareA11y')}
               >
-                <Icon name="settings-outline" size={22} color={colors.paper} />
+                <Icon name="share-outline" size={22} color={colors.paper} style={styles.overPhoto} />
               </Pressable>
-            )}
-            {isAdmin && challenge?.status !== 'closed' && (
-              <Pressable
-                onPress={closeChallengePopup.show}
-                style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel={t('challengeProgress.closeChallengeA11y')}
-              >
-                <Icon name="lock-closed-outline" size={22} color={colors.error} />
-              </Pressable>
-            )}
-            {isAdmin && isClosed && (
-              <Pressable
-                onPress={reopenChallengePopup.show}
-                style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel={t('challengeProgress.reopenChallengeA11y')}
-              >
-                <Icon name="lock-open-outline" size={22} color={colors.paper} />
-              </Pressable>
-            )}
+              {isOwner && (
+                <Pressable
+                  onPress={() => router.push(`/challenge/${id}/manage`)}
+                  style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('challengeProgress.manageA11y')}
+                >
+                  <Icon name="settings-outline" size={22} color={colors.paper} style={styles.overPhoto} />
+                </Pressable>
+              )}
+              {isAdmin && challenge?.status !== 'closed' && (
+                <Pressable
+                  onPress={closeChallengePopup.show}
+                  style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('challengeProgress.closeChallengeA11y')}
+                >
+                  <Icon name="lock-closed-outline" size={22} color={colors.error} style={styles.overPhoto} />
+                </Pressable>
+              )}
+              {isAdmin && isClosed && (
+                <Pressable
+                  onPress={reopenChallengePopup.show}
+                  style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('challengeProgress.reopenChallengeA11y')}
+                >
+                  <Icon name="lock-open-outline" size={22} color={colors.paper} style={styles.overPhoto} />
+                </Pressable>
+              )}
+            </Row>
           </Row>
-        </Row>
+        </View>
+
+        {coverNotice ? (
+          <Text variant="caption" tone="secondary" style={styles.coverNotice} testID="challenge-info-cover-notice">
+            {coverNotice}
+          </Text>
+        ) : null}
 
         <View style={styles.section}>
-          <ChallengeHeader title={view.title} rows={infoRows} accentColor={accentColor} />
+          <ChallengeHeader title={view.title} rows={infoRows} />
         </View>
 
         <View style={styles.section}>
@@ -554,6 +601,48 @@ const styles = StyleSheet.create({
   },
   section: {
     paddingBottom: spacing.lg,
+  },
+  // Sprint 10 wireframe: the challenge photo as a full-width header, the top
+  // bar's icons drawn on top of it.
+  hero: {
+    marginBottom: spacing.lg,
+  },
+  inkBase: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: colors.ink,
+  },
+  // `top` (the photo's height) and `height` (one screen) are set inline.
+  glowUnderHero: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+  },
+  heroImage: {
+    width: '100%',
+    aspectRatio: HERO_ASPECT_RATIO,
+    borderRadius: 0,
+  },
+  topBarOverHero: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  // Same dark text shadow as the "N liked this" label and the icons on feed
+  // photos, so the icons read on a light photo too.
+  overPhoto: {
+    textShadowColor: colors.ink,
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: shadows.md.shadowRadius,
+  },
+  coverNotice: {
+    paddingHorizontal: spacing.base,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.lg,
   },
   bottomBar: {
     paddingHorizontal: spacing.base,

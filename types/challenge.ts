@@ -43,6 +43,8 @@ export interface CreateChallengePayload {
     routine_description: string;
     exercises: CreateChallengeExercisePayload[];
   }>;
+  /** Sprint 10 — optional photo: the public URL uploadImageAsync() returned. */
+  imageUrl?: string;
 }
 
 /** Same target shape `TodayRoutineTarget` (services/adapters/metricsAdapter.ts)
@@ -159,8 +161,15 @@ export interface ChallengeContract {
   /** 'open' | 'closed' — admin-only action (Bloque 1). Absent on older
    * cached responses treated as 'open'. */
   status?: string;
+  /** Sprint 10 — the challenge photo, signed; only sent once it passed
+   * moderation (`imageStatus === 'approved'`), `null` otherwise. */
+  imageUrl?: string | null;
+  /** 'none' = no photo. Absent on responses from before the photo existed. */
+  imageStatus?: ChallengeImageStatus;
   [key: string]: unknown;
 }
+
+export type ChallengeImageStatus = 'none' | PhotoModerationStatus;
 
 export interface JoinChallengeResponse {
   success?: boolean;
