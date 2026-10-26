@@ -1,0 +1,8 @@
+## variante production (exit 0)
+android:usesCleartextTraffic="false"
+debug manifest: usesCleartextTraffic="true"
+» android: userInterfaceStyle: Install expo-system-ui in your project to enable this feature.
+## variante development (exit 0)
+android:usesCleartextTraffic="true"
+debug manifest: usesCleartextTraffic="true"
+» android: userInterfaceStyle: Install expo-system-ui in your project to enable this feature.

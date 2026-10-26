@@ -75,7 +75,6 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true,
             "minSdkVersion": 24,
             "compileSdkVersion": 36,
             "targetSdkVersion": 36
@@ -87,7 +86,6 @@
       ]
     ],
     "extra": {
-      "apiUrl": "http://20.63.84.1:3000",
       "eas": {
         "projectId": "bc509756-4500-48e1-92f2-441965b21629"
       },
