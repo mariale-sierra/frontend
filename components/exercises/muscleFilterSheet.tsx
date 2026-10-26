@@ -51,7 +51,7 @@ export function MuscleFilterSheet({ visible, selected, onSelect, onClose }: Musc
     }
     getMuscleRegions()
       .then(setRegions)
-      .catch((error: any) => logError('MuscleFilterSheet', error));
+      .catch((error: unknown) => logError('MuscleFilterSheet', error));
   }, [visible]);
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export function MuscleFilterSheet({ visible, selected, onSelect, onClose }: Musc
     setLoading(true);
     getMusclesInRegion(activeRegion.code)
       .then(setMuscles)
-      .catch((error: any) => logError('MuscleFilterSheet', error))
+      .catch((error: unknown) => logError('MuscleFilterSheet', error))
       .finally(() => setLoading(false));
   }, [activeRegion]);
 
