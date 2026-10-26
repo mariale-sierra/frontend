@@ -32,7 +32,7 @@ interface ActivityFilterChipsProps {
  * of chips — "All", then one per activity — that narrows the list to challenges
  * whose MAIN activity (the one that colors their card) is the picked one. Same
  * pill as the create flow's activity picker (`surface`, bold `label`, `radius.big`);
- * an unpicked activity chip carries a dot of its own color, a picked one fills
+ * an unpicked activity chip carries a dot of its own color after its label, a picked one fills
  * with it (`ink` text on it, as activity colors pair with); a picked "All" fills
  * with `paper`. It runs edge to edge: the row bleeds out of the list header's
  * side padding and puts it back inside the scroll.
@@ -95,10 +95,11 @@ function Chip({
       testID={testID}
       style={({ pressed }) => [styles.chip, selected && { backgroundColor: fill }, pressed && styles.pressed]}
     >
-      {dot && !selected ? <View style={[styles.dot, { backgroundColor: dot }]} /> : null}
       <Text variant="label" weight="bold" tone={selected ? 'inverse' : 'primary'}>
         {label}
       </Text>
+      {/* After the label (Sprint 10), like the profile's practice badges' icon. */}
+      {dot && !selected ? <View style={[styles.dot, { backgroundColor: dot }]} testID={`${testID}-dot`} /> : null}
     </Pressable>
   );
 }

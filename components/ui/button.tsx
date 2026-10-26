@@ -13,7 +13,8 @@ import { Text } from './text';
 /**
  * ButtonVariant defines the available button styles:
  * - primary: `primary` background, `ink` text, for the one main action on a screen
- * - outline: `ink` background, `paper`-bordered, for secondary actions — NOT
+ * - outline: solid `surface` background, no border, `paper` text (it was an
+ *   `ink` fill with a `paper` border until Sprint 10), for secondary actions — NOT
  *   for use in popups/modals (see `neutral` below); still fine for in-page
  *   secondary actions like a "Retry" button in an error state.
  * - danger: solid `error` background, `ink` text, for destructive actions
@@ -151,10 +152,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
 
+  // Sprint 10, explicit request: no outline any more — a solid `surface`
+  // fill with `paper` text. The variant keeps its name so call sites compile.
   outline: {
-    backgroundColor: colors.ink,
-    borderWidth: 1,
-    borderColor: colors.paper,
+    backgroundColor: colors.surface,
   },
 
   danger: {

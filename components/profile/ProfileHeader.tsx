@@ -4,10 +4,11 @@ import { activityColors, colors, radius, spacing } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { getPracticeOption } from '../../constants/practiceOptions';
 import { ACTIVITY_ICON_NAME } from '../icons/activityIcon';
-import { AccentPill } from '../ui/accentPill';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
+
+const PRACTICE_ICON_SIZE = 16;
 
 interface ProfileHeaderProps {
   displayName: string;
@@ -137,14 +138,19 @@ export function ProfileHeader({
       {practiceBadges.length > 0 && (
         <View style={[styles.badgesRow, styles.badgesRowGap]}>
           {practiceBadges.map((option) => (
-            <AccentPill
-              key={option.value}
-              label={option.label}
-              color={activityColors[option.activityType]}
-              variant="filled"
-              size="md"
-              icon={ACTIVITY_ICON_NAME[option.activityType]}
-            />
+            // Sprint 10: the same pill as the Challenges activity filter chips —
+            // `surface`, bold `paper` label — with the activity icon in its own
+            // color after the label.
+            <View key={option.value} style={styles.practiceBadge} testID={`practice-badge-${option.value}`}>
+              <Text variant="label" weight="bold">
+                {option.label}
+              </Text>
+              <Icon
+                name={ACTIVITY_ICON_NAME[option.activityType]}
+                size={PRACTICE_ICON_SIZE}
+                color={activityColors[option.activityType]}
+              />
+            </View>
           ))}
         </View>
       )}
@@ -204,6 +210,16 @@ const styles = StyleSheet.create({
     width: 1,
     height: 32,
     backgroundColor: withAlpha(colors.paper, 0.08),
+  },
+  // Same shape as ActivityFilterChips' chip.
+  practiceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    borderRadius: radius.big,
+    backgroundColor: colors.surface,
   },
   badgesRow: {
     flexDirection: 'row',
