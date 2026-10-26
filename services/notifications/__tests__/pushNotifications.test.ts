@@ -141,6 +141,33 @@ describe('push notifications', () => {
       await expect(syncPushToken()).resolves.toBeNull();
     });
 
+    it('warns about a failed registration without printing the bearer token or the push token', async () => {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue(permission('granted'));
+      (registerPushToken as jest.Mock).mockRejectedValueOnce(
+        Object.assign(new Error('Request failed with status code 500'), {
+          config: {
+            method: 'post',
+            url: '/notifications/push-token?retry=1',
+            headers: { Authorization: 'Bearer secret-access-token' },
+            data: '{"token":"ExponentPushToken[abc]"}',
+          },
+          response: { status: 500, data: { message: 'echo ExponentPushToken[abc]' } },
+        }),
+      );
+
+      await expect(syncPushToken()).resolves.toBeNull();
+
+      expect(warn).toHaveBeenCalledWith(
+        '[push] could not register the push token',
+        'POST /notifications/push-token -> 500',
+      );
+      const printed = JSON.stringify(warn.mock.calls);
+      expect(printed).not.toContain('secret-access-token');
+      expect(printed).not.toContain('ExponentPushToken');
+      expect(storage.setItem).not.toHaveBeenCalled();
+    });
+
     it('sends a token only once per session, and calls made at the same time share one request', async () => {
       (Notifications.getPermissionsAsync as jest.Mock).mockResolvedValue(permission('granted'));
 
