@@ -17,7 +17,8 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "APP_VARIANT": "preview"
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_API_URL": "https://havit-api.canadacentral.cloudapp.azure.com"
       },
       "android": {
         "buildType": "apk"
@@ -26,7 +27,8 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "APP_VARIANT": "production"
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_API_URL": "https://havit-api.canadacentral.cloudapp.azure.com"
       }
     }
   },

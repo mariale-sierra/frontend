@@ -13,7 +13,7 @@ La seguridad del transporte ahora depende de la variante de build. `development`
 - `expo-build-properties` sigue en `app.json` con lo fijo (niveles de SDK, target de iOS), pero sin `usesCleartextTraffic`: `app.config.js` lo agrega a esa misma entrada según la variante.
 - Una build de release sin URL https es un error y no un aviso: es la única forma de que no se cuele un APK inseguro.
 - La URL HTTP de respaldo en `services/api.ts` solo aplica en `__DEV__`.
-- `.env` sigue apuntando a `http://20.63.84.1:3000` para desarrollo **hasta que exista el dominio**: cambiarlo antes rompería `expo start` de todo el equipo.
+- `.env` apunta al dominio HTTPS desde que existe; el respaldo HTTP queda solo para desarrollo.
 
 ## 3. Archivos modificados
 
@@ -28,8 +28,8 @@ La seguridad del transporte ahora depende de la variante de build. `development`
 
 ## 4. Configuración
 
-- **EAS (pendiente, B8):** `EXPO_PUBLIC_API_URL=https://havit-api.<región>.cloudapp.azure.com` en los perfiles `preview` y `production` (bloque `env` de `eas.json` o *Environment variables* en expo.dev). Sin eso, `eas build --profile preview|production` falla con un mensaje que explica qué falta.
-- Cuando el dominio responda: `.env` → `EXPO_PUBLIC_API_URL=https://…`.
+- **EAS:** `EXPO_PUBLIC_API_URL=https://havit-api.canadacentral.cloudapp.azure.com` en el bloque `env` de los perfiles `preview` y `production` de `eas.json`. Sin eso, `eas build --profile preview|production` falla con un mensaje que explica qué falta.
+- Dominio activo (2026-10-26): etiqueta DNS `havit-api` en la IP pública de la VM, puertos 80/443 abiertos en el NSG y `API_DOMAIN` en el `.env` de `raiz` en la VM; certificado de Let's Encrypt emitido por Caddy. `.env` ya apunta a `https://havit-api.canadacentral.cloudapp.azure.com`.
 - Desarrollo local: sin cambios (`npm run start:local` escribe una URL `http://<ip-lan>:3000` en `.env.local`).
 
 ## 5. Pruebas
@@ -52,7 +52,6 @@ Flujos críticos: login, registro, `GET /users/me` y `GET /challenges` se probar
 
 ## 7. Pendientes y riesgos
 
-- **No integrar esta rama a `development` antes de tener el dominio:** bloquearía las builds de preview de B8. El PR queda abierto con esa condición.
 - **APK viejos (con B8):** siguen funcionando mientras el 3000 esté abierto. Plan: distribuir el APK HTTPS → avisar → ventana de migración → cerrar el 3000. Detalle en el documento principal, sección 7.
 
 ## 8. Rollback
