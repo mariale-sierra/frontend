@@ -1367,6 +1367,94 @@ const en = {
     notifications: 'Notifications',
     notificationsHint: 'What you get notified about, in the app and on your phone',
     aboutHint: 'Credits for exercise data and illustrations',
+    helpHint: 'Quick answers about challenges, progress, privacy and posts',
+  },
+  // Sprint 10, B9: short answers; opened from Settings.
+  help: {
+    title: 'Help & FAQ',
+    intro: 'Tap a question to see the answer.',
+    sections: {
+      challenges: {
+        title: 'Challenges',
+        items: {
+          join: {
+            q: 'How do I join a challenge?',
+            a: 'Open the challenge and tap "Join challenge". If it is private, the button says "Request to join": its creator reviews your request and you get a notification when they answer.',
+          },
+          leave: {
+            q: 'What happens if I leave a challenge?',
+            a: 'You stop taking part, but your progress is saved. You can leave from the challenge screen.',
+          },
+          finish: {
+            q: 'When is a challenge finished?',
+            a: 'When you log its last day. Every finished challenge counts toward the completed-challenge badges.',
+          },
+          location: {
+            q: 'Can I train somewhere else that day?',
+            a: 'Yes. On the routine day, change the training location: if an exercise can’t be done there, you pick a similar one. It only changes your workout; the routine stays the same for everyone else.',
+          },
+        },
+      },
+      progress: {
+        title: 'Progress',
+        items: {
+          log: {
+            q: 'How do I log today’s progress?',
+            a: 'Tap the add button, pick the challenge and take a photo. Your day is logged right away, even while the photo is still under review.',
+          },
+          restDay: {
+            q: 'How do rest days work?',
+            a: 'Rest is part of the plan: on a rest day you don’t have to train. You can plan upcoming rest days, but not apply them to days that already passed.',
+          },
+          streak: {
+            q: 'How is my streak counted?',
+            a: 'It is your consecutive days with a log, and rest days count too. If a day goes by without a log, the streak starts over.',
+          },
+          badges: {
+            q: 'How do I earn badges?',
+            a: 'By logging workouts, keeping your streak and finishing challenges. On your profile, tap a badge to see how it is counted and how much is left.',
+          },
+        },
+      },
+      privacy: {
+        title: 'Privacy',
+        items: {
+          photoVisibility: {
+            q: 'Who sees my photos?',
+            a: 'When you take the photo you choose "Followers" or "Private". Only you can see a private photo.',
+          },
+          privateProfile: {
+            q: 'What does a private profile do?',
+            a: 'It hides your bio from other users. Turn it on in Settings > Edit profile.',
+          },
+          deleteAccount: {
+            q: 'How do I delete my account?',
+            a: 'In Settings > Delete account. Before you confirm, we explain what happens to your data.',
+          },
+        },
+      },
+      posts: {
+        title: 'Posts',
+        items: {
+          review: {
+            q: 'Why does my photo say "In review"?',
+            a: 'We review photos before publishing them. Until then only you can see it. If it doesn’t pass the review it isn’t published, but your day stays logged.',
+          },
+          report: {
+            q: 'How do I report a post or a comment?',
+            a: 'Use the "Report" option on the post or comment and pick a reason. Our team reviews it.',
+          },
+          delete: {
+            q: 'Can I delete a post?',
+            a: 'Yes, your own: open the post’s options and tap "Delete post".',
+          },
+          suspension: {
+            q: 'What happens if my content breaks the rules?',
+            a: 'We may hide it and, depending on the case, suspend your activity for a while. During a suspension you can still browse the app. See the Community Guidelines in Settings.',
+          },
+        },
+      },
+    },
   },
   about: {
     title: 'About & Credits',

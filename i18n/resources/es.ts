@@ -1331,6 +1331,94 @@ const es = {
     notifications: 'Notificaciones',
     notificationsHint: 'Qué avisos recibes en la app y en el teléfono',
     aboutHint: 'Créditos de los datos de ejercicios e ilustraciones',
+    helpHint: 'Respuestas rápidas sobre retos, progreso, privacidad y publicaciones',
+  },
+  // Sprint 10, B9: respuestas breves; se abre desde Configuración.
+  help: {
+    title: 'Ayuda y preguntas frecuentes',
+    intro: 'Toca una pregunta para ver la respuesta.',
+    sections: {
+      challenges: {
+        title: 'Retos',
+        items: {
+          join: {
+            q: '¿Cómo me uno a un reto?',
+            a: 'Abre el reto y toca "Unirme al reto". Si el reto es privado, el botón dice "Solicitar unirme": quien lo creó revisa tu solicitud y te llega una notificación cuando responda.',
+          },
+          leave: {
+            q: '¿Qué pasa si salgo de un reto?',
+            a: 'Dejas de participar, pero tu progreso se guarda. Puedes salir desde la pantalla del reto.',
+          },
+          finish: {
+            q: '¿Cuándo se termina un reto?',
+            a: 'Al registrar su último día. Cada reto terminado cuenta para las insignias de retos completados.',
+          },
+          location: {
+            q: '¿Puedo entrenar en otro lugar ese día?',
+            a: 'Sí. En el día de la rutina cambia el lugar de entrenamiento: si un ejercicio no se puede hacer ahí, eliges uno parecido. Solo cambia tu entrenamiento; la rutina sigue igual para los demás.',
+          },
+        },
+      },
+      progress: {
+        title: 'Progreso',
+        items: {
+          log: {
+            q: '¿Cómo registro mi progreso del día?',
+            a: 'Toca el botón de agregar, elige el reto y toma una foto. Tu día queda registrado al instante, aunque la foto todavía esté en revisión.',
+          },
+          restDay: {
+            q: '¿Cómo funcionan los días de descanso?',
+            a: 'El descanso es parte del plan: en un día de descanso no tienes que entrenar. Puedes planear tus próximos descansos, pero no aplicarlos a días que ya pasaron.',
+          },
+          streak: {
+            q: '¿Cómo se cuenta mi racha?',
+            a: 'Son los días seguidos con registro, y los días de descanso también cuentan. Si dejas pasar un día sin registrar, la racha vuelve a empezar.',
+          },
+          badges: {
+            q: '¿Cómo consigo insignias?',
+            a: 'Registrando entrenamientos, manteniendo tu racha y terminando retos. En tu perfil, toca una insignia para ver cómo se cuenta y cuánto te falta.',
+          },
+        },
+      },
+      privacy: {
+        title: 'Privacidad',
+        items: {
+          photoVisibility: {
+            q: '¿Quién ve mis fotos?',
+            a: 'Al tomar la foto eliges "Seguidores" o "Privado". Una foto privada solo la ves tú.',
+          },
+          privateProfile: {
+            q: '¿Qué hace el perfil privado?',
+            a: 'Oculta tu biografía a otros usuarios. Lo activas en Configuración > Editar perfil.',
+          },
+          deleteAccount: {
+            q: '¿Cómo elimino mi cuenta?',
+            a: 'En Configuración > Eliminar cuenta. Antes de confirmar te explicamos qué pasa con tus datos.',
+          },
+        },
+      },
+      posts: {
+        title: 'Publicaciones',
+        items: {
+          review: {
+            q: '¿Por qué mi foto dice "En revisión"?',
+            a: 'Revisamos las fotos antes de publicarlas. Mientras tanto solo tú la ves. Si no pasa la revisión no se publica, pero tu día sigue registrado.',
+          },
+          report: {
+            q: '¿Cómo reporto una publicación o un comentario?',
+            a: 'Usa la opción "Reportar" de la publicación o del comentario y elige el motivo. Nuestro equipo lo revisa.',
+          },
+          delete: {
+            q: '¿Puedo eliminar una publicación?',
+            a: 'Sí, las tuyas: abre las opciones de la publicación y toca "Eliminar publicación".',
+          },
+          suspension: {
+            q: '¿Qué pasa si mi contenido incumple las normas?',
+            a: 'Podemos ocultarlo y, según el caso, suspender tu actividad por un tiempo. Durante la suspensión puedes seguir viendo la app. Revisa las Normas de la comunidad en Configuración.',
+          },
+        },
+      },
+    },
   },
   about: {
     title: 'Acerca de y Créditos',

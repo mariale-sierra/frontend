@@ -35,9 +35,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
  * now has a gear that opens this screen, which groups what was scattered:
  * edit profile, notifications, the legal documents, about, log out and delete
  * account. Each row opens the screen that already existed (same confirmations).
- *
- * Help / FAQ (B9) is not linked: there is no such screen yet. When it exists it
- * becomes one more row in the "legal and information" section.
+ * Help / FAQ (B9) is one more row in the "legal and information" section.
  */
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -74,6 +72,13 @@ export default function SettingsScreen() {
         </Section>
 
         <Section title={t('settings.sections.legal')}>
+          <SettingsRow
+            icon="help-circle-outline"
+            label={t('help.title')}
+            hint={t('settings.helpHint')}
+            onPress={() => router.push('/profile/help')}
+            testID="settings-help"
+          />
           {LEGAL_DOCS.map(({ doc, icon }) => (
             <SettingsRow
               key={doc}
