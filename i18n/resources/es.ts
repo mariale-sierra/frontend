@@ -10,6 +10,23 @@ const es = {
       dismiss: 'Descartar',
       gotIt: 'Entendido',
     },
+    // Sprint 10, revisión de accesibilidad: lo que lee el lector de pantalla en botones de solo ícono.
+    a11y: {
+      close: 'Cerrar',
+      send: 'Enviar',
+      increase: 'Aumentar {{label}}',
+      decrease: 'Disminuir {{label}}',
+      previousMonth: 'Mes anterior',
+      nextMonth: 'Mes siguiente',
+      flipCamera: 'Cambiar de cámara',
+      confirmPhoto: 'Usar esta foto',
+      clearSearch: 'Borrar búsqueda',
+      openMessages: 'Mensajes',
+      openRoutine: 'Abrir rutina',
+      openPhoto: 'Abrir foto',
+      deleteComment: 'Eliminar comentario',
+      removeDay: 'Quitar el día {{day}}',
+    },
     fields: {
       email: 'Correo',
       username: 'Usuario',
@@ -56,6 +73,11 @@ const es = {
         ownChallenge: 'No puedes unirte a un reto que creaste.',
         emailInUse: 'Ese correo ya está en uso.',
         usernameInUse: 'Ese nombre de usuario ya está en uso.',
+        accountTaken: 'Ese correo o nombre de usuario ya está en uso.',
+        passwordTooShort: 'Usa al menos 10 caracteres.',
+        passwordTooLong: 'Esa contraseña es demasiado larga.',
+        passwordContainsIdentity: 'Tu contraseña no puede contener tu nombre de usuario ni tu correo.',
+        passwordTooCommon: 'Esa contraseña es demasiado común. Prueba una frase que solo se te ocurra a ti.',
         deletionAlreadyRequested: 'Ya solicitaste eliminar tu cuenta.',
         cycleTooLong: 'El ciclo no puede ser más largo que el reto.',
       },
@@ -236,6 +258,9 @@ const es = {
     dailyProofValue: '1 foto por día de entreno',
     rewardLabel: 'Al terminarlo',
     rewardValue: 'Cuenta para tus insignias de retos completados (1 y 3 retos). Se termina al registrar su último día.',
+    // Sprint 10: solo quien lo creó ve por qué su foto todavía no aparece.
+    coverPending: 'Tu foto está en revisión. Hasta que se apruebe, todos ven el espacio vacío.',
+    coverRejected: 'Tu foto no pasó la revisión, así que no se mostrará.',
     statusLabel: 'Estado',
     closedValue: 'Cerrado',
     restEveryCycle_one: '{{count}} día de descanso cada {{cycleLength}}',
@@ -335,6 +360,9 @@ const es = {
   },
   search: {
     screenTitle: 'Buscar',
+    browseByActivity: 'Por actividad',
+    popularTitle: 'Populares ahora',
+    seeAll: 'Ver todos',
     placeholder: 'Buscar retos o personas',
     challengesSectionTitle: 'Retos',
     peopleSectionTitle: 'Personas',
@@ -427,6 +455,16 @@ const es = {
     submit: {
       startChallenge: 'Iniciar reto',
     },
+    // Sprint 10: el paso opcional de la foto del reto.
+    cover: {
+      pick: 'Elegir foto',
+      change: 'Cambiar foto',
+      remove: 'Quitar',
+      skipHint: 'Puedes saltar este paso: en Explorar se verá un espacio vacío.',
+      reviewHint: 'Revisamos la foto antes de mostrarla a todos.',
+      uploadFailed: 'No pudimos subir la foto. Intenta de nuevo, o quítala para crear el reto sin foto.',
+      inReview: 'Reto creado. Tu foto está en revisión.',
+    },
     rules: {
       dailyPhoto: {
         title: 'Una foto cada día de entrenamiento',
@@ -480,6 +518,10 @@ const es = {
       visibility: {
         title: '¿Quién lo puede ver?',
         description: 'Elige si cualquiera puede encontrarlo y unirse, o solo las personas que tú apruebes.',
+      },
+      photo: {
+        title: 'Agrega una foto',
+        description: 'Opcional. Se muestra en la tarjeta del reto en Explorar y en su pantalla de información.',
       },
       review: {
         title: 'Listo cuando quieras',
@@ -871,6 +913,7 @@ const es = {
   badges: {
     title: 'Insignias',
     earnedCount: '{{earned}} de {{total}}',
+    openA11y: 'Abrir insignias',
     tileA11yEarned: 'Insignia {{name}}, conseguida. Toca para ver el detalle.',
     tileA11yLocked: 'Insignia {{name}}, por conseguir. Toca para ver cómo.',
     earnedOwn: '¡La conseguiste!',
@@ -943,6 +986,7 @@ const es = {
   profileEdit: {
     entry: 'Editar perfil',
     screenTitle: 'Editar perfil',
+    sectionProfile: 'Perfil',
     displayName: 'Nombre',
     displayNamePlaceholder: 'Tu nombre visible',
     displayNameRequired: 'El nombre no puede estar vacío.',
@@ -1321,6 +1365,94 @@ const es = {
     notifications: 'Notificaciones',
     notificationsHint: 'Qué avisos recibes en la app y en el teléfono',
     aboutHint: 'Créditos de los datos de ejercicios e ilustraciones',
+    helpHint: 'Respuestas rápidas sobre retos, progreso, privacidad y publicaciones',
+  },
+  // Sprint 10, B9: respuestas breves; se abre desde Configuración.
+  help: {
+    title: 'Ayuda y preguntas frecuentes',
+    intro: 'Toca una pregunta para ver la respuesta.',
+    sections: {
+      challenges: {
+        title: 'Retos',
+        items: {
+          join: {
+            q: '¿Cómo me uno a un reto?',
+            a: 'Abre el reto y toca "Unirme al reto". Si el reto es privado, el botón dice "Solicitar unirme": quien lo creó revisa tu solicitud y te llega una notificación cuando responda.',
+          },
+          leave: {
+            q: '¿Qué pasa si salgo de un reto?',
+            a: 'Dejas de participar, pero tu progreso se guarda. Puedes salir desde la pantalla del reto.',
+          },
+          finish: {
+            q: '¿Cuándo se termina un reto?',
+            a: 'Al registrar su último día. Cada reto terminado cuenta para las insignias de retos completados.',
+          },
+          location: {
+            q: '¿Puedo entrenar en otro lugar ese día?',
+            a: 'Sí. En el día de la rutina cambia el lugar de entrenamiento: si un ejercicio no se puede hacer ahí, eliges uno parecido. Solo cambia tu entrenamiento; la rutina sigue igual para los demás.',
+          },
+        },
+      },
+      progress: {
+        title: 'Progreso',
+        items: {
+          log: {
+            q: '¿Cómo registro mi progreso del día?',
+            a: 'Toca el botón de agregar, elige el reto y toma una foto. Tu día queda registrado al instante, aunque la foto todavía esté en revisión.',
+          },
+          restDay: {
+            q: '¿Cómo funcionan los días de descanso?',
+            a: 'El descanso es parte del plan: en un día de descanso no tienes que entrenar. Puedes planear tus próximos descansos, pero no aplicarlos a días que ya pasaron.',
+          },
+          streak: {
+            q: '¿Cómo se cuenta mi racha?',
+            a: 'Son los días seguidos con registro, y los días de descanso también cuentan. Si dejas pasar un día sin registrar, la racha vuelve a empezar.',
+          },
+          badges: {
+            q: '¿Cómo consigo insignias?',
+            a: 'Registrando entrenamientos, manteniendo tu racha y terminando retos. En tu perfil, toca una insignia para ver cómo se cuenta y cuánto te falta.',
+          },
+        },
+      },
+      privacy: {
+        title: 'Privacidad',
+        items: {
+          photoVisibility: {
+            q: '¿Quién ve mis fotos?',
+            a: 'Al tomar la foto eliges "Seguidores" o "Privado". Una foto privada solo la ves tú.',
+          },
+          privateProfile: {
+            q: '¿Qué hace el perfil privado?',
+            a: 'Oculta tu biografía a otros usuarios. Lo activas en Configuración > Editar perfil.',
+          },
+          deleteAccount: {
+            q: '¿Cómo elimino mi cuenta?',
+            a: 'En Configuración > Eliminar cuenta. Antes de confirmar te explicamos qué pasa con tus datos.',
+          },
+        },
+      },
+      posts: {
+        title: 'Publicaciones',
+        items: {
+          review: {
+            q: '¿Por qué mi foto dice "En revisión"?',
+            a: 'Revisamos las fotos antes de publicarlas. Mientras tanto solo tú la ves. Si no pasa la revisión no se publica, pero tu día sigue registrado.',
+          },
+          report: {
+            q: '¿Cómo reporto una publicación o un comentario?',
+            a: 'Usa la opción "Reportar" de la publicación o del comentario y elige el motivo. Nuestro equipo lo revisa.',
+          },
+          delete: {
+            q: '¿Puedo eliminar una publicación?',
+            a: 'Sí, las tuyas: abre las opciones de la publicación y toca "Eliminar publicación".',
+          },
+          suspension: {
+            q: '¿Qué pasa si mi contenido incumple las normas?',
+            a: 'Podemos ocultarlo y, según el caso, suspender tu actividad por un tiempo. Durante la suspensión puedes seguir viendo la app. Revisa las Normas de la comunidad en Configuración.',
+          },
+        },
+      },
+    },
   },
   about: {
     title: 'Acerca de y Créditos',

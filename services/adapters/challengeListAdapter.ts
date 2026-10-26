@@ -157,6 +157,14 @@ export function pickAuthor(challenge: ChallengeContract): ChallengeAuthorViewMod
   };
 }
 
+/** The challenge photo to show, or `null` for the placeholder. The backend only
+ * sends `imageUrl` once the photo passed moderation; the status check is a
+ * second guard so a pending/rejected photo can never show. */
+export function pickChallengeImageUrl(challenge: ChallengeContract): string | null {
+  if (challenge.imageStatus !== 'approved') return null;
+  return asString(challenge.imageUrl) || null;
+}
+
 // pickChallengeStatus now lives in ./challengeState (shared with
 // homeAdapter.ts — both Home's hero card and this Mine tab need the exact
 // same status detection).
@@ -173,6 +181,7 @@ function toExploreCard(challenge: ChallengeContract, labels: ChallengeListLabels
     membersCount: pickMembersCount(challenge),
     dominantActivityCategory: pickDominantActivityCategory(challenge),
     author: pickAuthor(challenge),
+    imageUrl: pickChallengeImageUrl(challenge),
   };
 }
 

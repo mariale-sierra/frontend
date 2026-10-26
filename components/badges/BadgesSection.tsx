@@ -13,6 +13,10 @@ import { queryKeys, staleTimes } from '../../services/cache/queries';
 interface BadgesSectionProps {
   /** Omit for the session user's own badges (GET /badges/me). */
   userId?: string;
+  /** `row` (default): a titled, horizontally scrolling row. `grid`: every badge
+   * in a wrapping grid under just the earned count — the Badges screen, which
+   * has its own title. */
+  layout?: 'row' | 'grid';
 }
 
 /**
@@ -20,7 +24,7 @@ interface BadgesSectionProps {
  * error, or when the backend returns [] (a private profile you do not follow):
  * a missing badge row must never read as an error on the profile.
  */
-export function BadgesSection({ userId }: BadgesSectionProps) {
+export function BadgesSection({ userId, layout = 'row' }: BadgesSectionProps) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<BadgeContract | null>(null);
   const isOwn = !userId;
@@ -38,6 +42,24 @@ export function BadgesSection({ userId }: BadgesSectionProps) {
   const earnedCount = badges.filter((badge) => badge.earned).length;
   // Stable sort: earned first, catalog order kept inside each group.
   const sorted = [...badges].sort((a, b) => Number(b.earned) - Number(a.earned));
+
+  if (layout === 'grid') {
+    return (
+      <View style={styles.wrapper} testID="badges-grid">
+        <Text variant="label" weight="bold" tone="secondary" align="center">
+          {t('badges.earnedCount', { earned: earnedCount, total: badges.length })}
+        </Text>
+        <View style={styles.grid}>
+          {sorted.map((badge) => (
+            <View key={badge.code} style={styles.gridCell}>
+              <BadgeTile badge={badge} onPress={setSelected} size="large" />
+            </View>
+          ))}
+        </View>
+        <BadgeDetailSheet badge={selected} isOwn={isOwn} onClose={() => setSelected(null)} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.wrapper}>
@@ -68,5 +90,17 @@ const styles = StyleSheet.create({
   },
   row: {
     gap: spacing.sm,
+  },
+  // Three to a row: each cell is exactly a third of the width, its badge
+  // centered in it; a last row of one or two stays centered too.
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    rowGap: spacing.lg,
+  },
+  gridCell: {
+    width: '33.333%',
+    alignItems: 'center',
   },
 });

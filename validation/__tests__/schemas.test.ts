@@ -23,15 +23,70 @@ describe('validation schemas', () => {
 
   it('register: requires email/username/password', () => {
     const schema = createRegisterSchema(t);
-    expect(schema.safeParse({ email: 'a@b.com', username: '', password: 'password1' }).success).toBe(false);
-    expect(schema.safeParse({ email: 'a@b.com', username: '   ', password: 'password1' }).success).toBe(false);
-    expect(schema.safeParse({ email: 'a@b.com', username: 'esteban', password: 'password1' }).success).toBe(true);
+    expect(schema.safeParse({ email: 'a@b.com', username: '', password: 'Montaña-Lenta' }).success).toBe(false);
+    expect(schema.safeParse({ email: 'a@b.com', username: '   ', password: 'Montaña-Lenta' }).success).toBe(false);
+    expect(schema.safeParse({ email: 'a@b.com', username: 'esteban', password: 'Montaña-Lenta' }).success).toBe(true);
   });
 
-  it('register: the password has the backend minimum (RegisterDto @MinLength(8))', () => {
+  // B4: mirrors the backend password policy (src/auth/password-policy.ts).
+  describe('register: password policy (B4)', () => {
     const schema = createRegisterSchema(t);
-    expect(schema.safeParse({ email: 'a@b.com', username: 'esteban', password: 'short12' }).success).toBe(false);
-    expect(schema.safeParse({ email: 'a@b.com', username: 'esteban', password: '12345678' }).success).toBe(true);
+    const passwordIssues = (password: string, username = 'esteban', email = 'ana.lopez@b.com') => {
+      const result = schema.safeParse({ email, username, password });
+      return result.success
+        ? []
+        : result.error.issues.filter((i) => i.path[0] === 'password').map((i) => i.message);
+    };
+
+    it('requires at least 10 characters (the old 8-character passwords no longer pass)', () => {
+      expect(passwordIssues('12345678')).toEqual(['common.validation.passwordMin']);
+      expect(passwordIssues('Kx9!vQ2#m')).toEqual(['common.validation.passwordMin']);
+      expect(passwordIssues('Kx9!vQ2#mP')).toEqual([]);
+    });
+
+    it('rejects more than 72 bytes', () => {
+      expect(passwordIssues('ñ'.repeat(37))).toEqual(['common.errors.known.passwordTooLong']);
+    });
+
+    it.each([
+      ['the username', 'xxESTEBANxx99'],
+      ['the email local part', 'Ana.Lopez-segura'],
+      ['the username in leetspeak', '3st3b4n-zebra-22'],
+    ])('rejects a password containing %s', (_label, password) => {
+      expect(passwordIssues(password)).toEqual(['common.errors.known.passwordContainsIdentity']);
+    });
+
+    // Post-audit B4-03-F01: same cases as the backend.
+    it.each([
+      '12345678901',
+      '1234512345',
+      '11223344556',
+      '123456789a',
+      '987654321a',
+      'q1w2e3r4t5y6',
+      'abcdabcdab',
+      'aaaaaaaaaaaa',
+    ])('rejects the trivial sequence or repetition %s', (password) => {
+      expect(passwordIssues(password)).toEqual(['common.errors.known.passwordTooCommon']);
+    });
+
+    it.each(['Montaña-Lenta-Azul', 'Kx9!vQ2#mPz7', 'qwertyMangoPeludo', 'Lluvia_en_Xela_2026'])(
+      'accepts a strong password: %s',
+      (password) => {
+        expect(passwordIssues(password)).toEqual([]);
+      },
+    );
+
+    // Post-audit B4-03-F02.
+    it('counts characters, not UTF-16 code units', () => {
+      expect(passwordIssues('🔥🍕🎉🚀🌙')).toEqual(['common.validation.passwordMin']);
+      expect(passwordIssues('🔥🍕🎉🚀🌙 luna roja')).toEqual([]);
+    });
+
+    it('leaves the common-password list to the server', () => {
+      // The backend answers "Password is too common", mapped to the password step.
+      expect(passwordIssues('password123')).toEqual([]);
+    });
   });
 
   it('profile edit: display name required, bio optional/empty allowed', () => {

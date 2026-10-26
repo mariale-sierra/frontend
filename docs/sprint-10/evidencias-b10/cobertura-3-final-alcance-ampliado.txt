@@ -1,0 +1,15 @@
+Medicion: final-alcance-ampliado
+Commit de produccion: 930ca59 + cambios de B10 (arbol de trabajo)
+Comando (en frontend/): npx jest --ci --coverage --cacheDirectory=<scratch>/jest-cache --coverageDirectory=<scratch>/<medicion>/coverage --coverageReporters=json-summary --coverageReporters=text-summary --coverageReporters=json --json --outputFile=<scratch>/<medicion>/jest-results.json
+Alcance: collectCoverageFrom de package.json: services, hooks, i18n, components, app; excluye **/__tests__/**, **/*.d.ts, components/**/index.ts
+Archivos medidos: 359
+Estado: exit=0
+Test Suites: 1 skipped, 190 passed, 190 of 191 total
+Tests:       5 skipped, 2267 passed, 2272 total
+
+=============================== Coverage summary ===============================
+Statements   : 56.92% ( 4635/8142 )
+Branches     : 53.12% ( 3001/5649 )
+Functions    : 52.2% ( 1335/2557 )
+Lines        : 57.58% ( 4211/7313 )
+================================================================================

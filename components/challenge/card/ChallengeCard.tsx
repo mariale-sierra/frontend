@@ -49,6 +49,14 @@ interface ChallengeCardProps {
   cornerBadge?: ReactNode;
   /** See `ChallengeCardSizing`. Default `fixed`. */
   sizing?: ChallengeCardSizing;
+  /** More room between the content and the card's edges (Explore, Sprint 10). */
+  roomy?: boolean;
+  /** Centers the text column vertically instead of pinning the header to the
+   * top and the footer to the bottom — for a card with no footer (Explore). */
+  centered?: boolean;
+  /** Drawn behind the content, edge to edge (over the glow) — Explore's
+   * challenge photo (Sprint 10). Clipped to the card's rounded corners. */
+  background?: ReactNode;
   /** The mesh recipe for the card's glow (see `getMeshRecipe`); the plain
    * half-moon from the bottom edge when unset — or when `USE_MESH_CARD_GLOW` is
    * off, which is the revert. */
@@ -79,15 +87,23 @@ export function ChallengeCard({
   side,
   cornerBadge,
   sizing = 'fixed',
+  roomy = false,
+  centered = false,
+  background,
   glowRecipe,
 }: ChallengeCardProps) {
   return (
     <AccentCard
       color={accentColor}
       glowRecipe={USE_MESH_CARD_GLOW ? glowRecipe : undefined}
-      style={[styles.card, sizing === 'fill' ? styles.fill : styles.fixed]}
+      style={[styles.card, sizing === 'fill' ? styles.fill : styles.fixed, roomy && styles.roomy]}
     >
-      <View style={[styles.content, !side && styles.contentAlone]}>
+      {background ? (
+        <View style={styles.background} pointerEvents="none">
+          {background}
+        </View>
+      ) : null}
+      <View style={[styles.content, !side && styles.contentAlone, centered && styles.contentCentered]}>
         <View style={styles.header}>
           {top}
           <View style={styles.titleBlock}>
@@ -129,8 +145,21 @@ const styles = StyleSheet.create({
   fixed: {
     height: CHALLENGE_CARD_HEIGHT,
   },
+  // The whole card, padding included: an absolute child is placed against the
+  // card's border box, and AccentCard clips it to the rounded corners.
+  background: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
   fill: {
     flex: 1,
+  },
+  // `base` instead of AccentCard's own `md` padding.
+  roomy: {
+    padding: spacing.base,
   },
   // The text column sits a little further in from the card's edge than the side
   // panel does (which runs to the card's own padding), so it breathes.
@@ -141,6 +170,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.sm,
     paddingLeft: spacing.sm,
+  },
+  contentCentered: {
+    justifyContent: 'center',
   },
   // With no side panel the column is inset the same amount on the right.
   contentAlone: {

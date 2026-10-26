@@ -146,6 +146,8 @@ function RootNavigator() {
         <Stack.Screen name="profile/posts" options={{ headerShown: false }} />
         <Stack.Screen name="profile/about" options={{ headerShown: false }} />
         <Stack.Screen name="profile/settings" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/help" options={{ headerShown: false }} />
+        <Stack.Screen name="profile/badges" options={{ headerShown: false }} />
         <Stack.Screen name="profile/moderation" options={{ headerShown: false }} />
         <Stack.Screen name="profile/delete-account" options={{ headerShown: false }} />
         <Stack.Screen name="accept-terms" options={{ headerShown: false, gestureEnabled: false }} />

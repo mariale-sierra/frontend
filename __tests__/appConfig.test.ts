@@ -79,4 +79,22 @@ describe('app.config.js', () => {
     expect(names).toEqual(expect.arrayContaining(['expo-router', 'expo-notifications']));
     expect(config.extra.eas?.projectId).toBe(appJson.expo.extra.eas.projectId);
   });
+
+  it('keeps the static build properties from app.json (SDK levels, iOS target)', () => {
+    const config = resolveWith({
+      APP_VARIANT: 'production',
+      EXPO_PUBLIC_API_URL: 'https://api.havit.example',
+    });
+    const entry = config.plugins.find(
+      (p): p is [string, { android: Record<string, unknown>; ios: Record<string, unknown> }] =>
+        Array.isArray(p) && p[0] === 'expo-build-properties',
+    );
+    expect(entry?.[1].android).toMatchObject({
+      minSdkVersion: 24,
+      compileSdkVersion: 36,
+      targetSdkVersion: 36,
+      usesCleartextTraffic: false,
+    });
+    expect(entry?.[1].ios).toEqual({ deploymentTarget: '16.4' });
+  });
 });

@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { BottomSheetModal } from '../ui/bottomSheetModal';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
-import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
+import { badgeColors, colors, fillOpacity, spacing } from '../../constants/theme';
 import { getBadgeMetric, getBadgeStyle } from '../../constants/badges';
+import { LockedDisc, MetallicDisc } from './MetallicDisc';
 import { withAlpha } from '../../utils/color';
 import { BADGE_TILE_SIZE, useBadgeName } from './BadgeTile';
 import type { BadgeContract } from '../../types/badge';
@@ -27,7 +28,8 @@ export function BadgeDetailSheet({ badge, isOwn, onClose }: BadgeDetailSheetProp
 
   if (!badge) return null;
 
-  const { icon, color } = getBadgeStyle(badge.code);
+  const { icon, tier } = getBadgeStyle(badge.code);
+  const metalColor = badgeColors[tier].base;
   const description = t(`badges.items.${badge.code}.description`, { defaultValue: badge.description });
   const ratio = badge.target > 0 ? Math.min(1, badge.progress / badge.target) : 0;
   const metric = getBadgeMetric(badge.code);
@@ -35,9 +37,15 @@ export function BadgeDetailSheet({ badge, isOwn, onClose }: BadgeDetailSheetProp
   return (
     <BottomSheetModal visible onClose={onClose} glass maxHeight="60%">
       <View style={styles.content}>
-        <View style={[styles.disc, badge.earned ? { backgroundColor: color } : styles.discLocked]}>
-          <Icon name={icon} size={36} color={badge.earned ? colors.ink : withAlpha(colors.paper, 0.4)} />
-        </View>
+        {badge.earned ? (
+          <MetallicDisc tier={tier} size={DISC_SIZE}>
+            <Icon name={icon} size={36} color={colors.ink} />
+          </MetallicDisc>
+        ) : (
+          <LockedDisc tier={tier} size={DISC_SIZE} progress={ratio}>
+            <Icon name={icon} size={36} color={withAlpha(colors.paper, 0.4)} />
+          </LockedDisc>
+        )}
         <Text variant="subheader" align="center">
           {badgeName(badge)}
         </Text>
@@ -53,7 +61,7 @@ export function BadgeDetailSheet({ badge, isOwn, onClose }: BadgeDetailSheetProp
         <View style={styles.progressBlock}>
           <View style={styles.track}>
             <View
-              style={[styles.fill, { width: `${ratio * 100}%`, backgroundColor: badge.earned ? color : colors.neutral }]}
+              style={[styles.fill, { width: `${ratio * 100}%`, backgroundColor: badge.earned ? metalColor : colors.neutral }]}
             />
           </View>
           <Text variant="caption" tone="secondary" align="center">
@@ -76,16 +84,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.base,
     paddingBottom: spacing.xl,
-  },
-  disc: {
-    width: DISC_SIZE,
-    height: DISC_SIZE,
-    borderRadius: radius.big * 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  discLocked: {
-    backgroundColor: withAlpha(colors.paper, fillOpacity.subtle),
   },
   progressBlock: {
     alignSelf: 'stretch',

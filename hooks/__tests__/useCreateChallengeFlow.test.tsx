@@ -4,6 +4,7 @@ import { useCreateChallengeFlow } from '../useCreateChallengeFlow';
 import { useChallengeBuilder } from '../../store/challengeBuilderStore';
 import { useRoutineBuilder } from '../../store/routineBuilderStore';
 import { createChallenge } from '../../services/challenge/challenge.service';
+import { uploadImageAsync } from '../../services/uploads/upload.service';
 import { router } from 'expo-router';
 
 jest.mock('expo-router', () => ({
@@ -16,6 +17,11 @@ jest.mock('react-i18next', () => {
 });
 jest.mock('../../services/challenge/challenge.service', () => ({
   createChallenge: jest.fn(),
+}));
+// Sprint 10: the optional photo is uploaded on create (the real service pulls in api/i18n).
+jest.mock('../../services/uploads/upload.service', () => ({
+  uploadImageAsync: jest.fn(),
+  normalizeUploadMimeType: (type: string | null | undefined) => type ?? 'image/jpeg',
 }));
 
 const REST_DAY = { name: 'Rest day', description: '', isRestDay: true, exercises: [] } as never;
@@ -55,6 +61,7 @@ describe('useCreateChallengeFlow — the activity & location step', () => {
       'cycleLength',
       'cycleFill',
       'visibility',
+      'photo',
       'review',
       'rules',
     ]);
@@ -119,6 +126,81 @@ describe('useCreateChallengeFlow — the activity & location step', () => {
     expect(createChallenge).toHaveBeenCalledWith(
       expect.objectContaining({ categories: ['Strength', 'Cardio Low'], locations: ['Gym', 'Home'] }),
     );
+  });
+});
+
+describe('useCreateChallengeFlow — the optional photo (Sprint 10)', () => {
+  let alertSpy: jest.SpyInstance;
+
+  function fillEverything() {
+    fillEverythingButTheActivityStep();
+    useChallengeBuilder.setState({ selectedCategories: ['Strength'], selectedLocations: ['Gym'] });
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useChallengeBuilder.getState().resetChallengeBuilder();
+    useRoutineBuilder.setState({ routinesByDay: {} });
+    alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    (createChallenge as jest.Mock).mockResolvedValue({ id: 'challenge-1' });
+    (uploadImageAsync as jest.Mock).mockResolvedValue('https://cdn.test/uploads/me/photo.jpeg');
+  });
+
+  afterEach(() => {
+    alertSpy.mockRestore();
+  });
+
+  it('comes right after visibility and can be skipped: Continue with no photo goes on', async () => {
+    fillEverything();
+    const { result } = await renderFlow();
+    const photoStep = result.current.steps.findIndex((step) => step.kind === 'photo');
+    expect(result.current.steps[photoStep - 1].kind).toBe('visibility');
+
+    await act(async () => useChallengeBuilder.getState().setCurrentStep(photoStep));
+    await act(async () => result.current.handleNext());
+
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(result.current.activeStep.kind).toBe('review');
+  });
+
+  it('without a photo: uploads nothing and sends no imageUrl', async () => {
+    fillEverything();
+    const { result } = await renderFlow();
+
+    await act(async () => result.current.handleActionPress());
+
+    expect(uploadImageAsync).not.toHaveBeenCalled();
+    expect((createChallenge as jest.Mock).mock.calls[0][0]).not.toHaveProperty('imageUrl');
+  });
+
+  it('with a photo: uploads it only on create and sends its URL', async () => {
+    fillEverything();
+    const { result } = await renderFlow();
+    await act(async () => result.current.setCoverPhoto({ uri: 'file:///photo.png', mimeType: 'image/png' }));
+    expect(uploadImageAsync).not.toHaveBeenCalled();
+
+    await act(async () => result.current.handleActionPress());
+
+    expect(uploadImageAsync).toHaveBeenCalledWith('file:///photo.png', 'image/png');
+    expect(createChallenge).toHaveBeenCalledWith(
+      expect.objectContaining({ imageUrl: 'https://cdn.test/uploads/me/photo.jpeg' }),
+    );
+    // Reset with the rest of the form once the challenge exists.
+    expect(useChallengeBuilder.getState().coverPhoto).toBeNull();
+  });
+
+  it('if the upload fails, the challenge is not created and the photo is kept to retry', async () => {
+    fillEverything();
+    (uploadImageAsync as jest.Mock).mockRejectedValue(new Error('PUT failed'));
+    const { result } = await renderFlow();
+    await act(async () => result.current.setCoverPhoto({ uri: 'file:///photo.jpg' }));
+
+    await act(async () => result.current.handleActionPress());
+
+    expect(createChallenge).not.toHaveBeenCalled();
+    expect(alertSpy).toHaveBeenCalledWith('common.errors.genericTitle', 'challengeCreate.cover.uploadFailed');
+    expect(useChallengeBuilder.getState().coverPhoto).toEqual({ uri: 'file:///photo.jpg' });
+    expect(result.current.isSubmitting).toBe(false);
   });
 });
 

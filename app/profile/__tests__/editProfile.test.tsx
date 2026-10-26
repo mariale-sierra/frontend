@@ -33,7 +33,12 @@ jest.mock('../../../utils/storage', () => ({
 }));
 jest.mock('../../../utils/navigation', () => ({ safeBack: jest.fn() }));
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: jest.fn() }));
-jest.mock('../../../services/uploads/upload.service', () => ({ uploadImageAsync: jest.fn() }));
+jest.mock('../../../services/uploads/upload.service', () => ({
+  uploadImageAsync: jest.fn(),
+  // B5/CP6: edit.tsx now also imports this — real behavior is covered in
+  // upload.service.test.ts, not here.
+  normalizeUploadMimeType: jest.fn(() => 'image/jpeg'),
+}));
 jest.mock('../../../services/cache/loaders', () => ({ loadMyProfile: jest.fn() }));
 jest.mock('../../../services/user/user.service', () => ({ updateMyProfile: jest.fn(), updateMyProfilePhoto: jest.fn() }));
 jest.mock('../../../hooks/useAuth', () => ({ useAuth: () => ({ logout: jest.fn() }) }));

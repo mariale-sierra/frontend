@@ -35,7 +35,7 @@ export function ExerciseInput({
         onChangeText={onChangeText}
         style={styles.input}
         placeholder={placeholder}
-        placeholderTextColor={withAlpha(colors.paper, textOpacity.tertiary)}
+        placeholderTextColor={withAlpha(colors.paper, textOpacity.secondary)}
       />
     </View>
   );

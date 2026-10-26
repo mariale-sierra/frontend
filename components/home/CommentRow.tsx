@@ -4,7 +4,7 @@ import { IconButton } from '../ui/iconButton';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 import { Row } from '../layout/row';
-import { colors, spacing, textOpacity } from '../../constants/theme';
+import { colors, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import type { CommentViewModel } from '../../services/adapters/workoutPostSocialAdapter';
 
@@ -37,6 +37,7 @@ export function CommentRow({ comment, isMine, onDelete, onReport }: CommentRowPr
         <IconButton
           testID="comment-delete"
           name="trash-outline"
+          accessibilityLabel={t('common.a11y.deleteComment')}
           size={28}
           iconSize={16}
           iconColor={withAlpha(colors.paper, textOpacity.secondary)}
@@ -49,7 +50,7 @@ export function CommentRow({ comment, isMine, onDelete, onReport }: CommentRowPr
           name="flag-outline"
           size={28}
           iconSize={16}
-          iconColor={withAlpha(colors.paper, textOpacity.tertiary)}
+          iconColor={withAlpha(colors.paper, textOpacity.secondary)}
           onPress={onReport}
           accessibilityLabel={t('reports.reportCommentA11y')}
         />

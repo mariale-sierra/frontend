@@ -19,9 +19,6 @@ import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { useUserPosts } from '../../hooks/useUserPosts';
 import { queryKeys, staleTimes } from '../../services/cache/queries';
 import { invalidateQueries } from '../../services/cache/queryCache';
-import { BadgesSection } from '../../components/badges';
-import { Button } from '../../components/ui/button';
-import { Icon } from '../../components/ui/icon';
 
 /**
  * Profile tab: one virtualized list (header, badges, toggle, then the photo
@@ -100,6 +97,17 @@ export default function Profile() {
           testID="open-moderation"
         />
       )}
+      {/* Badges live on their own screen now (2026-10-23, explicit request: off
+          the profile itself, behind an icon up here). */}
+      <IconButton
+        name="ribbon-outline"
+        iconSize={22}
+        onPress={() => router.push('/profile/badges')}
+        accessibilityRole="button"
+        accessibilityLabel={t('badges.openA11y')}
+        hitSlop={10}
+        testID="open-badges"
+      />
       {/* Sprint 10, B2: a gear for Settings (log out, notifications, legal...).
           Neurolab participants looked for those behind the old pencil, which
           only opened Edit profile — that is now the button under the header. */}
@@ -166,20 +174,9 @@ export default function Profile() {
               onPressFollowers={() => router.push('/profile/followers')}
               onPressFollowing={() => router.push('/profile/following')}
               practices={profile.practice_preferences}
-              actions={
-                <Button
-                  variant="outline"
-                  size="md"
-                  leftIcon={<Icon name="create-outline" size={16} color={colors.paper} />}
-                  onPress={() => router.push('/profile/edit')}
-                  accessibilityLabel={t('profile.editButtonA11y')}
-                  testID="profile-edit-button"
-                >
-                  {t('profile.editButton')}
-                </Button>
-              }
             />
-            <BadgesSection />
+            {/* No Edit profile button (2026-10-23, explicit request): it's a row
+                in Settings, behind the gear above. */}
             <PostsViewToggle view={view} onViewChange={setView} />
           </>
         }

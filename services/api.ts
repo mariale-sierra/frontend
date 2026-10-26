@@ -2,10 +2,11 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import i18n from '../i18n';
-import { getAccessToken } from './auth/token.service';
+import { getAccessToken, getSessionEpoch } from './auth/token.service';
 import { useErrorNotificationStore } from '../store/errorNotificationStore';
 import { isContentRejectedError } from '../utils/contentModeration';
 import { notifySessionExpired } from './auth/sessionEvents';
+import { isSessionChangedError, refreshSession } from './auth/sessionRefresh';
 import { getApiErrorStatus, isNetworkError, knownApiMessageKey } from '../utils/apiError';
 
 // Lets a specific call opt out of the global error toast below — for
@@ -19,6 +20,17 @@ declare module 'axios' {
     /** This endpoint answers 401 for something other than the session (e.g. a
      * wrong password re-check) — don't sign the user out on it. */
     skipSessionExpiredLogout?: boolean;
+    /** B4: a call that manages the session itself (POST /auth/login,
+     * /auth/register, /auth/refresh, /auth/logout): sent without a bearer
+     * token — never the previous session's — and a failure is never retried,
+     * never signs out and never toasts: its caller decides. This is what keeps
+     * a failed refresh from triggering another refresh. */
+    authRefresh?: boolean;
+    /** Set on the one retry after a refresh, so a second 401 signs out. */
+    retriedAfterRefresh?: boolean;
+    /** The session (services/auth/token.service.ts epoch) the request was
+     * sent under; a 401 that comes back after it changed is dropped. */
+    sessionEpoch?: number;
   }
 }
 
@@ -49,9 +61,13 @@ const api = axios.create({
 });
 
 api.interceptors.request.use(async (config) => {
-  const token = await getAccessToken();
+  const token = config.authRefresh ? null : await getAccessToken();
+  // Read right after the token, in the same tick: the pair belongs together.
+  config.sessionEpoch = getSessionEpoch();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  } else if (config.authRefresh) {
+    delete config.headers.Authorization;
   }
   // Browsers send a CORS preflight for this custom header. The public API may
   // still be running a deployment from before X-Timezone was added to its
@@ -119,22 +135,82 @@ export function showApiErrorToast(error: any) {
   }
 }
 
+/**
+ * A 401 on a request that carried a token: the access token (15 min, B4)
+ * expired or the session was revoked. The token to replay it with: the one
+ * another request of the SAME session already renewed meanwhile, or a fresh
+ * one from ONE refresh (single flight, see services/auth/sessionRefresh.ts).
+ * null when the session is really over — or when this already is the replay.
+ * Throws the refresh's own error when it couldn't reach the server, and
+ * SessionChangedError when the session was replaced.
+ */
+async function tokenForRetry(config: any): Promise<string | null> {
+  if (config.retriedAfterRefresh) return null;
+  const epoch: number = config.sessionEpoch;
+  const current = await getAccessToken();
+  // Same session (checked by the caller), renewed by another request: no second refresh.
+  if (current && epoch === getSessionEpoch() && `Bearer ${current}` !== config.headers?.Authorization) {
+    return current;
+  }
+  return refreshSession(api, epoch);
+}
+
+/** The request belongs to a session this device no longer holds. */
+const fromOtherSession = (config: any) =>
+  config?.sessionEpoch !== undefined && config.sessionEpoch !== getSessionEpoch();
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = error?.config;
+    // Session calls report to their caller only (see `authRefresh`).
+    if (config?.authRefresh) return Promise.reject(error);
+
     // A 401 on a request that carried a token means the session is gone
-    // (expired, or the account was banned/deleted): sign out instead of
-    // leaving every screen failing on its own. Requests without a token
-    // (login/register) answer 401 for wrong credentials and are left alone.
+    // (expired, or the account was banned/deleted): first try to renew it
+    // (B4), and only if that fails sign out instead of leaving every screen
+    // failing on its own. Requests without a token (login/register) answer
+    // 401 for wrong credentials and are left alone.
     if (
       error?.response?.status === 401 &&
-      error?.config?.headers?.Authorization &&
-      !error?.config?.skipSessionExpiredLogout
+      config?.headers?.Authorization &&
+      !config?.skipSessionExpiredLogout
     ) {
+      // Post-audit: sent by a session that was signed out (or replaced by
+      // another account) while it was in flight. Never refresh it, never
+      // sign the current session out for it, never replay it with the
+      // current session's token: drop it quietly.
+      if (fromOtherSession(config)) return Promise.reject(error);
+
+      let token: string | null;
+      try {
+        token = await tokenForRetry(config);
+      } catch (refreshError: any) {
+        if (isSessionChangedError(refreshError) || fromOtherSession(config)) {
+          return Promise.reject(error);
+        }
+        // Couldn't renew for a transient reason (offline, timeout, 429, 5xx):
+        // keep the session — it may well still be valid, and the next request
+        // retries the refresh. Reject with THAT error (on this request's
+        // config, so the toast bookkeeping stays right), not with the 401: a
+        // caller reading 401 as "signed out" (restoreSession) must not wipe a
+        // session that only couldn't be renewed right now (post-audit B4-01-F02).
+        if (!config.suppressErrorToast) showApiErrorToast(refreshError);
+        if (refreshError && typeof refreshError === 'object') refreshError.config = config;
+        return Promise.reject(refreshError);
+      }
+      if (fromOtherSession(config)) return Promise.reject(error);
+      if (token) {
+        // Replayed once. The request interceptor sets the stored (new) token
+        // again; the replay's own failure goes through this interceptor.
+        config.retriedAfterRefresh = true;
+        config.headers.Authorization = `Bearer ${token}`;
+        return api(config);
+      }
       notifySessionExpired();
     }
 
-    if (!error?.config?.suppressErrorToast) {
+    if (!config?.suppressErrorToast) {
       showApiErrorToast(error);
     }
 

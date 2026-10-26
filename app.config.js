@@ -28,11 +28,26 @@ module.exports = ({ config }) => {
     );
   }
 
+  // app.json keeps the static expo-build-properties options (SDK levels, iOS target);
+  // only usesCleartextTraffic depends on the variant, so it's merged into that entry.
+  const plugins = (config.plugins ?? []).filter(
+    (p) => !(Array.isArray(p) && p[0] === 'expo-build-properties'),
+  );
+  const buildProperties =
+    (config.plugins ?? []).find((p) => Array.isArray(p) && p[0] === 'expo-build-properties')?.[1] ??
+    {};
+
   return {
     ...config,
     plugins: [
-      ...(config.plugins ?? []),
-      ['expo-build-properties', { android: { usesCleartextTraffic: isDevelopment } }],
+      ...plugins,
+      [
+        'expo-build-properties',
+        {
+          ...buildProperties,
+          android: { ...buildProperties.android, usesCleartextTraffic: isDevelopment },
+        },
+      ],
     ],
     extra: {
       ...config.extra,

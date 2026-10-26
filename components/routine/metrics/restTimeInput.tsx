@@ -34,7 +34,7 @@ export function RestTimeInput({
           onChangeText={onChangeMinutes}
           style={[styles.input, styles.restInput]}
           placeholder="0"
-          placeholderTextColor={withAlpha(colors.paper, textOpacity.tertiary)}
+          placeholderTextColor={withAlpha(colors.paper, textOpacity.secondary)}
         />
         <Text variant="caption" tone="secondary" style={styles.restUnit}>min</Text>
         <TextInput
@@ -43,7 +43,7 @@ export function RestTimeInput({
           onChangeText={onChangeSeconds}
           style={[styles.input, styles.restInput]}
           placeholder="0"
-          placeholderTextColor={withAlpha(colors.paper, textOpacity.tertiary)}
+          placeholderTextColor={withAlpha(colors.paper, textOpacity.secondary)}
         />
         <Text variant="caption" tone="secondary" style={styles.restUnit}>sec</Text>
       </Row>

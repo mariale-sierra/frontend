@@ -63,12 +63,20 @@ describe('Profile tab — settings entry (B2)', () => {
     expect(screen.getByTestId('open-settings').props.accessibilityLabel).toBe('settings.openA11y');
   });
 
-  it('keeps Edit profile one tap away, as a labelled button', async () => {
+  // 2026-10-23, explicit request: the Edit profile button left the profile — it's
+  // a row in Settings, behind the gear — and so did the badges row.
+  it('has no Edit profile button any more', async () => {
     const screen = await renderWithTheme(<Profile />);
 
-    expect(screen.getByText('profile.editButton')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('profile-edit-button'));
+    expect(screen.queryByTestId('profile-edit-button')).toBeNull();
+    expect(screen.queryByText('profile.editButton')).toBeNull();
+  });
 
-    expect(router.push).toHaveBeenCalledWith('/profile/edit');
+  it('the badge icon at the top opens the Badges screen', async () => {
+    const screen = await renderWithTheme(<Profile />);
+
+    await fireEvent.press(screen.getByTestId('open-badges'));
+
+    expect(router.push).toHaveBeenCalledWith('/profile/badges');
   });
 });

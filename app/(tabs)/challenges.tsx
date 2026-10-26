@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { Row } from '../../components/layout/row';
@@ -19,6 +20,7 @@ import type { ChallengesView } from '../../components/challenge/list/ChallengesV
 import type { ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import type { ChallengeMineCardViewModel } from '../../services/adapters/challengeListAdapter';
 import { colors, radius, spacing } from '../../constants/theme';
+import { BOTTOM_NAV_HEIGHT } from '../../constants/bottomNav';
 import { getChallenges, getMyProgressPhotos } from '../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../services/user/user.service';
 import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../../services/adapters';
@@ -43,13 +45,24 @@ function ChallengeListSeparator() {
 }
 
 export default function Challenges() {
+  const insets = useSafeAreaInsets();
+  // The nav bar floats over the list: reserve its height (plus the bottom
+  // inset) so the last card and the Finished toggle can scroll above it.
+  const listContentStyle = useMemo(
+    () => [styles.listContent, { paddingBottom: insets.bottom + BOTTOM_NAV_HEIGHT + spacing['2xl'] }],
+    [insets.bottom],
+  );
   const router = useRouter();
   const { t } = useTranslation();
   // Lets a caller land directly on the Explore segment (e.g. the Log
   // Metrics picker's "no challenges yet" empty state, which used to push a
   // separate app/challenge/explore-all.tsx screen — now retired in favor of
   // this same tab, deep-linked straight into its Explore view).
-  const { view: requestedView } = useLocalSearchParams<{ view?: ChallengesView }>();
+  // `activity`: open Browse already filtered to one activity (Search's "Browse by activity").
+  const { view: requestedView, activity: requestedActivity } = useLocalSearchParams<{
+    view?: ChallengesView;
+    activity?: string;
+  }>();
 
   const [view, setView] = useState<ChallengesView>(requestedView === 'explore' ? 'explore' : 'mine');
 
@@ -106,10 +119,18 @@ export default function Challenges() {
       exploreChallenges.some((challenge) => challenge.dominantActivityCategory === activity)),
     [exploreChallenges],
   );
-  // A refresh can take away the last challenge of the picked activity — back to all.
+  // Arriving with `activity=` (Search's chips): start filtered to it.
   useEffect(() => {
+    const requested = ACTIVITY_FILTER_ORDER.find((activity) => activity === requestedActivity);
+    if (requested) setActivityFilter(requested);
+  }, [requestedActivity]);
+  // A refresh can take away the last challenge of the picked activity — back to
+  // all. Only once the list has loaded: an empty list mid-load isn't "no
+  // challenges of that activity", and would wipe a filter Search just set.
+  useEffect(() => {
+    if (!allQuery.data) return;
     if (activityFilter && !filterActivities.includes(activityFilter)) setActivityFilter(null);
-  }, [activityFilter, filterActivities]);
+  }, [activityFilter, filterActivities, allQuery.data]);
   const visibleExploreChallenges = useMemo(
     () => (activityFilter
       ? exploreChallenges.filter((challenge) => challenge.dominantActivityCategory === activityFilter)
@@ -380,7 +401,7 @@ export default function Challenges() {
               </View>
             ) : undefined
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={listContentStyle}
           initialNumToRender={3}
           maxToRenderPerBatch={3}
           windowSize={5}
@@ -401,7 +422,7 @@ export default function Challenges() {
               </Text>
             </View>
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={listContentStyle}
           initialNumToRender={3}
           maxToRenderPerBatch={3}
           windowSize={5}

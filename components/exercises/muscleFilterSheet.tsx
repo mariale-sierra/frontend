@@ -51,7 +51,7 @@ export function MuscleFilterSheet({ visible, selected, onSelect, onClose }: Musc
     }
     getMuscleRegions()
       .then(setRegions)
-      .catch((error: any) => logError('MuscleFilterSheet', error));
+      .catch((error: unknown) => logError('MuscleFilterSheet', error));
   }, [visible]);
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export function MuscleFilterSheet({ visible, selected, onSelect, onClose }: Musc
     setLoading(true);
     getMusclesInRegion(activeRegion.code)
       .then(setMuscles)
-      .catch((error: any) => logError('MuscleFilterSheet', error))
+      .catch((error: unknown) => logError('MuscleFilterSheet', error))
       .finally(() => setLoading(false));
   }, [activeRegion]);
 
@@ -75,7 +75,13 @@ export function MuscleFilterSheet({ visible, selected, onSelect, onClose }: Musc
     <BottomSheetModal visible={visible} onClose={onClose} maxHeight="75%">
       <View style={styles.header}>
         {activeRegion ? (
-          <Pressable onPress={() => setActiveRegion(null)} hitSlop={8} style={styles.backIcon}>
+          <Pressable
+            onPress={() => setActiveRegion(null)}
+            hitSlop={8}
+            style={styles.backIcon}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.actions.back')}
+          >
             <Icon name="chevron-back-outline" size={20} />
           </Pressable>
         ) : (

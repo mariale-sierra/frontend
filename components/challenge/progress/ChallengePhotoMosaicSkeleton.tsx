@@ -53,6 +53,8 @@ export function ChallengePhotoMosaicSkeleton({ width, photos, totalDays, onPress
           <Pressable
             key={photo.id}
             onPress={() => onPressPhoto(photo.id)}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={t('common.a11y.openPhoto')}
             style={({ pressed }) => [styles.photoCell, pressed && styles.pressed, { width: itemWidth }]}
           >
             {photo.imageUrl ? (

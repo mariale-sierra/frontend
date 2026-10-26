@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from '../ui/text';
 import { IconButton } from '../ui/iconButton';
@@ -41,6 +42,7 @@ interface SetTargetStepperProps {
  * `Text` it replaces exactly, so the swap doesn't visibly jump.
  */
 export function SetTargetStepper({ value, unitLabel, adjusted, step, onIncrease, onDecrease, onChangeValue }: SetTargetStepperProps) {
+  const { t } = useTranslation();
   const decreaseDisabled = value - step < 0;
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState('');
@@ -63,6 +65,8 @@ export function SetTargetStepper({ value, unitLabel, adjusted, step, onIncrease,
       <IconButton
         name="remove-outline"
         variant="ghost"
+        accessibilityLabel={t('common.a11y.decrease', { label: unitLabel })}
+        accessibilityValue={{ text: `${value} ${unitLabel}` }}
         size={32}
         iconSize={16}
         iconColor={colors.paper}
@@ -94,6 +98,8 @@ export function SetTargetStepper({ value, unitLabel, adjusted, step, onIncrease,
       <IconButton
         name="add-outline"
         variant="ghost"
+        accessibilityLabel={t('common.a11y.increase', { label: unitLabel })}
+        accessibilityValue={{ text: `${value} ${unitLabel}` }}
         size={32}
         iconSize={16}
         iconColor={colors.ink}

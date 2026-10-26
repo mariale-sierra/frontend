@@ -1,5 +1,13 @@
 import api from '../api';
-import { clearAccessToken, getAccessToken, setAccessToken } from './token.service';
+import {
+  beginSession,
+  clearAccessToken,
+  clearRefreshToken,
+  endSessionEpoch,
+  getAccessToken,
+  getRefreshToken,
+  getSessionEpoch,
+} from './token.service';
 import { storage } from '../../utils/storage';
 import type {
   AuthSessionResponse,
@@ -8,27 +16,27 @@ import type {
   RegisterRequest,
 } from '../../types/auth';
 
+// Errors are not caught or logged here: the login screen tells the user what
+// happened (logError skips these handled 4xx answers anyway).
 export async function login(email: string, password: string) {
-  try {
-    const payload: LoginRequest = { email, password };
-    // The login screen shows its own message for every failure (wrong credentials
-    // is a 401 that is not a session expiry), so no global toast on top of it.
-    const response = await api.post<AuthSessionResponse>('/auth/login', payload, { suppressErrorToast: true });
-    const { accessToken, user } = response.data;
+  const payload: LoginRequest = { email, password };
+  // The login screen shows its own message for every failure (wrong credentials
+  // is a 401 that is not a session expiry), so no global toast on top of it.
+  // authRefresh: never sent with a previous session's bearer token.
+  const response = await api.post<AuthSessionResponse>('/auth/login', payload, {
+    suppressErrorToast: true,
+    authRefresh: true,
+  });
+  const { accessToken, refreshToken, user } = response.data;
 
-    await setAccessToken(accessToken);
-    if (user?.id) {
-      await storage.setItem('userId', String(user.id));
-    }
-    if (user?.username) {
-      await storage.setItem('username', user.username);
-    }
-    return response.data;
-  } catch (error: any) {
-    // No log: the login screen tells the user what happened (logError skips
-    // these handled 4xx answers anyway).
-    throw error;
+  await beginSession(accessToken, refreshToken);
+  if (user?.id) {
+    await storage.setItem('userId', String(user.id));
   }
+  if (user?.username) {
+    await storage.setItem('username', user.username);
+  }
+  return response.data;
 }
 
 export async function register(
@@ -38,9 +46,12 @@ export async function register(
   consent: LegalConsent,
 ) {
   const payload: RegisterRequest = { email, username, password, ...consent };
-  const response = await api.post<AuthSessionResponse>('/auth/register', payload, { suppressErrorToast: true });
-  const { accessToken, user } = response.data;
-  await setAccessToken(accessToken);
+  const response = await api.post<AuthSessionResponse>('/auth/register', payload, {
+    suppressErrorToast: true,
+    authRefresh: true,
+  });
+  const { accessToken, refreshToken, user } = response.data;
+  await beginSession(accessToken, refreshToken);
   if (user?.id) {
     await storage.setItem('userId', String(user.id));
   }
@@ -56,8 +67,38 @@ export async function acceptTerms(consent: LegalConsent) {
   return response.data;
 }
 
-export async function logout() {
+/** Bounded so signing out never hangs on a bad connection. */
+const LOGOUT_REQUEST_TIMEOUT_MS = 5000;
+
+/**
+ * Clears the session on this device. With `revokeOnServer` (an explicit
+ * logout) it first asks the backend to revoke it (B4: POST /auth/logout), so
+ * the refresh token — and within seconds its access token — stop working
+ * even if they were copied off the device. Best effort: offline, the local
+ * sign-out still happens and the server session just expires (30 days).
+ * Skipped when the session already ended server-side (expired / revoked).
+ */
+export async function logout({ revokeOnServer = true }: { revokeOnServer?: boolean } = {}) {
+  // First of all: a refresh still in flight for this session can no longer
+  // store its answer (post-audit B4-01-F01). The backend revokes the whole
+  // family whichever token of the chain we send, so a rotation racing this
+  // logout doesn't keep the session alive server-side either.
+  const epoch = endSessionEpoch();
+  const refreshToken = revokeOnServer ? await getRefreshToken().catch(() => null) : null;
+  if (refreshToken) {
+    await api
+      .post(
+        '/auth/logout',
+        { refreshToken },
+        { authRefresh: true, suppressErrorToast: true, timeout: LOGOUT_REQUEST_TIMEOUT_MS },
+      )
+      .catch(() => undefined);
+  }
+  // Someone signed in while the logout request was out: theirs is the
+  // session on the device now, don't wipe it.
+  if (epoch !== getSessionEpoch()) return;
   await clearAccessToken();
+  await clearRefreshToken();
   await storage.removeItem('userId');
   await storage.removeItem('username');
 }

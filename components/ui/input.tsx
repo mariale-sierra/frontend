@@ -96,7 +96,8 @@ export function Input({
   const placeholderColorMap = {
     body: withAlpha(colors.paper, textOpacity.primary),
     secondary: withAlpha(colors.paper, textOpacity.secondary),
-    caption: withAlpha(colors.paper, textOpacity.tertiary),
+    // `secondary`, not `tertiary` (2.5:1 on ink): a placeholder has to stay legible.
+    caption: withAlpha(colors.paper, textOpacity.secondary),
   } as const;
 
   return (

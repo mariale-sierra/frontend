@@ -330,6 +330,7 @@ export default function Chat() {
                 </View>
                 <IconButton
                   name="send"
+                  accessibilityLabel={t('common.a11y.send')}
                   size={SEND_BUTTON_SIZE}
                   iconSize={18}
                   iconColor={colors.ink}

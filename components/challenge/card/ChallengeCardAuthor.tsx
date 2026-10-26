@@ -6,7 +6,7 @@ import { spacing } from '../../../constants/theme';
 import { challengeCardText } from './challengeCardText';
 import type { ChallengeAuthorViewModel } from '../list/challengeListSections';
 
-const AVATAR_SIZE = { sm: 18, md: 20 } as const;
+const AVATAR_SIZE = { sm: 18, md: 20, lg: 28 } as const;
 
 interface ChallengeCardAuthorProps {
   author: ChallengeAuthorViewModel;
@@ -16,8 +16,12 @@ interface ChallengeCardAuthorProps {
    * "same weight and size" as `ChallengeCardMembers`, per explicit request
    * 2026-09-22) — a bigger, bold `label`, matching that component's own text
    * exactly except for color (this stays `paper`, per the separate "I want
-   * the text in paper" request; `ChallengeCardMembers` uses `primary`). */
-  size?: 'sm' | 'md';
+   * the text in paper" request; `ChallengeCardMembers` uses `primary`).
+   * `lg`: the Explore card's author line (Sprint 10) — a bigger avatar and
+   * `body` text. */
+  size?: 'sm' | 'md' | 'lg';
+  /** Bold label; defaults to bold for `md`. Explore's card sets it off (Sprint 10). */
+  bold?: boolean;
 }
 
 /**
@@ -32,15 +36,15 @@ interface ChallengeCardAuthorProps {
  * detail screen's incomplete-data placeholder already defined but never
  * used.
  */
-export function ChallengeCardAuthor({ author, size = 'sm' }: ChallengeCardAuthorProps) {
+export function ChallengeCardAuthor({ author, size = 'sm', bold = size === 'md' }: ChallengeCardAuthorProps) {
   const { t } = useTranslation();
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, size === 'lg' && styles.rowLg]}>
       <UserAvatar username={author.username} imageUrl={author.profileImageUrl} size={AVATAR_SIZE[size]} circle />
       <Text
-        variant={size === 'md' ? 'label' : 'caption'}
-        weight={size === 'md' ? 'bold' : undefined}
+        variant={size === 'lg' ? 'body' : size === 'md' ? 'label' : 'caption'}
+        weight={bold ? 'bold' : undefined}
         numberOfLines={1}
         style={[challengeCardText.paper, styles.text]}
       >
@@ -60,5 +64,9 @@ const styles = StyleSheet.create({
   },
   text: {
     flexShrink: 1,
+  },
+  // More room next to the bigger avatar.
+  rowLg: {
+    gap: spacing.sm,
   },
 });

@@ -13,7 +13,9 @@ import { resetSessionStores } from '../store/resetSessionStores';
 import { clearQueryCache, setQueryScope } from '../services/cache/queryCache';
 import { forgetPushToken, unregisterPushToken } from '../services/notifications/pushNotifications';
 import { setSessionExpiredHandler } from '../services/auth/sessionEvents';
-import type { LegalConsent } from '../types/auth';
+import { getSessionEpoch } from '../services/auth/token.service';
+import type { AuthSessionResponse, LegalConsent } from '../types/auth';
+import { getApiErrorStatus } from '../utils/apiError';
 
 interface AuthContextValue {
   token: string | null;
@@ -21,13 +23,13 @@ interface AuthContextValue {
   username: string | null;
   isAuthenticated: boolean;
   isRestoring: boolean;
-  login: (email: string, password: string) => Promise<any>;
+  login: (email: string, password: string) => Promise<AuthSessionResponse>;
   register: (
     email: string,
     username: string,
     password: string,
     consent: LegalConsent,
-  ) => Promise<any>;
+  ) => Promise<AuthSessionResponse>;
   logout: () => Promise<void>;
   restoreSession: () => Promise<void>;
 }
@@ -82,9 +84,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // server rejects (401) still ends the session — the same cleanup as
       // before, just after the first paint instead of before it. Network
       // errors, 5xx, etc. keep the session, as they always did.
-      fetchAuthMe().catch(async (error: any) => {
-        if (error?.response?.status !== 401) return;
-        await logoutService();
+      // B4: an expired access token is renewed by the API client first; a
+      // 401 here means the session itself is over. A refresh that failed for
+      // a transient reason (offline, timeout, 429, 5xx) comes back as THAT
+      // error, not a 401, so a recoverable session is kept and renewed on
+      // the next request (post-audit B4-01-F02). And if the session changed
+      // meanwhile (signed out, or another account signed in), this answer is
+      // about the old one: leave the current one alone.
+      const epoch = getSessionEpoch();
+      fetchAuthMe().catch(async (error: unknown) => {
+        if (getApiErrorStatus(error) !== 401 || epoch !== getSessionEpoch()) return;
+        await logoutService({ revokeOnServer: false });
         invalidateChallengeProgressCache();
         resetSessionStores();
         await clearQueryCache();
@@ -102,13 +112,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     restoreSession();
   }, [restoreSession]);
 
-  // Any authenticated request answered 401 (token expired, account banned,
-  // purged or gone) signs the user out here, and RootNavigator takes them to
+  // Any authenticated request answered 401 that a refresh couldn't fix
+  // (session expired or revoked, account banned, purged or gone) signs the
+  // user out here, and RootNavigator takes them to
   // the login screen. See services/api.ts.
   useEffect(() => {
     setSessionExpiredHandler(async () => {
       await forgetPushToken();
-      await logoutService();
+      // Already over server-side (the refresh was rejected): nothing to revoke.
+      await logoutService({ revokeOnServer: false });
       invalidateChallengeProgressCache();
       resetSessionStores();
       await clearQueryCache();

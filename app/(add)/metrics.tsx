@@ -137,7 +137,13 @@ export default function Metrics() {
     >
 
       <Row justify="space-between" align="center" style={[styles.topBar, { paddingTop: insets.top + spacing.md }]}>
-        <Pressable onPress={goBack} hitSlop={12} style={styles.iconButton}>
+        <Pressable
+          onPress={goBack}
+          hitSlop={12}
+          style={styles.iconButton}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.actions.back')}
+        >
           <Icon name="chevron-back-outline" size={24} color={colors.paper} />
         </Pressable>
         <Pressable

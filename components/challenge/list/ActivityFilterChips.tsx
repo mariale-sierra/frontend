@@ -22,6 +22,9 @@ interface ActivityFilterChipsProps {
   /** The picked activity, or null for "All". */
   selected: ActivityType | null;
   onSelect: (activity: ActivityType | null) => void;
+  /** The leading "All" chip — on by default; off where a chip only navigates
+   * (Search's "Browse by activity"). */
+  showAll?: boolean;
 }
 
 /**
@@ -29,12 +32,12 @@ interface ActivityFilterChipsProps {
  * of chips — "All", then one per activity — that narrows the list to challenges
  * whose MAIN activity (the one that colors their card) is the picked one. Same
  * pill as the create flow's activity picker (`surface`, bold `label`, `radius.big`);
- * an unpicked activity chip carries a dot of its own color, a picked one fills
+ * an unpicked activity chip carries a dot of its own color after its label, a picked one fills
  * with it (`ink` text on it, as activity colors pair with); a picked "All" fills
  * with `paper`. It runs edge to edge: the row bleeds out of the list header's
  * side padding and puts it back inside the scroll.
  */
-export function ActivityFilterChips({ activities, selected, onSelect }: ActivityFilterChipsProps) {
+export function ActivityFilterChips({ activities, selected, onSelect, showAll = true }: ActivityFilterChipsProps) {
   const { t } = useTranslation();
 
   return (
@@ -45,13 +48,15 @@ export function ActivityFilterChips({ activities, selected, onSelect }: Activity
       contentContainerStyle={styles.row}
       testID="activity-filter-chips"
     >
-      <Chip
-        label={t('challenges.filterAll')}
-        selected={selected === null}
-        fill={colors.paper}
-        onPress={() => onSelect(null)}
-        testID="activity-filter-all"
-      />
+      {showAll && (
+        <Chip
+          label={t('challenges.filterAll')}
+          selected={selected === null}
+          fill={colors.paper}
+          onPress={() => onSelect(null)}
+          testID="activity-filter-all"
+        />
+      )}
       {activities.map((activity) => (
         <Chip
           key={activity}
@@ -90,10 +95,11 @@ function Chip({
       testID={testID}
       style={({ pressed }) => [styles.chip, selected && { backgroundColor: fill }, pressed && styles.pressed]}
     >
-      {dot && !selected ? <View style={[styles.dot, { backgroundColor: dot }]} /> : null}
       <Text variant="label" weight="bold" tone={selected ? 'inverse' : 'primary'}>
         {label}
       </Text>
+      {/* After the label (Sprint 10), like the profile's practice badges' icon. */}
+      {dot && !selected ? <View style={[styles.dot, { backgroundColor: dot }]} testID={`${testID}-dot`} /> : null}
     </Pressable>
   );
 }

@@ -17,9 +17,6 @@ export interface ChallengeInfoRow {
 interface ChallengeHeaderProps {
   title: string;
   rows: ChallengeInfoRow[];
-  /** Activity Color System v2 — this challenge's own resolved accent color,
-   * used for the title text. */
-  accentColor: string;
 }
 
 /** Title + info-rows block at the top of Challenge-Info — left-aligned display-font
@@ -27,10 +24,12 @@ interface ChallengeHeaderProps {
  * including the last, per the wireframe). Replaces the old centered
  * giant-day-count/location-icon-grid/activity-badge-chip layout, which
  * doesn't appear in this wireframe at all. */
-export default function ChallengeHeader({ title, rows, accentColor }: ChallengeHeaderProps) {
+export default function ChallengeHeader({ title, rows }: ChallengeHeaderProps) {
   return (
     <View>
-      <Text variant="title" style={[styles.title, { color: accentColor, opacity: 1 }]}>{title}</Text>
+      {/* `paper`, not the activity color (Sprint 10, explicit request) — the
+          header photo and the glow already carry the challenge's color. */}
+      <Text variant="title" style={styles.title}>{title}</Text>
 
       <View style={styles.rows}>
         {rows.map((row, index) => (
@@ -51,6 +50,8 @@ export default function ChallengeHeader({ title, rows, accentColor }: ChallengeH
 
 const styles = StyleSheet.create({
   title: {
+    color: colors.paper,
+    opacity: 1,
     paddingHorizontal: spacing.base,
     paddingBottom: spacing.base,
   },

@@ -295,7 +295,7 @@ function ReportCard({
             {report.target.text || t('moderation.noText')}
           </Text>
           {!report.target.exists ? (
-            <Text variant="caption" tone="tertiary">{t('moderation.contentDeleted')}</Text>
+            <Text variant="caption" tone="secondary">{t('moderation.contentDeleted')}</Text>
           ) : null}
         </View>
       </Row>

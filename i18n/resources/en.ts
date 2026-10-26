@@ -10,6 +10,23 @@ const en = {
       dismiss: 'Dismiss',
       gotIt: 'Got it',
     },
+    // Sprint 10 accessibility pass: what a screen reader says for icon-only buttons.
+    a11y: {
+      close: 'Close',
+      send: 'Send',
+      increase: 'Increase {{label}}',
+      decrease: 'Decrease {{label}}',
+      previousMonth: 'Previous month',
+      nextMonth: 'Next month',
+      flipCamera: 'Switch camera',
+      confirmPhoto: 'Use this photo',
+      clearSearch: 'Clear search',
+      openMessages: 'Messages',
+      openRoutine: 'Open routine',
+      openPhoto: 'Open photo',
+      deleteComment: 'Delete comment',
+      removeDay: 'Remove day {{day}}',
+    },
     fields: {
       email: 'Email',
       username: 'Username',
@@ -56,6 +73,11 @@ const en = {
         ownChallenge: 'You can\'t join a challenge you created.',
         emailInUse: 'That email is already in use.',
         usernameInUse: 'That username is already taken.',
+        accountTaken: 'That email or username is already in use.',
+        passwordTooShort: 'Use at least 10 characters.',
+        passwordTooLong: 'That password is too long.',
+        passwordContainsIdentity: 'Your password can\'t contain your username or email.',
+        passwordTooCommon: 'That password is too common. Try a phrase only you would think of.',
         deletionAlreadyRequested: 'Your account deletion was already requested.',
         cycleTooLong: 'The cycle can\'t be longer than the challenge.',
       },
@@ -241,6 +263,9 @@ const en = {
     dailyProofValue: '1 photo per training day',
     rewardLabel: 'When you finish',
     rewardValue: 'Counts toward your completed-challenge badges (1 and 3 challenges). It is finished when you log its last day.',
+    // Sprint 10: only the creator sees why their photo isn't showing yet.
+    coverPending: 'Your photo is in review. Until it is approved, everyone sees the placeholder.',
+    coverRejected: 'Your photo didn’t pass the review, so it won’t be shown.',
     statusLabel: 'Status',
     closedValue: 'Closed',
     restEveryCycle_one: '{{count}} rest day every {{cycleLength}}',
@@ -343,6 +368,9 @@ const en = {
   },
   search: {
     screenTitle: 'Search',
+    browseByActivity: 'Browse by activity',
+    popularTitle: 'Popular right now',
+    seeAll: 'See all',
     placeholder: 'Search challenges or people',
     challengesSectionTitle: 'Challenges',
     peopleSectionTitle: 'People',
@@ -439,6 +467,16 @@ const en = {
     submit: {
       startChallenge: 'Start challenge',
     },
+    // Sprint 10: the optional challenge photo step.
+    cover: {
+      pick: 'Choose photo',
+      change: 'Change photo',
+      remove: 'Remove',
+      skipHint: 'You can skip this step: Explore will show a placeholder.',
+      reviewHint: 'We review the photo before showing it to everyone.',
+      uploadFailed: 'We couldn’t upload the photo. Try again, or remove it to create the challenge without one.',
+      inReview: 'Challenge created. Your photo is in review.',
+    },
     rules: {
       dailyPhoto: {
         title: 'A photo every training day',
@@ -492,6 +530,10 @@ const en = {
       visibility: {
         title: 'Who can see it?',
         description: 'Choose whether anyone can find and join it, or only the people you approve.',
+      },
+      photo: {
+        title: 'Add a photo',
+        description: 'Optional. It shows on the challenge card in Explore and on its info screen.',
       },
       review: {
         title: 'Ready when you are',
@@ -883,6 +925,7 @@ const en = {
   badges: {
     title: 'Badges',
     earnedCount: '{{earned}} of {{total}}',
+    openA11y: 'Open badges',
     tileA11yEarned: '{{name}} badge, earned. Tap for details.',
     tileA11yLocked: '{{name}} badge, not earned yet. Tap to see how.',
     earnedOwn: 'You earned it!',
@@ -955,6 +998,7 @@ const en = {
   profileEdit: {
     entry: 'Edit profile',
     screenTitle: 'Edit profile',
+    sectionProfile: 'Profile',
     displayName: 'Name',
     displayNamePlaceholder: 'Your visible name',
     displayNameRequired: 'Name cannot be empty.',
@@ -1357,6 +1401,94 @@ const en = {
     notifications: 'Notifications',
     notificationsHint: 'What you get notified about, in the app and on your phone',
     aboutHint: 'Credits for exercise data and illustrations',
+    helpHint: 'Quick answers about challenges, progress, privacy and posts',
+  },
+  // Sprint 10, B9: short answers; opened from Settings.
+  help: {
+    title: 'Help & FAQ',
+    intro: 'Tap a question to see the answer.',
+    sections: {
+      challenges: {
+        title: 'Challenges',
+        items: {
+          join: {
+            q: 'How do I join a challenge?',
+            a: 'Open the challenge and tap "Join challenge". If it is private, the button says "Request to join": its creator reviews your request and you get a notification when they answer.',
+          },
+          leave: {
+            q: 'What happens if I leave a challenge?',
+            a: 'You stop taking part, but your progress is saved. You can leave from the challenge screen.',
+          },
+          finish: {
+            q: 'When is a challenge finished?',
+            a: 'When you log its last day. Every finished challenge counts toward the completed-challenge badges.',
+          },
+          location: {
+            q: 'Can I train somewhere else that day?',
+            a: 'Yes. On the routine day, change the training location: if an exercise can’t be done there, you pick a similar one. It only changes your workout; the routine stays the same for everyone else.',
+          },
+        },
+      },
+      progress: {
+        title: 'Progress',
+        items: {
+          log: {
+            q: 'How do I log today’s progress?',
+            a: 'Tap the add button, pick the challenge and take a photo. Your day is logged right away, even while the photo is still under review.',
+          },
+          restDay: {
+            q: 'How do rest days work?',
+            a: 'Rest is part of the plan: on a rest day you don’t have to train. You can plan upcoming rest days, but not apply them to days that already passed.',
+          },
+          streak: {
+            q: 'How is my streak counted?',
+            a: 'It is your consecutive days with a log, and rest days count too. If a day goes by without a log, the streak starts over.',
+          },
+          badges: {
+            q: 'How do I earn badges?',
+            a: 'By logging workouts, keeping your streak and finishing challenges. On your profile, tap a badge to see how it is counted and how much is left.',
+          },
+        },
+      },
+      privacy: {
+        title: 'Privacy',
+        items: {
+          photoVisibility: {
+            q: 'Who sees my photos?',
+            a: 'When you take the photo you choose "Followers" or "Private". Only you can see a private photo.',
+          },
+          privateProfile: {
+            q: 'What does a private profile do?',
+            a: 'It hides your bio from other users. Turn it on in Settings > Edit profile.',
+          },
+          deleteAccount: {
+            q: 'How do I delete my account?',
+            a: 'In Settings > Delete account. Before you confirm, we explain what happens to your data.',
+          },
+        },
+      },
+      posts: {
+        title: 'Posts',
+        items: {
+          review: {
+            q: 'Why does my photo say "In review"?',
+            a: 'We review photos before publishing them. Until then only you can see it. If it doesn’t pass the review it isn’t published, but your day stays logged.',
+          },
+          report: {
+            q: 'How do I report a post or a comment?',
+            a: 'Use the "Report" option on the post or comment and pick a reason. Our team reviews it.',
+          },
+          delete: {
+            q: 'Can I delete a post?',
+            a: 'Yes, your own: open the post’s options and tap "Delete post".',
+          },
+          suspension: {
+            q: 'What happens if my content breaks the rules?',
+            a: 'We may hide it and, depending on the case, suspend your activity for a while. During a suspension you can still browse the app. See the Community Guidelines in Settings.',
+          },
+        },
+      },
+    },
   },
   about: {
     title: 'About & Credits',

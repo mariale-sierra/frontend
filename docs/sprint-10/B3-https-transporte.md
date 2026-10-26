@@ -10,7 +10,7 @@ La seguridad del transporte ahora depende de la variante de build. `development`
 ## 2. Decisiones técnicas
 
 - La variante sale de `APP_VARIANT` (definida por perfil en `eas.json`), con `EAS_BUILD_PROFILE` como respaldo; sin ninguna de las dos se asume `development` (`expo start`).
-- `expo-build-properties` pasa de `app.json` (con `true` fijo) a `app.config.js`, con un valor por variante.
+- `expo-build-properties` sigue en `app.json` con lo fijo (niveles de SDK, target de iOS), pero sin `usesCleartextTraffic`: `app.config.js` lo agrega a esa misma entrada según la variante.
 - Una build de release sin URL https es un error y no un aviso: es la única forma de que no se cuele un APK inseguro.
 - La URL HTTP de respaldo en `services/api.ts` solo aplica en `__DEV__`.
 - `.env` sigue apuntando a `http://20.63.84.1:3000` para desarrollo **hasta que exista el dominio**: cambiarlo antes rompería `expo start` de todo el equipo.
@@ -20,10 +20,10 @@ La seguridad del transporte ahora depende de la variante de build. `development`
 | Archivo | Cambio |
 |---|---|
 | `app.config.js` | Variante, `usesCleartextTraffic`, validación de `https://`. |
-| `app.json` | Sin el plugin con cleartext fijo y sin `extra.apiUrl` HTTP (siempre la sobrescribía `app.config.js`). |
+| `app.json` | Sin `usesCleartextTraffic: true` fijo y sin `extra.apiUrl` HTTP (siempre la sobrescribía `app.config.js`). |
 | `eas.json` | `env.APP_VARIANT` por perfil. |
 | `services/api.ts` | Respaldo HTTP solo en desarrollo. |
-| `__tests__/appConfig.test.ts` (nuevo) | 8 pruebas. |
+| `__tests__/appConfig.test.ts` (nuevo) | 9 pruebas. |
 | `docs/ARCHITECTURE-GUIDE.md` | Sección de la URL base actualizada. |
 
 ## 4. Configuración
