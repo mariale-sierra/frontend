@@ -22,18 +22,21 @@ export function StreakGridItem({
   size,
   onAvatarLoadEnd,
 }: StreakGridItemProps) {
-  // Same rule as FriendStreakCard: `success` badge when logged today, dark
-  // `surface` otherwise.
-  const badgeColor = loggedToday ? colors.success : colors.surface;
+  // Same counter as FriendStreakCard (and the profile's streak badge): whiteish
+  // `primary` pill with ink text, `success` green with a white label once this
+  // friend logged a workout today.
+  const badgeColor = loggedToday ? colors.success : colors.primary;
 
   return (
     <View style={[styles.item, { width: size }]}>
       <View style={{ width: size, height: size }}>
         <UserAvatar username={username} imageUrl={avatarUrl} size={size} circle onLoadEnd={onAvatarLoadEnd} />
-        <View style={[styles.badge, { backgroundColor: badgeColor }]}>
-          <Text variant="caption" weight="bold" inverse={loggedToday}>
-            {streakDays}
-          </Text>
+        <View style={styles.badgeRow} pointerEvents="none">
+          <View style={[styles.badge, { backgroundColor: badgeColor }]}>
+            <Text variant="caption" weight="bold" inverse={!loggedToday}>
+              {streakDays}
+            </Text>
+          </View>
         </View>
       </View>
       <Text variant="caption" tone="secondary" numberOfLines={1} style={[styles.name, { width: size }]}>
@@ -46,19 +49,25 @@ export function StreakGridItem({
 const styles = StyleSheet.create({
   item: {
     alignItems: 'center',
-    gap: spacing.xs,
+    // Clears the badge hanging below the avatar, same spacing as FriendStreakCard.
+    gap: spacing.base,
   },
-  badge: {
+  // Centers the badge under the avatar whatever its width (1 or 3 digits).
+  badgeRow: {
     position: 'absolute',
-    bottom: -spacing.sm,
-    left: '50%',
-    transform: [{ translateX: -14 }],
+    bottom: -spacing.md,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  // Same pill as FriendStreakCard and ProfileHeader's `streakBadge`.
+  badge: {
     minWidth: 28,
     alignItems: 'center',
-    paddingHorizontal: spacing.xs + 2,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 2,
-    borderRadius: radius.small,
-    borderWidth: 2,
+    borderRadius: radius.big,
+    borderWidth: 3,
     borderColor: colors.ink,
   },
   name: {
