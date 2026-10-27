@@ -6,7 +6,8 @@
  * are asked to accept again.
  *
  * Spanish only on purpose: a legal text has one authoritative language.
- * Text in [BRACKETS] is still to be filled in by the company / lawyer.
+ * Contact details and regions are filled in; the lawyer's formal review is still pending
+ * (external dependency, see backend/docs/testing/MATRIZ-REQUISITOS-NO-FUNCIONALES-2026-10-27.md).
  */
 export const LEGAL_VERSION = '2026-10-v1';
 
@@ -30,7 +31,7 @@ export const LEGAL_DOCS: Record<LegalDocKey, LegalDoc> = {
       {
         heading: 'Quiénes somos',
         paragraphs: [
-          'Responsable del tratamiento: [NOMBRE LEGAL DE LA EMPRESA], con domicilio en [DIRECCIÓN] ("Havit"). Contacto de privacidad: [CORREO DE PRIVACIDAD].',
+          'Responsable del tratamiento: HAVIT, con domicilio en Ciudad de Guatemala, Guatemala ("Havit"). Contacto de privacidad: havit_support@gmail.com.',
         ],
       },
       {
@@ -75,8 +76,8 @@ export const LEGAL_DOCS: Record<LegalDocKey, LegalDoc> = {
       {
         heading: '5. Con quién compartimos datos',
         bullets: [
-          'Microsoft Azure (base de datos y alojamiento) - [REGIÓN].',
-          'Cloudflare R2 (almacenamiento de fotos) - [REGIÓN].',
+          'Microsoft Azure (base de datos y alojamiento) - Canadá (Canada Central).',
+          'Cloudflare R2 (almacenamiento de fotos) - Canadá.',
           'OpenAI (moderación automática de texto e imágenes): lo que publicas puede enviarse para detectar contenido prohibido.',
           'Autoridades, cuando la ley lo exija.',
         ],
@@ -85,15 +86,15 @@ export const LEGAL_DOCS: Record<LegalDocKey, LegalDoc> = {
         heading: '6. Cuánto tiempo conservamos tus datos',
         bullets: [
           'Mientras tu cuenta esté activa.',
-          'Si solicitas eliminar tu cuenta, tienes 30 días para arrepentirte. Pasado ese plazo eliminamos definitivamente tus publicaciones, fotos, comentarios, mensajes, registros de entrenamiento, métricas, seguidores y notificaciones, y anonimizamos tu cuenta. Durante esos 30 días tu perfil deja de ser visible.',
+          'Si solicitas eliminar tu cuenta, tienes 7 días para arrepentirte. Pasado ese plazo eliminamos definitivamente tus publicaciones, fotos, comentarios, mensajes, registros de entrenamiento, métricas, seguidores y notificaciones, y anonimizamos tu cuenta. Durante esos 7 días tu perfil deja de ser visible.',
           'Conservamos de forma anonimizada los registros de moderación y un registro de auditoría de la eliminación.',
-          'Las copias de seguridad pueden conservar datos hasta [N] días antes de sobrescribirse.',
+          'Las copias de seguridad pueden conservar datos hasta 7 días antes de sobrescribirse.',
         ],
       },
       {
         heading: '7. Tus derechos',
         paragraphs: [
-          'Puedes acceder a tus datos, corregirlos, solicitar su eliminación, oponerte o limitar ciertos tratamientos, retirar tu consentimiento y pedir una copia. Puedes eliminar tu cuenta desde Perfil → Configuración → Eliminar cuenta, o escribiendo a [CORREO DE PRIVACIDAD]. Responderemos en un máximo de [30] días.',
+          'Puedes acceder a tus datos, corregirlos, solicitar su eliminación, oponerte o limitar ciertos tratamientos, retirar tu consentimiento y pedir una copia. Puedes eliminar tu cuenta desde Perfil → Configuración → Eliminar cuenta, o escribiendo a havit_support@gmail.com. Responderemos en un máximo de 30 días.',
         ],
       },
       {
@@ -142,7 +143,7 @@ export const LEGAL_DOCS: Record<LegalDocKey, LegalDoc> = {
       {
         heading: '5. Conducta y moderación',
         paragraphs: [
-          'Debes cumplir las Normas de la Comunidad. Podemos revisar contenido de forma automática y manual, ocultarlo o eliminarlo, advertir, suspender o cerrar cuentas que incumplan las normas o la ley. Puedes pedir la revisión de una decisión escribiendo a [CORREO DE SOPORTE].',
+          'Debes cumplir las Normas de la Comunidad. Podemos revisar contenido de forma automática y manual, ocultarlo o eliminarlo, advertir, suspender o cerrar cuentas que incumplan las normas o la ley. Puedes pedir la revisión de una decisión escribiendo a havit_support@gmail.com.',
         ],
       },
       {
@@ -164,7 +165,7 @@ export const LEGAL_DOCS: Record<LegalDocKey, LegalDoc> = {
       {
         heading: '9. Limitación de responsabilidad y ley aplicable',
         paragraphs: [
-          'En la máxima medida permitida por la ley, Havit no responde por daños indirectos ni por el contenido publicado por usuarios. Estos Términos se rigen por las leyes de [PAÍS]. Contacto: [CORREO DE SOPORTE].',
+          'En la máxima medida permitida por la ley, Havit no responde por daños indirectos ni por el contenido publicado por usuarios. Estos Términos se rigen por las leyes de Guatemala. Contacto: havit_support@gmail.com.',
         ],
       },
     ],
@@ -211,13 +212,13 @@ export const LEGAL_DOCS: Record<LegalDocKey, LegalDoc> = {
       {
         heading: 'Si estás en riesgo',
         paragraphs: [
-          'Si tú o alguien que conoces está en peligro o pensando en hacerse daño, contacta a los servicios de emergencia o a una línea de ayuda de tu país: [LISTA DE LÍNEAS DE AYUDA LOCALES].',
+          'Si tú o alguien que conoces está en peligro o pensando en hacerse daño, contacta a los servicios de emergencia o a una línea de ayuda de tu país (en Guatemala, el 911 de emergencias).',
         ],
       },
       {
         heading: 'Apelaciones',
         paragraphs: [
-          'Si crees que nos equivocamos, escríbenos a [CORREO DE SOPORTE] indicando tu usuario y el contenido. Revisaremos tu caso con una persona distinta a quien tomó la decisión original.',
+          'Si crees que nos equivocamos, escríbenos a havit_support@gmail.com indicando tu usuario y el contenido. Revisaremos tu caso con una persona distinta a quien tomó la decisión original.',
         ],
       },
     ],
