@@ -1,8 +1,9 @@
-import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import { colors, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { Button } from './button';
 import { Icon } from './icon';
+import { IllustratedBlock } from './illustratedBlock';
 import { Text } from './text';
 import { Row } from '../layout/row';
 
@@ -40,41 +41,49 @@ export const ILLUSTRATION_SIZE = 120;
  * as the Home feed's empty state, which it generalizes.
  */
 export function EmptyState({ icon, illustration, title, message, actions, muted = false, testID }: EmptyStateProps) {
+  const actionRow =
+    actions && actions.length > 0 ? (
+      <Row gap="sm" justify="center" style={styles.actions}>
+        {actions.map((action) => (
+          <Button key={action.label} variant="outline" size="sm" onPress={action.onPress} testID={action.testID}>
+            {action.label}
+          </Button>
+        ))}
+      </Row>
+    ) : null;
+
+  // Sprint 10: with an illustration the whole block waits behind a skeleton
+  // until the picture loads, then appears at once.
+  if (illustration) {
+    return (
+      <IllustratedBlock
+        source={illustration}
+        size={ILLUSTRATION_SIZE}
+        actionCount={actions?.length ?? 0}
+        style={styles.container}
+        testID={testID}
+        imageTestID={testID ? `${testID}-illustration` : undefined}
+      >
+        <Text variant="body" align="center" tone={muted ? 'tertiary' : 'secondary'}>
+          {title}
+        </Text>
+        {actionRow}
+      </IllustratedBlock>
+    );
+  }
+
   return (
     <View style={styles.container} testID={testID}>
-      {illustration ? (
-        <Image
-          source={illustration}
-          style={styles.illustration}
-          resizeMode="contain"
-          accessibilityIgnoresInvertColors
-          testID={testID ? `${testID}-illustration` : undefined}
-        />
-      ) : icon ? (
-        <Icon name={icon} size={34} color={withAlpha(colors.paper, textOpacity.tertiary)} />
-      ) : null}
-      <Text
-        variant="body"
-        weight={illustration ? undefined : 'bold'}
-        align="center"
-        tone={muted ? 'tertiary' : illustration ? 'secondary' : undefined}
-      >
+      {icon ? <Icon name={icon} size={34} color={withAlpha(colors.paper, textOpacity.tertiary)} /> : null}
+      <Text variant="body" weight="bold" align="center" tone={muted ? 'tertiary' : undefined}>
         {title}
       </Text>
-      {message && !illustration ? (
+      {message ? (
         <Text variant="body" tone="secondary" align="center">
           {message}
         </Text>
       ) : null}
-      {actions && actions.length > 0 ? (
-        <Row gap="sm" justify="center" style={styles.actions}>
-          {actions.map((action) => (
-            <Button key={action.label} variant="outline" size="sm" onPress={action.onPress} testID={action.testID}>
-              {action.label}
-            </Button>
-          ))}
-        </Row>
-      ) : null}
+      {actionRow}
     </View>
   );
 }
@@ -89,9 +98,5 @@ const styles = StyleSheet.create({
   actions: {
     marginTop: spacing.sm,
     flexWrap: 'wrap',
-  },
-  illustration: {
-    width: ILLUSTRATION_SIZE,
-    height: ILLUSTRATION_SIZE,
   },
 });

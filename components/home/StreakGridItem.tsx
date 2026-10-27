@@ -10,9 +10,18 @@ interface StreakGridItemProps {
   loggedToday: boolean;
   /** The avatar's diameter — what its column allows (`getStreakGridLayout`). */
   size: number;
+  /** Called once the profile photo is on screen. */
+  onAvatarLoadEnd?: () => void;
 }
 
-export function StreakGridItem({ username, avatarUrl, streakDays, loggedToday, size }: StreakGridItemProps) {
+export function StreakGridItem({
+  username,
+  avatarUrl,
+  streakDays,
+  loggedToday,
+  size,
+  onAvatarLoadEnd,
+}: StreakGridItemProps) {
   // Same rule as FriendStreakCard: `success` badge when logged today, dark
   // `surface` otherwise.
   const badgeColor = loggedToday ? colors.success : colors.surface;
@@ -20,7 +29,7 @@ export function StreakGridItem({ username, avatarUrl, streakDays, loggedToday, s
   return (
     <View style={[styles.item, { width: size }]}>
       <View style={{ width: size, height: size }}>
-        <UserAvatar username={username} imageUrl={avatarUrl} size={size} circle />
+        <UserAvatar username={username} imageUrl={avatarUrl} size={size} circle onLoadEnd={onAvatarLoadEnd} />
         <View style={[styles.badge, { backgroundColor: badgeColor }]}>
           <Text variant="caption" weight="bold" inverse={loggedToday}>
             {streakDays}

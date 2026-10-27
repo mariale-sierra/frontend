@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Image, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { Animated, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import ScreenBackground from '../../components/layout/screenBackground';
 import { AccentPill } from '../../components/ui/accentPill';
 import { Divider } from '../../components/ui/divider';
 import { Icon } from '../../components/ui/icon';
+import { IllustratedBlock } from '../../components/ui/illustratedBlock';
 import { Loader } from '../../components/ui/loader';
 import { Text } from '../../components/ui/text';
 import { Row } from '../../components/layout/row';
@@ -259,13 +260,14 @@ export default function Home() {
               <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} scrollX={carouselScrollX} />
             ) : (
               // Sprint 10: an illustration and one short line in place of the trophy icon.
-              <View style={[styles.center, styles.inset]} testID="home-no-challenge">
-                <Image
-                  source={EMPTY_ILLUSTRATIONS.homeNoChallenge}
-                  style={styles.emptyIllustration}
-                  resizeMode="contain"
-                  testID="home-no-challenge-illustration"
-                />
+              <IllustratedBlock
+                source={EMPTY_ILLUSTRATIONS.homeNoChallenge}
+                size={HOME_ILLUSTRATION_SIZE}
+                actionCount={1}
+                style={[styles.center, styles.inset]}
+                testID="home-no-challenge"
+                imageTestID="home-no-challenge-illustration"
+              >
                 <Text variant="label" tone="secondary" align="center">
                   {t('home.noActiveChallenge')}
                 </Text>
@@ -277,7 +279,7 @@ export default function Home() {
                     onPress={() => router.push('/(tabs)/challenges?view=explore')}
                   />
                 </View>
-              </View>
+              </IllustratedBlock>
             )}
           </View>
 
@@ -421,10 +423,6 @@ const styles = StyleSheet.create({
   },
   emptyStateCta: {
     marginTop: spacing.xs,
-  },
-  emptyIllustration: {
-    width: HOME_ILLUSTRATION_SIZE,
-    height: HOME_ILLUSTRATION_SIZE,
   },
   friendsArea: {},
   divider: {

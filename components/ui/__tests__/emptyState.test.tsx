@@ -48,6 +48,11 @@ describe('EmptyState', () => {
         />,
       );
 
+      // Behind a skeleton until the illustration loads.
+      expect(screen.getByTestId('empty-illustration-skeleton')).toBeTruthy();
+      await fireEvent(screen.getByTestId('empty-illustration', { includeHiddenElements: true }), 'loadEnd');
+
+      expect(screen.queryByTestId('empty-illustration-skeleton')).toBeNull();
       expect(screen.getByTestId('empty-illustration').props.source).toEqual(ILLUSTRATION);
       expect(screen.getByText('Your feed is empty for now')).toBeTruthy();
       expect(screen.queryByText('This longer explanation is left out')).toBeNull();

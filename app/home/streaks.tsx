@@ -9,12 +9,16 @@ import { StreakGridItem, StreaksGridSkeleton } from '../../components/home';
 import { getFollowingStreaks } from '../../services/follow/follow.service';
 import { toFriendStreakViewModels, type FriendStreakViewModel } from '../../services/adapters/followAdapter';
 import { useCachedQuery } from '../../hooks/useCachedQuery';
+import { useImagesDrawn } from '../../hooks/useImagesDrawn';
 import { queryKeys, staleTimes } from '../../services/cache/queries';
 import { STREAK_GRID_COLUMNS } from '../../constants/streaksGrid';
 import { spacing } from '../../constants/theme';
 import { getStreakGridLayout } from '../../utils/streaksGrid';
 
 type GridRow = FriendStreakViewModel | { userId: string; filler: true };
+
+/** Grid rows rendered up front — the ones whose photos the skeleton waits for. */
+const INITIAL_ROWS = 6;
 
 /** Pads to a multiple of `STREAK_GRID_COLUMNS` so a partial last row still lines up
  * under the same flex columns as every full row above it. */
@@ -54,6 +58,19 @@ export default function StreaksAllScreen() {
     return padToGridColumns(sortedFriends);
   }, [friends]);
 
+  // Sprint 10: the grid stays a skeleton until the profile pictures on screen
+  // are drawn, so they appear together (the real grid renders invisibly
+  // underneath — see useImagesDrawn).
+  const awaitedIds = useMemo(
+    () =>
+      gridData
+        .slice(0, INITIAL_ROWS * STREAK_GRID_COLUMNS)
+        .filter((item): item is FriendStreakViewModel => !('filler' in item) && !!item.avatarUrl)
+        .map((item) => item.userId),
+    [gridData],
+  );
+  const { ready: avatarsReady, onDrawn } = useImagesDrawn(awaitedIds, { enabled: !loading && !error });
+
   return (
     <ScreenBackground variant="default">
       <View style={styles.header}>
@@ -73,30 +90,46 @@ export default function StreaksAllScreen() {
           <Text tone="secondary">{t('streaksScreen.errorMessage')}</Text>
         </View>
       ) : (
-        <FlatList
-          data={gridData}
-          keyExtractor={(item) => item.userId}
-          numColumns={STREAK_GRID_COLUMNS}
-          contentContainerStyle={styles.grid}
-          renderItem={({ item }) => (
-            <View style={styles.cell}>
-              {!('filler' in item) && (
-                <StreakGridItem
-                  username={item.username}
-                  avatarUrl={item.avatarUrl}
-                  streakDays={item.streakDays}
-                  loggedToday={item.loggedToday}
-                  size={avatarSize}
-                />
+        <View style={styles.gridWrap}>
+          <View
+            style={[styles.gridWrap, !avatarsReady && styles.hidden]}
+            pointerEvents={avatarsReady ? 'auto' : 'none'}
+            accessibilityElementsHidden={!avatarsReady}
+            importantForAccessibility={avatarsReady ? 'auto' : 'no-hide-descendants'}
+          >
+            <FlatList
+              data={gridData}
+              keyExtractor={(item) => item.userId}
+              numColumns={STREAK_GRID_COLUMNS}
+              initialNumToRender={INITIAL_ROWS}
+              contentContainerStyle={styles.grid}
+              renderItem={({ item }) => (
+                <View style={styles.cell}>
+                  {!('filler' in item) && (
+                    <StreakGridItem
+                      username={item.username}
+                      avatarUrl={item.avatarUrl}
+                      streakDays={item.streakDays}
+                      loggedToday={item.loggedToday}
+                      size={avatarSize}
+                      onAvatarLoadEnd={() => onDrawn(item.userId)}
+                    />
+                  )}
+                </View>
               )}
+              ListEmptyComponent={
+                <View style={styles.center}>
+                  <Text tone="secondary">{t('streaksScreen.emptyMessage')}</Text>
+                </View>
+              }
+            />
+          </View>
+          {!avatarsReady ? (
+            <View style={[styles.skeletonWrap, styles.skeletonOverlay]} pointerEvents="none" testID="streaks-skeleton">
+              <StreaksGridSkeleton avatarSize={avatarSize} />
             </View>
-          )}
-          ListEmptyComponent={
-            <View style={styles.center}>
-              <Text tone="secondary">{t('streaksScreen.emptyMessage')}</Text>
-            </View>
-          }
-        />
+          ) : null}
+        </View>
       )}
     </ScreenBackground>
   );
@@ -126,6 +159,18 @@ const styles = StyleSheet.create({
   cell: {
     flex: 1,
     alignItems: 'center',
+  },
+  gridWrap: {
+    flex: 1,
+  },
+  hidden: {
+    opacity: 0,
+  },
+  skeletonOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
   },
   skeletonWrap: {
     paddingHorizontal: spacing.lg,
