@@ -121,3 +121,27 @@ describe('Routine day — joining from this screen', () => {
     expect(getMyChallengeJoinRequest).not.toHaveBeenCalled();
   });
 });
+
+// Sprint 10: "This routine works at" starts folded; a tap on its title opens it.
+describe('Routine day — where the routine works', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('keeps the places hidden until the section is opened', async () => {
+    const { getLocationAvailability } = jest.requireMock('../../../services/exercises/exercises.service');
+    (getLocationAvailability as jest.Mock).mockResolvedValueOnce([
+      { code: 'gym', name: 'Gym', requiresSubstitution: false, unsupportedExerciseIds: [] },
+    ]);
+    const screen = await renderDay();
+
+    const toggle = await screen.findByTestId('routine-location-toggle');
+    expect(toggle.props.accessibilityState).toEqual(expect.objectContaining({ expanded: false }));
+    expect(screen.queryByText('Gym')).toBeNull();
+
+    await fireEvent.press(toggle);
+
+    expect(screen.getByText('Gym')).toBeTruthy();
+    expect(screen.getByTestId('routine-location-toggle').props.accessibilityState).toEqual(
+      expect.objectContaining({ expanded: true }),
+    );
+  });
+});

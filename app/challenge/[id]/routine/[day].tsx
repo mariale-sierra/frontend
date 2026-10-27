@@ -250,6 +250,8 @@ export default function RoutineDayDetail() {
     [rawCycleDay],
   );
   const [locationSheetVisible, setLocationSheetVisible] = useState(false);
+  // Sprint 10: "This routine works at" starts folded — a tap on its title opens it.
+  const [locationOpen, setLocationOpen] = useState(false);
   const [locationAvailability, setLocationAvailability] = useState<LocationAvailability[]>([]);
   const refsKey = routineExerciseRefs.map((e) => e.exerciseId).join(',');
   useEffect(() => {
@@ -370,41 +372,58 @@ export default function RoutineDayDetail() {
 
         {locationAvailability.length > 0 && (
           <View style={styles.locationSection}>
-            <Text variant="label" weight="bold">{t('challengeRoutineDay.location.availableAt')}</Text>
-            <Row gap="sm" style={styles.locationChips}>
-              {locationAvailability.map((location) => (
-                <View
-                  key={location.code}
-                  style={[styles.locationChip, location.requiresSubstitution && styles.locationChipWarn]}
-                >
-                  <Text variant="caption" weight="medium">{location.name}</Text>
-                  {location.requiresSubstitution && (
-                    <Text variant="caption" tone="secondary">
-                      {t('challengeRoutineDay.location.needsSwapsShort', { count: location.unsupportedExerciseIds.length })}
-                    </Text>
-                  )}
-                </View>
-              ))}
-            </Row>
-            {adaptation ? (
-              <Text variant="caption" tone="secondary">
-                {t('challengeRoutineDay.location.yourVersion', { location: adaptation.locationName })}
-              </Text>
-            ) : canChangeLocation ? (
-              <Text variant="caption" tone="secondary">{t('challengeRoutineDay.location.dayHint')}</Text>
-            ) : null}
-            {canChangeLocation && (
-              <Pressable
-                onPress={() => setLocationSheetVisible(true)}
-                style={({ pressed }) => [styles.locationButton, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel={t('challengeRoutineDay.location.changeA11y')}
-              >
-                <Icon name="location-outline" size={16} color={accentColor} />
-                <Text variant="label" weight="bold" style={{ color: accentColor }}>
-                  {t('challengeRoutineDay.location.changeCta')}
+            <Pressable
+              onPress={() => setLocationOpen((open) => !open)}
+              style={({ pressed }) => [styles.locationHeader, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: locationOpen }}
+              testID="routine-location-toggle"
+            >
+              <Text variant="label" weight="bold">{t('challengeRoutineDay.location.availableAt')}</Text>
+              <Icon
+                name={locationOpen ? 'chevron-up-outline' : 'chevron-down-outline'}
+                size={18}
+                color={withAlpha(colors.paper, textOpacity.secondary)}
+              />
+            </Pressable>
+            {locationOpen && (
+              <>
+              <Row gap="sm" style={styles.locationChips} testID="routine-location-chips">
+                {locationAvailability.map((location) => (
+                  <View
+                    key={location.code}
+                    style={[styles.locationChip, location.requiresSubstitution && styles.locationChipWarn]}
+                  >
+                    <Text variant="caption" weight="medium">{location.name}</Text>
+                    {location.requiresSubstitution && (
+                      <Text variant="caption" tone="secondary">
+                        {t('challengeRoutineDay.location.needsSwapsShort', { count: location.unsupportedExerciseIds.length })}
+                      </Text>
+                    )}
+                  </View>
+                ))}
+              </Row>
+              {adaptation ? (
+                <Text variant="caption" tone="secondary">
+                  {t('challengeRoutineDay.location.yourVersion', { location: adaptation.locationName })}
                 </Text>
-              </Pressable>
+              ) : canChangeLocation ? (
+                <Text variant="caption" tone="secondary">{t('challengeRoutineDay.location.dayHint')}</Text>
+              ) : null}
+              {canChangeLocation && (
+                <Pressable
+                  onPress={() => setLocationSheetVisible(true)}
+                  style={({ pressed }) => [styles.locationButton, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('challengeRoutineDay.location.changeA11y')}
+                >
+                  <Icon name="location-outline" size={16} color={accentColor} />
+                  <Text variant="label" weight="bold" style={{ color: accentColor }}>
+                    {t('challengeRoutineDay.location.changeCta')}
+                  </Text>
+                </Pressable>
+              )}
+              </>
             )}
           </View>
         )}
@@ -611,6 +630,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.base,
     paddingBottom: spacing.lg,
     gap: spacing.sm,
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 44,
   },
   locationChips: {
     flexWrap: 'wrap',
