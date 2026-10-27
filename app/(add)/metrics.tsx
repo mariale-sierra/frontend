@@ -10,10 +10,9 @@ import { Text } from '../../components/ui/text';
 import { LogMetricsExerciseCard } from '../../components/add/logMetricsExerciseCard';
 import { CreateFlowPrimaryButton } from '../../components/challenge/create';
 import { CoachMark } from '../../components/onboarding/CoachMark';
-import { colors, radius, spacing, textOpacity } from '../../constants/theme';
+import { colors, fillOpacity, radius, spacing, textOpacity, typography } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { useMetricsScreen } from '../../hooks/useMetricsScreen';
-import { countAdjustedSets } from '../../services/adapters/index';
 import { getChallengeGlowColor } from '../../services/adapters/challengeState';
 import { hasSeenLogScreenCoachMark, markLogScreenCoachMarkSeen } from '../../utils/logScreenCoachMark';
 import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../constants/onboardingDebug';
@@ -56,7 +55,6 @@ export default function Metrics() {
     () => ({ colors: [accentColor], scrollX: staticScrollX, pageWidth: 0, soft: true }),
     [accentColor, staticScrollX],
   );
-  const totalAdjusted = exerciseMetrics.reduce((sum, exercise) => sum + countAdjustedSets(exercise), 0);
 
   // Onboarding Stage 5's coach mark — teaches the non-obvious part of this
   // screen's flow (the "Log day" button leads to a quick confirmation photo
@@ -113,10 +111,11 @@ export default function Metrics() {
     return (
       <ScrollView style={styles.scroll} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
         <Stack gap="base">
-          {exerciseMetrics.map((exercise) => (
+          {exerciseMetrics.map((exercise, index) => (
             <LogMetricsExerciseCard
               key={exercise.id}
               exercise={exercise}
+              position={index + 1}
               onChangeValue={(rowIndex, field, nextValue) =>
                 updateMetricValue(exercise.id, rowIndex, field, String(nextValue))
               }
@@ -163,7 +162,7 @@ export default function Metrics() {
         <Text variant="header" size="xs" numberOfLines={1} style={styles.eyebrow}>
           {selectedChallenge?.label ?? ''}
         </Text>
-        <Text variant="title" numberOfLines={2}>
+        <Text variant="title" numberOfLines={2} style={styles.dayTitle}>
           {routineName
             ? t('logMetrics.entry.dayWithRoutine', { day: currentDay ?? 1, routine: routineName })
             : t('logMetrics.pickChallenge.dayLabel', { day: currentDay ?? 1 })}
@@ -184,13 +183,13 @@ export default function Metrics() {
             accessibilityLabel={t('challengeRoutineDay.location.changeA11y')}
             testID="metrics-change-location"
           >
-            <Icon name="location-outline" size={16} color={colors.primary} />
+            <Icon name="location-outline" size={16} color={colors.paper} />
             <Text variant="label" weight="bold" style={styles.locationButtonText}>
               {adaptation
                 ? t('challengeRoutineDay.location.trainingAt', { location: adaptation.locationName })
                 : t('challengeRoutineDay.location.sheetTitle')}
             </Text>
-            <Icon name="chevron-down-outline" size={14} color={colors.primary} />
+            <Icon name="chevron-down-outline" size={14} color={colors.paper} />
           </Pressable>
         )}
       </View>
@@ -206,7 +205,7 @@ export default function Metrics() {
           />
         )}
         <Text variant="caption" tone="secondary" align="center">
-          {t('logMetrics.entry.footerCaption', { count: totalAdjusted })}
+          {t('logMetrics.entry.footerCaption')}
         </Text>
         <CreateFlowPrimaryButton
           onPress={goToCamera}
@@ -259,6 +258,12 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xs,
     paddingBottom: spacing.base,
   },
+  // Sprint 10: one step under the `title` variant (`2xl`, was `3xl`).
+  dayTitle: {
+    fontSize: typography.fontSize['2xl'],
+    lineHeight: typography.lineHeight['2xl'],
+    letterSpacing: typography.displayLetterSpacing(typography.fontSize['2xl']),
+  },
   locationButton: {
     alignSelf: 'flex-start',
     flexDirection: 'row',
@@ -268,14 +273,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.big,
-    backgroundColor: withAlpha(colors.paper, 0.08),
+    // Sprint 10: the metric steppers' light gray (SetTargetStepper's pill) and
+    // white text, so the screen's controls share one look.
+    backgroundColor: withAlpha(colors.paper, fillOpacity.chip),
   },
   locationButtonText: {
-    color: colors.primary,
+    color: colors.paper,
     opacity: 1,
   },
+  // Pure white (`paper`), not the cream `primary` — Sprint 10.
   eyebrow: {
-    color: colors.primary,
+    color: colors.paper,
     opacity: 1,
   },
   contentWrap: {

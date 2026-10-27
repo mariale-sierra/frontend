@@ -43,10 +43,11 @@ describe('SetTargetStepper', () => {
     expect(pillStyle().backgroundColor).not.toBe(colors.surface);
   });
 
-  it('keeps its rectangle: the same radius, height and border width as before', async () => {
+  // Sprint 10: a full pill now (was the `small` rounded rectangle).
+  it('is a rounded pill, with the same height and border width as before', async () => {
     await renderWithTheme(<SetTargetStepper {...baseProps} />);
 
-    expect(pillStyle()).toMatchObject({ borderRadius: radius.small, height: 44, borderWidth: 1.5 });
+    expect(pillStyle()).toMatchObject({ borderRadius: radius.big, height: 44, borderWidth: 1.5 });
   });
 
   // Every label in it is `paper` at the full-strength text tier, so none gets lost on the lighter fill.
@@ -78,12 +79,13 @@ describe('SetTargetStepper', () => {
     expect(StyleSheet.flatten(field.props.style)).toMatchObject({ color: colors.paper, opacity: textOpacity.primary });
   });
 
-  it('has no outline of its own until the set is adjusted, then lights up `success` — unchanged', async () => {
+  // Sprint 10: a quiet `paper` outline, not `success` green — green read as "only a changed set counts".
+  it('has no outline of its own until the set is adjusted, then a neutral one', async () => {
     const { rerender } = await renderWithTheme(<SetTargetStepper {...baseProps} />);
     expect(pillStyle().borderColor).toBe('transparent');
 
     await rerender(<SetTargetStepper {...baseProps} adjusted />);
-    expect(pillStyle().borderColor).toBe(colors.success);
+    expect(pillStyle().borderColor).toBe(withAlpha(colors.paper, textOpacity.secondary));
   });
 
   // The border keeps its width in both states, so adjusting a set does not nudge the row.

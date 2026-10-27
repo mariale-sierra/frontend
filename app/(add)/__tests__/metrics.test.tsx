@@ -118,11 +118,12 @@ describe('the Log Metrics screen', () => {
     expect(screen.getByTestId('background-light')).toHaveTextContent(`bottom:${colors.primary}`);
   });
 
-  it('keeps the challenge name in `primary`', async () => {
+  // Sprint 10: pure white (`paper`), not the cream `primary`.
+  it('shows the challenge name in white', async () => {
     mockScreen();
     await renderWithTheme(<Metrics />);
 
-    expect(flattenStyle(screen.getByText('Morning Strength').props.style).color).toBe(colors.primary);
+    expect(flattenStyle(screen.getByText('Morning Strength').props.style).color).toBe(colors.paper);
   });
 
   it('shows the challenge and the day over the gradient', async () => {
