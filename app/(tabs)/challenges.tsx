@@ -21,6 +21,11 @@ import type { ExploreChallengeViewModel } from '../../components/challenge/list/
 import type { ChallengeMineCardViewModel } from '../../services/adapters/challengeListAdapter';
 import { colors, radius, spacing } from '../../constants/theme';
 import { BOTTOM_NAV_HEIGHT } from '../../constants/bottomNav';
+import { useImagesReady } from '../../hooks/useImagesReady';
+import { EMPTY_ILLUSTRATIONS } from '../../constants/illustrations';
+
+/** How many Explore cards' photos to wait for: about a screenful. */
+const EXPLORE_PHOTOS_TO_WAIT_FOR = 6;
 import { getChallenges, getMyProgressPhotos } from '../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../services/user/user.service';
 import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../../services/adapters';
@@ -144,6 +149,12 @@ export default function Challenges() {
     view === 'mine'
       ? enrolledQuery.isLoading || photosQuery.isLoading
       : enrolledQuery.isLoading || allQuery.isLoading;
+  // Sprint 10: Explore keeps its skeleton until the photos of the first cards
+  // (the ones on screen) are downloaded too, so the list appears complete.
+  const explorePhotosReady = useImagesReady(
+    visibleExploreChallenges.slice(0, EXPLORE_PHOTOS_TO_WAIT_FOR).map((challenge) => challenge.imageUrl),
+    { enabled: view === 'explore' && !loading },
+  );
   const failed = view === 'mine' ? !enrolledQuery.data && enrolledQuery.error : !allQuery.data && allQuery.error;
   const error = failed ? t('challenges.loadError') : null;
   // Finished challenges are collapsed out of the main Mine list by default —
@@ -343,7 +354,7 @@ export default function Challenges() {
     [handleCreateChallenge, t, view, showExploreTip, dismissExploreTip, filterActivities, activityFilter],
   );
 
-  if (loading) {
+  if (loading || (view === 'explore' && !explorePhotosReady)) {
     return (
       <ScreenBackground variant="default" gradientBackground>
         {listHeader}
@@ -380,9 +391,9 @@ export default function Challenges() {
           ListEmptyComponent={
             mineChallenges.length === 0 ? (
               <EmptyState
-                icon="trophy-outline"
+                illustration={EMPTY_ILLUSTRATIONS.mineChallenges}
                 title={t('challenges.emptyMineTitle')}
-                message={t('challenges.emptyMine')}
+                testID="empty-mine"
                 actions={[
                   { label: t('challenges.emptyMineExplore'), onPress: () => setView('explore'), testID: 'empty-mine-explore' },
                   { label: t('challenges.emptyMineCreate'), onPress: () => router.push('/challenge/create'), testID: 'empty-mine-create' },

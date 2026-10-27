@@ -1,7 +1,16 @@
 import { EmptyState } from '../ui/emptyState';
 import type { EmptyStateAction } from '../ui/emptyState';
 import { memo, useCallback, type ReactElement } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, View, type RefreshControlProps } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  Pressable,
+  StyleSheet,
+  View,
+  type ImageSourcePropType,
+  type RefreshControlProps,
+} from 'react-native';
 import { colors, fillOpacity, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { useTranslation } from 'react-i18next';
@@ -72,14 +81,17 @@ function PhotoGridEmpty({
   emptyLabel,
   emptyTitle,
   emptyActions,
-}: Pick<PhotoGridListProps, 'emptyLabel' | 'emptyTitle' | 'emptyActions'>) {
+  emptyIllustration,
+}: Pick<PhotoGridListProps, 'emptyLabel' | 'emptyTitle' | 'emptyActions' | 'emptyIllustration'>) {
   if (emptyActions && emptyActions.length > 0) {
     return (
       <EmptyState
         icon="camera-outline"
+        illustration={emptyIllustration}
         title={emptyTitle ?? emptyLabel}
         message={emptyTitle ? emptyLabel : undefined}
         actions={emptyActions}
+        testID="photo-grid-empty"
       />
     );
   }
@@ -103,6 +115,9 @@ interface PhotoGridListProps {
   /** With `emptyActions`, the empty state gets a bold title above `emptyLabel` and buttons toward where photos come from. */
   emptyTitle?: string;
   emptyActions?: EmptyStateAction[];
+  /** With `emptyActions`: an illustration in place of the icon, and just the
+   * title as a single line (Sprint 10 — the user's own profile). */
+  emptyIllustration?: ImageSourcePropType;
   onPhotoPress?: (photo: ChallengePhoto) => void;
   /** Everything above the grid (profile header, badges, toggle). */
   header?: ReactElement | null;
@@ -128,6 +143,7 @@ export function PhotoGridList({
   emptyLabel,
   emptyTitle,
   emptyActions,
+  emptyIllustration,
   onPhotoPress,
   header,
   footer,
@@ -160,7 +176,12 @@ export function PhotoGridList({
         loading ? (
           <PhotoGridSkeleton />
         ) : (
-          <PhotoGridEmpty emptyLabel={emptyLabel} emptyTitle={emptyTitle} emptyActions={emptyActions} />
+          <PhotoGridEmpty
+            emptyLabel={emptyLabel}
+            emptyTitle={emptyTitle}
+            emptyActions={emptyActions}
+            emptyIllustration={emptyIllustration}
+          />
         )
       }
       ListFooterComponent={
