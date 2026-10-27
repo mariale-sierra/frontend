@@ -1,4 +1,5 @@
-import { Image, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { LoadingImage } from '../../ui/loadingImage';
 import { Icon } from '../../ui/icon';
 import { colors, radius, textOpacity } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
@@ -33,7 +34,7 @@ export function ChallengeCoverTile({ imageUrl, size, iconSize, rotateDeg = 0, st
   if (imageUrl) {
     return (
       <View style={tile} testID={testID}>
-        <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" testID={testID ? `${testID}-image` : undefined} />
+        <LoadingImage uri={imageUrl} style={styles.image} testID={testID ? `${testID}-image` : undefined} />
       </View>
     );
   }

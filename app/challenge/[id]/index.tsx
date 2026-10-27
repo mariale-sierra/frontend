@@ -37,6 +37,7 @@ import { invalidateAfterMembershipChanged, invalidateChallenge } from '../../../
 import { loadChallenge } from '../../../services/cache/challengeLoaders';
 import { ChallengeCoverTile } from '../../../components/challenge/card/ChallengeCoverTile';
 import { pickChallengeImageUrl } from '../../../services/adapters/challengeListAdapter';
+import { useImagesReady } from '../../../hooks/useImagesReady';
 
 /** The header photo: full width, about 3:5 as tall as wide (Sprint 10 wireframe). */
 const HERO_ASPECT_RATIO = 5 / 3;
@@ -60,6 +61,9 @@ export default function ChallengeDetail() {
   const { id, inviteId } = useLocalSearchParams<{ id: string; inviteId?: string }>();
   const [challenge, setChallenge] = useState<ChallengeContract | null>(null);
   const [loading, setLoading] = useState(true);
+  // Sprint 10: the header photo is downloaded before the screen shows, so the
+  // skeleton stays until the data and the photo are both ready.
+  const coverReady = useImagesReady([challenge ? pickChallengeImageUrl(challenge) : null], { enabled: !loading });
   const [error, setError] = useState(false);
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus>('none');
   const [membershipLoading, setMembershipLoading] = useState(true);
@@ -254,7 +258,7 @@ export default function ChallengeDetail() {
     setShareVisible(true);
   }
 
-  if (loading) {
+  if (loading || !coverReady) {
     return (
       <ScreenBackground variant="default">
         <Row justify="space-between" align="center" style={styles.topBar}>

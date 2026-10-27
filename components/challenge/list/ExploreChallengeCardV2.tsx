@@ -1,5 +1,5 @@
 import { memo, useId } from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { Icon } from '../../ui/icon';
@@ -7,6 +7,7 @@ import { Text } from '../../ui/text';
 import { challengeCardText } from '../card/challengeCardText';
 import { ChallengeCard } from '../card/ChallengeCard';
 import { ChallengeCardAuthor } from '../card/ChallengeCardAuthor';
+import { LoadingImage } from '../../ui/loadingImage';
 import type { ExploreChallengeCardProps } from './challengeListSections';
 import { colors, fillOpacity, radius, shadows, spacing } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
@@ -97,7 +98,8 @@ function CardPhoto({ uri }: { uri: string }) {
     // the photo fades into black with no seam (the glow is for cards without one).
     <View style={styles.photoBase} testID="explore-card-photo-base">
       <View style={styles.photoArea} testID="explore-card-photo">
-        <Image source={{ uri }} style={StyleSheet.absoluteFill} resizeMode="cover" testID="explore-card-cover-image" />
+        {/* A spinner on the skeleton fill while it loads, under the fade. */}
+        <LoadingImage uri={uri} style={StyleSheet.absoluteFill} testID="explore-card-cover-image" />
         <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
           <Defs>
             <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
