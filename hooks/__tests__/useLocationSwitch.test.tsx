@@ -87,13 +87,15 @@ describe('useLocationSwitch', () => {
     expect(hook.current.buildAdaptation()?.substitutions).toEqual([]);
   });
 
-  it('a failed alternatives request is treated as no alternative, never as a crash', async () => {
+  it('a failed alternatives request blocks applying instead of passing as "no alternative"', async () => {
     alternatives.mockRejectedValue(new Error('network'));
     const { result: hook } = await setup();
     await waitFor(() => expect(hook.current.locations).not.toBeNull());
     await act(async () => hook.current.selectLocation(LOCATIONS[1]));
 
-    await waitFor(() => expect(hook.current.canApply).toBe(true));
+    await waitFor(() => expect(hook.current.hasFailedLookup).toBe(true));
+    expect(hook.current.canApply).toBe(false);
+    expect(hook.current.buildAdaptation()).toBeNull();
     expect(hook.current.items[0]).toMatchObject({ failed: true, chosenId: null });
   });
 

@@ -843,6 +843,7 @@ const es = {
     noChallengeSelectedMessage: 'Vuelve a métricas y selecciona un reto primero.',
     uploadError: 'No se pudo subir la imagen. Intenta de nuevo.',
     saveProgressError: 'No se pudo guardar el progreso. Intenta de nuevo.',
+    metricsPartialError: 'Progreso guardado, pero {{failed}} de {{total}} valores de métricas no se pudieron guardar.',
     permissionMessage: 'Se requiere permiso de cámara para tomar la evidencia.',
     grantPermission: 'Conceder permiso',
     goBack: '← Volver',

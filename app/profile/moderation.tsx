@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, RefreshControl, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -54,17 +54,36 @@ export default function ModerationScreen() {
     }
   }, []);
 
+  // Cursor of the page request in flight (undefined = first page) and a
+  // generation counter, so a repeated onEndReached never fetches the same page
+  // twice and a refresh discards any older response still on its way.
+  const inFlightCursor = useRef<number | null | undefined>(null);
+  const generation = useRef(0);
+
   const load = useCallback(async (after?: number) => {
+    const cursor = after ?? undefined;
+    if (inFlightCursor.current === cursor && inFlightCursor.current !== null) return;
+    if (after === undefined) generation.current += 1;
+    const myGeneration = generation.current;
+    inFlightCursor.current = cursor;
     setError(false);
     try {
       const page = await listPendingReports(after);
-      setReports((prev) => (after === undefined ? page.reports : [...prev, ...page.reports]));
+      if (myGeneration !== generation.current) return;
+      setReports((prev) => {
+        if (after === undefined) return page.reports;
+        const seen = new Set(prev.map((r) => r.id));
+        return [...prev, ...page.reports.filter((r) => !seen.has(r.id))];
+      });
       setNextAfter(page.nextAfter);
     } catch {
-      setError(true);
+      if (myGeneration === generation.current) setError(true);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (inFlightCursor.current === cursor) inFlightCursor.current = null;
+      if (myGeneration === generation.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 

@@ -855,6 +855,7 @@ const en = {
     noChallengeSelectedMessage: 'Go back to metrics and select a challenge first.',
     uploadError: 'Could not upload image. Try again.',
     saveProgressError: 'Could not save progress. Try again.',
+    metricsPartialError: 'Progress saved, but {{failed}} of {{total}} metric values could not be saved.',
     permissionMessage: 'Camera permission is required to take proof.',
     grantPermission: 'Grant Permission',
     goBack: '← Go Back',

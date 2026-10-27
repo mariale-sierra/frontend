@@ -69,14 +69,9 @@ api.interceptors.request.use(async (config) => {
   } else if (config.authRefresh) {
     delete config.headers.Authorization;
   }
-  // Browsers send a CORS preflight for this custom header. The public API may
-  // still be running a deployment from before X-Timezone was added to its
-  // allow-list, so keep web login and requests compatible with that server.
-  // Native clients are not subject to CORS and retain timezone-aware day
-  // boundaries; the backend falls back to UTC when web omits this header.
-  if (Platform.OS !== 'web') {
-    config.headers['X-Timezone'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  }
+  // Sent on web too (the backend's CORS allow-list includes X-Timezone), so web
+  // and native resolve the same local day for daily progress and streaks.
+  config.headers['X-Timezone'] = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return config;
 });
 

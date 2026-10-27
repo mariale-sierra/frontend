@@ -53,6 +53,8 @@ const FIELD_TO_METRIC_CODE: Partial<Record<MetricField, WorkoutMetricCode>> = {
 export async function applyExerciseMetrics(
   workout: WorkoutLogContract,
   exerciseMetrics: ExerciseMetricsBlock[],
+  /** Called when some writes failed, so the caller can tell the user the metrics were only partly saved. */
+  onFailures?: (failed: number, attempted: number) => void,
 ): Promise<number> {
   const wles = workout.exercises ?? [];
   const writes: Array<() => Promise<unknown>> = [];
@@ -100,5 +102,7 @@ export async function applyExerciseMetrics(
   }
 
   const results = await Promise.allSettled(writes.map((run) => run()));
-  return results.filter((result) => result.status === 'fulfilled').length;
+  const saved = results.filter((result) => result.status === 'fulfilled').length;
+  if (saved < writes.length) onFailures?.(writes.length - saved, writes.length);
+  return saved;
 }
