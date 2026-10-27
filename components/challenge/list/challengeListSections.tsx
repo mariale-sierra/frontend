@@ -39,6 +39,9 @@ export interface ExploreChallengeViewModel {
   /** The challenge photo once it passed moderation; `null`/absent shows the
    * placeholder (no photo, still in review, or rejected). */
   imageUrl?: string | null;
+  /** A private challenge is asked to join (the owner approves), so its card
+   * says "Request" instead of "Join" — same wording as Challenge-Info. */
+  isPrivate?: boolean;
 }
 
 /** The props of a Challenges-Explore card — the same for every design of it. */

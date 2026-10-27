@@ -166,6 +166,9 @@ export interface ChallengeContract {
   imageUrl?: string | null;
   /** 'none' = no photo. Absent on responses from before the photo existed. */
   imageStatus?: ChallengeImageStatus;
+  /** B11 (sprint 10): a private challenge seen by someone outside it — its
+   * `cycle_days` only say which days are rest days, without routines. */
+  routine_hidden?: boolean;
   [key: string]: unknown;
 }
 

@@ -13,6 +13,7 @@ export type NotificationTypeCode =
   | 'challenge_join_response'
   | 'challenge_participant_joined'
   | 'challenge_closed'
+  | 'challenge_reopened'
   | 'challenge_removed'
   | 'report_resolved'
   | 'content_hidden';

@@ -182,6 +182,7 @@ function toExploreCard(challenge: ChallengeContract, labels: ChallengeListLabels
     dominantActivityCategory: pickDominantActivityCategory(challenge),
     author: pickAuthor(challenge),
     imageUrl: pickChallengeImageUrl(challenge),
+    isPrivate: String(challenge.visibility ?? '').toLowerCase() === 'private',
   };
 }
 

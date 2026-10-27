@@ -107,6 +107,18 @@ describe('toExploreChallengeViewModels', () => {
 
     expect(viewModel.author).toBeNull();
   });
+
+  it('marks private challenges so the card asks to join instead of joining', () => {
+    const [priv, pub, unknown] = toExploreChallengeViewModels([
+      buildChallenge({ id: 'P', visibility: 'private', members_count: 3 }),
+      buildChallenge({ id: 'O', visibility: 'public', members_count: 2 }),
+      buildChallenge({ id: 'U', members_count: 1 }),
+    ]);
+
+    expect(priv.isPrivate).toBe(true);
+    expect(pub.isPrivate).toBe(false);
+    expect(unknown.isPrivate).toBe(false);
+  });
 });
 
 describe('pickAuthor', () => {

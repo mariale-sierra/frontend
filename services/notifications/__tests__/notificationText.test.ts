@@ -40,6 +40,9 @@ describe('notificationText', () => {
     expect(
       notificationText({ ...base, type: 'challenge_closed', actor: null }, t),
     ).toBe('notifications.types.challenge_closed|');
+    expect(
+      notificationText({ ...base, type: 'challenge_reopened', actor: null }, t),
+    ).toBe('notifications.types.challenge_reopened|');
   });
 
   it.each([

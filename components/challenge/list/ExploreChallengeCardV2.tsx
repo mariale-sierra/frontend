@@ -78,7 +78,7 @@ export const ExploreChallengeCardV2 = memo(function ExploreChallengeCardV2({
                 opens the challenge, where joining happens. */}
             <View style={[styles.joinPill, { backgroundColor: accentColor }]} testID="explore-card-join">
               <Text variant="body" weight="bold" style={styles.joinText}>
-                {t('challenges.join')}
+                {t(challenge.isPrivate ? 'challenges.requestJoin' : 'challenges.join')}
               </Text>
               <Icon name="chevron-forward" size={18} color={colors.ink} />
             </View>

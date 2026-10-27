@@ -182,6 +182,16 @@ describe('Explore card (glow design, Sprint 10 mockups) specifics', () => {
     expect(screen.getByTestId('explore-card-join')).toBeTruthy();
   });
 
+  it('says "Join" on a public challenge and "Request" on a private one (B1/B2 wording)', async () => {
+    const pub = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge()} />);
+    expect(pub.getByText('Join')).toBeTruthy();
+    expect(pub.queryByText('Request')).toBeNull();
+
+    const priv = await renderWithProviders(<ExploreChallengeCardV2 challenge={buildChallenge({ isPrivate: true })} />);
+    expect(priv.getByText('Request')).toBeTruthy();
+    expect(priv.queryByText('Join')).toBeNull();
+  });
+
   it.each([
     ['no photo', undefined],
     ['a photo still in review or rejected (the API sends no URL)', null],

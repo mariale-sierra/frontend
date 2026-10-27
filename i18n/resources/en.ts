@@ -174,6 +174,7 @@ const en = {
     membersCount: '{{count}} members',
     view: 'View',
     join: 'Join',
+    requestJoin: 'Request',
     emptyMine: "You haven't joined any challenges yet.",
     emptyExplore: 'No challenges to explore right now.',
     emptyExploreFilter: 'No challenges in this category yet.',
@@ -275,6 +276,7 @@ const en = {
     showLess: 'Show less',
     cycleTitle: 'The cycle',
     cycleCaption: '{{cycleDays}}, repeating for {{totalDays}}',
+    routineHiddenNotice: "It's a private challenge: you'll see its routine once your request is approved.",
     restDayLabel: 'Rest day',
     restDayNoPhoto: 'no photo needed',
     exerciseCount_one: '{{count}} exercise',
@@ -1234,6 +1236,7 @@ const en = {
       challenge_join_response_rejected: 'Your request to join a challenge was declined',
       challenge_participant_joined: '{{name}} joined your challenge',
       challenge_closed: "A challenge you're in was closed",
+      challenge_reopened: "A challenge you're in was reopened",
       challenge_removed: 'You were removed from a challenge',
       report_resolved_actioned: 'We reviewed your report and took action. Thanks for helping',
       report_resolved_dismissed: 'We reviewed your report and found no violation',
@@ -1415,6 +1418,10 @@ const en = {
           join: {
             q: 'How do I join a challenge?',
             a: 'Open the challenge and tap "Join challenge". If it is private, the button says "Request to join": its creator reviews your request and you get a notification when they answer.',
+          },
+          private: {
+            q: 'What can I see of a private challenge before joining?',
+            a: 'Its name, photo, length, how many people are in it and which days are rest days. Each day’s routine is only for its members: you’ll see it once your request is approved.',
           },
           leave: {
             q: 'What happens if I leave a challenge?',

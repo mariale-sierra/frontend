@@ -33,6 +33,9 @@ export interface ChallengeDetailViewModel {
   authorName?: string;
   /** Rest days included — see ChallengeDaySummary's doc comment. */
   days: ChallengeDaySummary[];
+  /** A private challenge seen from outside it: the backend sends the cycle's
+   * shape without routines (B11), so the cycle list shows a notice instead. */
+  routineHidden: boolean;
 }
 
 export type ChallengeDetailAdapterResult =
@@ -155,6 +158,7 @@ export function toChallengeDetailViewModel(
       categoriesLabel: pickCategoriesLabel(challenge, labels.categoryFallbackLabel),
       authorName: getAuthorName(challenge),
       days: mapDays(challenge, locationsLabel),
+      routineHidden: challenge.routine_hidden === true,
     },
   };
 }

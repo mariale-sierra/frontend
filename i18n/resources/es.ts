@@ -174,6 +174,7 @@ const es = {
     membersCount: '{{count}} miembros',
     view: 'Ver',
     join: 'Unirme',
+    requestJoin: 'Solicitar',
     emptyMine: 'Aún no te has unido a ningún reto.',
     emptyExplore: 'No hay retos para explorar por ahora.',
     emptyExploreFilter: 'Aún no hay retos en esta categoría.',
@@ -270,6 +271,7 @@ const es = {
     showLess: 'Ver menos',
     cycleTitle: 'El ciclo',
     cycleCaption: '{{cycleDays}}, se repite durante {{totalDays}}',
+    routineHiddenNotice: 'Es un reto privado: verás su rutina cuando aprueben tu solicitud.',
     restDayLabel: 'Día de descanso',
     restDayNoPhoto: 'no necesita foto',
     exerciseCount_one: '{{count}} ejercicio',
@@ -1198,6 +1200,7 @@ const es = {
       challenge_join_response_rejected: 'Rechazaron tu solicitud para unirte a un reto',
       challenge_participant_joined: '{{name}} se unió a tu reto',
       challenge_closed: 'Se cerró un reto en el que participas',
+      challenge_reopened: 'Se reabrió un reto en el que participas',
       challenge_removed: 'Te removieron de un reto',
       report_resolved_actioned: 'Revisamos tu reporte y tomamos medidas. Gracias por ayudar',
       report_resolved_dismissed: 'Revisamos tu reporte y no encontramos una infracción',
@@ -1379,6 +1382,10 @@ const es = {
           join: {
             q: '¿Cómo me uno a un reto?',
             a: 'Abre el reto y toca "Unirme al reto". Si el reto es privado, el botón dice "Solicitar unirme": quien lo creó revisa tu solicitud y te llega una notificación cuando responda.',
+          },
+          private: {
+            q: '¿Qué veo de un reto privado antes de entrar?',
+            a: 'Su nombre, foto, duración, cuántas personas participan y qué días son de descanso. La rutina de cada día solo la ven sus miembros: la verás cuando aprueben tu solicitud.',
           },
           leave: {
             q: '¿Qué pasa si salgo de un reto?',

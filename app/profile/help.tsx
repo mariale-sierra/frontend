@@ -12,7 +12,7 @@ import { withAlpha } from '../../utils/color';
 
 /** Section → question ids; the copy lives in `help.sections.<section>.items.<question>`. */
 export const HELP_SECTIONS = {
-  challenges: ['join', 'leave', 'finish', 'location'],
+  challenges: ['join', 'private', 'leave', 'finish', 'location'],
   progress: ['log', 'restDay', 'streak', 'badges'],
   privacy: ['photoVisibility', 'privateProfile', 'deleteAccount'],
   posts: ['review', 'report', 'delete', 'suspension'],

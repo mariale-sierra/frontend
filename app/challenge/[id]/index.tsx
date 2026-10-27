@@ -477,6 +477,7 @@ export default function ChallengeDetail() {
             durationDays={view.durationDays}
             accentColor={accentColor}
             onPressDay={(day) => router.push(`/challenge/${id}/routine/${day}`)}
+            hiddenNotice={view.routineHidden ? t('challengeInfo.routineHiddenNotice') : undefined}
           />
         </View>
       </ScrollView>
