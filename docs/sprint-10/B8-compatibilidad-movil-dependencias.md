@@ -1684,13 +1684,15 @@ configuración (§4.1), no de un dispositivo.
 | B-4 | ~~`xcode-select` apunta a CLT~~ | — | **RESUELTO** sin `sudo` usando `DEVELOPER_DIR` |
 | B-5 | Sin cuenta Apple Developer de pago | **solo** las notificaciones push en iOS (F13) | 99 USD/año, o aceptar el camino A |
 | B-6 | ~~iPhone no conectado~~ | — | **RESUELTO**: conectado, confiado y con Modo de desarrollador `enabled` (§9.2.4) |
-| B-7 | B3 sin mergear + API en HTTP | que iOS llegue al backend (§4.4, §9.4) | merge de B3 o backend en red local |
+| B-7 | ~~B3 sin mergear + API en HTTP~~ | — | **RESUELTO (2026-10-27)**: B3 está en `development` (PR #18; el `main` del frontend todavía no lo tiene) y el API responde en `https://havit-api.canadacentral.cloudapp.azure.com` con certificado válido. iOS ya puede hablar con producción (ATS lo permite). |
 | B-8 | Toolchain Android local incompleto | la build local y el emulador | plataforma `android-35` + `cmdline-tools` |
 | B-11 | ~~Componente de plataforma iOS no instalado en Xcode~~ | — | **RESUELTO**: runtime `iOS 26.4.1 (23E254a)` instalado (7,9 GB, *Ready*) y `-showdestinations` ya ofrece `Any iOS Device` |
 | B-9 | ~~Soporte de iOS 26.6.2 en Xcode 26.4.1 sin confirmar~~ | — | **RESUELTO**: el iPhone aparece como destino disponible en `-showdestinations` (§9.2.4). No hace falta actualizar Xcode |
 | B-10 | Sin credenciales FCM/APNs | push en ambas plataformas | configurar en EAS |
 
 ## 12. Coordinación con otras tareas
+
+> **Actualización 2026-10-27.** B3 ya se fusionó a `development` (PR #18). El `main` del frontend todavía no lo incluye: el último merge a `main` fue el PR #19, del 2026-10-23. El punto de merge descrito abajo quedó resuelto: `app.config.js` combina `...buildProperties.android` con `usesCleartextTraffic`, así que conserva `minSdkVersion`/`compileSdkVersion`/`targetSdkVersion` y `ios.deploymentTarget`, y `__tests__/nativeConfig.test.ts` pasa. El texto de abajo describe el estado al 2026-10-25.
 
 **B3 (HTTPS y transporte).** `origin/feature/sprint10-b3-https` existe, **no está
 mergeada** y está por detrás de `development` (no contiene B4). Toca

@@ -5,7 +5,12 @@ Responsable: Ale Pérez · 2026-10-23. Documento principal (infraestructura, Pos
 ## 1. Resumen
 
 La seguridad del transporte ahora depende de la variante de build. `development` puede usar HTTP (backend en la LAN con `npm run start:local`). `preview` y `production` salen con `usesCleartextTraffic=false`, y `app.config.js` **falla** si la URL del API no es `https://`, para no publicar por accidente un APK que mande contraseñas y JWT en claro.
-**Criterio: PARCIAL.** Configuración verificada (config resuelta y `AndroidManifest.xml` generado). Pendiente: el dominio HTTPS, la URL en EAS, compilar el APK y probarlo en dispositivo (B8).
+**Criterio: PARCIAL.** Configuración verificada (config resuelta y `AndroidManifest.xml` generado).
+
+> **Actualización 2026-10-27.** El dominio y la URL en EAS ya están (ver §4). El API responde por HTTPS con un certificado válido de Let's Encrypt que vence el 2027-01-24, y HTTP redirige con 308 (`backend/docs/sprint-10/evidencias-b3/verificacion-produccion-2026-10-27.txt`). Falta:
+> - compilar y distribuir el APK `preview`/`production` con HTTPS (B8);
+> - probarlo en un dispositivo;
+> - después, cerrar el puerto 3000, que sigue abierto (`http://20.63.84.1:3000/health` → 200). Los APK viejos todavía lo usan.
 
 ## 2. Decisiones técnicas
 
