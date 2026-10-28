@@ -79,6 +79,21 @@ describe('toExploreChallengeViewModels', () => {
     expect(viewModels.map((v) => v.challengeId)).toEqual(['most', 'some', 'few', 'none']);
   });
 
+  // Sprint 10: the official @havit challenges always lead Explore.
+  it("puts the official @havit account's challenges first, then the most-joined", () => {
+    const havit = (id: string): ChallengeAuthorContract => ({ id, username: 'Havit', displayName: null, profileImageUrl: null });
+    const challenges = [
+      buildChallenge({ id: 'popular', members_count: 248 }),
+      buildChallenge({ id: 'havit-small', members_count: 2, author: havit('h') }),
+      buildChallenge({ id: 'other', members_count: 40 }),
+      buildChallenge({ id: 'havit-big', members_count: 10, author: havit('h') }),
+    ];
+
+    const viewModels = toExploreChallengeViewModels(challenges);
+
+    expect(viewModels.map((v) => v.challengeId)).toEqual(['havit-big', 'havit-small', 'popular', 'other']);
+  });
+
   it("carries the challenge's author through to the card", () => {
     const author: ChallengeAuthorContract = {
       id: 'u1',

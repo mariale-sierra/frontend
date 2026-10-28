@@ -1,8 +1,14 @@
 import { act, fireEvent } from '@testing-library/react-native';
+import { router } from 'expo-router';
 import { renderWithTheme as render } from '../../../test-utils/renderWithTheme';
 import { IMAGES_READY_TIMEOUT_MS } from '../../../hooks/useImagesReady';
 import { FriendsStreakSection } from '../FriendsStreakSection';
 import type { FriendStreakViewModel } from '../../../services/adapters/followAdapter';
+
+jest.mock('expo-router', () => {
+  const router = { push: jest.fn() };
+  return { router, useRouter: () => router };
+});
 
 // Sprint 10: the streaks row stays a skeleton until every profile picture is on screen.
 describe('FriendsStreakSection', () => {
@@ -11,6 +17,9 @@ describe('FriendsStreakSection', () => {
     { userId: '2', username: 'luis', avatarUrl: 'https://cdn.test/luis.jpg', streakDays: 2, loggedToday: false },
   ];
   const HIDDEN = { includeHiddenElements: true };
+  // The avatar photo (the card around it carries the same label, as a button).
+  const photoOf = (screen: Awaited<ReturnType<typeof render>>, username: string) =>
+    screen.getAllByLabelText(username, HIDDEN).find((node) => node.props.source)!;
 
   it('shows the skeleton until every profile picture has rendered', async () => {
     const screen = await render(<FriendsStreakSection friends={FRIENDS} />);
@@ -18,10 +27,10 @@ describe('FriendsStreakSection', () => {
     expect(screen.getByTestId('friends-streak-skeleton')).toBeTruthy();
     expect(screen.queryByText('ana')).toBeNull();
 
-    await fireEvent(screen.getByLabelText('ana', HIDDEN), 'loadEnd');
+    await fireEvent(photoOf(screen, 'ana'), 'loadEnd');
     expect(screen.getByTestId('friends-streak-skeleton')).toBeTruthy();
 
-    await fireEvent(screen.getByLabelText('luis', HIDDEN), 'loadEnd');
+    await fireEvent(photoOf(screen, 'luis'), 'loadEnd');
 
     expect(screen.queryByTestId('friends-streak-skeleton')).toBeNull();
     expect(screen.getByText('ana')).toBeTruthy();
@@ -50,5 +59,12 @@ describe('FriendsStreakSection', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  // Sprint 10: tapping a friend opens their profile.
+  it("opens a friend's profile when their card is tapped", async () => {
+    const screen = await render(<FriendsStreakSection friends={FRIENDS.map((f) => ({ ...f, avatarUrl: undefined }))} />);
+    await fireEvent.press(screen.getByTestId('friend-streak-2'));
+    expect(router.push).toHaveBeenCalledWith('/profile/2');
   });
 });

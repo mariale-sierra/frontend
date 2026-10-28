@@ -665,10 +665,12 @@ const styles = StyleSheet.create({
     marginTop: -spacing.sm,
     marginBottom: spacing.lg,
   },
+  // Sprint 10: `ink` like the screen behind it (was a `surface` slab); the
+  // hairline on top still marks where the scrolling content ends.
   bottomBar: {
     paddingHorizontal: spacing.base,
     paddingTop: spacing.md,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.ink,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: withAlpha(colors.paper, 0.08),
   },

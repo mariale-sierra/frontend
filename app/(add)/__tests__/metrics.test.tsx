@@ -134,15 +134,14 @@ describe('the Log Metrics screen', () => {
     expect(screen.getByText('logMetrics.entry.dayWithRoutine:3:Push')).toBeTruthy();
   });
 
-  it('has no surface-colored header any more — only the bottom bar with the CTA is on `surface`', async () => {
+  // Sprint 10: the bottom bar lost its `surface` slab too — it cut across the
+  // bottom gradient — so nothing on the screen sits on `surface` now.
+  it('has no surface-colored header or bottom bar: the CTA sits right on the gradient', async () => {
     mockScreen();
     await renderWithTheme(<Metrics />);
 
-    const onSurface = withBackground(screen.toJSON() as Node, colors.surface);
-
-    expect(onSurface).toHaveLength(1);
-    expect(textOf(onSurface[0])).toContain('logMetrics.entry.logDayCta');
-    expect(textOf(onSurface[0])).not.toContain('Morning Strength');
+    expect(withBackground(screen.toJSON() as Node, colors.surface)).toHaveLength(0);
+    expect(screen.getByText('logMetrics.entry.logDayCta')).toBeTruthy();
   });
 
   describe('where you train (B7 on the register screen)', () => {

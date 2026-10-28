@@ -12,7 +12,6 @@ import { SpaceForm } from '../../../components/spaces/SpaceForm';
 import type { SpaceFormHandle } from '../../../components/spaces/SpaceForm';
 import { createSpace } from '../../../services/spaces/spaces.service';
 import { colors, spacing } from '../../../constants/theme';
-import { withAlpha } from '../../../utils/color';
 import type { CreateSpacePayload } from '../../../types/space';
 
 /** Create-space screen — wireframe Chats-47C is the SAME screen for create
@@ -41,10 +40,14 @@ export default function CreateSpaceScreen() {
   }
 
   return (
-    <ScreenBackground variant="default">
+    // Sprint 10: laid out like Edit profile — its compact top bar (a small bold
+    // centered title, not the big `title`) over the same top-lit background.
+    <ScreenBackground variant="top">
       <View style={styles.header}>
-        <BackButton />
-        <Text variant="title">{t('spaces.createTitle')}</Text>
+        <BackButton style={styles.backButton} />
+        <Text variant="body" weight="bold" align="center" style={styles.headerTitle}>
+          {t('spaces.createTitle')}
+        </Text>
         <View style={styles.headerSpacer} />
       </View>
       <View style={styles.contentWrap}>
@@ -85,11 +88,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.base,
+  },
+  backButton: {
+    marginLeft: -spacing.sm,
+  },
+  headerTitle: {
+    flex: 1,
   },
   headerSpacer: {
-    width: 40,
+    width: 44,
+    height: 44,
   },
   contentWrap: {
     flex: 1,
@@ -101,14 +111,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing['2xl'],
   },
-  // Same sticky-footer chrome as manage.tsx / the metrics screen's own
-  // bottom bar (app/(add)/metrics.tsx).
+  // Sprint 10: the Create button sits right on the background, without the
+  // gray `surface` slab (like the metrics screen's bottom bar now).
   footer: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    backgroundColor: colors.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: withAlpha(colors.paper, 0.08),
   },
   submitError: {
     color: colors.error,

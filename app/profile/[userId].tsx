@@ -19,7 +19,7 @@ import { useIsAdmin } from '../../hooks/useIsAdmin';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { getUserPosts } from '../../services/challenge/challenge.service';
-import { BadgesSection } from '../../components/badges';
+import { IconButton } from '../../components/ui/iconButton';
 import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { useUserPosts } from '../../hooks/useUserPosts';
 import { queryKeys, staleTimes } from '../../services/cache/queries';
@@ -179,6 +179,19 @@ export default function UserProfile() {
     <ScreenBackground variant="default">
       <View style={styles.header}>
         <BackButton />
+        {/* Sprint 10: badges behind the same ribbon icon as your own profile,
+            on their own screen, instead of a row under the header. */}
+        {profile && (
+          <IconButton
+            name="ribbon-outline"
+            iconSize={22}
+            onPress={() => router.push({ pathname: '/profile/badges', params: { userId: profile.id } })}
+            accessibilityRole="button"
+            accessibilityLabel={t('badges.openA11y')}
+            hitSlop={10}
+            testID="open-user-badges"
+          />
+        )}
       </View>
       {profileQuery.isLoading || !profile ? (
         <ScrollView
@@ -255,7 +268,6 @@ export default function UserProfile() {
                   )
                 }
               />
-              <BadgesSection userId={profile.id} />
             </>
           }
         />
@@ -285,7 +297,11 @@ export default function UserProfile() {
 }
 
 const styles = StyleSheet.create({
+  // Back on the left, the badges icon on the right.
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xs,
   },

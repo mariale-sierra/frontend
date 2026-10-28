@@ -66,6 +66,24 @@ export function boostSaturation(hex: string, factor: number) {
   return transformHsl(hex, (h, s, l) => [h, Math.min(1, s * factor), l]);
 }
 
+/** Scales a hex color's HSV saturation by `factor` (clamped to 1), keeping hue
+ * and brightness: each channel's distance below the brightest one grows by
+ * `factor`. Deepens a color whose HSL saturation is already maxed (a bright
+ * one like `#FFBE51`, where `boostSaturation` can do nothing) toward its pure
+ * hue. Non-6-digit hex values are returned unchanged. */
+export function boostHsvSaturation(hex: string, factor: number) {
+  const normalized = hex.replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return hex;
+  const channels = [0, 2, 4].map((i) => parseInt(normalized.slice(i, i + 2), 16));
+  const max = Math.max(...channels);
+  const min = Math.min(...channels);
+  if (max === 0 || max === min) return hex;
+  const scale = Math.min(factor, max / (max - min));
+  return `#${channels
+    .map((c) => Math.round(max - (max - c) * scale).toString(16).padStart(2, '0').toUpperCase())
+    .join('')}`;
+}
+
 /** Mixes a 6-digit hex color toward white by `amount` (0 = unchanged, 1 =
  * pure white) — a straight per-channel RGB lerp, not an HSL lightness bump
  * (which can visibly shift hue/saturation as it approaches white). For a

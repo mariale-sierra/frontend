@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { Row } from '../../components/layout/row';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
 import { CoachMark } from '../../components/onboarding/CoachMark';
@@ -325,7 +326,9 @@ export default function Challenges() {
           style={({ pressed }) => [styles.newButton, pressed && styles.newButtonPressed]}
           accessibilityRole="button"
         >
-          <Icon name="add-outline" size={16} color={colors.ink} />
+          {/* Sprint 10: a heavier plus than Ionicons' outline one, by request
+              (an exception to the outline-icons rule). */}
+          <MaterialCommunityIcons name="plus-thick" size={16} color={colors.ink} testID="challenges-new-plus" />
           <Text variant="label" weight="bold" inverse>
             {t('challenges.newButton')}
           </Text>
@@ -453,7 +456,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radius.big,
-    backgroundColor: colors.primary,
+    // Sprint 10: pure white (`paper`), not the cream `primary`.
+    backgroundColor: colors.paper,
   },
   newButtonPressed: {
     opacity: 0.9,

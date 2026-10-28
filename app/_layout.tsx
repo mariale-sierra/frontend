@@ -113,6 +113,10 @@ function RootNavigator() {
   return (
     <NavigationThemeProvider value={navigationTheme}>
       <Stack>
+        {/* The start route that redirects to login or Home. Undeclared, it got the
+            navigator's default header ("index") on a blank screen for the moment
+            it took to restore the session. */}
+        <Stack.Screen name="index" options={{ headerShown: false, contentStyle: { backgroundColor: colors.ink } }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false, contentStyle: { backgroundColor: colors.ink } }} />
         {/* A regular card screen (was a placeholder modal): it pushes other

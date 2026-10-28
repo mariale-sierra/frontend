@@ -1,4 +1,4 @@
-import { boostSaturation, rotateHue } from '../color';
+import { boostHsvSaturation, boostSaturation, rotateHue } from '../color';
 
 describe('boostSaturation', () => {
   it('keeps hue and lightness while raising saturation', () => {
@@ -45,5 +45,23 @@ describe('hueOf', () => {
     expect(hueOf('#FF0000')).toBeCloseTo(0);
     expect(hueOf('#00FF00')).toBeCloseTo(120);
     expect(hueOf('#808080')).toBeNull();
+  });
+});
+
+// Sprint 10: deepens a color whose HSL saturation is already maxed (strength's amber).
+describe('boostHsvSaturation', () => {
+  it('deepens a bright color toward its pure hue, keeping hue and brightness', () => {
+    // #FFBE51: HSV saturation 68% -> 82%, still full brightness (FF), same amber hue.
+    expect(boostHsvSaturation('#FFBE51', 1.2)).toBe('#FFB12E');
+    expect(boostSaturation('#FFBE51', 1.2)).toBe('#FFBE51');
+  });
+
+  it('never goes past the pure hue', () => {
+    expect(boostHsvSaturation('#FF8000', 2)).toBe('#FF8000');
+  });
+
+  it('leaves grays and non-hex values alone', () => {
+    expect(boostHsvSaturation('#808080', 1.5)).toBe('#808080');
+    expect(boostHsvSaturation('red', 1.5)).toBe('red');
   });
 });

@@ -1,5 +1,6 @@
 import { memo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 import { colors, radius, spacing } from '../../constants/theme';
@@ -19,8 +20,17 @@ export const FriendStreakCard = memo(function FriendStreakCard({ friend, onAvata
   // a white label once this friend logged a workout today.
   const badgeColor = friend.loggedToday ? colors.success : colors.primary;
 
+  const router = useRouter();
+
   return (
-    <View style={styles.card}>
+    // Sprint 10: tapping a friend opens their profile.
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      onPress={() => router.push(`/profile/${friend.userId}`)}
+      accessibilityRole="button"
+      accessibilityLabel={friend.username}
+      testID={`friend-streak-${friend.userId}`}
+    >
       <View style={styles.avatarWrap}>
         <UserAvatar
           username={friend.username}
@@ -39,7 +49,7 @@ export const FriendStreakCard = memo(function FriendStreakCard({ friend, onAvata
       <Text variant="caption" tone="secondary" numberOfLines={1} style={styles.name}>
         {friend.username}
       </Text>
-    </View>
+    </Pressable>
   );
 });
 
@@ -50,6 +60,9 @@ const styles = StyleSheet.create({
     // Grows with the badge's `bottom` offset (each step down is matched here)
     // to keep the badge→username gap visually unchanged.
     gap: spacing.base,
+  },
+  pressed: {
+    opacity: 0.7,
   },
   avatarWrap: {
     width: AVATAR_SIZE,

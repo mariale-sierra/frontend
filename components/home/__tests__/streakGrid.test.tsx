@@ -1,14 +1,28 @@
+import { fireEvent } from '@testing-library/react-native';
+import { router } from 'expo-router';
 import { renderWithTheme } from '../../../test-utils/renderWithTheme';
 import { StreakGridItem } from '../StreakGridItem';
 import { StreaksGridSkeleton } from '../StreaksGridSkeleton';
 import { STREAK_GRID_COLUMNS } from '../../../constants/streaksGrid';
 import { getStreakGridLayout } from '../../../utils/streaksGrid';
 
+jest.mock('expo-router', () => {
+  const router = { push: jest.fn() };
+  return { router, useRouter: () => router };
+});
+
 const { avatarSize } = getStreakGridLayout(390);
 
 describe('StreakGridItem', () => {
   const render = () =>
-    renderWithTheme(<StreakGridItem username="alice" streakDays={7} loggedToday={false} size={avatarSize} />);
+    renderWithTheme(<StreakGridItem userId="u-alice" username="alice" streakDays={7} loggedToday={false} size={avatarSize} />);
+
+  // Sprint 10: tapping a friend opens their profile.
+  it('opens the friend’s profile when tapped', async () => {
+    const screen = await render();
+    await fireEvent.press(screen.getByTestId('streak-grid-item-u-alice'));
+    expect(router.push).toHaveBeenCalledWith('/profile/u-alice');
+  });
 
   it('shows the friend’s name and streak', async () => {
     const screen = await render();

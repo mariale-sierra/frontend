@@ -107,6 +107,7 @@ export default function StreaksAllScreen() {
                 <View style={styles.cell}>
                   {!('filler' in item) && (
                     <StreakGridItem
+                      userId={item.userId}
                       username={item.username}
                       avatarUrl={item.avatarUrl}
                       streakDays={item.streakDays}

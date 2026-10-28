@@ -87,7 +87,9 @@ export default function Metrics() {
     if (challengeLoadError) {
       return (
         <View style={styles.stateWrap}>
-          <Text tone="secondary" align="center">{t('metrics.alerts.submitErrorFallback')}</Text>
+          <Text tone="secondary" align="center">
+            {t('metrics.alerts.submitErrorFallback')}
+          </Text>
         </View>
       );
     }
@@ -95,7 +97,9 @@ export default function Metrics() {
     if (isEmpty) {
       return (
         <View style={styles.stateWrap}>
-          <Text tone="secondary" align="center">{t('logMetrics.pickChallenge.emptyMessage')}</Text>
+          <Text tone="secondary" align="center">
+            {t('logMetrics.pickChallenge.emptyMessage')}
+          </Text>
         </View>
       );
     }
@@ -103,26 +107,26 @@ export default function Metrics() {
     if (exerciseMetrics.length === 0) {
       return (
         <View style={styles.stateWrap}>
-          <Text tone="secondary" align="center">{t('logMetrics.entry.noExercises')}</Text>
+          <Text tone="secondary" align="center">
+            {t('logMetrics.entry.noExercises')}
+          </Text>
         </View>
       );
     }
 
     return (
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.list} showsVerticalScrollIndicator={false}>
-        <Stack gap="base">
-          {exerciseMetrics.map((exercise, index) => (
-            <LogMetricsExerciseCard
-              key={exercise.id}
-              exercise={exercise}
-              position={index + 1}
-              onChangeValue={(rowIndex, field, nextValue) =>
-                updateMetricValue(exercise.id, rowIndex, field, String(nextValue))
-              }
-            />
-          ))}
-        </Stack>
-      </ScrollView>
+      <Stack gap="base" style={styles.list}>
+        {exerciseMetrics.map((exercise, index) => (
+          <LogMetricsExerciseCard
+            key={exercise.id}
+            exercise={exercise}
+            position={index + 1}
+            onChangeValue={(rowIndex, field, nextValue) =>
+              updateMetricValue(exercise.id, rowIndex, field, String(nextValue))
+            }
+          />
+        ))}
+      </Stack>
     );
   }
 
@@ -134,67 +138,77 @@ export default function Metrics() {
       gradientEdge="bottom"
       gradientPages={backgroundPages}
     >
-
-      <Row justify="space-between" align="center" style={[styles.topBar, { paddingTop: insets.top + spacing.md }]}>
-        <Pressable
-          onPress={goBack}
-          hitSlop={12}
-          style={styles.iconButton}
-          accessibilityRole="button"
-          accessibilityLabel={t('common.actions.back')}
-        >
-          <Icon name="chevron-back-outline" size={24} color={colors.paper} />
-        </Pressable>
-        <Pressable
-          onPress={goToRestDay}
-          style={({ pressed }) => [styles.restDayButton, pressed && styles.restDayButtonPressed]}
-          accessibilityRole="button"
-          accessibilityLabel={t('challenges.restDay')}
-        >
-          <Icon name="moon-outline" size={16} color={colors.ink} />
-          <Text variant="label" weight="bold" style={styles.restDayButtonText}>
-            {t('challenges.restDay')}
-          </Text>
-        </Pressable>
-      </Row>
-
-      <View style={styles.titleBlock}>
-        <Text variant="header" size="xs" numberOfLines={1} style={styles.eyebrow}>
-          {selectedChallenge?.label ?? ''}
-        </Text>
-        <Text variant="title" numberOfLines={2} style={styles.dayTitle}>
-          {routineName
-            ? t('logMetrics.entry.dayWithRoutine', { day: currentDay ?? 1, routine: routineName })
-            : t('logMetrics.pickChallenge.dayLabel', { day: currentDay ?? 1 })}
-        </Text>
-        {adaptation && (
-          <Text variant="caption" tone="secondary">
-            {t('challengeRoutineDay.location.yourVersion', { location: adaptation.locationName })}
-          </Text>
-        )}
-        {adaptationInvalid && (
-          <Text variant="caption" tone="secondary">{t('challengeRoutineDay.location.invalidSwaps')}</Text>
-        )}
-        {routineId != null && baseExercises.length > 0 && !isLoadingData && (
+      {/* Sprint 10: the header (back, Rest day, challenge, Day N, location)
+          scrolls away with the exercises instead of staying pinned. */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Row justify="space-between" align="center" style={[styles.topBar, { paddingTop: insets.top + spacing.md }]}>
           <Pressable
-            onPress={() => setLocationSheetVisible(true)}
-            style={({ pressed }) => [styles.locationButton, pressed && styles.restDayButtonPressed]}
+            onPress={goBack}
+            hitSlop={12}
+            style={styles.iconButton}
             accessibilityRole="button"
-            accessibilityLabel={t('challengeRoutineDay.location.changeA11y')}
-            testID="metrics-change-location"
+            accessibilityLabel={t('common.actions.back')}
           >
-            <Icon name="location-outline" size={16} color={colors.paper} />
-            <Text variant="label" weight="bold" style={styles.locationButtonText}>
-              {adaptation
-                ? t('challengeRoutineDay.location.trainingAt', { location: adaptation.locationName })
-                : t('challengeRoutineDay.location.sheetTitle')}
-            </Text>
-            <Icon name="chevron-down-outline" size={14} color={colors.paper} />
+            <Icon name="chevron-back-outline" size={24} color={colors.paper} />
           </Pressable>
-        )}
-      </View>
+          <Pressable
+            onPress={goToRestDay}
+            style={({ pressed }) => [styles.restDayButton, pressed && styles.restDayButtonPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={t('challenges.restDay')}
+          >
+            <Icon name="moon-outline" size={16} color={colors.ink} />
+            <Text variant="label" weight="bold" style={styles.restDayButtonText}>
+              {t('challenges.restDay')}
+            </Text>
+          </Pressable>
+        </Row>
 
-      <View style={styles.contentWrap}>{renderContent()}</View>
+        <View style={styles.titleBlock}>
+          <Text variant="header" size="xs" numberOfLines={1} style={styles.eyebrow}>
+            {selectedChallenge?.label ?? ''}
+          </Text>
+          <Text variant="title" numberOfLines={2} style={styles.dayTitle}>
+            {routineName
+              ? t('logMetrics.entry.dayWithRoutine', { day: currentDay ?? 1, routine: routineName })
+              : t('logMetrics.pickChallenge.dayLabel', { day: currentDay ?? 1 })}
+          </Text>
+          {adaptation && (
+            <Text variant="caption" tone="secondary">
+              {t('challengeRoutineDay.location.yourVersion', { location: adaptation.locationName })}
+            </Text>
+          )}
+          {adaptationInvalid && (
+            <Text variant="caption" tone="secondary">
+              {t('challengeRoutineDay.location.invalidSwaps')}
+            </Text>
+          )}
+          {routineId != null && baseExercises.length > 0 && !isLoadingData && (
+            <Pressable
+              onPress={() => setLocationSheetVisible(true)}
+              style={({ pressed }) => [styles.locationButton, pressed && styles.restDayButtonPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={t('challengeRoutineDay.location.changeA11y')}
+              testID="metrics-change-location"
+            >
+              <Icon name="location-outline" size={16} color={colors.paper} />
+              <Text variant="label" weight="bold" style={styles.locationButtonText}>
+                {adaptation
+                  ? t('challengeRoutineDay.location.trainingAt', { location: adaptation.locationName })
+                  : t('challengeRoutineDay.location.sheetTitle')}
+              </Text>
+              <Icon name="chevron-down-outline" size={14} color={colors.paper} />
+            </Pressable>
+          )}
+        </View>
+
+        <View style={styles.contentWrap}>{renderContent()}</View>
+      </ScrollView>
 
       <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
         {showLogScreenCoachMark && hasChallenges && (
@@ -293,9 +307,13 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
   },
+  // Grows to the screen's height, so the loading/empty states still center.
+  scrollContent: {
+    flexGrow: 1,
+  },
   list: {
     paddingHorizontal: spacing.base,
-    paddingBottom: spacing['2xl'] + 132,
+    paddingBottom: spacing.xl,
   },
   stateWrap: {
     flex: 1,
@@ -303,12 +321,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.xl,
   },
+  // Sprint 10: no gray `surface` slab under the button any more — it cut
+  // across the screen's bottom gradient. The button and its caption sit right
+  // on the gradient, like the rest of the screen.
   bottomBar: {
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    backgroundColor: colors.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: withAlpha(colors.paper, 0.08),
   },
 });

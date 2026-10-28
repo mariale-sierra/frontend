@@ -2,7 +2,8 @@ import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { Fill } from '@shopify/react-native-skia';
 import { AccentDome } from '../ui/accentDome';
 import { WebSafeCanvas } from '../ui/webSafeCanvas';
-import { colors } from '../../constants/theme';
+import { activityColors, colors } from '../../constants/theme';
+import { boostHsvSaturation } from '../../utils/color';
 
 interface ChallengeAccentBackdropProps {
   /** The challenge's own activity accent color. */
@@ -21,6 +22,28 @@ const BLOOM_PEAK = 0.26;
 const BLOOM_BLUR_RATIO = 0.04;
 
 const GRAIN_OPACITY = 0.02;
+
+// Sprint 10: a bit more saturated than the shared default
+// (ACCENT_VIVID_FACTOR, 1.25) — the challenge screens' light read a little dull.
+const VIVID_FACTOR = 1.45;
+// The boost above already takes every activity color to its HSL saturation cap,
+// so going further deepens each one toward its pure hue instead (HSV
+// saturation), keeping hue and brightness — Sprint 10. A touch for every
+// activity, a bit more for strength's amber, cardio intense's lime and mind
+// body's pink.
+const DEEPEN_DEFAULT = 1.1;
+const DEEPEN_BY_COLOR: Record<string, number> = {
+  [activityColors.strength.toUpperCase()]: 1.25,
+  [activityColors.cardioIntense.toUpperCase()]: 1.25,
+  [activityColors.mindBody.toUpperCase()]: 1.25,
+};
+const ACTIVITY_COLORS = new Set(Object.values(activityColors).map((color) => color.toUpperCase()));
+
+function backdropColor(color: string) {
+  const key = color.toUpperCase();
+  if (!ACTIVITY_COLORS.has(key)) return color;
+  return boostHsvSaturation(color, DEEPEN_BY_COLOR[key] ?? DEEPEN_DEFAULT);
+}
 
 /**
  * Skia backdrop for a challenge-scoped screen (Challenge-Info, the progress
@@ -44,13 +67,14 @@ export function ChallengeAccentBackdrop({ color }: ChallengeAccentBackdropProps)
         <AccentDome
           width={width}
           height={height}
-          color={color}
+          color={backdropColor(color)}
           domeHalfWidth={DOME_HALF_WIDTH}
           domeDepth={DOME_DEPTH}
           washPeak={WASH_PEAK}
           bloomPeak={BLOOM_PEAK}
           bloomBlur={width * BLOOM_BLUR_RATIO}
           grainOpacity={GRAIN_OPACITY}
+          vividFactor={VIVID_FACTOR}
         />
       </WebSafeCanvas>
     </View>

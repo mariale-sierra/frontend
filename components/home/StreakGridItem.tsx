@@ -1,9 +1,12 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
 import { colors, radius, spacing } from '../../constants/theme';
 
 interface StreakGridItemProps {
+  /** Whose streak — tapping it opens their profile. */
+  userId: string;
   username: string;
   avatarUrl?: string;
   streakDays: number;
@@ -15,6 +18,7 @@ interface StreakGridItemProps {
 }
 
 export function StreakGridItem({
+  userId,
   username,
   avatarUrl,
   streakDays,
@@ -27,8 +31,17 @@ export function StreakGridItem({
   // friend logged a workout today.
   const badgeColor = loggedToday ? colors.success : colors.primary;
 
+  const router = useRouter();
+
   return (
-    <View style={[styles.item, { width: size }]}>
+    // Sprint 10: tapping a friend opens their profile.
+    <Pressable
+      style={({ pressed }) => [styles.item, { width: size }, pressed && styles.pressed]}
+      onPress={() => router.push(`/profile/${userId}`)}
+      accessibilityRole="button"
+      accessibilityLabel={username}
+      testID={`streak-grid-item-${userId}`}
+    >
       <View style={{ width: size, height: size }}>
         <UserAvatar username={username} imageUrl={avatarUrl} size={size} circle onLoadEnd={onAvatarLoadEnd} />
         <View style={styles.badgeRow} pointerEvents="none">
@@ -42,11 +55,14 @@ export function StreakGridItem({
       <Text variant="caption" tone="secondary" numberOfLines={1} style={[styles.name, { width: size }]}>
         {username}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  pressed: {
+    opacity: 0.7,
+  },
   item: {
     alignItems: 'center',
     // Clears the badge hanging below the avatar, same spacing as FriendStreakCard.

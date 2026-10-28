@@ -640,11 +640,13 @@ const styles = StyleSheet.create({
   locationChips: {
     flexWrap: 'wrap',
   },
+  // Sprint 10: a solid `surface` pill (was a translucent `paper` fill, which
+  // let the gradient through and read as glass).
   locationChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.big,
-    backgroundColor: withAlpha(colors.paper, 0.08),
+    backgroundColor: colors.surface,
   },
   locationChipWarn: {
     borderWidth: StyleSheet.hairlineWidth,

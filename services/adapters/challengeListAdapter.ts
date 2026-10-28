@@ -259,6 +259,9 @@ export function toChallengeMineViewModels(
  * own state-priority sort above. `pickMembersCount` already falls back to
  * `0` for a challenge with no member-count field at all, so a brand-new
  * challenge sorts to the bottom rather than throwing/`NaN`-ing the sort.
+ *
+ * Sprint 10: the official @havit account's challenges always come first (the
+ * curated default set), then everyone else's; most-joined first within each.
  */
 export function toExploreChallengeViewModels(
   challenges: ChallengeContract[],
@@ -269,5 +272,12 @@ export function toExploreChallengeViewModels(
   };
   return challenges
     .map((c) => toExploreCard(c, labels))
-    .sort((a, b) => b.membersCount - a.membersCount);
+    .sort((a, b) => Number(isOfficial(b)) - Number(isOfficial(a)) || b.membersCount - a.membersCount);
+}
+
+/** The account that publishes the default challenges (its username is stored as "Havit"). */
+export const OFFICIAL_USERNAME = 'havit';
+
+function isOfficial(card: ExploreChallengeViewModel): boolean {
+  return card.author?.username.toLowerCase() === OFFICIAL_USERNAME;
 }

@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { fireEvent } from '@testing-library/react-native';
 import { renderWithProviders } from '../../../test-utils/renderWithProviders';
 import { ProfileHeader } from '../ProfileHeader';
 import { activityColors, colors, radius } from '../../../constants/theme';
@@ -42,5 +43,34 @@ describe('ProfileHeader — practice badges', () => {
     const screen = await renderHeader(['Weightlifting', 'Not a practice']);
 
     expect(screen.queryByText('Not a practice')).toBeNull();
+  });
+
+  // Sprint 10: one row of interests by default; "Show more" unfolds the rest.
+  describe('folding to one row', () => {
+    const layout = (height: number) => ({ nativeEvent: { layout: { x: 0, y: 0, width: 300, height } } });
+    const wrapOf = (screen: Awaited<ReturnType<typeof renderHeader>>) => screen.getByTestId('practice-badge-Weightlifting').parent!;
+
+    it('shows one row and a "Show more" toggle when the interests wrap past it', async () => {
+      const screen = await renderHeader(['Weightlifting', 'Boxing', 'HIIT', 'Running']);
+      await fireEvent(screen.getByTestId('practice-badge-Weightlifting'), 'layout', layout(36));
+      await fireEvent(wrapOf(screen), 'layout', layout(76));
+
+      const toggle = screen.getByTestId('practices-toggle');
+      expect(toggle.props.accessibilityState).toEqual(expect.objectContaining({ expanded: false }));
+      expect(styleOf(wrapOf(screen).parent!)).toMatchObject({ maxHeight: 36, overflow: 'hidden' });
+
+      await fireEvent.press(toggle);
+
+      expect(screen.getByTestId('practices-toggle').props.accessibilityState).toEqual(expect.objectContaining({ expanded: true }));
+      expect((styleOf(wrapOf(screen).parent!) ?? {}).maxHeight).toBeUndefined();
+    });
+
+    it('has no toggle when they all fit on one row', async () => {
+      const screen = await renderHeader(['Weightlifting', 'Boxing']);
+      await fireEvent(screen.getByTestId('practice-badge-Weightlifting'), 'layout', layout(36));
+      await fireEvent(wrapOf(screen), 'layout', layout(36));
+
+      expect(screen.queryByTestId('practices-toggle')).toBeNull();
+    });
   });
 });
