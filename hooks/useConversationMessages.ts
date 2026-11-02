@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import {
   deleteMessage as deleteMessageRequest,
@@ -27,6 +28,10 @@ export function useConversationMessages(conversationId: string) {
   const [hasMore, setHasMore] = useState(false);
   const oldestIdRef = useRef<number | null>(null);
   const latestIdRef = useRef<number | null>(null);
+  // A tick is skipped while the previous one is still out (a slow network
+  // would otherwise stack a request every 5s) and while the app is in the
+  // background (nobody is reading; the next focus/tick catches up).
+  const pollingRef = useRef(false);
   // Real, reported bug: "clicking the username to check out the profile
   // works, but when you go back to the chat, you are sent to the beginning
   // of the chat thread again." Root cause traced to this hook, not the
@@ -77,6 +82,8 @@ export function useConversationMessages(conversationId: string) {
   );
 
   const poll = useCallback(() => {
+    if (pollingRef.current || AppState.currentState !== 'active') return;
+    pollingRef.current = true;
     getMessages(conversationId, { limit: POLL_PAGE_SIZE })
       .then((page) => {
         const newer =
@@ -94,6 +101,9 @@ export function useConversationMessages(conversationId: string) {
       })
       .catch(() => {
         // Silent — a missed poll tick isn't worth surfacing as an error.
+      })
+      .finally(() => {
+        pollingRef.current = false;
       });
   }, [conversationId]);
 

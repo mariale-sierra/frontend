@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { getSpaceMessages, sendSpaceMessage } from '../services/spaces/spaces.service';
 import type { SpaceMessageContract } from '../types/space';
@@ -25,6 +26,10 @@ export function useSpaceMessages(spaceId: string | null) {
   const [hasMore, setHasMore] = useState(false);
   const oldestIdRef = useRef<number | null>(null);
   const latestIdRef = useRef<number | null>(null);
+  // A tick is skipped while the previous one is still out (a slow network
+  // would otherwise stack a request every 5s) and while the app is in the
+  // background (nobody is reading; the next focus/tick catches up).
+  const pollingRef = useRef(false);
   // Same bug, same fix as useConversationMessages (1:1 chat): useFocusEffect
   // fires on EVERY re-focus, and flipping `loading` back to true there made
   // the space screen unmount its FlatList — coming back from Members,
@@ -56,7 +61,8 @@ export function useSpaceMessages(spaceId: string | null) {
   }, [spaceId]);
 
   const poll = useCallback(() => {
-    if (!spaceId) return;
+    if (!spaceId || pollingRef.current || AppState.currentState !== 'active') return;
+    pollingRef.current = true;
     getSpaceMessages(spaceId, { limit: POLL_PAGE_SIZE })
       .then((page) => {
         const newer =
@@ -73,6 +79,9 @@ export function useSpaceMessages(spaceId: string | null) {
       })
       .catch(() => {
         // Silent — a missed poll tick isn't worth surfacing as an error.
+      })
+      .finally(() => {
+        pollingRef.current = false;
       });
   }, [spaceId]);
 

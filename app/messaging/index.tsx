@@ -168,11 +168,9 @@ export default function Messaging() {
     return [...conversationRows, ...spaceRows].sort((a, b) => b.timestamp - a.timestamp);
   }, [filteredConversations, filteredSpaceThreadPreviews]);
 
-  // reload()/reloadSpaces() both flip their own `loading` flag true, which
-  // also briefly swaps the list to its skeleton (same as this screen already
-  // does on every tab re-focus, via useConversations/useSpaces' own
-  // useFocusEffect) — accepted here as consistent with that existing
-  // behavior, rather than adding a silent-reload mode purely for this.
+  // reload()/reloadSpaces() refresh in place once the list has loaded (see
+  // useFocusedResource), so pull-to-refresh and re-focus never swap the list
+  // back to its skeleton, and share a request already in flight.
   const { refreshing, onRefresh } = usePullToRefresh(
     useCallback(() => Promise.all([reload(), reloadSpaces()]), [reload, reloadSpaces]),
   );
