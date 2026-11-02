@@ -6,20 +6,25 @@ import { withAlpha } from '../../utils/color';
 interface BottomNavGlassSurfaceProps {
   style?: StyleProp<ViewStyle>;
   tone?: 'dark' | 'light';
+  /** Corner radius of the shape this glass fills. The native glass layer is
+   * not clipped by its parent's rounded corners, so it has to be given the
+   * shape itself or it renders square and cuts into the circle/capsule. */
+  radius?: number;
 }
 
 /** Native Liquid Glass on iOS 26+, with a tokenized solid tint when the
  * runtime cannot provide the native effect. */
-export function BottomNavGlassSurface({ style, tone = 'dark' }: BottomNavGlassSurfaceProps) {
+export function BottomNavGlassSurface({ style, tone = 'dark', radius }: BottomNavGlassSurfaceProps) {
+  const shape = radius === undefined ? null : { borderRadius: radius };
   const tintColor = tone === 'light' ? colors.paper : colors.surface;
 
   return (
     <View
       pointerEvents="none"
-      style={[styles.surface, tone === 'light' ? styles.lightSurface : styles.darkSurface, style]}
+      style={[styles.surface, tone === 'light' ? styles.lightSurface : styles.darkSurface, style, shape]}
     >
       <GlassView
-        style={StyleSheet.absoluteFill}
+        style={[StyleSheet.absoluteFill, shape]}
         glassEffectStyle="regular"
         tintColor={withAlpha(tintColor, glass.tintOpacity)}
       />

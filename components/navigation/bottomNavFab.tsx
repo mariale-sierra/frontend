@@ -64,7 +64,7 @@ export function BottomNavFab({
       hitSlop={8}
       style={[styles.fab, glassVariant && styles.glassFab, centered && styles.centeredFab, pressStyle]}
     >
-      {glassVariant ? <BottomNavGlassSurface tone="light" style={StyleSheet.absoluteFill} /> : null}
+      {glassVariant ? <BottomNavGlassSurface tone="light" radius={BOTTOM_NAV_FAB_SIZE / 2} style={StyleSheet.absoluteFill} /> : null}
       <Ionicons
         name="add"
         size={BOTTOM_NAV_FAB_ICON_SIZE}

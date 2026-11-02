@@ -1,23 +1,11 @@
-import { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
 import { getSpaces } from '../services/spaces/spaces.service';
 import type { SpaceContract } from '../types/space';
+import { useFocusedResource } from './useFocusedResource';
 
+const NO_SPACES: SpaceContract[] = [];
+
+/** Every space (joined or to explore), refreshed in place on each focus. */
 export function useSpaces() {
-  const [spaces, setSpaces] = useState<SpaceContract[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  const load = useCallback(() => {
-    setLoading(true);
-    setError(false);
-    return getSpaces()
-      .then(setSpaces)
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useFocusEffect(useCallback(() => { load(); }, [load]));
-
-  return { spaces, loading, error, reload: load };
+  const { data, loading, error, reload } = useFocusedResource('spaces', getSpaces, NO_SPACES);
+  return { spaces: data, loading, error, reload };
 }

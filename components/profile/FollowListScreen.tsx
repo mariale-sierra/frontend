@@ -1,6 +1,4 @@
-import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../layout/screenBackground';
 import { BackButton } from '../ui/backButton';
@@ -11,6 +9,9 @@ import { FollowListItem } from './FollowListItem';
 import { getFollowers, getFollowing } from '../../services/follow/follow.service';
 import { colors, spacing } from '../../constants/theme';
 import type { FollowUserSummaryContract } from '../../types/follow';
+import { useFocusedResource } from '../../hooks/useFocusedResource';
+
+const NO_USERS: FollowUserSummaryContract[] = [];
 
 interface FollowListScreenProps {
   kind: 'followers' | 'following';
@@ -21,24 +22,15 @@ interface FollowListScreenProps {
  * for another user's followers/following). */
 export function FollowListScreen({ kind }: FollowListScreenProps) {
   const { t } = useTranslation();
-  const [users, setUsers] = useState<FollowUserSummaryContract[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  const load = useCallback(() => {
-    setLoading(true);
-    setError(false);
-    const request = kind === 'followers' ? getFollowers() : getFollowing();
-    request
-      .then(setUsers)
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, [kind]);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
+  const {
+    data: users,
+    loading,
+    error,
+    reload: load,
+  } = useFocusedResource<FollowUserSummaryContract[]>(
+    kind,
+    () => (kind === 'followers' ? getFollowers() : getFollowing()),
+    NO_USERS,
   );
 
   const title = kind === 'followers' ? t('profile.followersScreenTitle') : t('profile.followingScreenTitle');

@@ -1,30 +1,13 @@
-import { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
 import { getConversations } from '../services/chats/chats.service';
 import type { ConversationSummaryContract } from '../types/chat';
+import { useFocusedResource } from './useFocusedResource';
 
-/** Conversation list, reloaded every time the screen regains focus — same
- * pattern as FollowListScreen, so returning from a chat thread (where an
- * unread count or last-message preview may have changed) shows fresh data. */
+const NO_CONVERSATIONS: ConversationSummaryContract[] = [];
+
+/** Conversation list, refreshed every time the screen regains focus (an unread
+ * count or last-message preview may have changed in the thread just left) —
+ * in place, without flashing the skeleton again. */
 export function useConversations() {
-  const [conversations, setConversations] = useState<ConversationSummaryContract[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  const load = useCallback(() => {
-    setLoading(true);
-    setError(false);
-    return getConversations()
-      .then(setConversations)
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
-
-  return { conversations, loading, error, reload: load };
+  const { data, loading, error, reload } = useFocusedResource('conversations', getConversations, NO_CONVERSATIONS);
+  return { conversations: data, loading, error, reload };
 }

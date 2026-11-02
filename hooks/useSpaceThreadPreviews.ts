@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getSpaceMessages } from '../services/spaces/spaces.service';
 import { getSpaceThreadLastViewedMap } from '../utils/spaceThreadReads';
 import type { SpaceContract, SpaceMessageContract } from '../types/space';
@@ -28,11 +28,14 @@ export interface SpaceThreadPreview {
  * whenever that array's reference changes, which happens whenever
  * `useSpaces`' own focus-triggered reload produces new data (so returning
  * to this list after reading a thread picks up the freshly-marked
- * `lastViewedAt` too).
+ * `lastViewedAt` too). Only the first load counts as `loading`; later
+ * refreshes update the previews in place, and an answer overtaken by a newer
+ * refresh is dropped.
  */
 export function useSpaceThreadPreviews(joinedSpaces: SpaceContract[]) {
   const [previews, setPreviews] = useState<SpaceThreadPreview[]>([]);
   const [loading, setLoading] = useState(joinedSpaces.length > 0);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
     if (joinedSpaces.length === 0) {
@@ -40,7 +43,8 @@ export function useSpaceThreadPreviews(joinedSpaces: SpaceContract[]) {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    let current = true;
+    if (!hasLoadedRef.current) setLoading(true);
     Promise.all([
       getSpaceThreadLastViewedMap(),
       Promise.all(
@@ -51,15 +55,22 @@ export function useSpaceThreadPreviews(joinedSpaces: SpaceContract[]) {
         ),
       ),
     ])
-      .then(([lastViewedMap, results]) =>
+      .then(([lastViewedMap, results]) => {
+        if (!current) return;
+        hasLoadedRef.current = true;
         setPreviews(
           results.map((result) => ({
             ...result,
             lastViewedAt: lastViewedMap[result.space.id] ?? null,
           })),
-        ),
-      )
-      .finally(() => setLoading(false));
+        );
+      })
+      .finally(() => {
+        if (current) setLoading(false);
+      });
+    return () => {
+      current = false;
+    };
   }, [joinedSpaces]);
 
   return { previews, loading };
