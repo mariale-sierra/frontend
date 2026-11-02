@@ -3,12 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Row } from '../layout/row';
 import { Stack } from '../layout/stack';
 import { Text } from '../ui/text';
-import { GlassSurface } from '../ui/glassSurface';
-import { Icon } from '../ui/icon';
 import { SetTargetStepper } from './setTargetStepper';
-import { colors, radius, spacing, textOpacity } from '../../constants/theme';
-import { withAlpha } from '../../utils/color';
-import { countAdjustedSets } from '../../services/adapters/index';
+import { radius, spacing } from '../../constants/theme';
 import { ACTIVITY_METRIC_CONFIG } from '../../types/metrics';
 import type { ExerciseMetricsBlock, MetricField } from '../../types/metrics';
 
@@ -43,6 +39,8 @@ function toStoredValue(field: MetricField, displayValue: number): number {
 
 interface LogMetricsExerciseCardProps {
   exercise: ExerciseMetricsBlock;
+  /** Its place in the routine (1-based) — the exercises come in routine order. */
+  position?: number;
   onChangeValue: (rowIndex: number, field: MetricField, nextValue: number) => void;
 }
 
@@ -50,41 +48,47 @@ interface LogMetricsExerciseCardProps {
  * `Set N` row per real set, each with one stepper pill per metric target
  * that set actually has (almost always exactly one, per the app's own data:
  * the Routine Creator only ever writes a reps or duration target, never
- * weight — see METRIC_CODE_TO_FIELD in metricsAdapter.ts). The leading
- * circle is a derived "all sets adjusted" indicator, not a manual toggle —
- * there's no backend concept of a per-exercise checkbox to back one. */
-export function LogMetricsExerciseCard({ exercise, onChangeValue }: LogMetricsExerciseCardProps) {
+ * weight — see METRIC_CODE_TO_FIELD in metricsAdapter.ts). The header says how
+ * many sets and the target. Sprint 10: it used to carry an "adjusted/total"
+ * count and a circle that filled green once every set was changed, which read
+ * as "only what you change counts" — untouched sets are saved at their target
+ * all the same, so the header no longer tracks changes. */
+export function LogMetricsExerciseCard({ exercise, position, onChangeValue }: LogMetricsExerciseCardProps) {
   const { t } = useTranslation();
   const config = ACTIVITY_METRIC_CONFIG[exercise.activityType] ?? ACTIVITY_METRIC_CONFIG.strength;
   const primaryColumn = config.columns[0];
   const primaryTarget = exercise.rows[0]?.targets?.[primaryColumn.key];
 
   const totalSets = exercise.rows.length;
-  const adjustedCount = countAdjustedSets(exercise);
-  const allAdjusted = totalSets > 0 && adjustedCount === totalSets;
+  const meta = [
+    config.showSetColumn ? t('logMetrics.entry.setsCount', { count: totalSets }) : null,
+    primaryTarget !== undefined
+      ? `${t('logMetrics.entry.targetLabel', { value: toDisplayValue(primaryColumn.key, primaryTarget) })} ${primaryColumn.label}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <GlassSurface style={styles.card}>
+    <View style={styles.card}>
       <Row gap="sm" align="center">
-        <View style={[styles.indicator, allAdjusted && styles.indicatorDone]}>
-          {allAdjusted && <Icon name="checkmark-outline" size={13} color={colors.ink} />}
-        </View>
-
+        {position != null ? (
+          <Text variant="label" weight="bold" tone="secondary" testID="log-metrics-exercise-number">
+            {position}
+          </Text>
+        ) : null}
         <Text variant="label" weight="bold" style={styles.name} numberOfLines={1}>
           {exercise.name}
         </Text>
 
-        <Text variant="caption" tone="secondary">
-          {t('logMetrics.entry.setsProgress', { done: adjustedCount, total: totalSets })}
-          {primaryTarget !== undefined
-            ? ` · ${t('logMetrics.entry.targetLabel', {
-                value: toDisplayValue(primaryColumn.key, primaryTarget),
-              })} ${primaryColumn.label}`
-            : ''}
-        </Text>
+        {meta ? (
+          <Text variant="caption" tone="secondary">
+            {meta}
+          </Text>
+        ) : null}
       </Row>
 
-      <Stack gap="sm">
+      <Stack gap="xs">
         {exercise.rows.map((row, rowIndex) => {
           const visibleColumns = config.columns.filter((col) => row.targets?.[col.key] !== undefined);
           const columns = visibleColumns.length > 0 ? visibleColumns : [primaryColumn];
@@ -128,30 +132,17 @@ export function LogMetricsExerciseCard({ exercise, onChangeValue }: LogMetricsEx
           );
         })}
       </Stack>
-    </GlassSurface>
+    </View>
   );
 }
 
-// A frosted-glass card, the same glass as the comments sheet: the screen's gradient
-// shows through it (`GlassSurface` supplies the blur, the tint and the rim).
+// Sprint 10: no card behind each exercise any more (it was the comments sheet's
+// frosted glass) — the exercises sit straight on the screen's gradient.
 const styles = StyleSheet.create({
   card: {
     gap: spacing.md,
     borderRadius: radius.medium,
     padding: spacing.base,
-  },
-  indicator: {
-    width: 22,
-    height: 22,
-    borderRadius: radius.big,
-    borderWidth: 1.5,
-    borderColor: withAlpha(colors.paper, textOpacity.tertiary),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  indicatorDone: {
-    borderColor: colors.success,
-    backgroundColor: colors.success,
   },
   name: {
     flex: 1,

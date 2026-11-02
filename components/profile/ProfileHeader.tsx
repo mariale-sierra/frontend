@@ -1,13 +1,15 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { activityColors, colors, radius, spacing } from '../../constants/theme';
+import { activityColors, colors, radius, spacing, textOpacity } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 import { getPracticeOption } from '../../constants/practiceOptions';
 import { ACTIVITY_ICON_NAME } from '../icons/activityIcon';
-import { AccentPill } from '../ui/accentPill';
 import { Icon } from '../ui/icon';
 import { Text } from '../ui/text';
 import { UserAvatar } from '../ui/userAvatar';
+
+const PRACTICE_ICON_SIZE = 16;
 
 interface ProfileHeaderProps {
   displayName: string;
@@ -134,22 +136,71 @@ export function ProfileHeader({
         <StatColumn value={followingCount} label={t('profile.followingLabel')} onPress={onPressFollowing} />
       </View>
 
-      {practiceBadges.length > 0 && (
-        <View style={[styles.badgesRow, styles.badgesRowGap]}>
-          {practiceBadges.map((option) => (
-            <AccentPill
-              key={option.value}
-              label={option.label}
-              color={activityColors[option.activityType]}
-              variant="filled"
-              size="md"
-              icon={ACTIVITY_ICON_NAME[option.activityType]}
-            />
-          ))}
-        </View>
-      )}
+      {practiceBadges.length > 0 && <PracticeBadges options={practiceBadges} />}
 
       {actions}
+    </View>
+  );
+}
+
+type PracticeOption = NonNullable<ReturnType<typeof getPracticeOption>>;
+
+/**
+ * Sprint 10: the interests show one row; when they wrap to more, a "Show more"
+ * toggle unfolds the rest. The full wrap is laid out inside a box clipped to
+ * the first row's height, and its own height says whether anything is hidden.
+ */
+function PracticeBadges({ options }: { options: PracticeOption[] }) {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const [rowHeight, setRowHeight] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
+  const overflows = rowHeight > 0 && contentHeight > rowHeight + 1;
+
+  return (
+    <View style={styles.badgesRowGap}>
+      <View style={!expanded && rowHeight > 0 ? { maxHeight: rowHeight, overflow: 'hidden' } : undefined}>
+        <View style={styles.badgesRow} onLayout={(event: LayoutChangeEvent) => setContentHeight(event.nativeEvent.layout.height)}>
+          {options.map((option, index) => (
+            // The same pill as the Challenges activity filter chips — `surface`,
+            // bold `paper` label — with the activity icon in its own color after it.
+            <View
+              key={option.value}
+              style={styles.practiceBadge}
+              testID={`practice-badge-${option.value}`}
+              onLayout={index === 0 ? (event: LayoutChangeEvent) => setRowHeight(event.nativeEvent.layout.height) : undefined}
+            >
+              <Text variant="label" weight="bold">
+                {option.label}
+              </Text>
+              <Icon
+                name={ACTIVITY_ICON_NAME[option.activityType]}
+                size={PRACTICE_ICON_SIZE}
+                color={activityColors[option.activityType]}
+              />
+            </View>
+          ))}
+        </View>
+      </View>
+      {overflows && (
+        <Pressable
+          onPress={() => setExpanded((value) => !value)}
+          style={styles.practicesToggle}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityState={{ expanded }}
+          testID="practices-toggle"
+        >
+          <Text variant="label" weight="bold" tone="secondary">
+            {expanded ? t('profile.practicesShowLess') : t('profile.practicesShowMore')}
+          </Text>
+          <Icon
+            name={expanded ? 'chevron-up-outline' : 'chevron-down-outline'}
+            size={14}
+            color={withAlpha(colors.paper, textOpacity.secondary)}
+          />
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -205,6 +256,16 @@ const styles = StyleSheet.create({
     height: 32,
     backgroundColor: withAlpha(colors.paper, 0.08),
   },
+  // Same shape as ActivityFilterChips' chip.
+  practiceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    borderRadius: radius.big,
+    backgroundColor: colors.surface,
+  },
   badgesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -218,5 +279,12 @@ const styles = StyleSheet.create({
   // badges a bit bigger" — total effective gap now `spacing.lg` (24).
   badgesRowGap: {
     marginTop: spacing.md,
+  },
+  practicesToggle: {
+    flexDirection: 'row',
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 44,
   },
 });

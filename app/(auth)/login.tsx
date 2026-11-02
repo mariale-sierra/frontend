@@ -120,6 +120,7 @@ export default function Login() {
           onPress={handleBack}
           hitSlop={8}
           accessibilityRole="button"
+          accessibilityLabel={t('common.actions.back')}
           style={[styles.backButton, { top: insets.top + spacing.md }]}
         >
           <Icon name="chevron-back-outline" size={24} color={colors.paper} />

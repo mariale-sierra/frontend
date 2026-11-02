@@ -16,6 +16,8 @@ import { useTranslation } from 'react-i18next';
 import { createChallengeNameSchema, type ChallengeNameFormValues } from '../validation/challengeSchemas';
 import { invalidateAfterMembershipChanged } from '../services/cache/queries';
 import { logError, wasErrorToastShown } from '../utils/apiError';
+import { normalizeUploadMimeType, uploadImageAsync } from '../services/uploads/upload.service';
+import { useErrorNotificationStore } from '../store/errorNotificationStore';
 
 // The old single "Build the cycle" step is two steps now: 'cycleLength'
 // (53A — the cycle's length and the challenge's length, with a calendar
@@ -28,6 +30,8 @@ export type CreateStep =
   | { kind: 'cycleLength'; title: string; description: string }
   | { kind: 'cycleFill'; title: string; description: string }
   | { kind: 'visibility'; title: string; description: string }
+  // Sprint 10: an optional photo for the challenge (Explore card, info screen).
+  | { kind: 'photo'; title: string; description: string }
   | { kind: 'review'; title: string; description: string }
   // The last step (2026-10-20): how every challenge works — a photo a day —
   // and where "Start challenge" lives.
@@ -70,6 +74,9 @@ function getStepErrors(step: CreateStep, params: {
       return params.hasRoutineForEveryDay ? [] : [params.labels.configureEveryDay];
     case 'visibility':
       return params.visibility ? [] : [params.labels.visibility];
+    case 'photo':
+      // Optional — Continue with no photo skips it.
+      return [];
     case 'review':
     case 'rules':
       return [];
@@ -97,6 +104,9 @@ export function useCreateChallengeFlow() {
   const setSelectedCategories = useChallengeBuilder((state) => state.setSelectedCategories);
   const setSelectedLocations = useChallengeBuilder((state) => state.setSelectedLocations);
   const resetChallengeBuilder = useChallengeBuilder((state) => state.resetChallengeBuilder);
+  const coverPhoto = useChallengeBuilder((state) => state.coverPhoto);
+  const setCoverPhoto = useChallengeBuilder((state) => state.setCoverPhoto);
+  const showSuccess = useErrorNotificationStore((state) => state.showSuccess);
 
   const routinesByDay = useRoutineBuilder((state) => state.routinesByDay);
   const removeDayAndShift = useRoutineBuilder((state) => state.removeDayAndShift);
@@ -168,6 +178,11 @@ export function useCreateChallengeFlow() {
       kind: 'visibility',
       title: t('challengeCreate.steps.visibility.title'),
       description: t('challengeCreate.steps.visibility.description'),
+    },
+    {
+      kind: 'photo',
+      title: t('challengeCreate.steps.photo.title'),
+      description: t('challengeCreate.steps.photo.description'),
     },
     {
       kind: 'review',
@@ -310,7 +325,22 @@ export function useCreateChallengeFlow() {
 
     setIsSubmitting(true);
     try {
+      // Sprint 10: the photo is uploaded only now, so backing out of the flow
+      // never leaves a file behind. If it fails, nothing is created.
+      if (coverPhoto) {
+        try {
+          payload.imageUrl = await uploadImageAsync(coverPhoto.uri, normalizeUploadMimeType(coverPhoto.mimeType));
+        } catch (uploadErr: unknown) {
+          logError('createChallenge.photo', uploadErr);
+          Alert.alert(t('common.errors.genericTitle'), t('challengeCreate.cover.uploadFailed'));
+          return;
+        }
+      }
+
       await createChallenge(payload);
+      if (payload.imageUrl) {
+        showSuccess({ message: t('challengeCreate.cover.inReview') });
+      }
       invalidateAfterMembershipChanged();
       resetChallengeBuilder();
       // Real bug, fixed 2026-08-29, per user report ("the previous cycle
@@ -489,6 +519,8 @@ export function useCreateChallengeFlow() {
     setCycleLengthDays,
     setDurationDays,
     setVisibility,
+    coverPhoto,
+    setCoverPhoto,
     setCurrentStep,
     isSubmitting,
     hasRoutineForEveryDay,

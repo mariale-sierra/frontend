@@ -17,6 +17,9 @@ interface ChallengeBuilderState {
   currentStep: number;
   selectedCategories: string[];
   selectedLocations: string[];
+  /** Sprint 10 — the optional challenge photo, still only on the device: it is
+   * uploaded when the challenge is created, so backing out leaves no file. */
+  coverPhoto: ChallengeCoverPhoto | null;
   setTitle: (value: string) => void;
   setDescription: (value: string) => void;
   setCycleLengthDays: (value: number) => void;
@@ -27,7 +30,14 @@ interface ChallengeBuilderState {
   setCurrentStep: (value: number) => void;
   setSelectedCategories: (values: string[]) => void;
   setSelectedLocations: (values: string[]) => void;
+  setCoverPhoto: (value: ChallengeCoverPhoto | null) => void;
   resetChallengeBuilder: () => void;
+}
+
+export interface ChallengeCoverPhoto {
+  uri: string;
+  /** What the gallery reported, if anything (see normalizeUploadMimeType). */
+  mimeType?: string | null;
 }
 
 export const MIN_CYCLE_LENGTH_DAYS = 1;
@@ -58,6 +68,7 @@ export const useChallengeBuilder = create<ChallengeBuilderState>((set) => ({
   currentStep: 0,
   selectedCategories: [],
   selectedLocations: [],
+  coverPhoto: null,
   setTitle: (title) => set({ title }),
   setDescription: (description) => set({ description }),
   setCycleLengthDays: (value) => set((state) => withCycleLength(value, state.durationDays)),
@@ -69,6 +80,7 @@ export const useChallengeBuilder = create<ChallengeBuilderState>((set) => ({
   setCurrentStep: (currentStep) => set({ currentStep: Math.max(0, currentStep) }),
   setSelectedCategories: (selectedCategories) => set({ selectedCategories }),
   setSelectedLocations: (selectedLocations) => set({ selectedLocations }),
+  setCoverPhoto: (coverPhoto) => set({ coverPhoto }),
   resetChallengeBuilder: () => set({
     title: '',
     description: '',
@@ -78,5 +90,6 @@ export const useChallengeBuilder = create<ChallengeBuilderState>((set) => ({
     currentStep: 0,
     selectedCategories: [],
     selectedLocations: [],
+    coverPhoto: null,
   }),
 }));

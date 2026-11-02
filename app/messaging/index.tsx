@@ -1,6 +1,6 @@
 import { EmptyState } from '../../components/ui/emptyState';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, BackHandler, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import ScreenBackground from '../../components/layout/screenBackground';
@@ -12,7 +12,6 @@ import { Button } from '../../components/ui/button';
 import { SearchBar } from '../../components/ui/searchBar';
 import { Row } from '../../components/layout/row';
 import { Divider } from '../../components/ui/divider';
-import { BottomSheetModal } from '../../components/ui/bottomSheetModal';
 import { CoachMark } from '../../components/onboarding/CoachMark';
 import { ConversationListItem } from '../../components/chats/ConversationListItem';
 import { SpaceCard } from '../../components/spaces/SpaceCard';
@@ -58,10 +57,10 @@ type MessagingRow =
  * activity (`SpaceThreadListItem`, own row shape since it needs a
  * space-shaped preview, not a `ConversationSummaryContract`).
  *
- * The compose FAB now opens a small chooser (New message / Create space)
- * instead of jumping straight to `/messaging/new`, per the wireframe's own
- * "opens New message / Create space" note — collapsed to a direct push
- * before Spaces had a backend to create against.
+ * The compose button offers New message / Create space, per the wireframe's
+ * own "opens New message / Create space" note. Since Sprint 10 that is not a
+ * sheet any more: the list fades and slides away and the two options appear
+ * as `surface` buttons under the search bar (see `composeOpen`).
  */
 export default function Messaging() {
   const { t } = useTranslation();
@@ -70,7 +69,31 @@ export default function Messaging() {
   const { conversations, loading, error, reload } = useConversations();
   const { spaces, loading: spacesLoading, error: spacesError, reload: reloadSpaces } = useSpaces();
   const [query, setQuery] = useState('');
-  const [composeMenuVisible, setComposeMenuVisible] = useState(false);
+  // Sprint 10: the compose button no longer opens a sheet: the list slides away
+  // and the two options (New message / Create space) appear under the search
+  // bar, which stays with the back arrow and the compose button.
+  const [composeOpen, setComposeOpen] = useState(false);
+  const composeProgress = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(composeProgress, {
+      toValue: composeOpen ? 1 : 0,
+      duration: COMPOSE_ANIMATION_MS,
+      useNativeDriver: true,
+    }).start();
+  }, [composeOpen, composeProgress]);
+  // Android's back closes the options first, like the back arrow.
+  useEffect(() => {
+    if (!composeOpen) return;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setComposeOpen(false);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [composeOpen]);
+  const openComposeOption = (route: '/messaging/new' | '/messaging/spaces/create') => {
+    setComposeOpen(false);
+    router.push(route);
+  };
   const [joiningSpaceId, setJoiningSpaceId] = useState<string | null>(null);
 
   // Onboarding coach mark — points at the compose (airplane) button, shown
@@ -180,7 +203,7 @@ export default function Messaging() {
     // The paper light, from the bottom (the tabs' own edge) — explicit request.
     <ScreenBackground variant="default" gradientBackground gradientEdge="bottom">
       <Row align="center" gap="sm" style={styles.header}>
-        <BackButton style={styles.backButton} />
+        <BackButton style={styles.backButton} onPress={composeOpen ? () => setComposeOpen(false) : undefined} />
         <View style={styles.searchWrap}>
           <SearchBar value={query} onChangeText={setQuery} placeholder={t('chats.searchPlaceholder')} />
         </View>
@@ -190,180 +213,219 @@ export default function Messaging() {
           iconSize={22}
           iconColor={colors.ink}
           style={styles.composeButton}
-          onPress={() => setComposeMenuVisible(true)}
+          onPress={() => setComposeOpen((open) => !open)}
           accessibilityLabel={t('chats.composeA11y')}
+          accessibilityState={{ expanded: composeOpen }}
+          testID="chats-compose-button"
         />
       </Row>
 
       {showComposeCoachMark && (
         <View style={styles.composeCoachMarkWrap}>
-          <CoachMark
-            message={t('chats.composeCoachMark')}
-            onDismiss={dismissComposeCoachMark}
-            arrowPlacement="none"
-          />
+          <CoachMark message={t('chats.composeCoachMark')} onDismiss={dismissComposeCoachMark} arrowPlacement="none" />
         </View>
       )}
 
-      <FlatList
-        data={initialLoading || error ? [] : messagingRows}
-        keyExtractor={(row) => row.key}
-        contentContainerStyle={styles.list}
-        ListHeaderComponent={
-          <>
-            <Row align="center" gap="xs" style={styles.sectionHeader}>
-              <Text variant="subheader">{t('chats.spacesTitle')}</Text>
-            </Row>
-            {initialLoading ? (
-              <View style={styles.spacesPreviewList}>
-                {Array.from({ length: SPACES_PREVIEW_COUNT }, (_, index) => (
-                  <SpaceCardSkeleton key={index} />
-                ))}
-              </View>
-            ) : spacesError ? (
-              <View style={styles.spacesEmptyCard}>
-                <Text variant="body" tone="secondary" align="center">
-                  {t('spaces.loadError')}
-                </Text>
-              </View>
-            ) : exploreSpaces.length === 0 ? (
-              <View style={styles.spacesEmptyCard}>
-                <Icon name="layers-outline" size={28} color={withAlpha(colors.paper, textOpacity.tertiary)} />
-                <Text variant="body" tone="secondary" align="center">
-                  {t('chats.spacesEmptyState')}
-                </Text>
-              </View>
-            ) : filteredExploreSpaces.length === 0 ? (
-              <View style={styles.spacesEmptyCard}>
-                <Text variant="body" tone="secondary" align="center">
-                  {t('spaces.noResultsForSearch')}
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.spacesPreviewList}>
-                {spacesPreview.map((space) => (
-                  <SpaceCard
-                    key={space.id}
-                    space={space}
-                    onPress={() => router.push(`/messaging/spaces/${space.id}`)}
-                    onPressCta={() => handleJoinSpace(space)}
-                    ctaLoading={joiningSpaceId === space.id}
-                  />
-                ))}
-                {filteredExploreSpaces.length > SPACES_PREVIEW_COUNT && (
-                  <Pressable onPress={() => router.push('/messaging/spaces')} style={styles.seeAllRow}>
-                    <Text variant="label" weight="bold">
-                      {t('spaces.seeAll')}
+      <View style={styles.content}>
+        <Animated.View
+          style={[
+            styles.content,
+            {
+              opacity: composeProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+              transform: [
+                { translateY: composeProgress.interpolate({ inputRange: [0, 1], outputRange: [0, COMPOSE_SLIDE] }) },
+              ],
+            },
+          ]}
+          pointerEvents={composeOpen ? 'none' : 'auto'}
+          accessibilityElementsHidden={composeOpen}
+          importantForAccessibility={composeOpen ? 'no-hide-descendants' : 'auto'}
+          testID="chats-content"
+        >
+          <FlatList
+            data={initialLoading || error ? [] : messagingRows}
+            keyExtractor={(row) => row.key}
+            contentContainerStyle={styles.list}
+            ListHeaderComponent={
+              <>
+                <Row align="center" gap="xs" style={styles.sectionHeader}>
+                  <Text variant="subheader">{t('chats.spacesTitle')}</Text>
+                </Row>
+                {initialLoading ? (
+                  <View style={styles.spacesPreviewList}>
+                    {Array.from({ length: SPACES_PREVIEW_COUNT }, (_, index) => (
+                      <SpaceCardSkeleton key={index} />
+                    ))}
+                  </View>
+                ) : spacesError ? (
+                  <View style={styles.spacesEmptyCard}>
+                    <Text variant="body" tone="secondary" align="center">
+                      {t('spaces.loadError')}
                     </Text>
-                    <Icon name="chevron-forward-outline" size={16} color={colors.paper} />
-                  </Pressable>
+                  </View>
+                ) : exploreSpaces.length === 0 ? (
+                  <View style={styles.spacesEmptyCard}>
+                    <Icon name="layers-outline" size={28} color={withAlpha(colors.paper, textOpacity.tertiary)} />
+                    <Text variant="body" tone="secondary" align="center">
+                      {t('chats.spacesEmptyState')}
+                    </Text>
+                  </View>
+                ) : filteredExploreSpaces.length === 0 ? (
+                  <View style={styles.spacesEmptyCard}>
+                    <Text variant="body" tone="secondary" align="center">
+                      {t('spaces.noResultsForSearch')}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.spacesPreviewList}>
+                    {spacesPreview.map((space) => (
+                      <SpaceCard
+                        key={space.id}
+                        space={space}
+                        onPress={() => router.push(`/messaging/spaces/${space.id}`)}
+                        onPressCta={() => handleJoinSpace(space)}
+                        ctaLoading={joiningSpaceId === space.id}
+                      />
+                    ))}
+                    {filteredExploreSpaces.length > SPACES_PREVIEW_COUNT && (
+                      <Pressable onPress={() => router.push('/messaging/spaces')} style={styles.seeAllRow}>
+                        <Text variant="label" weight="bold">
+                          {t('spaces.seeAll')}
+                        </Text>
+                        <Icon name="chevron-forward-outline" size={16} color={colors.paper} />
+                      </Pressable>
+                    )}
+                  </View>
                 )}
-              </View>
-            )}
 
-            <Row align="center" gap="xs" style={styles.sectionHeader}>
-              <Text variant="subheader">{t('chats.title')}</Text>
-              <Icon name="people-outline" size={20} color={colors.paper} />
-            </Row>
-          </>
-        }
-        renderItem={({ item: row }) =>
-          row.kind === 'conversation' ? (
-            <ConversationListItem
-              conversation={row.conversation}
-              currentUserId={userId}
-              onPress={() =>
-                router.push({
-                  pathname: '/messaging/[conversationId]',
-                  params: {
-                    conversationId: row.conversation.id,
-                    otherUserId: row.conversation.otherParticipant.id,
-                    otherUsername: row.conversation.otherParticipant.username,
-                    otherDisplayName: row.conversation.otherParticipant.displayName ?? '',
-                    otherProfileImageUrl: row.conversation.otherParticipant.profileImageUrl ?? '',
-                    isPending: row.conversation.isPending ? '1' : '',
-                  },
-                })
-              }
-            />
-          ) : (
-            <SpaceThreadListItem
-              space={row.preview.space}
-              lastMessage={row.preview.lastMessage}
-              lastViewedAt={row.preview.lastViewedAt}
-              currentUserId={userId}
-              onPress={() => router.push(`/messaging/spaces/${row.preview.space.id}`)}
-            />
-          )
-        }
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-        ItemSeparatorComponent={() => <Divider marginVertical="xs" />}
-        ListEmptyComponent={
-          initialLoading ? (
-            <View>
-              {Array.from({ length: 4 }, (_, index) => (
-                <MessageRowSkeleton key={index} />
-              ))}
-            </View>
-          ) : error ? (
-            <View style={styles.center}>
-              <Text tone="secondary">{t('chats.loadError')}</Text>
-              <Button variant="outline" size="sm" onPress={reload}>
-                {t('common.actions.continue')}
-              </Button>
-            </View>
-          ) : query.trim() ? (
-            <View style={styles.center}>
-              <Text tone="secondary">{t('chats.noResultsForSearch')}</Text>
-            </View>
-          ) : (
-            <EmptyState
-              icon="chatbubbles-outline"
-              title={t('chats.emptyState')}
-              message={t('chats.emptyStateHint')}
-              actions={[
-                { label: t('chats.emptyStateNew'), onPress: () => router.push('/messaging/new'), testID: 'empty-chats-new' },
-                { label: t('chats.emptyStateFindPeople'), onPress: () => router.push('/(tabs)/search'), testID: 'empty-chats-people' },
-              ]}
-            />
-          )
-        }
-      />
+                <Row align="center" gap="xs" style={styles.sectionHeader}>
+                  <Text variant="subheader">{t('chats.title')}</Text>
+                  <Icon name="people-outline" size={20} color={colors.paper} />
+                </Row>
+              </>
+            }
+            renderItem={({ item: row }) =>
+              row.kind === 'conversation' ? (
+                <ConversationListItem
+                  conversation={row.conversation}
+                  currentUserId={userId}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/messaging/[conversationId]',
+                      params: {
+                        conversationId: row.conversation.id,
+                        otherUserId: row.conversation.otherParticipant.id,
+                        otherUsername: row.conversation.otherParticipant.username,
+                        otherDisplayName: row.conversation.otherParticipant.displayName ?? '',
+                        otherProfileImageUrl: row.conversation.otherParticipant.profileImageUrl ?? '',
+                        isPending: row.conversation.isPending ? '1' : '',
+                      },
+                    })
+                  }
+                />
+              ) : (
+                <SpaceThreadListItem
+                  space={row.preview.space}
+                  lastMessage={row.preview.lastMessage}
+                  lastViewedAt={row.preview.lastViewedAt}
+                  currentUserId={userId}
+                  onPress={() => router.push(`/messaging/spaces/${row.preview.space.id}`)}
+                />
+              )
+            }
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+            ItemSeparatorComponent={() => <Divider marginVertical="xs" />}
+            ListEmptyComponent={
+              initialLoading ? (
+                <View>
+                  {Array.from({ length: 4 }, (_, index) => (
+                    <MessageRowSkeleton key={index} />
+                  ))}
+                </View>
+              ) : error ? (
+                <View style={styles.center}>
+                  <Text tone="secondary">{t('chats.loadError')}</Text>
+                  <Button variant="outline" size="sm" onPress={reload}>
+                    {t('common.actions.continue')}
+                  </Button>
+                </View>
+              ) : query.trim() ? (
+                <View style={styles.center}>
+                  <Text tone="secondary">{t('chats.noResultsForSearch')}</Text>
+                </View>
+              ) : (
+                <EmptyState
+                  icon="chatbubbles-outline"
+                  title={t('chats.emptyState')}
+                  message={t('chats.emptyStateHint')}
+                  actions={[
+                    {
+                      label: t('chats.emptyStateNew'),
+                      onPress: () => router.push('/messaging/new'),
+                      testID: 'empty-chats-new',
+                    },
+                    {
+                      label: t('chats.emptyStateFindPeople'),
+                      onPress: () => router.push('/(tabs)/search'),
+                      testID: 'empty-chats-people',
+                    },
+                  ]}
+                />
+              )
+            }
+          />
+        </Animated.View>
 
-      {/* Glass, per explicit request: match CommentsSheet's own
-          `BottomSheetModal ... glass` treatment instead of the plain opaque
-          `surface` panel this used to be. */}
-      <BottomSheetModal visible={composeMenuVisible} onClose={() => setComposeMenuVisible(false)} glass maxHeight="35%">
-        <Pressable
-          style={styles.composeMenuRow}
-          onPress={() => {
-            setComposeMenuVisible(false);
-            router.push('/messaging/new');
-          }}
+        <Animated.View
+          style={[
+            styles.composeOptions,
+            {
+              opacity: composeProgress,
+              transform: [
+                {
+                  translateY: composeProgress.interpolate({ inputRange: [0, 1], outputRange: [-COMPOSE_SLIDE / 2, 0] }),
+                },
+              ],
+            },
+          ]}
+          pointerEvents={composeOpen ? 'auto' : 'none'}
+          accessibilityElementsHidden={!composeOpen}
+          importantForAccessibility={composeOpen ? 'auto' : 'no-hide-descendants'}
+          testID="chats-compose-options"
         >
-          <Icon name="chatbubble-outline" size={20} color={colors.paper} />
-          <Text variant="body" weight="bold">
-            {t('chats.newMessageTitle')}
-          </Text>
-        </Pressable>
-        {/* No divider between the two options (explicit request) — the rows'
-            own padding separates them, like the post "..." menu. */}
-        <Pressable
-          style={styles.composeMenuRow}
-          onPress={() => {
-            setComposeMenuVisible(false);
-            router.push('/messaging/spaces/create');
-          }}
-        >
-          <Icon name="add-circle-outline" size={20} color={colors.paper} />
-          <Text variant="body" weight="bold">
-            {t('spaces.createCta')}
-          </Text>
-        </Pressable>
-      </BottomSheetModal>
+          <Pressable
+            style={({ pressed }) => [styles.composeOption, pressed && styles.composeOptionPressed]}
+            onPress={() => openComposeOption('/messaging/new')}
+            accessibilityRole="button"
+            testID="chats-compose-new-message"
+          >
+            <Icon name="chatbubble-outline" size={20} color={colors.paper} />
+            <Text variant="body" weight="bold" style={styles.composeOptionLabel}>
+              {t('chats.newMessageTitle')}
+            </Text>
+            <Icon name="chevron-forward-outline" size={18} color={withAlpha(colors.paper, textOpacity.secondary)} />
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.composeOption, pressed && styles.composeOptionPressed]}
+            onPress={() => openComposeOption('/messaging/spaces/create')}
+            accessibilityRole="button"
+            testID="chats-compose-new-space"
+          >
+            <Icon name="add-circle-outline" size={20} color={colors.paper} />
+            <Text variant="body" weight="bold" style={styles.composeOptionLabel}>
+              {t('spaces.createCta')}
+            </Text>
+            <Icon name="chevron-forward-outline" size={18} color={withAlpha(colors.paper, textOpacity.secondary)} />
+          </Pressable>
+        </Animated.View>
+      </View>
     </ScreenBackground>
   );
 }
+
+const COMPOSE_ANIMATION_MS = 220;
+// How far the list slides down as it fades out (the options come in from half that above).
+const COMPOSE_SLIDE = 24;
 
 const styles = StyleSheet.create({
   header: {
@@ -422,10 +484,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.md,
   },
-  composeMenuRow: {
+  content: {
+    flex: 1,
+  },
+  // Over the top of the content area, right under the search bar.
+  composeOptions: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    // A bit of air under the search bar, on top of the header's own padding.
+    paddingTop: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  composeOption: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingVertical: spacing.md,
+    minHeight: 56,
+    paddingHorizontal: spacing.base,
+    borderRadius: radius.big,
+    backgroundColor: colors.surface,
+  },
+  composeOptionPressed: {
+    opacity: 0.8,
+  },
+  composeOptionLabel: {
+    flex: 1,
   },
 });

@@ -1,4 +1,9 @@
-import { pickAuthor, toChallengeMineViewModels, toExploreChallengeViewModels } from '../challengeListAdapter';
+import {
+  pickAuthor,
+  pickChallengeImageUrl,
+  toChallengeMineViewModels,
+  toExploreChallengeViewModels,
+} from '../challengeListAdapter';
 import type { ChallengeAuthorContract, ChallengeContract, ChallengePhoto } from '../../../types/challenge';
 
 function buildChallenge(overrides: Partial<ChallengeContract> & { id: string }): ChallengeContract {
@@ -74,6 +79,21 @@ describe('toExploreChallengeViewModels', () => {
     expect(viewModels.map((v) => v.challengeId)).toEqual(['most', 'some', 'few', 'none']);
   });
 
+  // Sprint 10: the official @havit challenges always lead Explore.
+  it("puts the official @havit account's challenges first, then the most-joined", () => {
+    const havit = (id: string): ChallengeAuthorContract => ({ id, username: 'Havit', displayName: null, profileImageUrl: null });
+    const challenges = [
+      buildChallenge({ id: 'popular', members_count: 248 }),
+      buildChallenge({ id: 'havit-small', members_count: 2, author: havit('h') }),
+      buildChallenge({ id: 'other', members_count: 40 }),
+      buildChallenge({ id: 'havit-big', members_count: 10, author: havit('h') }),
+    ];
+
+    const viewModels = toExploreChallengeViewModels(challenges);
+
+    expect(viewModels.map((v) => v.challengeId)).toEqual(['havit-big', 'havit-small', 'popular', 'other']);
+  });
+
   it("carries the challenge's author through to the card", () => {
     const author: ChallengeAuthorContract = {
       id: 'u1',
@@ -102,6 +122,18 @@ describe('toExploreChallengeViewModels', () => {
 
     expect(viewModel.author).toBeNull();
   });
+
+  it('marks private challenges so the card asks to join instead of joining', () => {
+    const [priv, pub, unknown] = toExploreChallengeViewModels([
+      buildChallenge({ id: 'P', visibility: 'private', members_count: 3 }),
+      buildChallenge({ id: 'O', visibility: 'public', members_count: 2 }),
+      buildChallenge({ id: 'U', members_count: 1 }),
+    ]);
+
+    expect(priv.isPrivate).toBe(true);
+    expect(pub.isPrivate).toBe(false);
+    expect(unknown.isPrivate).toBe(false);
+  });
 });
 
 describe('pickAuthor', () => {
@@ -116,6 +148,25 @@ describe('pickAuthor', () => {
     );
 
     expect(author).toEqual({ username: 'ana', displayName: null, profileImageUrl: null });
+  });
+});
+
+// Sprint 10: the Explore card shows the challenge photo only once it is approved.
+describe('pickChallengeImageUrl', () => {
+  const PHOTO = 'https://cdn.test/photo.jpeg';
+
+  it('passes an approved photo through', () => {
+    expect(pickChallengeImageUrl(buildChallenge({ id: 'A', imageUrl: PHOTO, imageStatus: 'approved' }))).toBe(PHOTO);
+  });
+
+  it.each(['pending', 'rejected', 'none', undefined] as const)('is null (placeholder) for status %s, even with a URL', (imageStatus) => {
+    expect(pickChallengeImageUrl(buildChallenge({ id: 'A', imageUrl: PHOTO, imageStatus }))).toBeNull();
+  });
+
+  it('reaches the Explore card view model', () => {
+    const [card] = toExploreChallengeViewModels([buildChallenge({ id: 'A', imageUrl: PHOTO, imageStatus: 'approved' })]);
+
+    expect(card.imageUrl).toBe(PHOTO);
   });
 });
 

@@ -3,9 +3,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ScreenBackground from '../../components/layout/screenBackground';
 import { usePullToRefresh } from '../../hooks/usePullToRefresh';
 import { Row } from '../../components/layout/row';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Icon } from '../../components/ui/icon';
 import { Text } from '../../components/ui/text';
 import { CoachMark } from '../../components/onboarding/CoachMark';
@@ -19,6 +21,12 @@ import type { ChallengesView } from '../../components/challenge/list/ChallengesV
 import type { ExploreChallengeViewModel } from '../../components/challenge/list/challengeListSections';
 import type { ChallengeMineCardViewModel } from '../../services/adapters/challengeListAdapter';
 import { colors, radius, spacing } from '../../constants/theme';
+import { BOTTOM_NAV_HEIGHT } from '../../constants/bottomNav';
+import { useImagesReady } from '../../hooks/useImagesReady';
+import { EMPTY_ILLUSTRATIONS } from '../../constants/illustrations';
+
+/** How many Explore cards' photos to wait for: about a screenful. */
+const EXPLORE_PHOTOS_TO_WAIT_FOR = 6;
 import { getChallenges, getMyProgressPhotos } from '../../services/challenge/challenge.service';
 import { getMyChallenges } from '../../services/user/user.service';
 import { toChallengeMineViewModels, toExploreChallengeViewModels } from '../../services/adapters';
@@ -43,6 +51,13 @@ function ChallengeListSeparator() {
 }
 
 export default function Challenges() {
+  const insets = useSafeAreaInsets();
+  // The nav bar floats over the list: reserve its height (plus the bottom
+  // inset) so the last card and the Finished toggle can scroll above it.
+  const listContentStyle = useMemo(
+    () => [styles.listContent, { paddingBottom: insets.bottom + BOTTOM_NAV_HEIGHT + spacing['2xl'] }],
+    [insets.bottom],
+  );
   const router = useRouter();
   const { t } = useTranslation();
   // Lets a caller land directly on the Explore segment (e.g. the Log
@@ -135,6 +150,12 @@ export default function Challenges() {
     view === 'mine'
       ? enrolledQuery.isLoading || photosQuery.isLoading
       : enrolledQuery.isLoading || allQuery.isLoading;
+  // Sprint 10: Explore keeps its skeleton until the photos of the first cards
+  // (the ones on screen) are downloaded too, so the list appears complete.
+  const explorePhotosReady = useImagesReady(
+    visibleExploreChallenges.slice(0, EXPLORE_PHOTOS_TO_WAIT_FOR).map((challenge) => challenge.imageUrl),
+    { enabled: view === 'explore' && !loading },
+  );
   const failed = view === 'mine' ? !enrolledQuery.data && enrolledQuery.error : !allQuery.data && allQuery.error;
   const error = failed ? t('challenges.loadError') : null;
   // Finished challenges are collapsed out of the main Mine list by default —
@@ -305,7 +326,9 @@ export default function Challenges() {
           style={({ pressed }) => [styles.newButton, pressed && styles.newButtonPressed]}
           accessibilityRole="button"
         >
-          <Icon name="add-outline" size={16} color={colors.ink} />
+          {/* Sprint 10: a heavier plus than Ionicons' outline one, by request
+              (an exception to the outline-icons rule). */}
+          <MaterialCommunityIcons name="plus-thick" size={16} color={colors.ink} testID="challenges-new-plus" />
           <Text variant="label" weight="bold" inverse>
             {t('challenges.newButton')}
           </Text>
@@ -334,7 +357,7 @@ export default function Challenges() {
     [handleCreateChallenge, t, view, showExploreTip, dismissExploreTip, filterActivities, activityFilter],
   );
 
-  if (loading) {
+  if (loading || (view === 'explore' && !explorePhotosReady)) {
     return (
       <ScreenBackground variant="default" gradientBackground>
         {listHeader}
@@ -371,9 +394,9 @@ export default function Challenges() {
           ListEmptyComponent={
             mineChallenges.length === 0 ? (
               <EmptyState
-                icon="trophy-outline"
+                illustration={EMPTY_ILLUSTRATIONS.mineChallenges}
                 title={t('challenges.emptyMineTitle')}
-                message={t('challenges.emptyMine')}
+                testID="empty-mine"
                 actions={[
                   { label: t('challenges.emptyMineExplore'), onPress: () => setView('explore'), testID: 'empty-mine-explore' },
                   { label: t('challenges.emptyMineCreate'), onPress: () => router.push('/challenge/create'), testID: 'empty-mine-create' },
@@ -392,7 +415,7 @@ export default function Challenges() {
               </View>
             ) : undefined
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={listContentStyle}
           initialNumToRender={3}
           maxToRenderPerBatch={3}
           windowSize={5}
@@ -413,7 +436,7 @@ export default function Challenges() {
               </Text>
             </View>
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={listContentStyle}
           initialNumToRender={3}
           maxToRenderPerBatch={3}
           windowSize={5}
@@ -433,7 +456,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: radius.big,
-    backgroundColor: colors.primary,
+    // Sprint 10: pure white (`paper`), not the cream `primary`.
+    backgroundColor: colors.paper,
   },
   newButtonPressed: {
     opacity: 0.9,

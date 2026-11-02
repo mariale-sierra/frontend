@@ -171,6 +171,7 @@ export default function Camera() {
           <IconButton
             name="arrow-back-outline"
             onPress={handleRetry}
+            accessibilityLabel={t('common.actions.back')}
             size={40}
             iconSize={22}
             iconColor={colors.paper}
@@ -224,6 +225,9 @@ export default function Camera() {
             testID="camera-confirm"
             onPress={handleConfirm}
             disabled={isBusy}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.a11y.confirmPhoto')}
+            accessibilityState={{ disabled: isBusy, busy: isBusy }}
             style={({ pressed }) => [
               styles.confirmButton,
               isBusy && styles.disabled,
@@ -255,6 +259,7 @@ export default function Camera() {
         <IconButton
           name="arrow-back-outline"
           onPress={() => safeBack()}
+          accessibilityLabel={t('common.actions.back')}
           size={40}
           iconSize={22}
           iconColor={colors.paper}
@@ -262,6 +267,7 @@ export default function Camera() {
         <IconButton
           name="camera-reverse-outline"
           onPress={flipCamera}
+          accessibilityLabel={t('common.a11y.flipCamera')}
           size={40}
           iconSize={26}
           iconColor={colors.paper}

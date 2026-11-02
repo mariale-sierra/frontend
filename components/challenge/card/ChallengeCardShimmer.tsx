@@ -7,8 +7,12 @@ import { withAlpha } from '../../../utils/color';
 // band... 22%... every ~3.5s, pausing between passes") read as "almost
 // invisible." Per the explicit follow-up ("like a skeleton loader"), this is
 // a continuous, seamless sweep with no pause between passes.
-const SWEEP_WIDTH = 150;
-const SWEEP_PASS_MS = 1300;
+// Toned down in Sprint 10 ("way too strong, over the top"): a narrower, much
+// dimmer band, a slower pass, and a pause between passes — an occasional
+// glint, not a constant sweep.
+const SWEEP_WIDTH = 110;
+const SWEEP_PASS_MS = 2400;
+const SWEEP_PAUSE_MS = 3200;
 const BAND_OVERHANG = 60;
 
 // A soft-edged look built from three plain, flat-color `View`s of decreasing
@@ -21,14 +25,14 @@ const BAND_OVERHANG = 60;
 // guaranteed to paint, so this trades a perfectly smooth edge for
 // something that is definitely, unambiguously there.
 const BANDS = [
-  { width: SWEEP_WIDTH, opacity: 0.12 },
-  { width: SWEEP_WIDTH * 0.55, opacity: 0.28 },
-  { width: SWEEP_WIDTH * 0.22, opacity: 0.55 },
+  { width: SWEEP_WIDTH, opacity: 0.04 },
+  { width: SWEEP_WIDTH * 0.55, opacity: 0.07 },
+  { width: SWEEP_WIDTH * 0.22, opacity: 0.12 },
 ] as const;
 
 /**
- * A soft diagonal band of light that sweeps continuously across the card,
- * left to right, no pause between passes — the "trophy catching the light"
+ * A faint diagonal band of light that sweeps across the card, left to right,
+ * now and then (a pause between passes since Sprint 10) — the "trophy catching the light"
  * cue for a finished challenge's card (`ChallengeStatusCardV2`,
  * `state === 'won'`), paired with the card's own dimmed ("apagado") opacity
  * in that same component. Per explicit request 2026-09-22.
@@ -67,16 +71,19 @@ export function ChallengeCardShimmer() {
   useEffect(() => {
     translateX.setValue(start);
     const loop = Animated.loop(
-      Animated.timing(translateX, {
-        toValue: end,
-        duration: SWEEP_PASS_MS,
-        easing: Easing.linear,
-        // Deliberately false — see the component doc comment. This is one
-        // decorative element on one card at a time; the JS-bridge cost is
-        // irrelevant, and it rules out a whole class of native-driver
-        // interop bugs the two earlier, invisible attempts may have hit.
-        useNativeDriver: false,
-      }),
+      Animated.sequence([
+        Animated.timing(translateX, {
+          toValue: end,
+          duration: SWEEP_PASS_MS,
+          easing: Easing.inOut(Easing.quad),
+          // Deliberately false — see the component doc comment. This is one
+          // decorative element on one card at a time; the JS-bridge cost is
+          // irrelevant, and it rules out a whole class of native-driver
+          // interop bugs the two earlier, invisible attempts may have hit.
+          useNativeDriver: false,
+        }),
+        Animated.delay(SWEEP_PAUSE_MS),
+      ]),
       { resetBeforeIteration: true, iterations: -1 },
     );
     loop.start();

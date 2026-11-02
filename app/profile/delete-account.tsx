@@ -23,7 +23,7 @@ const CONSEQUENCES = ['posts', 'metrics', 'messages', 'social', 'irreversible'] 
 
 /**
  * Account deletion (backend: /users/me/deletion-request). The user confirms
- * with their password; the account is scheduled for deletion in 30 days and
+ * with their password; the account is scheduled for deletion in 7 days and
  * stays recoverable until then. While a request is pending this screen shows
  * the date and a cancel button instead of the form.
  */

@@ -1,0 +1,15 @@
+# npx expo config --type public (Expo SDK 57) — 2026-10-23T19:17:58Z
+### X=1
+apiUrl = http://20.63.84.1:3000 | usesCleartextTraffic = true
+### APP_VARIANT=development EXPO_PUBLIC_API_URL=http://192.168.1.20:3000
+apiUrl = http://192.168.1.20:3000 | usesCleartextTraffic = true
+### APP_VARIANT=preview
+Error: Error reading Expo config at ../../../../frontend/app.config.js:
+[app.config] "preview" builds need an https:// API URL, got http://20.63.84.1:3000. Set EXPO_PUBLIC_API_URL=https://<api-domain> for this EAS profile (eas.json "env" or EAS environment variables). See docs/sprint-10/B3-https-transporte.md.
+### APP_VARIANT=production EXPO_PUBLIC_API_URL=http://20.63.84.1:3000
+Error: Error reading Expo config at ../../../../frontend/app.config.js:
+[app.config] "production" builds need an https:// API URL, got http://20.63.84.1:3000. Set EXPO_PUBLIC_API_URL=https://<api-domain> for this EAS profile (eas.json "env" or EAS environment variables). See docs/sprint-10/B3-https-transporte.md.
+### APP_VARIANT=production EXPO_PUBLIC_API_URL=https://havit-api.example.cloudapp.azure.com
+apiUrl = https://havit-api.example.cloudapp.azure.com | usesCleartextTraffic = false
+### EAS_BUILD_PROFILE=preview EXPO_PUBLIC_API_URL=https://havit-api.example.cloudapp.azure.com
+apiUrl = https://havit-api.example.cloudapp.azure.com | usesCleartextTraffic = false

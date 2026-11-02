@@ -1,4 +1,5 @@
 import { renderWithProviders } from '../../../test-utils/renderWithProviders';
+import { fireEvent } from '@testing-library/react-native';
 import Home from '../index';
 import { getMyChallenges } from '../../../services/user/user.service';
 import { getHomeFeed } from '../../../services/feed/feed.service';
@@ -112,8 +113,9 @@ describe('Home screen', () => {
     resolveChallenges([]);
 
     // Once loading finishes with no challenges, the loader is replaced by the
-    // empty-state content.
-    expect(await screen.findByText("You don't have an active challenge yet")).toBeTruthy();
+    // empty-state content (shown once its illustration has loaded).
+    await showNoChallengeIllustration(screen);
+    expect(screen.getByText("You don't have an active challenge yet")).toBeTruthy();
   });
 
   it('shows a "join or create" CTA in the empty-challenge state', async () => {
@@ -121,6 +123,13 @@ describe('Home screen', () => {
 
     const screen = await renderWithProviders(<Home />);
 
-    expect(await screen.findByText('Join or create')).toBeTruthy();
+    await showNoChallengeIllustration(screen);
+    expect(screen.getByText('Join or create')).toBeTruthy();
   });
 });
+
+// The empty-challenge block waits behind a skeleton until its illustration loads.
+async function showNoChallengeIllustration(screen: Awaited<ReturnType<typeof renderWithProviders>>) {
+  const illustration = await screen.findByTestId('home-no-challenge-illustration', { includeHiddenElements: true });
+  await fireEvent(illustration, 'loadEnd');
+}

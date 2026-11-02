@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, type TextInputProps } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { GlassInput } from './glassInput';
 import { Icon } from './icon';
 import { colors, fillOpacity, radius, spacing } from '../../constants/theme';
@@ -12,6 +13,7 @@ interface SearchBarProps extends Pick<TextInputProps, 'value' | 'onChangeText' |
  * there's text to clear. Focus feedback (haptic, spring grow, brighter rim)
  * comes from `GlassInput`. */
 export function SearchBar({ value, onChangeText, placeholder = 'Search' }: SearchBarProps) {
+  const { t } = useTranslation();
   return (
     <GlassInput
       value={value}
@@ -29,6 +31,7 @@ export function SearchBar({ value, onChangeText, placeholder = 'Search' }: Searc
             style={styles.clearButton}
             hitSlop={8}
             accessibilityRole="button"
+            accessibilityLabel={t('common.a11y.clearSearch')}
           >
             <Icon name="close-outline" size={14} color={colors.paper} />
           </Pressable>

@@ -15,7 +15,7 @@ import {
   adaptTodayRoutineExercises,
 } from '../services/adapters/index';
 import { useTranslation } from 'react-i18next';
-import { logError, wasErrorToastShown } from '../utils/apiError';
+import { getApiErrorStatus, logError, wasErrorToastShown } from '../utils/apiError';
 import { useErrorNotificationStore } from '../store/errorNotificationStore';
 
 export function useMetricsScreen() {
@@ -125,12 +125,12 @@ export function useMetricsScreen() {
           const exercises = adaptTodayRoutineExercises(routineData, initialChallenge);
           setExerciseMetrics(exercises, routineData.routine_id);
           loadDayAndRoutineName(routineData);
-        } catch (routineErr: any) {
+        } catch (routineErr) {
           logError('Metrics.initialRoutine', routineErr);
         }
-      } catch (error: any) {
+      } catch (error) {
         logError('Metrics.challenges', error);
-        if (error?.response?.status === 401) {
+        if (getApiErrorStatus(error) === 401) {
           setChallengeLoadError('401');
         } else {
           setChallengeLoadError('generic');
@@ -161,7 +161,7 @@ export function useMetricsScreen() {
         lastFetchedChallengeId.current = selectedChallengeId;
         setExerciseMetrics(exercises, routineData.routine_id);
         loadDayAndRoutineName(routineData);
-      } catch (error: any) {
+      } catch (error) {
         logError('Metrics.routine', error);
         reportRoutineLoadError(error);
       } finally {

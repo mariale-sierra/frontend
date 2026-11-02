@@ -2,7 +2,7 @@ import type { TFunction } from 'i18next';
 import type { NotificationContract } from '../../types/notification';
 
 /** Types that are system events by design (no actor) — never "Deleted user". */
-const SYSTEM_TYPES = new Set(['challenge_closed', 'report_resolved', 'content_hidden']);
+const SYSTEM_TYPES = new Set(['challenge_closed', 'challenge_reopened', 'report_resolved', 'content_hidden']);
 
 /** The i18n key under `notifications.types` for a row, including its variant. */
 export function notificationTextKey(n: Pick<NotificationContract, 'type' | 'data'>): string {

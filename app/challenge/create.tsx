@@ -13,6 +13,7 @@ import {
   CycleCalendarPreview,
   CycleDayList,
   VisibilityCardGroup,
+  ChallengeCoverPicker,
   ChallengeReviewSummary,
   ChallengeRulesStep,
   CreateFlowPrimaryButton,
@@ -56,6 +57,8 @@ export default function CreateChallenge() {
     setCycleLengthDays,
     setDurationDays,
     setVisibility,
+    coverPhoto,
+    setCoverPhoto,
     setCurrentStep,
     getDayStatus,
     getDayRoutineLabel,
@@ -195,6 +198,9 @@ export default function CreateChallenge() {
 
       case 'visibility':
         return <VisibilityCardGroup selectedVisibility={visibility} onChange={setVisibility} />;
+
+      case 'photo':
+        return <ChallengeCoverPicker photo={coverPhoto} onChange={setCoverPhoto} />;
 
       case 'review':
         return (

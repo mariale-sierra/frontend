@@ -4,6 +4,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { storage } from '../../utils/storage';
 import { registerPushToken, removePushToken } from './notifications.service';
+import { describeError } from '../../utils/apiError';
 
 /** The Expo push token this install registered, so logout can remove exactly it. */
 export const PUSH_TOKEN_KEY = 'pushToken';
@@ -167,7 +168,8 @@ async function doSyncPushToken(): Promise<string | null> {
       if (__DEV__) console.warn('[push] rate limited (429) — not registering the push token for a minute');
       return null;
     }
-    if (__DEV__) console.warn('[push] could not register the push token', error);
+    // describeError: a failed POST carries the bearer header and the push token in its config.
+    if (__DEV__) console.warn('[push] could not register the push token', describeError(error));
     return null;
   }
 }

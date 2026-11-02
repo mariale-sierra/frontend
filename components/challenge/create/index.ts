@@ -20,6 +20,9 @@ export * from './CycleDayList';
 // VisibilityCardGroup: Public/Private selectable cards (Step 5).
 export * from './VisibilityCardGroup';
 
+// ChallengeCoverPicker: optional challenge photo — pick, preview, change or remove (Step 6).
+export * from './ChallengeCoverPicker';
+
 // ChallengeReviewSummary: Hero card + Setup/Cycle summary cards (Step 6 — Review).
 export * from './ChallengeReviewSummary';
 

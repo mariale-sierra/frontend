@@ -61,4 +61,18 @@ describe('LocationSwitchSheet copy', () => {
     await waitFor(() => expect(screen.getByText('challengeRoutineDay.location.substitutionsHint')).toBeTruthy());
     expect(screen.queryByTestId('location-sheet-hint')).toBeNull();
   });
+
+  // Sprint 10: each place shows its own icon (the same ones as the exercise catalog).
+  it("shows each place's icon", async () => {
+    (getLocationAvailability as jest.Mock).mockResolvedValue([
+      { code: 'home', name: 'Home', requiresSubstitution: false, unsupportedExerciseIds: [] },
+      { code: 'gym', name: 'Gym', requiresSubstitution: false, unsupportedExerciseIds: [] },
+    ]);
+    const screen = await renderSheet();
+    await waitFor(() => expect(screen.getByLabelText('Gym')).toBeTruthy());
+
+    const tree = JSON.stringify(screen.toJSON());
+    expect(tree).toContain('home-outline');
+    expect(tree).toContain('barbell-outline');
+  });
 });

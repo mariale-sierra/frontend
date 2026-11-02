@@ -85,6 +85,8 @@ export function RoutinePickerCard({ routine, selected, onSelect, onOpen, onDelet
             onOpen();
           }}
           hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.a11y.openRoutine')}
           style={({ pressed }) => [styles.openButton, pressed && styles.pressed]}
         >
           <Icon name="chevron-forward-outline" size={16} color={withAlpha(colors.paper, textOpacity.tertiary)} />

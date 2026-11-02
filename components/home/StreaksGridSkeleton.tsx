@@ -38,6 +38,7 @@ const styles = StyleSheet.create({
   item: {
     width: `${100 / STREAK_GRID_COLUMNS}%`,
     alignItems: 'center',
-    gap: spacing.xs,
+    // Matches StreakGridItem's avatar→name gap, so nothing jumps when it swaps in.
+    gap: spacing.base,
   },
 });

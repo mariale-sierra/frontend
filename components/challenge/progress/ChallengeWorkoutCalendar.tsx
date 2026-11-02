@@ -75,7 +75,7 @@ function DayCell({ cell, isSelected, onPress, accentColor }: DayCellProps) {
       ) : status === 'missed' ? (
         <Text variant="label" align="center" style={styles.dayTextMissed}>{cell.dayOfMonth}</Text>
       ) : status === 'future' ? (
-        <Text variant="label" tone="tertiary" align="center">{cell.dayOfMonth}</Text>
+        <Text variant="label" tone="secondary" align="center">{cell.dayOfMonth}</Text>
       ) : (
         <Text variant="label" align="center">{cell.dayOfMonth}</Text>
       )}
@@ -123,6 +123,7 @@ export function ChallengeWorkoutCalendar({
           name="chevron-back-outline"
           variant="surface"
           size={36}
+          accessibilityLabel={t('common.a11y.previousMonth')}
           onPress={() => canGoPrev && setMonthIndex((i) => i - 1)}
           style={!canGoPrev && styles.navDisabled}
           disabled={!canGoPrev}
@@ -132,6 +133,7 @@ export function ChallengeWorkoutCalendar({
           name="chevron-forward-outline"
           variant="surface"
           size={36}
+          accessibilityLabel={t('common.a11y.nextMonth')}
           onPress={() => canGoNext && setMonthIndex((i) => i + 1)}
           style={!canGoNext && styles.navDisabled}
           disabled={!canGoNext}

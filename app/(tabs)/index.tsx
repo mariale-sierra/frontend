@@ -9,6 +9,7 @@ import ScreenBackground from '../../components/layout/screenBackground';
 import { AccentPill } from '../../components/ui/accentPill';
 import { Divider } from '../../components/ui/divider';
 import { Icon } from '../../components/ui/icon';
+import { IllustratedBlock } from '../../components/ui/illustratedBlock';
 import { Loader } from '../../components/ui/loader';
 import { Text } from '../../components/ui/text';
 import { Row } from '../../components/layout/row';
@@ -33,16 +34,21 @@ import { queryKeys, staleTimes } from '../../services/cache/queries';
 import { setQueryData } from '../../services/cache/queryCache';
 import { getFollowingStreaks } from '../../services/follow/follow.service';
 import { toFriendStreakViewModels } from '../../services/adapters/followAdapter';
-import { colors, spacing, textOpacity } from '../../constants/theme';
+import { colors, spacing } from '../../constants/theme';
+import { EMPTY_ILLUSTRATIONS } from '../../constants/illustrations';
+
 import { HOME_GRADIENT_EDGE, HOME_GRADIENT_SCROLLS, USE_HOME_ACTIVITY_GRADIENT } from '../../constants/screenBackground';
 import { BOTTOM_NAV_HEIGHT } from '../../constants/bottomNav';
 import { FORCE_SHOW_ONBOARDING_PREVIEWS } from '../../constants/onboardingDebug';
 import { formatTodayLabel, hoursUntilMidnight } from '../../utils/time';
-import { withAlpha } from '../../utils/color';
 import { useNotificationsStore } from '../../store/notificationsStore';
 import { useErrorNotificationStore } from '../../store/errorNotificationStore';
 import { hasSeenLogCoachMark, markLogCoachMarkSeen } from '../../utils/logCoachMark';
 import { FEED_POST_GAP, FEED_POST_INSET, HOME_EDGE_INSET } from '../../constants/feed';
+
+/** The no-challenge illustration on Home: smaller than other empty states, so the
+ * section stays about the size it was with the trophy icon. */
+const HOME_ILLUSTRATION_SIZE = 88;
 
 function FeedSeparator() {
   return <View style={styles.separator} />;
@@ -224,7 +230,12 @@ export default function Home() {
         </View>
 
         <Row gap="sm">
-          <Pressable style={styles.iconButton} onPress={() => router.push('/messaging')}>
+          <Pressable
+            style={styles.iconButton}
+            onPress={() => router.push('/messaging')}
+            accessibilityRole="button"
+            accessibilityLabel={t('common.a11y.openMessages')}
+          >
             <Icon name="chatbubble-ellipses-outline" size={22} />
           </Pressable>
           {/* B3: the dot is the real unread count (store/notificationsStore). */}
@@ -248,9 +259,18 @@ export default function Home() {
             {challenges.length > 0 ? (
               <ActiveChallengeSection challenges={challenges} hoursLeft={hoursLeft} scrollX={carouselScrollX} />
             ) : (
-              <View style={[styles.center, styles.inset]}>
-                <Icon name="trophy-outline" size={32} color={withAlpha(colors.paper, textOpacity.tertiary)} />
-                <Text variant="body" tone="secondary" align="center">{t('home.noActiveChallenge')}</Text>
+              // Sprint 10: an illustration and one short line in place of the trophy icon.
+              <IllustratedBlock
+                source={EMPTY_ILLUSTRATIONS.homeNoChallenge}
+                size={HOME_ILLUSTRATION_SIZE}
+                actionCount={1}
+                style={[styles.center, styles.inset]}
+                testID="home-no-challenge"
+                imageTestID="home-no-challenge-illustration"
+              >
+                <Text variant="label" tone="secondary" align="center">
+                  {t('home.noActiveChallenge')}
+                </Text>
                 <View style={styles.emptyStateCta}>
                   <AccentPill
                     label={t('challenges.joinOrCreate')}
@@ -259,7 +279,7 @@ export default function Home() {
                     onPress={() => router.push('/(tabs)/challenges?view=explore')}
                   />
                 </View>
-              </View>
+              </IllustratedBlock>
             )}
           </View>
 
@@ -394,10 +414,12 @@ const styles = StyleSheet.create({
   loaderTransparent: {
     backgroundColor: 'transparent',
   },
+  // Tighter than the other empty states: the illustration (HOME_ILLUSTRATION_SIZE)
+  // replaced a 32px icon, and the block should take about the same height.
   center: {
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing['2xl'],
+    paddingVertical: spacing.base,
   },
   emptyStateCta: {
     marginTop: spacing.xs,

@@ -40,9 +40,11 @@ interface UserAvatarProps {
    * token, so a big avatar is a rounded square (the wireframes' profile avatar); a
    * grid of friends (Streaks-All) asks for the circle. */
   circle?: boolean;
+  /** Called once the photo is on screen (or failed). Never called without a photo. */
+  onLoadEnd?: () => void;
 }
 
-export function UserAvatar({ username, size = 40, imageUrl, circle = false }: UserAvatarProps) {
+export function UserAvatar({ username, size = 40, imageUrl, circle = false, onLoadEnd }: UserAvatarProps) {
   const initial = username ? username[0].toUpperCase() : '?';
   const fontSize = Math.round(size * 0.38);
   // Corner radius is always the flat `big` token, not size/2 — confirmed by
@@ -60,6 +62,7 @@ export function UserAvatar({ username, size = 40, imageUrl, circle = false }: Us
         // Android decodes the full uploaded photo otherwise, for a 32-88px circle.
         resizeMethod="resize"
         accessibilityLabel={username}
+        onLoadEnd={onLoadEnd}
       />
     );
   }

@@ -8,7 +8,12 @@ import type {
   UserProfileContract,
 } from '../../types/user';
 
-type ChallengeListResponse = ChallengeContract[] | { data?: ChallengeContract[] };
+/** GET /users/me/challenges: the user's challenges grouped by their own status. */
+interface MyChallengesResponse {
+  active?: ChallengeContract[];
+  completed?: ChallengeContract[];
+  left?: ChallengeContract[];
+}
 
 export async function getMe() {
   const response = await api.get<UserProfileContract>('/users/me');
@@ -61,12 +66,6 @@ export async function searchUsers(query: string): Promise<PublicProfileContract[
   return Array.isArray(response.data) ? response.data : [];
 }
 
-/**
- * Canonical source for the current user's enrolled challenges (`GET /users/me/challenges`).
- * The backend always returns them grouped by status (`{ active, completed, left }`), with
- * each challenge already carrying its own `status` field — this flattens the groups into a
- * single array so callers can filter/group client-side as needed (see `ChallengeContract.status`).
- */
 /** Admin-only (global). Reuses the backend's is_active flag — never a hard delete. */
 export async function banUser(userId: string) {
   const response = await api.patch(`/users/${userId}/ban`);
@@ -84,8 +83,14 @@ export async function unbanUser(userId: string) {
   return response.data;
 }
 
+/**
+ * Canonical source for the current user's enrolled challenges (`GET /users/me/challenges`).
+ * The backend always returns them grouped by status (`{ active, completed, left }`), with
+ * each challenge already carrying its own `status` field — this flattens the groups into a
+ * single array so callers can filter/group client-side as needed (see `ChallengeContract.status`).
+ */
 export async function getMyChallenges(): Promise<ChallengeContract[]> {
-  const res = await api.get('/users/me/challenges');
+  const res = await api.get<MyChallengesResponse | null>('/users/me/challenges');
   const payload = res.data;
 
   const active = Array.isArray(payload?.active) ? payload.active : [];

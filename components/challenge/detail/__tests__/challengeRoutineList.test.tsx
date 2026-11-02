@@ -66,3 +66,22 @@ describe('ChallengeRoutineList rows', () => {
     expect(triggerLightHaptic).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('ChallengeRoutineList with a hidden routine (B11)', () => {
+  it('shows the notice instead of the day rows, keeping the cycle caption', async () => {
+    const screen = await renderWithTheme(
+      <ChallengeRoutineList
+        days={DAYS}
+        cycleLengthDays={2}
+        durationDays={30}
+        accentColor={activityColors.strength}
+        hiddenNotice="Private: join to see the routine"
+      />,
+    );
+
+    expect(screen.getByTestId('challenge-routine-hidden')).toBeTruthy();
+    expect(screen.getByText('Private: join to see the routine')).toBeTruthy();
+    expect(screen.getByText('challengeInfo.cycleCaption')).toBeTruthy();
+    expect(screen.queryByText('Push day')).toBeNull();
+  });
+});

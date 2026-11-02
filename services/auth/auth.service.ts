@@ -16,31 +16,27 @@ import type {
   RegisterRequest,
 } from '../../types/auth';
 
+// Errors are not caught or logged here: the login screen tells the user what
+// happened (logError skips these handled 4xx answers anyway).
 export async function login(email: string, password: string) {
-  try {
-    const payload: LoginRequest = { email, password };
-    // The login screen shows its own message for every failure (wrong credentials
-    // is a 401 that is not a session expiry), so no global toast on top of it.
-    // authRefresh: never sent with a previous session's bearer token.
-    const response = await api.post<AuthSessionResponse>('/auth/login', payload, {
-      suppressErrorToast: true,
-      authRefresh: true,
-    });
-    const { accessToken, refreshToken, user } = response.data;
+  const payload: LoginRequest = { email, password };
+  // The login screen shows its own message for every failure (wrong credentials
+  // is a 401 that is not a session expiry), so no global toast on top of it.
+  // authRefresh: never sent with a previous session's bearer token.
+  const response = await api.post<AuthSessionResponse>('/auth/login', payload, {
+    suppressErrorToast: true,
+    authRefresh: true,
+  });
+  const { accessToken, refreshToken, user } = response.data;
 
-    await beginSession(accessToken, refreshToken);
-    if (user?.id) {
-      await storage.setItem('userId', String(user.id));
-    }
-    if (user?.username) {
-      await storage.setItem('username', user.username);
-    }
-    return response.data;
-  } catch (error: any) {
-    // No log: the login screen tells the user what happened (logError skips
-    // these handled 4xx answers anyway).
-    throw error;
+  await beginSession(accessToken, refreshToken);
+  if (user?.id) {
+    await storage.setItem('userId', String(user.id));
   }
+  if (user?.username) {
+    await storage.setItem('username', user.username);
+  }
+  return response.data;
 }
 
 export async function register(

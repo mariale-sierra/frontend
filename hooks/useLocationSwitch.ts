@@ -153,10 +153,12 @@ export function useLocationSwitch({ visible, routineId, exercises, current }: Op
   const withoutAlternatives = items.filter((item) => item.alternatives !== null && item.alternatives.length === 0);
   const chosenIds = items.flatMap((item) => (item.chosenId != null ? [item.chosenId] : []));
   const hasDuplicateChoice = new Set(chosenIds).size !== chosenIds.length;
-  const canApply = selected !== null && routineId != null && !loading && !hasDuplicateChoice;
+  /** A failed alternatives lookup is not "nothing compatible": applying would keep an incompatible exercise. */
+  const hasFailedLookup = items.some((item) => item.failed);
+  const canApply = selected !== null && routineId != null && !loading && !hasDuplicateChoice && !hasFailedLookup;
 
   const buildAdaptation = useCallback((): WorkoutAdaptation | null => {
-    if (!selected || routineId == null || loading || hasDuplicateChoice) return null;
+    if (!selected || routineId == null || loading || hasDuplicateChoice || hasFailedLookup) return null;
     const substitutions: ChosenSubstitute[] = [];
     for (const item of items) {
       const alternative = item.alternatives?.find((a) => a.id === item.chosenId);
@@ -169,7 +171,7 @@ export function useLocationSwitch({ visible, routineId, exercises, current }: Op
       });
     }
     return { routineId, locationCode: selected.code, locationName: selected.name, substitutions };
-  }, [selected, routineId, loading, hasDuplicateChoice, items]);
+  }, [selected, routineId, loading, hasDuplicateChoice, hasFailedLookup, items]);
 
   return {
     locations,
@@ -178,6 +180,7 @@ export function useLocationSwitch({ visible, routineId, exercises, current }: Op
     items,
     loading,
     withoutAlternatives,
+    hasFailedLookup,
     canApply,
     selectLocation,
     choose,

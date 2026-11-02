@@ -14,7 +14,8 @@ import { formatRelativeTime } from '../../utils/time';
 import type { ChallengeInviteContract, InviteStatus } from '../../types/invite';
 import type { InviteAction } from '../../hooks/useInvites';
 
-const MUTED = withAlpha(colors.paper, textOpacity.tertiary);
+// Cancelled/expired status text: `secondary`, legible (Sprint 10 accessibility pass).
+const MUTED = withAlpha(colors.paper, textOpacity.secondary);
 
 const STATUS_COLOR: Record<InviteStatus, string> = {
   pending: colors.primary,

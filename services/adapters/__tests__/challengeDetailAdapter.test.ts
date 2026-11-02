@@ -144,6 +144,25 @@ describe('toChallengeDetailViewModel', () => {
     expect(result.value.cycleLengthDays).toBe(4);
     expect(result.value.restDaysPerCycleCount).toBe(1);
   });
+
+  it('flags a private challenge whose routine the backend hid (B11), and nothing else', () => {
+    const hidden = toChallengeDetailViewModel(
+      buildChallenge({
+        routine_hidden: true,
+        cycle_days: [
+          { day_number: 1, is_rest_day: false, exercises: [] },
+          { day_number: 2, is_rest_day: true, exercises: [] },
+        ],
+      }),
+      LABELS,
+    );
+    expect(hidden.ok && hidden.value.routineHidden).toBe(true);
+    // The cycle's shape (rest days) still comes through for the info rows.
+    expect(hidden.ok && hidden.value.restDaysPerCycleCount).toBe(1);
+
+    const visible = toChallengeDetailViewModel(buildChallenge(), LABELS);
+    expect(visible.ok && visible.value.routineHidden).toBe(false);
+  });
 });
 
 describe('getUpcomingDays', () => {

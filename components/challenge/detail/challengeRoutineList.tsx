@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from '../../ui/icon';
 import { Text } from '../../ui/text';
 import { Row } from '../../layout/row';
-import { colors, spacing } from '../../../constants/theme';
+import { colors, spacing, textOpacity } from '../../../constants/theme';
+import { withAlpha } from '../../../utils/color';
 import ChallengeRoutineDayCard from './challengeRoutineDayCard';
 import type { ChallengeDaySummary } from '../../../services/adapters/challengeDetailAdapter';
 
@@ -15,6 +16,9 @@ interface ChallengeRoutineListProps {
    * passed through to each workout day's numbered badge. */
   accentColor: string;
   onPressDay?: (day: number) => void;
+  /** Shown instead of the day rows when the routine isn't visible to this
+   * viewer (a private challenge they're not in yet). */
+  hiddenNotice?: string;
 }
 
 /**
@@ -24,7 +28,7 @@ interface ChallengeRoutineListProps {
  * which doesn't apply to a cycle-based model (a cycle repeats as a whole,
  * it isn't paged through).
  */
-export default function ChallengeRoutineList({ days, cycleLengthDays, durationDays, accentColor, onPressDay }: ChallengeRoutineListProps) {
+export default function ChallengeRoutineList({ days, cycleLengthDays, durationDays, accentColor, onPressDay, hiddenNotice }: ChallengeRoutineListProps) {
   const { t } = useTranslation();
 
   return (
@@ -41,22 +45,31 @@ export default function ChallengeRoutineList({ days, cycleLengthDays, durationDa
         </Text>
       </Row>
 
-      <View style={styles.dayList}>
-        {days.map((item) => (
-          <ChallengeRoutineDayCard
-            key={`cycle-day-${item.day}`}
-            day={item.day}
-            isRestDay={item.isRestDay}
-            routineName={item.routineName}
-            subtitle={t('challengeInfo.exerciseSummary', {
-              exercises: t('challengeInfo.exerciseCount', { count: item.exerciseCount }),
-              location: item.location,
-            })}
-            accentColor={accentColor}
-            onPress={() => onPressDay?.(item.day)}
-          />
-        ))}
-      </View>
+      {hiddenNotice ? (
+        <Row gap="sm" align="center" testID="challenge-routine-hidden">
+          <Icon name="lock-closed-outline" size={16} color={withAlpha(colors.paper, textOpacity.secondary)} />
+          <Text variant="body" tone="secondary" style={styles.hiddenNotice}>
+            {hiddenNotice}
+          </Text>
+        </Row>
+      ) : (
+        <View style={styles.dayList}>
+          {days.map((item) => (
+            <ChallengeRoutineDayCard
+              key={`cycle-day-${item.day}`}
+              day={item.day}
+              isRestDay={item.isRestDay}
+              routineName={item.routineName}
+              subtitle={t('challengeInfo.exerciseSummary', {
+                exercises: t('challengeInfo.exerciseCount', { count: item.exerciseCount }),
+                location: item.location,
+              })}
+              accentColor={accentColor}
+              onPress={() => onPressDay?.(item.day)}
+            />
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -73,5 +86,8 @@ const styles = StyleSheet.create({
   },
   dayList: {
     gap: spacing.md,
+  },
+  hiddenNotice: {
+    flex: 1,
   },
 });

@@ -67,9 +67,11 @@ describe('Settings screen (B2)', () => {
     expect(mockLogout).toHaveBeenCalledTimes(1);
   });
 
-  it('does not link a Help/FAQ screen that does not exist yet', async () => {
+  it('links Help / FAQ (B9) from the legal and information section', async () => {
     const screen = await renderWithTheme(<SettingsScreen />);
 
-    expect(screen.queryByText(/faq|help/i)).toBeNull();
+    await fireEvent.press(screen.getByTestId('settings-help'));
+
+    expect(router.push).toHaveBeenCalledWith('/profile/help');
   });
 });

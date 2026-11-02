@@ -157,6 +157,14 @@ export function pickAuthor(challenge: ChallengeContract): ChallengeAuthorViewMod
   };
 }
 
+/** The challenge photo to show, or `null` for the placeholder. The backend only
+ * sends `imageUrl` once the photo passed moderation; the status check is a
+ * second guard so a pending/rejected photo can never show. */
+export function pickChallengeImageUrl(challenge: ChallengeContract): string | null {
+  if (challenge.imageStatus !== 'approved') return null;
+  return asString(challenge.imageUrl) || null;
+}
+
 // pickChallengeStatus now lives in ./challengeState (shared with
 // homeAdapter.ts — both Home's hero card and this Mine tab need the exact
 // same status detection).
@@ -173,6 +181,8 @@ function toExploreCard(challenge: ChallengeContract, labels: ChallengeListLabels
     membersCount: pickMembersCount(challenge),
     dominantActivityCategory: pickDominantActivityCategory(challenge),
     author: pickAuthor(challenge),
+    imageUrl: pickChallengeImageUrl(challenge),
+    isPrivate: String(challenge.visibility ?? '').toLowerCase() === 'private',
   };
 }
 
@@ -249,6 +259,9 @@ export function toChallengeMineViewModels(
  * own state-priority sort above. `pickMembersCount` already falls back to
  * `0` for a challenge with no member-count field at all, so a brand-new
  * challenge sorts to the bottom rather than throwing/`NaN`-ing the sort.
+ *
+ * Sprint 10: the official @havit account's challenges always come first (the
+ * curated default set), then everyone else's; most-joined first within each.
  */
 export function toExploreChallengeViewModels(
   challenges: ChallengeContract[],
@@ -259,5 +272,12 @@ export function toExploreChallengeViewModels(
   };
   return challenges
     .map((c) => toExploreCard(c, labels))
-    .sort((a, b) => b.membersCount - a.membersCount);
+    .sort((a, b) => Number(isOfficial(b)) - Number(isOfficial(a)) || b.membersCount - a.membersCount);
+}
+
+/** The account that publishes the default challenges (its username is stored as "Havit"). */
+export const OFFICIAL_USERNAME = 'havit';
+
+function isOfficial(card: ExploreChallengeViewModel): boolean {
+  return card.author?.username.toLowerCase() === OFFICIAL_USERNAME;
 }

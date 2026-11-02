@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from '../ui/text';
 import { IconButton } from '../ui/iconButton';
@@ -29,8 +30,10 @@ interface SetTargetStepperProps {
  * the Mine / Explore toggle — with every label in it `paper`, so none gets lost
  * on it. (2026-09-20, explicit request. It was a solid `ink` slot, then no fill
  * at all, then a hole cut in the glass card, each of which the user turned down.)
- * Its border lights up `success` once this set has been adjusted away from its
- * plan; the minus button has no fill of its own (`ghost`), and only the plus
+ * Its border turns a quiet `paper` outline once this set has been adjusted away
+ * from its plan — neutral, not `success` green (Sprint 10): green read as
+ * "only a changed set counts", while an untouched set is saved at its target
+ * just the same. The minus button has no fill of its own (`ghost`), and only the plus
  * button carries the lime accent.
  *
  * Tap-to-edit added 2026-08-31: the value used to be a read-only `Text`,
@@ -41,6 +44,7 @@ interface SetTargetStepperProps {
  * `Text` it replaces exactly, so the swap doesn't visibly jump.
  */
 export function SetTargetStepper({ value, unitLabel, adjusted, step, onIncrease, onDecrease, onChangeValue }: SetTargetStepperProps) {
+  const { t } = useTranslation();
   const decreaseDisabled = value - step < 0;
   const [editing, setEditing] = useState(false);
   const [draftText, setDraftText] = useState('');
@@ -63,6 +67,8 @@ export function SetTargetStepper({ value, unitLabel, adjusted, step, onIncrease,
       <IconButton
         name="remove-outline"
         variant="ghost"
+        accessibilityLabel={t('common.a11y.decrease', { label: unitLabel })}
+        accessibilityValue={{ text: `${value} ${unitLabel}` }}
         size={32}
         iconSize={16}
         iconColor={colors.paper}
@@ -94,6 +100,8 @@ export function SetTargetStepper({ value, unitLabel, adjusted, step, onIncrease,
       <IconButton
         name="add-outline"
         variant="ghost"
+        accessibilityLabel={t('common.a11y.increase', { label: unitLabel })}
+        accessibilityValue={{ text: `${value} ${unitLabel}` }}
         size={32}
         iconSize={16}
         iconColor={colors.ink}
@@ -111,7 +119,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     height: 44,
-    borderRadius: radius.small,
+    // Sprint 10: a full pill (was the `small` rounded rectangle).
+    borderRadius: radius.big,
     borderWidth: 1.5,
     borderColor: 'transparent',
     backgroundColor: withAlpha(colors.paper, fillOpacity.chip),
@@ -119,7 +128,7 @@ const styles = StyleSheet.create({
     paddingRight: spacing.sm,
   },
   pillAdjusted: {
-    borderColor: colors.success,
+    borderColor: withAlpha(colors.paper, textOpacity.secondary),
   },
   stepButtonDisabled: {
     opacity: 0.4,

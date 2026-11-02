@@ -19,6 +19,17 @@ describe('ActivityFilterChips', () => {
     expect(JSON.stringify(screen.toJSON())).toContain(`"backgroundColor":"${activityColors.cardioLow}"`);
   });
 
+  it("puts an unpicked chip's dot after its label", async () => {
+    const screen = await renderWithTheme(
+      <ActivityFilterChips activities={['cardioLow']} selected={null} onSelect={jest.fn()} />,
+    );
+    const chip = screen.getByTestId('activity-filter-cardioLow');
+    const children = chip.children as Array<{ props: { testID?: string } } | string>;
+    const last = children[children.length - 1];
+
+    expect(typeof last === 'object' && last.props.testID).toBe('activity-filter-cardioLow-dot');
+  });
+
   it('fills "All" with `paper` when nothing is picked', async () => {
     const screen = await renderWithTheme(
       <ActivityFilterChips activities={['strength']} selected={null} onSelect={jest.fn()} />,

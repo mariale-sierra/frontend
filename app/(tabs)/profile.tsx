@@ -19,6 +19,7 @@ import { useCachedQuery } from '../../hooks/useCachedQuery';
 import { useUserPosts } from '../../hooks/useUserPosts';
 import { queryKeys, staleTimes } from '../../services/cache/queries';
 import { invalidateQueries } from '../../services/cache/queryCache';
+import { EMPTY_ILLUSTRATIONS } from '../../constants/illustrations';
 
 /**
  * Profile tab: one virtualized list (header, badges, toggle, then the photo
@@ -150,6 +151,7 @@ export default function Profile() {
         loading={posts.isLoading}
         emptyLabel={view === 'posts' ? t('profile.emptyPublicPhotos') : t('profile.emptyAllPhotos')}
         emptyTitle={t('profile.emptyPostsTitle')}
+        emptyIllustration={EMPTY_ILLUSTRATIONS.profile}
         emptyActions={[
           { label: t('profile.emptyPostsExplore'), onPress: () => router.push('/(tabs)/challenges?view=explore'), testID: 'empty-posts-explore' },
           { label: t('profile.emptyPostsLog'), onPress: () => router.push('/log'), testID: 'empty-posts-log' },

@@ -10,6 +10,23 @@ const en = {
       dismiss: 'Dismiss',
       gotIt: 'Got it',
     },
+    // Sprint 10 accessibility pass: what a screen reader says for icon-only buttons.
+    a11y: {
+      close: 'Close',
+      send: 'Send',
+      increase: 'Increase {{label}}',
+      decrease: 'Decrease {{label}}',
+      previousMonth: 'Previous month',
+      nextMonth: 'Next month',
+      flipCamera: 'Switch camera',
+      confirmPhoto: 'Use this photo',
+      clearSearch: 'Clear search',
+      openMessages: 'Messages',
+      openRoutine: 'Open routine',
+      openPhoto: 'Open photo',
+      deleteComment: 'Delete comment',
+      removeDay: 'Remove day {{day}}',
+    },
     fields: {
       email: 'Email',
       username: 'Username',
@@ -133,7 +150,7 @@ const en = {
     categoryFallback: 'General',
     activityBadgesShort: {
       strength: 'Strength',
-      cardioIntense: 'HI Cardio',
+      cardioIntense: 'Intense Cardio',
       cardioLow: 'Low Cardio',
       flexibility: 'Flex',
       mindBody: 'Mind-Body',
@@ -157,6 +174,7 @@ const en = {
     membersCount: '{{count}} members',
     view: 'View',
     join: 'Join',
+    requestJoin: 'Request',
     emptyMine: "You haven't joined any challenges yet.",
     emptyExplore: 'No challenges to explore right now.',
     emptyExploreFilter: 'No challenges in this category yet.',
@@ -246,6 +264,9 @@ const en = {
     dailyProofValue: '1 photo per training day',
     rewardLabel: 'When you finish',
     rewardValue: 'Counts toward your completed-challenge badges (1 and 3 challenges). It is finished when you log its last day.',
+    // Sprint 10: only the creator sees why their photo isn't showing yet.
+    coverPending: 'Your photo is in review. Until it is approved, everyone sees the placeholder.',
+    coverRejected: 'Your photo didn’t pass the review, so it won’t be shown.',
     statusLabel: 'Status',
     closedValue: 'Closed',
     restEveryCycle_one: '{{count}} rest day every {{cycleLength}}',
@@ -255,6 +276,7 @@ const en = {
     showLess: 'Show less',
     cycleTitle: 'The cycle',
     cycleCaption: '{{cycleDays}}, repeating for {{totalDays}}',
+    routineHiddenNotice: "It's a private challenge: you'll see its routine once your request is approved.",
     restDayLabel: 'Rest day',
     restDayNoPhoto: 'no photo needed',
     exerciseCount_one: '{{count}} exercise',
@@ -385,9 +407,10 @@ const en = {
       dayWithRoutine: 'Day {{day}} · {{routine}}',
       noExercises: "No exercises for today's routine.",
       setLabel: 'Set {{number}}',
-      setsProgress: '{{done}}/{{total}}',
+      setsCount_one: '{{count}} set',
+      setsCount_other: '{{count}} sets',
       targetLabel: 'target {{value}}',
-      footerCaption: 'Untouched sets log at target — {{count}} adjusted so far',
+      footerCaption: 'Every set is saved as shown. Change only what was different.',
       logDayCta: 'Log day',
       logCoachMark: 'Logging today asks for a quick photo next, to confirm your progress.',
     },
@@ -447,6 +470,16 @@ const en = {
     submit: {
       startChallenge: 'Start challenge',
     },
+    // Sprint 10: the optional challenge photo step.
+    cover: {
+      pick: 'Choose photo',
+      change: 'Change photo',
+      remove: 'Remove',
+      skipHint: 'You can skip this step: Explore will show a placeholder.',
+      reviewHint: 'We review the photo before showing it to everyone.',
+      uploadFailed: 'We couldn’t upload the photo. Try again, or remove it to create the challenge without one.',
+      inReview: 'Challenge created. Your photo is in review.',
+    },
     rules: {
       dailyPhoto: {
         title: 'A photo every training day',
@@ -500,6 +533,10 @@ const en = {
       visibility: {
         title: 'Who can see it?',
         description: 'Choose whether anyone can find and join it, or only the people you approve.',
+      },
+      photo: {
+        title: 'Add a photo',
+        description: 'Optional. It shows on the challenge card in Explore and on its info screen.',
       },
       review: {
         title: 'Ready when you are',
@@ -630,7 +667,7 @@ const en = {
       needsSwapsShort_one: '{{count}} swap needed',
       needsSwapsShort_other: '{{count}} swaps needed',
       sheetTitle: 'Where are you training today?',
-      sheetHint: 'Pick a place. If an exercise cannot be done there, you choose a similar one that tracks the same things. Only your workout changes: the challenge routine stays the same for everyone else.',
+      sheetHint: "You'll swap what doesn't work there. Only your workout changes.",
       substitutionsHint: 'Choose what replaces each exercise that cannot be done here.',
       trainingAt: 'Training at {{location}}',
       substitutionsTitle: 'Training at {{location}}',
@@ -821,6 +858,7 @@ const en = {
     noChallengeSelectedMessage: 'Go back to metrics and select a challenge first.',
     uploadError: 'Could not upload image. Try again.',
     saveProgressError: 'Could not save progress. Try again.',
+    metricsPartialError: 'Progress saved, but {{failed}} of {{total}} metric values could not be saved.',
     permissionMessage: 'Camera permission is required to take proof.',
     grantPermission: 'Grant Permission',
     goBack: '← Go Back',
@@ -936,6 +974,8 @@ const en = {
     emptyPostsLog: 'Log a workout',
     userNotFound: 'Could not load this profile.',
     followersLabel: 'Followers',
+    practicesShowMore: 'Show more',
+    practicesShowLess: 'Show less',
     followingLabel: 'Following',
     banUserA11y: 'Ban this user (admin)',
     messageButton: 'Message',
@@ -1199,6 +1239,7 @@ const en = {
       challenge_join_response_rejected: 'Your request to join a challenge was declined',
       challenge_participant_joined: '{{name}} joined your challenge',
       challenge_closed: "A challenge you're in was closed",
+      challenge_reopened: "A challenge you're in was reopened",
       challenge_removed: 'You were removed from a challenge',
       report_resolved_actioned: 'We reviewed your report and took action. Thanks for helping',
       report_resolved_dismissed: 'We reviewed your report and found no violation',
@@ -1367,6 +1408,98 @@ const en = {
     notifications: 'Notifications',
     notificationsHint: 'What you get notified about, in the app and on your phone',
     aboutHint: 'Credits for exercise data and illustrations',
+    helpHint: 'Quick answers about challenges, progress, privacy and posts',
+  },
+  // Sprint 10, B9: short answers; opened from Settings.
+  help: {
+    title: 'Help & FAQ',
+    intro: 'Tap a question to see the answer.',
+    sections: {
+      challenges: {
+        title: 'Challenges',
+        items: {
+          join: {
+            q: 'How do I join a challenge?',
+            a: 'Open the challenge and tap "Join challenge". If it is private, the button says "Request to join": its creator reviews your request and you get a notification when they answer.',
+          },
+          private: {
+            q: 'What can I see of a private challenge before joining?',
+            a: 'Its name, photo, length, how many people are in it and which days are rest days. Each day’s routine is only for its members: you’ll see it once your request is approved.',
+          },
+          leave: {
+            q: 'What happens if I leave a challenge?',
+            a: 'You stop taking part, but your progress is saved. You can leave from the challenge screen.',
+          },
+          finish: {
+            q: 'When is a challenge finished?',
+            a: 'When you log its last day. Every finished challenge counts toward the completed-challenge badges.',
+          },
+          location: {
+            q: 'Can I train somewhere else that day?',
+            a: 'Yes. On the routine day, change the training location: if an exercise can’t be done there, you pick a similar one. It only changes your workout; the routine stays the same for everyone else.',
+          },
+        },
+      },
+      progress: {
+        title: 'Progress',
+        items: {
+          log: {
+            q: 'How do I log today’s progress?',
+            a: 'Tap the add button, pick the challenge and take a photo. Your day is logged right away, even while the photo is still under review.',
+          },
+          restDay: {
+            q: 'How do rest days work?',
+            a: 'Rest is part of the plan: on a rest day you don’t have to train. You can plan upcoming rest days, but not apply them to days that already passed.',
+          },
+          streak: {
+            q: 'How is my streak counted?',
+            a: 'It is your consecutive days with a log, and rest days count too. If a day goes by without a log, the streak starts over.',
+          },
+          badges: {
+            q: 'How do I earn badges?',
+            a: 'By logging workouts, keeping your streak and finishing challenges. On your profile, tap a badge to see how it is counted and how much is left.',
+          },
+        },
+      },
+      privacy: {
+        title: 'Privacy',
+        items: {
+          photoVisibility: {
+            q: 'Who sees my photos?',
+            a: 'When you take the photo you choose "Followers" or "Private". Only you can see a private photo.',
+          },
+          privateProfile: {
+            q: 'What does a private profile do?',
+            a: 'It hides your bio from other users. Turn it on in Settings > Edit profile.',
+          },
+          deleteAccount: {
+            q: 'How do I delete my account?',
+            a: 'In Settings > Delete account. Before you confirm, we explain what happens to your data.',
+          },
+        },
+      },
+      posts: {
+        title: 'Posts',
+        items: {
+          review: {
+            q: 'Why does my photo say "In review"?',
+            a: 'We review photos before publishing them. Until then only you can see it. If it doesn’t pass the review it isn’t published, but your day stays logged.',
+          },
+          report: {
+            q: 'How do I report a post or a comment?',
+            a: 'Use the "Report" option on the post or comment and pick a reason. Our team reviews it.',
+          },
+          delete: {
+            q: 'Can I delete a post?',
+            a: 'Yes, your own: open the post’s options and tap "Delete post".',
+          },
+          suspension: {
+            q: 'What happens if my content breaks the rules?',
+            a: 'We may hide it and, depending on the case, suspend your activity for a while. During a suspension you can still browse the app. See the Community Guidelines in Settings.',
+          },
+        },
+      },
+    },
   },
   about: {
     title: 'About & Credits',
@@ -1406,11 +1539,11 @@ const en = {
       social: 'You are removed from challenges, spaces, followers and following.',
       irreversible: 'After the waiting period this cannot be undone.',
     },
-    gracePeriod: 'You have 30 days to change your mind. During that time your profile is hidden, and you can cancel by logging in and opening this screen.',
+    gracePeriod: 'You have 7 days to change your mind. During that time your profile is hidden, and you can cancel by logging in and opening this screen.',
     passwordLabel: 'Confirm your password',
     requestCta: 'Delete my account',
     confirmTitle: 'Delete your account?',
-    confirmMessage: 'Your account and data will be permanently deleted in 30 days. You can cancel until then.',
+    confirmMessage: 'Your account and data will be permanently deleted in 7 days. You can cancel until then.',
     confirmCta: 'Yes, delete',
     wrongPassword: 'That password is not correct.',
     alreadyRequested: 'You already requested deletion of this account.',

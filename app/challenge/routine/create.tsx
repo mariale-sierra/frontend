@@ -129,7 +129,13 @@ export default function CreateRoutineScreen() {
   return (
     <ScreenBackground variant="top" gradientBackground vividGradient={USE_VIVID_CREATE_FLOW_BACKGROUND}>
       <Row justify="space-between" align="center" style={styles.topBar}>
-        <Pressable onPress={() => safeBack()} hitSlop={12} style={styles.iconButton}>
+        <Pressable
+          onPress={() => safeBack()}
+          hitSlop={12}
+          style={styles.iconButton}
+          accessibilityRole="button"
+          accessibilityLabel={hasExercises ? t('common.actions.back') : t('common.a11y.close')}
+        >
           <Icon
             name={hasExercises ? 'chevron-back-outline' : 'close-outline'}
             size={24}

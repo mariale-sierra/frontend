@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { Skeleton } from '../ui/skeleton';
 import { Row } from '../layout/row';
 import { radius, spacing } from '../../constants/theme';

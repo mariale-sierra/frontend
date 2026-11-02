@@ -420,7 +420,7 @@ export default function Register() {
       <View style={[styles.content, isIntro && !introImagesReady && styles.contentLoading]}>
       <View style={[styles.topRow, { paddingTop: insets.top + spacing.md }]}>
         {!isIntro ? (
-          <Pressable onPress={handleBack} hitSlop={8} accessibilityRole="button">
+          <Pressable onPress={handleBack} hitSlop={8} accessibilityRole="button" accessibilityLabel={t('common.actions.back')}>
             <Icon name="chevron-back-outline" size={24} color={colors.paper} />
           </Pressable>
         ) : (

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { BottomSheetModal } from '../../ui/bottomSheetModal';
 import { Button } from '../../ui/button';
 import { Icon } from '../../ui/icon';
+import { LOCATION_ICON_NAME, type LocationType } from '../../icons/locationIcon';
 import { Text } from '../../ui/text';
 import { Row } from '../../layout/row';
 import { borderWidth, colors, radius, spacing, textOpacity } from '../../../constants/theme';
@@ -87,6 +88,12 @@ export function LocationSwitchSheet({
                   accessibilityLabel={location.name}
                   style={styles.locationRow}
                 >
+                  {/* Sprint 10: each place with its own icon (the catalog's codes). */}
+                  <Icon
+                    name={LOCATION_ICON_NAME[location.code as LocationType] ?? 'location-outline'}
+                    size={20}
+                    color={colors.paper}
+                  />
                   <View style={styles.fill}>
                     <Text variant="body" weight="bold">{location.name}</Text>
                     <Text variant="caption" tone="secondary">

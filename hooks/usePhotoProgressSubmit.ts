@@ -6,6 +6,7 @@ import { submitWorkoutProgress } from '../services/workout-log/workout-log.servi
 import { applyExerciseMetrics } from '../services/metrics/applyExerciseMetrics';
 import { invalidateAfterWorkoutLogged } from '../services/cache/queries';
 import { invalidateChallengeProgressCache } from './useChallengeProgress';
+import { useErrorNotificationStore } from '../store/errorNotificationStore';
 import { useMetricsEntryStore } from '../store/metricsEntryStore';
 import {
   adaptationForRoutine,
@@ -126,7 +127,12 @@ async function uploadAndSave(
   // on the metrics screen still need to be saved against them here.
   if (exerciseMetrics.length > 0) {
     try {
-      await applyExerciseMetrics(workout, exerciseMetrics);
+      await applyExerciseMetrics(workout, exerciseMetrics, (failed, attempted) => {
+        // Progress is saved; tell the user which part was not, instead of a silent "success".
+        useErrorNotificationStore.getState().show({
+          message: t('camera.metricsPartialError', { failed, total: attempted }),
+        });
+      });
     } catch (metricsError) {
       // The workout + photo already saved — a metrics save failure must not
       // block the flow or look like data loss.

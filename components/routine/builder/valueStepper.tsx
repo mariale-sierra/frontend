@@ -1,4 +1,5 @@
 import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Row } from '../../layout/row';
 import { Text } from '../../ui/text';
 import { IconButton } from '../../ui/iconButton';
@@ -18,6 +19,7 @@ interface ValueStepperProps {
  * `big` so it reads as a circle) instead of bespoke buttons; the value itself
  * is the one `primary`-filled pill, matching the wireframe exactly. */
 export function ValueStepper({ label, valueLabel, onIncrease, onDecrease, decreaseDisabled = false }: ValueStepperProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.track}>
       <Text variant="label" weight="medium" tone="secondary">{label}</Text>
@@ -26,6 +28,8 @@ export function ValueStepper({ label, valueLabel, onIncrease, onDecrease, decrea
         <IconButton
           name="remove-outline"
           variant="surface"
+          accessibilityLabel={t('common.a11y.decrease', { label })}
+          accessibilityValue={{ text: valueLabel }}
           size={32}
           iconSize={14}
           iconColor={colors.paper}
@@ -41,6 +45,8 @@ export function ValueStepper({ label, valueLabel, onIncrease, onDecrease, decrea
         <IconButton
           name="add-outline"
           variant="surface"
+          accessibilityLabel={t('common.a11y.increase', { label })}
+          accessibilityValue={{ text: valueLabel }}
           size={32}
           iconSize={14}
           iconColor={colors.paper}

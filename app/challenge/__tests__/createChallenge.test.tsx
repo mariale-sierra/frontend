@@ -22,6 +22,10 @@ jest.mock('react-i18next', () => {
 jest.mock('../../../services/challenge/challenge.service', () => ({
   createChallenge: jest.fn(),
 }));
+jest.mock('../../../services/uploads/upload.service', () => ({
+  uploadImageAsync: jest.fn(),
+  normalizeUploadMimeType: () => 'image/jpeg',
+}));
 jest.mock('../../../services/exercises/exercises.service', () => ({
   getExerciseCount: jest.fn(),
 }));

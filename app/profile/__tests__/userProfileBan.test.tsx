@@ -87,6 +87,13 @@ describe("Another user's profile — the admin's ban action", () => {
     useErrorNotificationStore.setState({ visible: false, config: { message: '' } });
   });
 
+  // Sprint 10: their badges sit behind the ribbon icon, on the Badges screen, like your own.
+  it('opens their badges on the Badges screen from the ribbon icon', async () => {
+    const screen = await renderProfile(false);
+    fireEvent.press(screen.getByTestId('open-user-badges'));
+    expect(router.push).toHaveBeenCalledWith({ pathname: '/profile/badges', params: { userId: USER_ID } });
+  });
+
   it('has a Message button that opens a chat with that person (Instagram-style), for any viewer', async () => {
     const screen = await renderProfile(false);
     fireEvent.press(screen.getByTestId('profile-message-button'));
