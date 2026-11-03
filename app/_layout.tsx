@@ -14,6 +14,7 @@ import { ChallengeFinishedPopup } from '../components/ui/ChallengeFinishedPopup'
 import { ChallengeJoinApprovedPopup } from '../components/ui/ChallengeJoinApprovedPopup';
 import { UploadSuccessPopup } from '../components/ui/UploadSuccessPopup';
 import { ErrorNotificationProvider } from '../components/ui/ErrorNotificationProvider';
+import { AppErrorFallback } from '../components/ui/AppErrorFallback';
 import i18n, { PREFERRED_LANGUAGE_KEY } from '../i18n';
 import type { SupportedLanguage } from '../i18n';
 import { storage } from '../utils/storage';
@@ -176,6 +177,10 @@ function RootNavigator() {
     </NavigationThemeProvider>
   );
 }
+
+// Any route that throws while rendering shows a retry screen instead of a blank
+// app or the red box (see AppErrorFallback).
+export { AppErrorFallback as ErrorBoundary };
 
 export default function RootLayout() {
   // Not gating first paint on fontsLoaded/fontError — an earlier version of

@@ -1,5 +1,10 @@
 const en = {
   common: {
+    errorBoundary: {
+      title: 'Something went wrong',
+      message: 'This screen ran into a problem. Your data is safe.',
+      retry: 'Try again',
+    },
     actions: {
       login: 'Log in',
       register: 'Create account',
