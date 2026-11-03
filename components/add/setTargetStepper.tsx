@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Text } from '../ui/text';
 import { IconButton } from '../ui/iconButton';
-import { colors, fillOpacity, radius, spacing, textOpacity, typography } from '../../constants/theme';
+import { colors, fillOpacity, radius, spacing, textOpacity, typography, keyboardAppearance } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
 interface SetTargetStepperProps {
@@ -79,6 +79,7 @@ export function SetTargetStepper({ value, unitLabel, adjusted, step, onIncrease,
 
       {editing ? (
         <TextInput
+          keyboardAppearance={keyboardAppearance}
           value={draftText}
           onChangeText={setDraftText}
           onBlur={commitEdit}

@@ -1,7 +1,7 @@
 import { StyleSheet, TextInput, View } from 'react-native';
 import { Text } from '../../ui/text';
 import { Row } from '../../layout/row';
-import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
+import { colors, radius, spacing, textOpacity, keyboardAppearance } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 
 interface RestTimeInputProps {
@@ -29,6 +29,7 @@ export function RestTimeInput({
       <Text variant="label" tone="secondary">{label}</Text>
       <Row justify="flex-start" align="center" gap="sm" style={styles.restRow}>
         <TextInput
+          keyboardAppearance={keyboardAppearance}
           keyboardType="numeric"
           value={minutes}
           onChangeText={onChangeMinutes}
@@ -38,6 +39,7 @@ export function RestTimeInput({
         />
         <Text variant="caption" tone="secondary" style={styles.restUnit}>min</Text>
         <TextInput
+          keyboardAppearance={keyboardAppearance}
           keyboardType="numeric"
           value={seconds}
           onChangeText={onChangeSeconds}

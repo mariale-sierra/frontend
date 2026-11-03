@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, TextInput } from 'react-native';
 import type { TextInputProps } from 'react-native';
 import { Icon } from '../ui/icon';
-import { colors, radius, spacing, textOpacity, typography } from '../../constants/theme';
+import { colors, radius, spacing, textOpacity, typography, keyboardAppearance } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
 interface FloatingLabelInputProps extends Omit<TextInputProps, 'placeholder' | 'style'> {
@@ -132,6 +132,7 @@ export function FloatingLabelInput({
         {label}
       </Animated.Text>
       <TextInput
+        keyboardAppearance={keyboardAppearance}
         // Android keeps drawing the old mask when `secureTextEntry` is flipped on a live input
         // (the reveal/hide eye then seems to do nothing), so the input is rebuilt when it flips.
         key={revealed ? 'revealed' : 'masked'}

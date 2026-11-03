@@ -1,5 +1,10 @@
 const es = {
   common: {
+    errorBoundary: {
+      title: 'Algo salió mal',
+      message: 'Esta pantalla tuvo un problema. Tus datos están a salvo.',
+      retry: 'Reintentar',
+    },
     actions: {
       login: 'Iniciar sesión',
       register: 'Crear cuenta',
