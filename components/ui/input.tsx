@@ -11,7 +11,7 @@ import {
 import { useState } from 'react';
 import { Text } from './text';
 import { Row } from '../layout/row';
-import { spacing, radius, colors, textOpacity, fontSize } from '../../constants/theme';
+import { spacing, radius, colors, textOpacity, fontSize, keyboardAppearance } from '../../constants/theme';
 import { withAlpha } from '../../utils/color';
 
 /**
@@ -120,6 +120,7 @@ export function Input({
         {leftIcon}
 
         <TextInput
+          keyboardAppearance={keyboardAppearance}
           placeholder={placeholder}
           placeholderTextColor={placeholderColorMap[placeholderVariant]}
           multiline={multiline}

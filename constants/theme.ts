@@ -395,8 +395,16 @@ export type ShadowToken = keyof typeof shadows;
 // Combined theme
 // ---------------------------------------------------------------------------
 
+/**
+ * iOS keyboard look for every text field. The app only has a dark theme, so
+ * the keyboard is dark to match it; if a light theme is ever added, this is
+ * the one place that has to follow it.
+ */
+export const keyboardAppearance = 'dark' as const;
+
 export const theme = {
   colors,
+  keyboardAppearance,
   typography,
   spacing,
   radius,

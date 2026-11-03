@@ -1,6 +1,6 @@
 import { StyleSheet, TextInput, ViewProps, View } from 'react-native';
 import { Text } from '../../ui/text';
-import { colors, radius, spacing, textOpacity } from '../../../constants/theme';
+import { colors, radius, spacing, textOpacity, keyboardAppearance } from '../../../constants/theme';
 import { withAlpha } from '../../../utils/color';
 
 interface ExerciseInputProps extends Omit<ViewProps, 'children'> {
@@ -30,6 +30,7 @@ export function ExerciseInput({
     <View style={[styles.field, style]} {...props}>
       <Text variant="label" tone="secondary">{label}</Text>
       <TextInput
+        keyboardAppearance={keyboardAppearance}
         keyboardType={keyboardType}
         value={value}
         onChangeText={onChangeText}
