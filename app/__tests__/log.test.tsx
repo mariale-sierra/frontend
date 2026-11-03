@@ -6,9 +6,11 @@ import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-han
 import { renderWithTheme } from '../../test-utils/renderWithTheme';
 import LogChallengePicker from '../log';
 import { getMyChallenges } from '../../services/user/user.service';
-import { getUserPosts } from '../../services/challenge/challenge.service';
+import { getMyProgressPhotos } from '../../services/challenge/challenge.service';
 import { router } from 'expo-router';
 import { DECK_IMAGES_TIMEOUT_MS } from '../../constants/challengeDeck';
+import { setQueryData } from '../../services/cache/queryCache';
+import { queryKeys } from '../../services/cache/queries';
 
 jest.mock('react-native-worklets', () => require('react-native-worklets/src/mock'));
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
@@ -28,8 +30,7 @@ jest.mock('expo-haptics', () => ({
   ImpactFeedbackStyle: { Light: 'light' },
 }));
 jest.mock('../../services/user/user.service', () => ({ getMyChallenges: jest.fn() }));
-jest.mock('../../services/challenge/challenge.service', () => ({ getUserPosts: jest.fn() }));
-jest.mock('../../hooks/useAuth', () => ({ useAuth: () => ({ userId: 'user-1' }) }));
+jest.mock('../../services/challenge/challenge.service', () => ({ getMyProgressPhotos: jest.fn() }));
 // The glow is drawn once a card has been measured; this hands it a size at once.
 jest.mock('../../components/ui/accentGlow', () => ({
   AccentGlow: ({ children }: { children: (size: { width: number; height: number }) => React.ReactNode }) =>
@@ -63,7 +64,7 @@ async function giveDeckItsWidth() {
 describe('the log-progress picker', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (getUserPosts as jest.Mock).mockResolvedValue({ photos: [] });
+    (getMyProgressPhotos as jest.Mock).mockResolvedValue([]);
   });
 
   it('asks which challenge, over a deck of cards — one per challenge that can be logged today', async () => {
@@ -82,6 +83,17 @@ describe('the log-progress picker', () => {
     // Nothing to log on a rest day: no card for it.
     expect(screen.queryByText('Rest day challenge')).toBeNull();
     expect(screen.getByText('1 / 2')).toBeTruthy();
+  });
+
+  it('opens on what Home and Challenges already loaded, without asking the server again', async () => {
+    setQueryData(queryKeys.myChallenges, [challenge(1, 'Morning Strength')]);
+    setQueryData(queryKeys.myPhotos, []);
+    await renderPicker();
+    await giveDeckItsWidth();
+
+    expect(screen.getByText('Morning Strength')).toBeTruthy();
+    expect(getMyChallenges).not.toHaveBeenCalled();
+    expect(getMyProgressPhotos).not.toHaveBeenCalled();
   });
 
   it('opens the metrics screen for the challenge whose front card is pressed', async () => {
@@ -196,7 +208,7 @@ describe('the log-progress picker', () => {
 
     async function renderWithPhotos(challengeIds = [1, 2]) {
       (getMyChallenges as jest.Mock).mockResolvedValue(challengeIds.map((id) => challenge(id, `Challenge ${id}`)));
-      (getUserPosts as jest.Mock).mockResolvedValue({ photos: challengeIds.map((id) => photo(String(id))) });
+      (getMyProgressPhotos as jest.Mock).mockResolvedValue(challengeIds.map((id) => photo(String(id))));
       await renderPicker();
       await giveDeckItsWidth();
       await waitFor(() => expect(screen.queryByTestId('challenge-deck')).toBeTruthy());

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { BlurView } from 'expo-blur';
@@ -10,9 +10,10 @@ import { Stack } from '../components/layout/stack';
 import { Text } from '../components/ui/text';
 import { ChallengeDeck } from '../components/add/challengeDeck';
 import { ChallengeDeckSkeleton } from '../components/add/challengeDeckSkeleton';
-import { loadMyChallenges } from '../services/cache/loaders';
-import { getUserPosts } from '../services/challenge/challenge.service';
-import { useAuth } from '../hooks/useAuth';
+import { useCachedQuery } from '../hooks/useCachedQuery';
+import { queryKeys, staleTimes } from '../services/cache/queries';
+import { getMyChallenges } from '../services/user/user.service';
+import { getMyProgressPhotos } from '../services/challenge/challenge.service';
 import { groupLatestPhotoByChallengeId } from '../services/adapters/challengeState';
 import { getLogChallengeQuickPicks, type LogChallengeQuickPick } from '../services/adapters/metricsAdapter';
 import { colors, radius, spacing, textOpacity } from '../constants/theme';
@@ -50,19 +51,34 @@ export default function LogChallengePicker() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width, onLayout } = useMeasuredWidth();
-  const { userId } = useAuth();
 
-  const [challenges, setChallenges] = useState<LogChallengeQuickPick[]>([]);
-  // Real, reported bug: `challenges` (the LOGGABLE-today quick-pick list,
-  // after getLogChallengeQuickPicks filters out rest days/already-logged/
-  // non-active ones) landing on zero doesn't mean "not part of any
-  // challenge" — it just as often means every active challenge is already
-  // done for today. Tracked separately (the raw, unfiltered enrolled count)
-  // so the empty state can tell those two real situations apart instead of
-  // always showing the "you don't have any challenges" copy.
-  const [hasAnyChallenges, setHasAnyChallenges] = useState(true);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  // Same shared cache entries Home and Challenges › Mine read: when either of
+  // those screens was open recently the picker opens with its data already
+  // there, instead of waiting on the network every time the FAB is tapped.
+  // A stale entry still shows at once and refreshes in the background.
+  const challengesQuery = useCachedQuery(queryKeys.myChallenges, getMyChallenges, {
+    staleTime: staleTimes.activity,
+    persist: true,
+  });
+  const photosQuery = useCachedQuery(queryKeys.myPhotos, getMyProgressPhotos, {
+    staleTime: staleTimes.activity,
+    persist: true,
+  });
+  const challenges = useMemo<LogChallengeQuickPick[]>(
+    () =>
+      challengesQuery.data
+        ? getLogChallengeQuickPicks(challengesQuery.data, groupLatestPhotoByChallengeId(photosQuery.data ?? []))
+        : [],
+    [challengesQuery.data, photosQuery.data],
+  );
+  // `challenges` is the LOGGABLE-today list (rest days, already-logged and
+  // finished ones filtered out), so zero doesn't mean "no challenges": the raw
+  // enrolled count tells the empty state which of the two it is.
+  const hasAnyChallenges = (challengesQuery.data?.length ?? 0) > 0;
+  // The photo only decides the thumbnail and the "already logged" filter, so
+  // wait for it only on a cold start, when neither list is cached yet.
+  const loading = challengesQuery.isLoading || photosQuery.isLoading;
+  const error = Boolean(challengesQuery.error);
   // Whether the deck's photos have loaded (see `ChallengeDeck`'s `onReady`).
   const [deckReady, setDeckReady] = useState(false);
   const handleDeckReady = useCallback(() => setDeckReady(true), []);
@@ -80,30 +96,6 @@ export default function LogChallengePicker() {
   }, [backdropOpacity]);
   const backdropAnimatedStyle = useAnimatedStyle(() => ({ opacity: backdropOpacity.value }));
 
-  useEffect(() => {
-    if (!userId) return;
-    let active = true;
-
-    // Only the newest page of posts: the picker needs just the latest photo of each challenge,
-    // and GET /workout-posts/mine returns (and enriches) the user's whole history.
-    Promise.all([loadMyChallenges(), getUserPosts(userId)])
-      .then(([myChallenges, { photos }]) => {
-        if (!active) return;
-        setHasAnyChallenges(myChallenges.length > 0);
-        const latestPhotoByChallengeId = groupLatestPhotoByChallengeId(photos);
-        setChallenges(getLogChallengeQuickPicks(myChallenges, latestPhotoByChallengeId));
-      })
-      .catch(() => {
-        if (active) setError(true);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [userId]);
 
   function handleDismiss() {
     safeBack();
